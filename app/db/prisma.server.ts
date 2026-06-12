@@ -1,0 +1,29 @@
+import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+
+/**
+ * Singleton do Prisma Client (S00-T01).
+ *
+ * Reaproveita a instância entre HMR via `globalThis.__prisma` em dev
+ * (não em prod). Sufixo `.server.ts` impede bundling no cliente.
+ *
+ * IMPORTANTE: a URL é lida na primeira importação. Se `process.env.DATABASE_URL`
+ * mudar depois (caso de testes), o helper `tests/helpers/db.ts` reseta
+ * `globalThis.__prisma` para forçar recriação.
+ *
+ * @see .harness/RAG/convention-prisma-sqlite.md §2.2
+ */
+const KEY = "__prisma" as const;
+const globalForPrisma = globalThis as unknown as { [KEY]?: PrismaClient };
+
+const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+
+export const prisma: PrismaClient =
+  globalForPrisma[KEY] ??
+  new PrismaClient({
+    adapter: new PrismaBetterSqlite3({ url: databaseUrl }),
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma[KEY] = prisma;
+}

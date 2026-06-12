@@ -5,3 +5,12 @@
 # React Router
 /.react-router/
 /build/
+
+# Prisma
+/generated/prisma
+/prisma/dev.db
+/dev.db
+
+# Tests
+/tests/.tmp/
+coverage/

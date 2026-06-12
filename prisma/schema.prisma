@@ -1,0 +1,319 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ==========================================
+// ENUMS & DICIONÁRIOS DO SISTEMA
+// ==========================================
+
+enum Cargo {
+  ADMIN
+  PASTOR
+  SECRETARIO
+  DISCIPULADOR
+  FINANCEIRO
+  LIDER_MINISTERIO
+}
+
+enum TipoMembro {
+  MEMBRO_ATIVO
+  CONGREGADO
+  VISITANTE
+}
+
+enum TipoLancamento {
+  ENTRADA
+  SAIDA
+}
+
+enum CategoriaLancamento {
+  DIZIMO
+  OFERTA
+  CAMPANHA
+  DESPESA_OPERACIONAL
+  COMPRA_ESTOQUE
+  MANUTENCAO
+  TRANSFERENCIA
+}
+
+enum TipoItemEstoque {
+  CONSUMO
+  PATRIMONIO
+}
+
+enum StatusItemPatrimonio {
+  DISPONIVEL
+  EM_MANUTENCAO
+  BAIXADO_PERDA
+}
+
+// ==========================================
+// MÓDULO 1: MEMBROS & USUÁRIOS
+// ==========================================
+
+model Membro {
+  id            String     @id @default(uuid())
+  nome          String
+  tipo          TipoMembro @default(VISITANTE)
+  cargo         Cargo? // Se nulo, o membro não tem acesso administrativo ao sistema
+  email         String?    @unique
+  senhaHash     String? // Nulo se o membro não tiver acesso ao sistema
+  telefone      String?
+  profissao     String?
+  estadoCivil   String?
+  dataConversao DateTime?
+  dataBatismo   DateTime?
+
+  // Endereço Residencial
+  logradouro String?
+  numero     String?
+  bairro     String?
+  cidade     String?
+  estado     String?
+  cep        String?
+
+  // Relacionamento de Discipulado (Auto-relacionamento 1:N)
+  // RN-MEM-04: 1 membro tem apenas 1 discipulador. 1 discipulador tem até 12 discípulos (validado via service)
+  discipuladorId String?
+  discipulador   Membro?  @relation("Discipulado", fields: [discipuladorId], references: [id], onDelete: Restrict)
+  discipulos     Membro[] @relation("Discipulado")
+
+  // Relacionamentos Eclesiásticos
+  ministerios MinisterioMembro[]
+
+  // Relacionamentos Financeiros
+  dizimos Lancamento[] @relation("MembroDizimo")
+
+  // Sessões de login (httpOnly cookie). Cascade no membro = logout automático ao excluir.
+  sessions Session[]
+
+  // Auditoria e Controle
+  transferenciasFeitas TransferenciaCaixa[]
+  estoquesRetirados    MovimentacaoEstoque[]
+  alertasRecebidos     AlertaDestinatario[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("membros")
+}
+
+/**
+ * Sessão de login server-side (S00-T02).
+ *
+ * Cada `createSession(membroId)` insere um registro aqui; o `sid` (UUID)
+ * é o valor do cookie httpOnly. Logout = `deleteSession(sid)`.
+ *
+ * Sliding renewal: a cada request autenticado, `expiresAt` é atualizado
+ * para `min(now + 7d, absoluteExpiresAt)`. Após `absoluteExpiresAt`,
+ * o cookie é considerado expirado mesmo se o cliente ainda o enviar.
+ */
+model Session {
+  id                String   @id @default(uuid())
+  membroId          String
+  expiresAt         DateTime
+  absoluteExpiresAt DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([membroId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Ministerio {
+  id          String              @id @default(uuid())
+  nome        String              @unique
+  descricao   String?
+  membros     MinisterioMembro[]
+  configGeral ConfiguracaoGeral[] @relation("MinisterioResponsavel")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ministerios")
+}
+
+model MinisterioMembro {
+  id           String     @id @default(uuid())
+  membroId     String
+  ministerioId String
+  membro       Membro     @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  ministerio   Ministerio @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+
+  @@unique([membroId, ministerioId])
+  @@map("ministerio_membros")
+}
+
+// ==========================================
+// MÓDULO 2: FINANCEIRO & CAIXAS
+// ==========================================
+
+model Caixa {
+  id            String @id @default(uuid())
+  nome          String @unique // Ex: "Caixa Geral", "Caixa da Cantina"
+  saldoCentavos Int    @default(0) // Armazenado em centavos para evitar erros de ponto flutuante
+
+  lancamentos   Lancamento[]
+  origemTransf  TransferenciaCaixa[] @relation("CaixaOrigem")
+  destinoTransf TransferenciaCaixa[] @relation("CaixaDestino")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("caixas")
+}
+
+model TransferenciaCaixa {
+  id             String   @id @default(uuid())
+  valorCentavos  Int
+  caixaOrigemId  String
+  caixaDestinoId String
+  executadoPorId String // Usuário/Membro que realizou a transferência (RN-FIN-02)
+  dataHora       DateTime @default(now())
+
+  caixaOrigem  Caixa  @relation("CaixaOrigem", fields: [caixaOrigemId], references: [id], onDelete: Restrict)
+  caixaDestino Caixa  @relation("CaixaDestino", fields: [caixaDestinoId], references: [id], onDelete: Restrict)
+  executadoPor Membro @relation(fields: [executadoPorId], references: [id], onDelete: Restrict)
+
+  @@map("transferencias_caixa")
+}
+
+model Lancamento {
+  id              String              @id @default(uuid())
+  tipo            TipoLancamento
+  categoria       CategoriaLancamento
+  valorCentavos   Int
+  descricao       String
+  dataCompetencia DateTime            @default(now())
+
+  caixaId String
+  caixa   Caixa  @relation(fields: [caixaId], references: [id], onDelete: Restrict)
+
+  // Se for Dízimo, o vínculo com Membro é obrigatório. Se for Oferta, pode ser anônimo (RN-FIN-05)
+  membroId String?
+  membro   Membro? @relation("MembroDizimo", fields: [membroId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lancamentos")
+}
+
+// ==========================================
+// MÓDULO 3: ESTOQUE & MANUTENÇÃO
+// ==========================================
+
+model ItemEstoque {
+  id         String          @id @default(uuid())
+  nome       String
+  descricao  String?
+  tipo       TipoItemEstoque @default(CONSUMO)
+  quantidade Int             @default(0) // Para consumo, incrementa/decrementa. Para patrimônio, geralmente é 1 por unidade física
+
+  // Campos específicos de Bens Patrimoniais
+  numeroSerie       String?               @unique
+  statusPatrimonio  StatusItemPatrimonio? @default(DISPONIVEL)
+  localizacaoFisica String?
+
+  movimentacoes MovimentacaoEstoque[]
+  manutencoes   ManutencaoAtivo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("itens_estoque")
+}
+
+model MovimentacaoEstoque {
+  id            String  @id @default(uuid())
+  itemEstoqueId String
+  quantidade    Int // Positivo para Entrada, Negativo para Saída
+  justificativa String? // Ex: "Retirada para o culto infantil", "Doação recebida"
+
+  // RN-EST-02: Apenas ADMIN e SECRETÁRIO autorizam, registrando a pessoa física que retirou
+  autorizadoPorId String
+  nomeRetirante   String // Nome textual da pessoa que pegou o item no almoxarifado
+
+  itemEstoque   ItemEstoque @relation(fields: [itemEstoqueId], references: [id], onDelete: Restrict)
+  autorizadoPor Membro      @relation(fields: [autorizadoPorId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@map("movimentacoes_estoque")
+}
+
+model ManutencaoAtivo {
+  id                  String    @id @default(uuid())
+  itemEstoqueId       String
+  assistenciaTecnica  String // Razão Social / Nome da Assistência (RN-EST-03)
+  enderecoAssistencia String
+  numeroOs            String? // Número da Ordem de Serviço
+  dataEnvio           DateTime  @default(now())
+  prazoTermino        DateTime? // Opcional. Se nulo, ativa a trigger do Cron de Alertas (RN-EST-04)
+  dataRetorno         DateTime?
+
+  // Caso dê Perda Total (RN-EST-05)
+  foiPerdaTotal   Boolean @default(false)
+  urlLaudoTecnico String? // Link do arquivo armazenado no MinIO
+
+  itemEstoque ItemEstoque @relation(fields: [itemEstoqueId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("manutencoes_ativo")
+}
+
+// ==========================================
+// CENTRAL DE ALERTAS & CONFIGURAÇÕES GERAIS
+// ==========================================
+
+model Alerta {
+  id            String               @id @default(uuid())
+  titulo        String
+  mensagem      String
+  resolvido     Boolean              @default(false)
+  destinatarios AlertaDestinatario[]
+
+  createdAt DateTime @default(now())
+
+  @@map("alertas")
+}
+
+model AlertaDestinatario {
+  id       String  @id @default(uuid())
+  alertaId String
+  membroId String // ID do usuário administrativo que precisa ver o alerta
+  lido     Boolean @default(false)
+
+  alerta Alerta @relation(fields: [alertaId], references: [id], onDelete: Cascade)
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@unique([alertaId, membroId])
+  @@map("alerta_destinatarios")
+}
+
+model ConfiguracaoGeral {
+  id                       String  @id @default(uuid())
+  // RN-MEM-05: Configuração de acolhimento de visitantes
+  responsavelVisitanteTipo String // "MEMBRO" ou "MINISTERIO"
+  responsavelMembroId      String?
+  responsavelMinisterioId  String?
+
+  responsavelMinisterio Ministerio? @relation("MinisterioResponsavel", fields: [responsavelMinisterioId], references: [id])
+
+  @@map("configuracoes_gerais")
+}
