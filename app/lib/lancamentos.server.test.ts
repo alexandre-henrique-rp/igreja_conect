@@ -77,7 +77,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "DESPESA_OPERACIONAL",
       valorCentavos: 1,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Tentativa falha",
     }, userWith("ADMIN")));
     expect(res).not.toBeNull();
@@ -94,7 +94,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "DIZIMO",
       valorCentavos: 500,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Dízimo sem membro",
     }, userWith("ADMIN"))).rejects.toThrow(); // Propaga ZodError (validação)
   });
@@ -107,13 +107,14 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "OFERTA",
       valorCentavos: 1000,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Oferta anônima",
     }, userWith("ADMIN"));
     expect(result).not.toBeNull();
-    expect(result.tipo).toBe("ENTRADA");
-    expect(result.categoria).toBe("OFERTA");
-    expect(result.membroId).toBeNull();
+    const r = result as { tipo: string; categoria: string; membroId: string | null };
+    expect(r.tipo).toBe("ENTRADA");
+    expect(r.categoria).toBe("OFERTA");
+    expect(r.membroId).toBeNull();
     const atual = await prismaTest.caixa.findUnique({ where: { id: caixa.id } });
     expect(atual!.saldoCentavos).toBe(1000);
   });
@@ -126,7 +127,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "OFERTA",
       valorCentavos: 100,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Tentar lançar em caixa arquivado",
     }, userWith("ADMIN")));
     expect(res).not.toBeNull();
@@ -141,11 +142,11 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "DESPESA_OPERACIONAL",
       valorCentavos: 1000,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Gastou tudo",
     }, userWith("ADMIN"));
     expect(result).not.toBeNull();
-    expect(result.tipo).toBe("SAIDA");
+    expect((result as { tipo: string }).tipo).toBe("SAIDA");
     const atual = await prismaTest.caixa.findUnique({ where: { id: caixa.id } });
     expect(atual!.saldoCentavos).toBe(0);
   });
@@ -158,7 +159,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "TRANSFERENCIA",
       valorCentavos: 1000,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Tentativa de transferência",
     }, userWith("ADMIN")));
     expect(res).not.toBeNull();
@@ -177,7 +178,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       valorCentavos: 1000,
       caixaId: caixa.id,
       membroId: membro.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Despesa vinculada a membro",
     }, userWith("ADMIN"))).rejects.toThrow();
   });
@@ -192,13 +193,14 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       valorCentavos: 5000,
       caixaId: caixa.id,
       membroId: membro.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Dízimo do João",
     }, userWith("ADMIN"));
     expect(result).not.toBeNull();
-    expect(result.tipo).toBe("ENTRADA");
-    expect(result.categoria).toBe("DIZIMO");
-    expect(result.membroId).toBe(membro.id);
+    const r3 = result as { tipo: string; categoria: string; membroId: string | null };
+    expect(r3.tipo).toBe("ENTRADA");
+    expect(r3.categoria).toBe("DIZIMO");
+    expect(r3.membroId).toBe(membro.id);
     const atual = await prismaTest.caixa.findUnique({ where: { id: caixa.id } });
     expect(atual!.saldoCentavos).toBe(5000);
   });
@@ -211,7 +213,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "OFERTA",
       valorCentavos: 100,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Oferta do culto",
     }, userWith("SECRETARIO"));
     expect(result).not.toBeNull();
@@ -224,7 +226,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "OFERTA",
       valorCentavos: 100,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Inválido",
     }, userWith("DISCIPULADOR")));
     expect(res).not.toBeNull();
@@ -239,7 +241,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
       categoria: "DESPESA_OPERACIONAL",
       valorCentavos: 200,
       caixaId: caixa.id,
-      dataCompetencia: "2026-06-01",
+      dataCompetencia: new Date("2026-06-01"),
       descricao: "Sem saldo",
     }, userWith("ADMIN")));
     expect(res).not.toBeNull();
