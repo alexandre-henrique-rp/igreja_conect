@@ -1,0 +1,123 @@
+{
+  "reviewer": "code-reviewer",
+  "phase": "phase.5.build",
+  "cycle": 2,
+  "sprint": "S06",
+  "timestamp": "2026-06-14T15:49:06Z",
+  "score": 0,
+  "gate": {
+    "min": 70,
+    "passed": false
+  },
+  "breakdown": {
+    "tdd": 0,
+    "docstrings": 0,
+    "simplicidade": 0,
+    "rbac3Layers": 5,
+    "lgpd": 0,
+    "monetaryConvention": 0,
+    "ragsReferenced": 0
+  },
+  "stats": {
+    "filesChecked": 0,
+    "tddRatio": "0:0",
+    "documentedRatio": "0%",
+    "simplicityScore": 0,
+    "s06FilesFound": 0,
+    "s06FilesExpected": 25
+  },
+  "strengths": [
+    "Cycle 1 baseline: assertCanSeeFinancials existe em app/lib/rbac.server.ts (S00-T05) com JSDoc completo (camada 3 RBAC).",
+    "Cycle 1 baseline: FINANCIAL_CARGOS = [ADMIN, PASTOR, FINANCEIRO] (linha 16) já reflete a matriz RN-FIN. Reutilizável para assertCanManageCaixa.",
+    "Cycle 1 baseline: Caixa.saldoCentavos em prisma/schema.prisma (linha 170) já usa Int (centavos), bloqueando uso de Float.",
+    "Cycle 1 baseline: Lancamento.membroId nullable + onDelete: SetNull (linhas 209-210) já implementa RN-FIN-05 (Dízimo vinculado, Oferta anônimo).",
+    "Cycle 1 baseline: getDizimosByMembro em finance.server.ts já aplica Camada 3 (assertCanSeeFinancials) e tem spy-test confirmando que NÃO toca DB quando perfil bloqueado (teste 'defesa em profundidade').",
+    "RAGs de S06 já estão prontos e validados: pattern-trava-saldo-service, pattern-transferencia-caixas, decision-caixa-soft-delete, architecture-financeiro.",
+    "PROMPTs de design estão prontos (6 pares DESIGN+PROMPT cobrindo 9/12 endpoints SPEC D.4)."
+  ],
+  "weaknesses": [
+    "ZERO código de S06 foi produzido. ~3h após sprint.started (12:45 → 15:49), nenhum arquivo novo existe em app/lib/, app/routes/app/, app/components/, prisma/migrations/.",
+    "Migration add_ativo_to_caixa NÃO existe. Únicas 3 migrations: add_session_model, add_config_acolhimento_and_alerta_fields, add_resolvido_to_alerta_destinatario. Schema Caixa NÃO tem campo 'ativo'.",
+    "app/lib/caixas.server.ts NÃO existe (S06-T02/T03/T04).",
+    "app/lib/lancamentos.server.ts NÃO existe (S06-T06/T07/T08).",
+    "app/lib/finance.server.ts NÃO foi estendido (S06-T05 assertSaldoSuficiente, S06-T10 getDashboardFinanceiro).",
+    "app/lib/rbac.server.ts NÃO foi estendido com assertCanManageCaixa nem assertCanCreateLancamento (S06-T03).",
+    "app/lib/schemas/caixas.ts e schemas/lancamentos.ts NÃO existem.",
+    "Rotas /app/financeiro/_index, /caixas, /caixas/novo, /caixas/:id, /lancamentos/novo NÃO existem.",
+    "Componentes CardSaldoCaixa, KpiSaldoTotal, TabelaCaixas, FormLancamento, MoneyInput, CaixaSearchBar, ExtratoFiltros, ExtratoCaixa, CaixaHeader, CardLancamento, ModalConfirmar, BadgeStatus, CardCaixa NÃO existem.",
+    "E2E spec e2e/financeiro-basico.spec.ts NÃO existe (S06-T14).",
+    "Testes de borda do brief §7.3 #3/4/5/9/11/12 NÃO foram implementados (caixas/lancamentos services não existem).",
+    "Testes de integração para S06 (caixas.server.test.ts, lancamentos.server.test.ts) NÃO existem."
+  ],
+  "blockers": [
+    "Sprint S06 está em 0% de implementação. 3 horas se passaram desde sprint.started (2026-06-14T12:45:00Z) e nenhum arquivo novo foi gerado. Fan-out Batch 1 (backend + frontend + code-reviewer) não produziu código.",
+    "Migration crítica add_ativo_to_caixa (S06-T01, base de toda decisão Caixa.ativo aprovada em phase.2) não foi criada. Bloqueia S06-T02 em diante (todos os services dependem de Caixa.ativo).",
+    "Helper canônico assertSaldoSuficiente (S06-T05, RAG pattern-trava-saldo-service §2.1) não foi implementado. Bloqueia S06-T07 (criarLancamento) e S07 (transferirEntreCaixas).",
+    "3 helpers RBAC para financeiro (assertCanManageCaixa, assertCanCreateLancamento, e filtro SECRETARIO↔DIZIMO em service) não existem. Bloqueia 4/15 tasks (S06-T03, T07, T10, T12, T13).",
+    "Gate phase.5.build (all-of) requer: coverage ≥85%, 0 critical/high security, review ≥70, LGPD ≥ warning. Nenhum dos critérios pode ser avaliado porque não há código novo."
+  ],
+  "antipatternsFound": [
+    "Nenhum antipattern encontrado em código de S06 — porque não há código de S06.",
+    "ANTIPATTERN WORKER: workers backend+frontend em fan-out Batch 1 não geraram output em ~3h. Possíveis causas: worker não iniciado, falha silenciosa, timeout, ou erro de capacidade grant. Requer investigação do orchestrator."
+  ],
+  "migrationCheck": {
+    "add_ativo_to_caixa": false,
+    "caixa_ativo_boolean": false,
+    "index_ativo": false,
+    "reversible": false,
+    "details": "prisma/migrations/ contém apenas 3 migrations de cycle 1 (add_session_model, add_config_acolhimento_and_alerta_fields, add_resolvido_to_alerta_destinatario). Nenhuma migration de S06. prisma/schema.prisma (mtime 2026-06-13 15:14) NÃO tem campo Caixa.ativo nem @@index([ativo])."
+  },
+  "rbacCheck": {
+    "assertCanSeeFinancials": true,
+    "assertCanManageCaixa": false,
+    "assertCanCreateLancamento": false,
+    "uiCanGuards": false,
+    "serviceCanGuards": false,
+    "details": "assertCanSeeFinancials EXISTE em rbac.server.ts:45 (cycle 1, S00-T05), com JSDoc, lança Response(403) para cargo fora de FINANCIAL_CARGOS. assertCanManageCaixa e assertCanCreateLancamento NÃO EXISTEM. UI <Can> guards para /app/financeiro/** NÃO foram implementados. Services de Caixa/Lançamento NÃO foram criados, então Camada 3 RBAC não pode ser verificada."
+  },
+  "tddCheck": {
+    "testsForPublicFunctions": 0,
+    "coverage": 0,
+    "redGreenRefactor": false,
+    "details": "Nenhum teste novo de S06 (caixas.server.test.ts, lancamentos.server.test.ts, estender finance.server.test.ts). 136 tests de cycle 1 em finance.server.test.ts cobrem APENAS getDizimosByMembro (S03-T11 placeholder), não assertSaldoSuficiente nem getDashboardFinanceiro. Coverage summary mais recente (S05) é 88.21% mas é de cycle 1, não inclui S06."
+  },
+  "codeCheck": {
+    "publicFunctionsS06": 0,
+    "documentedFunctionsS06": 0,
+    "functionsOver30LinesS06": 0,
+    "filesOver300LinesS06": 0,
+    "nestingOver3LevelsS06": 0,
+    "floatForMoneyS06": 0,
+    "prismaInRouteS06": 0,
+    "consoleLogS06": 0,
+    "defaultExportS06": 0,
+    "anyTypeS06": 0,
+    "details": "Métricas todas zero porque nenhum arquivo S06 existe. Impossível auditar TDD, docstrings, YAGNI/KISS sem código para auditar."
+  },
+  "lgpdCheck": {
+    "noCpfRgCnpjInS06Code": "N/A (sem código S06)",
+    "noValorCentavosInLogs": "N/A (sem código S06)",
+    "safeLogUsage": "N/A (sem código S06)",
+    "details": "Verificação LGPD em S06 é impossível porque não há código S06. Helpers canônicos (safeLog sem PII, dízimo restrito a 3 perfis) não foram referenciados em código novo."
+  },
+  "ragReferenceCheck": {
+    "assertSaldoSuficienteImplemented": false,
+    "transferirEntreCaixasImplemented": false,
+    "decisionCaixaSoftDeleteApplied": false,
+    "pattern3LayerRbacExtended": false,
+    "details": "RAGs de S06 (pattern-trava-saldo-service, pattern-transferencia-caixas, decision-caixa-soft-delete) foram lidos e referenciados nos PROMPTs de design, mas nenhum código de S06 os materializou. S07 (transferirEntreCaixas) depende de S06 (assertSaldoSuficiente) e está bloqueada."
+  },
+  "reportPath": ".harness/reviews/code-review-S06-20260614T154906Z.json",
+  "recommendation": "rework",
+  "readyForNextSprint": false,
+  "contextForOrchestrator": {
+    "sprintStartTime": "2026-06-14T12:45:00Z",
+    "reviewTime": "2026-06-14T15:49:06Z",
+    "elapsedHours": 3.07,
+    "expectedS06Artifacts": 25,
+    "foundS06Artifacts": 0,
+    "completionRate": "0%",
+    "fanOutBatch": "batch 1 (backend + frontend + code-reviewer) — 2 dos 3 workers não produziram output",
+    "actionRequired": "Investigar por que workers backend+frontend em Batch 1 não geraram código em ~3h. Verificar: (a) se foram despachados pelo orchestrator, (b) se houve erro de capability grant, (c) se timeout foi excedido, (d) se o worker está rodando em sessão paralela e ainda não terminou. Re-despachar se necessário, ou aguardar conclusão dos workers e re-executar code-review após output existir."
+  }
+}

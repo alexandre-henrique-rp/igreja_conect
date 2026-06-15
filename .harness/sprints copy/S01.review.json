@@ -1,0 +1,135 @@
+{
+  "sprint": "S01",
+  "reviewedAt": "2026-06-13T11:00:00Z",
+  "reviewer": "code-reviewer",
+  "score": 76,
+  "passThreshold": 70,
+  "passed": true,
+  "principles": {
+    "tdd": {
+      "score": 27,
+      "max": 40,
+      "findings": 2,
+      "details": "10/11 tasks S01 com teste. 91 testes unit/integration cobrindo comportamento. S01-T10 (E2E) NÃO ENTREGUE (diretório e2e/ vazio) — blocker. Histórico git não comprova TDD-first em S01 (arquivos untracked)."
+    },
+    "jsdoc": {
+      "score": 28,
+      "max": 30,
+      "findings": 2,
+      "details": "JSDoc em PT-BR + @param em inglês consistente em 19 funções públicas. @throws presente onde lança Response. @example presente em uso não-óbvio. LoginSchema e meta() sem @example/@description — -2 pontos."
+    },
+    "simplicity": {
+      "score": 21,
+      "max": 30,
+      "findings": 3,
+      "details": "YAGNI explícito e comentado (manterConectado, esqueceu-senha, cn sem clsx). Porém action() em login.tsx viola tamanho (84 vs 30) E profundidade (4 vs 3) — finding high. void useSearchParams em FormLogin — finding medium. 4 componentes JSX acima de 30 linhas — finding low."
+    }
+  },
+  "blockingFindings": 1,
+  "blockingDetails": "S01-T10 (E2E auth.spec.ts) não entregue. Diretório e2e/ vazio. Bloqueia próxima sprint (S02 depende dos 7 chains E2E para regressão).",
+  "findings": [
+    {
+      "id": "CODE-ISS-001",
+      "severity": "high",
+      "blocker": true,
+      "file": "e2e/auth.spec.ts",
+      "principle": "tdd",
+      "issue": "S01-T10 não entregue: arquivo de teste E2E Playwright inexistente. Diretório e2e/ vazio.",
+      "suggestion": "Criar e2e/auth.spec.ts cobrindo as 7 chains do design T8.4 (login sucesso, credenciais inválidas, validação, rate limit 429, autenticado em /login, sessão expirada, privacidade via spy) + bypass anônimo em /app/membros."
+    },
+    {
+      "id": "CODE-ISS-002",
+      "severity": "high",
+      "blocker": false,
+      "file": "app/routes/public/login.tsx:52-135",
+      "principle": "simplicity",
+      "issue": "Função action() tem 84 linhas (limite 30) e profundidade de aninhamento 4 (limite 3). 4 ramos de early-return (rate limit, zod, verifyCredentials, sucesso) + 4 blocos safeLog aninhados.",
+      "suggestion": "Extrair 3 helpers: rateLimitResponse(ip, retryAfter), parseLoginForm(formData, ip), successResponse(user, sid, next). action() vira pipeline linear de ~20 linhas."
+    },
+    {
+      "id": "CODE-ISS-003",
+      "severity": "medium",
+      "blocker": false,
+      "file": "app/components/FormLogin.tsx:144",
+      "principle": "simplicity",
+      "issue": "void useSearchParams; — import vivo sem uso, apenas para 'uso futuro'. Code smell: comentário auto-consciente.",
+      "suggestion": "Remover o import e o void. Se houver uso futuro, adicionar quando precisar (regra YAGNI)."
+    },
+    {
+      "id": "CODE-ISS-004",
+      "severity": "medium",
+      "blocker": false,
+      "file": "(vários — S01 untracked)",
+      "principle": "tdd",
+      "issue": "Arquivos novos da S01 (login.tsx, logout.tsx, _middleware.tsx, schemas/auth.ts, FormLogin.tsx, etc.) estão untracked no git. Não há evidência verificável de que testes foram escritos ANTES do código de feature.",
+      "suggestion": "Pedir a backend/frontend commit granular: 1 commit por task S01, com teste antes do código de feature (red-green-refactor visível no log)."
+    },
+    {
+      "id": "CODE-ISS-005",
+      "severity": "low",
+      "blocker": false,
+      "file": "app/lib/schemas/auth.ts:21",
+      "principle": "jsdoc",
+      "issue": "LoginSchema é const pública exportada mas não tem @example. Quebra consistência com o resto da sprint.",
+      "suggestion": "Adicionar @example com LoginSchema.safeParse({...})"
+    },
+    {
+      "id": "CODE-ISS-006",
+      "severity": "low",
+      "blocker": false,
+      "file": "app/routes/public/index.tsx:40",
+      "principle": "jsdoc",
+      "issue": "Função meta() tem JSDoc sucinto mas sem @description e sem @returns.",
+      "suggestion": "Adicionar @description e @returns {Array<{title?: string, name?: string, content?: string}>}"
+    },
+    {
+      "id": "CODE-ISS-007",
+      "severity": "low",
+      "blocker": false,
+      "file": "app/components/Button.tsx:170-172",
+      "principle": "simplicity",
+      "issue": "aria-disabled='true' é emitido em <button> mesmo quando HTML disabled já está presente. Screen reader anuncia DUAS vezes (a11y, transversal).",
+      "suggestion": "Remover aria-disabled quando o componente renderiza <button> nativo. Manter aria-disabled apenas em <Link> polimórfico."
+    },
+    {
+      "id": "CODE-ISS-008",
+      "severity": "low",
+      "blocker": false,
+      "file": "(4 componentes)",
+      "principle": "simplicity",
+      "issue": "Button (47), Input (65), TopbarPublica (47), FormLogin (89) — todos acima de 30 linhas.",
+      "suggestion": "Aceitável para JSX linear; revisar se algum crescer mais em sprints futuras."
+    }
+  ],
+  "stats": {
+    "filesChecked": 18,
+    "filesS01Feature": 13,
+    "filesS01Test": 13,
+    "tddRatio": "1:1 (excluindo S01-T10 faltando + S01-T11 N/A)",
+    "documentedRatio": "100% das funções públicas com JSDoc; 2 com @example ausente",
+    "simplicityScore": 21,
+    "linesTotal": 2477,
+    "functionsOver30Lines": 5,
+    "maxNestingDepth": 4,
+    "tasksCompleted": "10/11",
+    "testsAdded": 91,
+    "e2eTestsAdded": 0
+  },
+  "positiveFindings": [
+    "Anti-enumeração implementada E testada: verifyCredentials retorna null em 3 cenários indistinguíveis, e teste afirma explicitamente que senhaHash/email NÃO vazam (LGPD §2.5).",
+    "Defesa em profundidade materializada: 3 camadas (verifyCredentials server, _middleware /app/**, safeLog allowlist), cada uma com teste próprio. RAG security-rbac-matrix.md em código.",
+    "Open-redirect prevenido E testado: safeNext() rejeita //evil.com, teste login.test.tsx:151 verifica o bloqueio.",
+    "Acessibilidade exemplar nos componentes: aria-required, aria-invalid, aria-describedby, role=alert, skip link WCAG 2.4.1. Tudo testado no HTML SSR.",
+    "JSDoc em PT-BR consistente: 19 funções públicas com @description em PT, @param em inglês, @throws quando aplicável, @example para uso não-óbvio.",
+    "YAGNI explícito e comentado: manterConectado sem mudar TTL, 'esqueceu a senha' sem fluxo, cn() sem clsx com justificativa."
+  ],
+  "recommendation": "pass-with-followups",
+  "recommendationRationale": "Score 76 PASS o gate (>=70), mas S01-T10 (E2E) é blocker para S02 (regressão depende dos 7 chains). Recomenda-se: (1) backend/frontend entrega e2e/auth.spec.ts antes de fechar S01; (2) backend refatora action() em login.tsx quebrando em 3 helpers; (3) próximo code-review (S02) deve auditar YAGNI nos componentes JSX que ficaram no limite.",
+  "ragCandidate": {
+    "title": "convention-react-router-actions",
+    "category": "convention",
+    "priority": "medium",
+    "rationale": "Função action() em rota de auth facilmente ultrapassa 30 linhas e profundidade 3 quando concentra 4 etapas (rate limit, validação, credenciais, sucesso) + 4 blocos safeLog. Lição: rotas com side-effects server-side devem extrair helpers nomeados por etapa, deixando o action() como pipeline linear de ~20 linhas.",
+    "appliesTo": ["app/routes/**/action.ts", "app/routes/**/*.tsx (com action export)"]
+  }
+}

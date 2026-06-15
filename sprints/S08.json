@@ -1,0 +1,283 @@
+{
+  "_type": "harness-sprint-v6",
+  "id": "S08",
+  "cycle": 2,
+  "scope": "financeiro",
+  "name": "Fidelidade Financeira — Integração com aba de Membro (RN-MEM-03)",
+  "goal": "Substituir o placeholder do `TabFidelidadeFinanceira` por uma lista real de dízimos + card de resumo mensal/anual, integrada à aba Fidelidade em `/app/membros/:id?tab=fidelidade`. Defesa em 3 camadas: UI `<Can>` esconde para perfis bloqueados, loader `canSeeFinancials` redireciona para `?tab=dados` (UX, não 403), service `getDizimosByMembro` lança 403 (Camada 3 redundante). Fecha a métrica macro (PARTE 2): PASTOR vê dízimo recém-lançado pelo FINANCEIRO.",
+  "status": "pending",
+  "estimatedDays": 3,
+  "estimatedHours": 24,
+  "dependsOn": ["S07"],
+  "userStories": [
+    "US-FIN-006 (F6 — Aba Fidelidade Financeira integrada)",
+    "US-FIN-008 (F8 — RBAC fina 3 camadas)",
+    "US-MEM-005 (re-uso — métrica macro PARTE 2)"
+  ],
+  "specCoverage": {
+    "endpoints_specced_d4": [],
+    "endpoints_reused": "Aba Fidelidade reusa rota existente /app/membros/:id (membros.$id.tsx do ciclo 1) — sem novo endpoint D.4",
+    "testes_borda_cobertos": [10],
+    "rns_implemented": ["RN-MEM-03 (3 camadas)", "RN-FIN-05 (filtro DIZIMO)"]
+  },
+  "ragsReferenced": [
+    "architecture-financeiro §3.4 (fluxo Fidelidade)",
+    "security-rbac-matrix",
+    "pattern-3-layer-rbac",
+    "lgpd-igreja-conect",
+    "convention-monetary-values",
+    "convention-prisma-sqlite"
+  ],
+  "tasks": [
+    {
+      "id": "S08-T01",
+      "title": "Estender `getDizimosByMembro` em `app/lib/finance.server.ts` (substituir placeholder — adicionar paginação + resumo mês/ano via Promise.all)",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 3,
+      "dependsOn": [],
+      "specRefs": ["PRD D.4 F6", "brief §7.1 métrica macro PARTE 2 (PASTOR vê dízimo em < 2 min)", "brief §7.3 teste #10 (SECRETARIO bypass URL → 403)"],
+      "rags": ["architecture-financeiro §3.4", "security-rbac-matrix", "convention-prisma-sqlite", "pattern-3-layer-rbac"],
+      "files": {
+        "create": [],
+        "modify": ["app/lib/finance.server.ts (substituir placeholder)"]
+      },
+      "tdd": {
+        "testFirst": "Teste VERMELHO: getDizimosByMembro(membroId, {}, adminUser) com 10 dízimos retorna items[10], total=10, resumo.mes/ano com counts e totais corretos. Verde após.",
+        "testPath": "app/lib/finance.server.test.ts (estender)",
+        "acceptance": "100% cobertura + teste de borda #10 (SECRETARIO bypass URL) verde"
+      },
+      "acceptanceCriteria": [
+        "Substituir placeholder atual (`getDizimosByMembro(membroId, user): Array<unknown>`) por implementação canônica: `getDizimosByMembro(membroId, options: { page?: number; pageSize?: number } = {}, user: SessionUser): Promise<{ items: LancamentoResumo[]; total: number; page: number; pageSize: number; resumo: { mes: { totalCentavos: number; count: number }; ano: { totalCentavos: number; count: number } } }>`",
+        "Camada 3 RBAC PRIMEIRO: `assertCanSeeFinancials(user)` (3 perfis: ADMIN, PASTOR, FINANCEIRO) — SECRETARIO/DISCIPULADOR/LIDER_MINISTERIO → Response(403)",
+        "Computar `firstDayOfMonth`, `firstDayOfNextMonth`, `firstDayOfYear`, `firstDayOfNextYear` a partir de `new Date()`",
+        "Where base: `{ membroId, categoria: 'DIZIMO' as const }` — OFERTA anônima não aparece (mesmo com membroId)",
+        "**4 queries em PARALELO via `Promise.all`:** (1) `items = findMany` com paginação; (2) `total = count`; (3) `sumMes + countMes` (aggregate + count para mês); (4) `sumAno + countAno` (aggregate + count para ano)",
+        "Items `orderBy: [{ dataCompetencia: 'desc' }, { id: 'asc' }]` (determinística para dízimos na mesma data)",
+        "Select dos items: `{ id, dataCompetencia, valorCentavos, descricao, caixa: { select: { id, nome } } }` — SEM membro (não precisa exibir; o dono é o próprio membroId da URL)",
+        "Tipos: `export type LancamentoResumo = { id: string; dataCompetencia: Date; valorCentavos: number; descricao: string; caixa: { id: string; nome: string } }`; `export type ResumoFidelidade = { mes: { totalCentavos: number; count: number }; ano: { totalCentavos: number; count: number } }`",
+        "Edge case: 0 dízimos → `{ items: [], total: 0, resumo: { mes: { totalCentavos: 0, count: 0 }, ano: { totalCentavos: 0, count: 0 } } }`",
+        "Edge case: dízimo órfão (membro foi deletado) — `Lancamento.membroId` é `SetNull` no schema; se `membroId === null`, serviço não retorna (filtro where membroId = X garante que só retorna se o membro EXISTE na URL; histórico preservado com `membro: null` no display)",
+        "`safeLog({ action: 'view_dizimos', resource: 'membro:<id>', userId, result: 'ok' })` — SEM `valorCentavos` ou lista de dízimos (RAG `lgpd-igreja-conect` §2.5)",
+        "JSDoc completo (substituir o do placeholder)",
+        "**Testes (TDD):**",
+        "  - Happy path: membro com 10 dízimos (5 no mês corrente, 3 no ano anterior, 2 futuros), adminUser → items=10, total=10, resumo.mes.count=5, resumo.ano.count=8 (sem os 2 futuros)",
+        "  - Paginação: `page=1, pageSize=3` → items=3, total=10",
+        "  - Membro sem dízimos: items=[], total=0, resumo zerado",
+        "  - SECRETARIO → Response(403) (Camada 3 — teste de borda #10 do brief)",
+        "  - DISCIPULADOR → Response(403)",
+        "  - PASTOR → OK (3 perfis passam)"
+      ],
+      "done": false
+    },
+    {
+      "id": "S08-T02",
+      "title": "Adicionar helper `canSeeFinancials(user): boolean` em `rbac.server.ts` (Camada 2 — UX, NÃO substitui assertCanSeeFinancials)",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 0.5,
+      "dependsOn": [],
+      "specRefs": ["PRD D.4 F6 (3 camadas)", "PRD D.4 (DISCIPULADOR bypass URL → 403)"],
+      "rags": ["pattern-3-layer-rbac", "security-rbac-matrix"],
+      "files": {
+        "create": [],
+        "modify": ["app/lib/rbac.server.ts (+canSeeFinancials)"]
+      },
+      "tdd": {
+        "testFirst": "Teste unit: canSeeFinancials(adminUser) → true; canSeeFinancials(secretarioUser) → false; canSeeFinancials(discipuladorUser) → false",
+        "testPath": "app/lib/rbac.server.test.ts (estender)",
+        "acceptance": "100% cobertura"
+      },
+      "acceptanceCriteria": [
+        "Helper `canSeeFinancials(user: SessionUser): boolean` em `app/lib/rbac.server.ts`",
+        "Implementação: `return user.cargo === 'ADMIN' || user.cargo === 'PASTOR' || user.cargo === 'FINANCEIRO'`",
+        "**NÃO lança** — apenas retorna boolean. Usado em loaders para decidir se redireciona (Camada 2 UX)",
+        "**NÃO substitui `assertCanSeeFinancials`** (que lança 403 — Camada 3 service). Ambos coexistem",
+        "JSDoc explicando a coexistência (loader redirect + service throw + UI hide = 3 camadas)",
+        "Testes: 4 cenários (admin true, pastor true, financeiro true, secretario false, discipulador false, liderMinisterio false)"
+      ],
+      "done": false
+    },
+    {
+      "id": "S08-T03",
+      "title": "Componentes `<ResumoFinanceiro>` + `<TabelaDizimos>` + `<CardDizimo>` (mobile)",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 2.5,
+      "dependsOn": ["S08-T01"],
+      "specRefs": ["PRD D.4 F6 (tabela + card resumo)", "PRD §3.1 métrica macro PARTE 2"],
+      "rags": ["convention-monetary-values", "architecture-financeiro §3.4"],
+      "files": {
+        "create": [
+          "app/components/ResumoFinanceiro.tsx",
+          "app/components/TabelaDizimos.tsx",
+          "app/components/CardDizimo.tsx"
+        ],
+        "modify": []
+      },
+      "tdd": {
+        "testFirst": "Snapshot test de cada componente com mock data",
+        "testPath": "app/components/*.test.tsx (Vitest + React Testing Library)",
+        "acceptance": "Componentes renderizam corretamente; formatBRLFromCents aplicado; singular/plural correto"
+      },
+      "acceptanceCriteria": [
+        "`<ResumoFinanceiro mes, ano, now?>`: 2 cards cyan-50 (mês atual + ano corrente) com `Intl.DateTimeFormat('pt-BR', { month: 'long' })` para nome do mês, `formatBRLFromCents` para totais, contagem de dízimos (singular/plural), data-testid='resumo-mes-valor' e 'resumo-ano-valor', aria-label descritivo",
+        "`<TabelaDizimos items>`: tabela com Data (dd/MM/yyyy) / Valor (verde +R$ X,XX, formatBRLFromCents, font-mono tabular-nums) / Caixa (nome) / Descrição (truncate, max-w-xs)",
+        "`<CardDizimo>`: versão mobile (cards) com mesmas props",
+        "Formatação monetária 100% via `formatBRLFromCents` (helper do RAG `convention-monetary-values`)",
+        "Lighthouse Accessibility ≥ 95 (aria-labels descritivos, `<caption className='sr-only'>`)",
+        "JSDoc em cada componente"
+      ],
+      "done": false
+    },
+    {
+      "id": "S08-T04",
+      "title": "Substituir `TabFidelidadeFinanceira.tsx` (placeholder → implementação real) + integrar `<ResumoFinanceiro>` + `<TabelaDizimos>`",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 2,
+      "dependsOn": ["S08-T01", "S08-T03"],
+      "specRefs": ["PRD D.4 F6 (substituir placeholder)"],
+      "rags": ["architecture-financeiro §3.4 (camada 1 UI)"],
+      "files": {
+        "create": [],
+        "modify": ["app/components/TabFidelidadeFinanceira.tsx (substituir placeholder)"]
+      },
+      "tdd": {
+        "testFirst": "Snapshot test do componente atualizado com mock data",
+        "testPath": "app/components/TabFidelidadeFinanceira.test.tsx (atualizar — placeholder test já existia do ciclo 1)",
+        "acceptance": "Componente renderiza tabela + resumo + EmptyState amigável; botão '+ Lançar dízimo' condicional"
+      },
+      "acceptanceCriteria": [
+        "Substituir o corpo do componente (que era `<InfoBox>Módulo Financeiro ainda não disponível</InfoBox>`) pela implementação real",
+        "Props: `dizimos: LancamentoResumo[]`, `resumo: ResumoFidelidade`, `membroId: string`, `podeLancarDizimo: boolean` (true para ADMIN/PASTOR/FINANCEIRO)",
+        "Estrutura: `<div role='region' data-testid='tab-fidelidade'>` com h2 'Fidelidade Financeira' + botão '+ Lançar dízimo' (link para `/app/financeiro/lancamentos/novo?membroId=<id>`, condicional a `podeLancarDizimo`) + `<ResumoFinanceiro>` + (se dizimos.length > 0) `<TabelaDizimos>` + `<CardDizimo>` else `<EmptyState>`",
+        "EmptyState amigável: 'Nenhum dízimo registrado' + 'Lançamento é feito pelo Financeiro em /app/financeiro/lancamentos/novo.'",
+        "**Manter Camada 1 (UI) do ciclo 1 intacta:** componente SÓ é renderizado se `canSeeFinancials(user)` — não alterar `<Can allow={['ADMIN', 'PASTOR', 'FINANCEIRO']}>` no TabsMembro (camada 1 já implementada em S03-T07 do ciclo 1)",
+        "Atualizar JSDoc do componente (remover menção a 'placeholder')"
+      ],
+      "done": false
+    },
+    {
+      "id": "S08-T05",
+      "title": "Estender `app/routes/app/membros.$id.tsx` (loader — adicionar Camada 2 redirect + chamada a `getDizimosByMembro` quando tab=fidelidade)",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 2.5,
+      "dependsOn": ["S08-T01", "S08-T02", "S08-T04"],
+      "specRefs": ["PRD D.4 F6 (3 camadas)", "PRD D.4 (DISCIPULADOR bypass URL → 403 — implementado como redirect UX)"],
+      "rags": ["pattern-3-layer-rbac §2.3 (loader exemplo)", "architecture-financeiro §3.4"],
+      "files": {
+        "create": [],
+        "modify": ["app/routes/app/membros.$id.tsx (estender loader + componente)"]
+      },
+      "tdd": {
+        "testFirst": "TDD do redirect: loader com tab=fidelidade + SECRETARIO → throw redirect para ?tab=dados (NÃO throw 403 — UX decision)",
+        "testPath": "app/routes/app/membros.$id.test.ts (estender — teste de bypass URL)",
+        "acceptance": "100% cobertura: 3 cenários (admin OK, secretario redirect, discipulador redirect)"
+      },
+      "acceptanceCriteria": [
+        "Estender loader de `app/routes/app/membros.$id.tsx`: parse `tab` e `page` da URL (`tab ?? 'dados'`, `page ?? 1`)",
+        "**Camada 2 RBAC (UX, não 403):** se `tab === 'fidelidade' && !canSeeFinancials(user)` → `throw redirect(\\`/app/membros/\\${params.id}?tab=dados\\`)` — UX, não vaza informação sobre a existência da aba",
+        "Se `tab === 'fidelidade'`: chamar `await getDizimosByMembro(params.id, { page, pageSize: 25 }, user)` (Camada 3 redundante)",
+        "Passar `dizimos`, `resumo`, `tab`, `page`, `total` para o componente",
+        "Componente: renderizar a aba correta baseado em `tab` — se `tab === 'fidelidade' && canSeeFinancials(user)`, renderizar `<TabFidelidadeFinanceira dizimos={dizimos} resumo={resumo} membroId={membro.id} podeLancarDizimo={true} />` (RBAC fina via prop)",
+        "Manter integração com `<TabsMembro>` (ciclo 1, S03-T07) — apenas passar props novas",
+        "**3 camadas verificadas:** (1) UI `<Can>` esconde aba (ciclo 1); (2) loader redirect (S08-T05); (3) service assertCanSeeFinancials lança 403 (S08-T01)",
+        "Testes integração do loader: 3 cenários (admin OK, SECRETARIO redirect para ?tab=dados, DISCIPULADOR redirect)"
+      ],
+      "done": false
+    },
+    {
+      "id": "S08-T06",
+      "title": "Testes E2E Playwright — atualizar `e2e/fidelidade-bypass.spec.ts` (3 vetores de bypass + métrica macro PARTE 2)",
+      "type": "test",
+      "owner": "tester",
+      "estimatedHours": 3,
+      "dependsOn": ["S08-T04", "S08-T05"],
+      "specRefs": ["brief §7.3 teste #10 (SECRETARIO bypass URL → 403)", "brief §7.1 métrica macro PARTE 2 (PASTOR vê dízimo)"],
+      "rags": ["lesson-route-service-bypass", "pattern-3-layer-rbac", "architecture-financeiro §3.4"],
+      "files": {
+        "create": [],
+        "modify": ["e2e/fidelidade-bypass.spec.ts (estender — adicionar chains da métrica macro + 3 camadas Fidelidade)"]
+      },
+      "tdd": {
+        "testFirst": "E2E escrito ANTES do fechamento da sprint (validação final do gate)",
+        "testPath": "e2e/fidelidade-bypass.spec.ts (estender)",
+        "acceptance": "6+ chains Playwright verdes (3 originais + 3 novas), executa em < 60s"
+      },
+      "acceptanceCriteria": [
+        "**Manter chains do ciclo 1 (S03-T12):**",
+        "  - Chain 1: PASTOR loga → `/app/membros/<mariaId>?tab=fidelidade` → vê tabela com dízimos",
+        "  - Chain 2: UI não renderiza aba para SECRETARIO",
+        "  - Chain 3: source-audit (grep estático confirma ordem assertCan* < prisma.*)",
+        "**Novas chains (S08):**",
+        "  - Chain 4 (Camada 1 UI): SECRETARIO loga → `/app/membros/<id>` → aba Fidelidade NÃO renderiza no DOM (verificar com `expect(page.locator('[data-testid=\"tab-fidelidade\"]')).not.toBeVisible()`)",
+        "  - Chain 5 (Camada 2 loader): SECRETARIO com cookie sid → `fetch /app/membros/<id>?tab=fidelidade` direto → recebe 302 para `?tab=dados` (Camada 2 redirect)",
+        "  - Chain 6 (Camada 3 service): Bypass programático (curl com cookie) chamando `getDizimosByMembro` diretamente → recebe 403 (verificável via teste de integração)",
+        "  - Chain 7 (métrica macro PARTE 2): setup do S06-T14 Chain 6 (FINANCEIRO lança dízimo do Membro X) → PASTOR em outra sessão abre `/app/membros/<X>?tab=fidelidade` → vê dízimo recém-criado + cards de resumo atualizados (mês e ano). Tudo em < 2 min",
+        "  - Chain 8 (métrica macro VISTA PASTOR): PASTOR vê `resumo-mes-valor` R$ 50,00 (1 dízimo) e `resumo-ano-valor` R$ 50,00 (1 dízimo)",
+        "  - Chain 9 (métrica macro DISCIPULADOR): DISCIPULADOR loga → `/app/membros/<id>?tab=fidelidade` → 302 para `?tab=dados` (Camada 2)",
+        "  - Chain 10 (EmptyState): membro sem dízimos → vê 'Nenhum dízimo registrado' + descrição amigável",
+        "Workaround `dbSettle(100)` em transações recém-criadas",
+        "Total: < 60s para rodar todas as chains"
+      ],
+      "done": false
+    },
+    {
+      "id": "S08-T07",
+      "title": "Auditoria segurança + LGPD — checklist S08 (RN-MEM-03 3 camadas, safeLog sem PII, métrica macro)",
+      "type": "review",
+      "owner": "security",
+      "estimatedHours": 1.5,
+      "dependsOn": ["S08-T05", "S08-T06"],
+      "specRefs": ["PRD D.7.2 (gate qualidade)", "PRD D.6 R-FIN-03 (vazamento dízimos)"],
+      "rags": ["lgpd-igreja-conect §2.2 (dízimos restritos)", "security-rbac-matrix", "pattern-3-layer-rbac"],
+      "files": {
+        "create": [".harness/audit/security-s08.md", ".harness/audit/lgpd-s08.md"],
+        "modify": []
+      },
+      "tdd": {
+        "testFirst": "N/A (auditoria manual + greps)",
+        "testPath": "N/A (relatório em .harness/audit/)",
+        "acceptance": "0 vuln critical/high; LGPD compliant; métrica macro PARTE 2 verificada"
+      },
+      "acceptanceCriteria": [
+        "**Security audit (.harness/audit/security-s08.md):**",
+        "  - A01 (Broken Access Control): 3 camadas verificadas em Fidelidade (UI <Can> + loader redirect + service 403) — todos os 4 vetores de bypass cobertos (UI ausente, URL redirect, service 403, curl programático)",
+        "  - A03 (Injection): `where: { membroId, categoria: 'DIZIMO' }` filtra estritamente — sem SQL injection (Prisma parametrizado)",
+        "  - A04 (Insecure Design): sem auditoria de leitura (LGPD art. 37) é backlog explícito (brief §8 — não-objetivo); service não loga lista de dízimos",
+        "  - A09 (Logging): grep `console.log` em `app/lib/finance.server.ts` → apenas safeLog; sem `valorCentavos` em log",
+        "  - Score: 0 critical, 0 high, < 3 medium",
+        "**LGPD audit (.harness/audit/lgpd-s08.md):**",
+        "  - §2.2 (Dízimos restritos): SECRETARIO via URL tem redirect UX (Camada 2); service 403 (Camada 3) — 4 vetores E2E verdes",
+        "  - §2.5 (logs sem PII): grep em `app/lib/finance.server.ts` por 'valorCentavos' ou 'dizimos' em string literal → 0 fora de JSDoc",
+        "  - Status: 'LGPD Compliant'",
+        "  - **Métrica macro PARTE 2 verificada:** PASTOR vê dízimo recém-lançado pelo FINANCEIRO (testado em S08-T06 Chain 7+8)"
+      ],
+      "done": false
+    }
+  ],
+  "workers": ["backend", "frontend", "tester", "security", "lgpd-officer", "code-reviewer"],
+  "coverageTarget": 85,
+  "serviceCoverageTarget": 100,
+  "gate": {
+    "type": "all-of",
+    "checks": [
+      { "type": "coverage", "min": 85, "scope": "global" },
+      { "type": "coverage", "min": 100, "scope": "finance.server.ts (getDizimosByMembro)" },
+      { "type": "security", "maxCritical": 0, "maxHigh": 0 },
+      { "type": "review", "agent": "code-reviewer", "min": 70 },
+      { "type": "lgpd", "min": "warning" }
+    ]
+  },
+  "testesBordaObrigatorios": [
+    { "id": 10, "name": "SECRETARIO aba fidelidade (UI ausente + URL redirect + service 403)", "covered_in": "S08-T01 (service 403) + S08-T05 (loader redirect) + S08-T06 (4 chains E2E)" }
+  ],
+  "userStoryCoverage": {
+    "US-FIN-006 (F6 Fidelidade)": "S08-T01, S08-T03, S08-T04, S08-T05",
+    "US-FIN-008 (F8 RBAC fina)": "S08-T02, S08-T05, S08-T06",
+    "US-MEM-005 (re-uso)": "S08-T01, S08-T04, S08-T05, S08-T06 (métrica macro PARTE 2)"
+  },
+  "notes": "Sprint final do ciclo 2. Substitui placeholder do TabFidelidadeFinanceira por dados reais. Fecha a métrica macro (PARTE 1 em S06, PARTE 2 aqui): FINANCEIRO lança dízimo, PASTOR vê na aba. 3 camadas verificadas (UI <Can> + loader redirect + service 403). Re-uso de US-MEM-005 do ciclo 1. 24h estimadas (~3 dias × 1 dev). Cobre 1/12 testes de borda restantes (#10). Total ciclo 2: 64+32+24 = 120h, ~15 dias × 1 dev (3 sprints de 2 semanas cada)."
+}

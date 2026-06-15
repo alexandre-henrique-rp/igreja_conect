@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "headers": {
+    "vary": "Origin",
+    "content-type": "text/html",
+    "date": "Sun, 14 Jun 2026 01:22:49 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": "<!DOCTYPE html><html lang=\"pt-BR\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><title>Visitante Smoke 1 s05-smoke-cdfdc830 — Igreja Conect</title><link rel=\"modulepreload\" href=\"/node_modules/.pnpm/@react-router+dev@7.17.0_@react-router+serve@7.17.0_react-router@7.17.0_react-dom@19.2._c2175259156071906b52404c14226f7a/node_modules/@react-router/dev/dist/config/defaults/entry.client.tsx\"/><link rel=\"modulepreload\" href=\"/app/root.tsx\"/><link rel=\"modulepreload\" href=\"/app/routes/app/_middleware.tsx\"/><link rel=\"modulepreload\" href=\"/app/routes/app.tsx\"/><link rel=\"modulepreload\" href=\"/app/routes/app/membros.$id.tsx\"/><link data-react-router-critical-css=\"\" rel=\"stylesheet\" href=\"/@react-router/critical.css?pathname=/app/membros/58387d36-c70e-4cfd-8219-889c421419f3\"/></head><body><div class=\"min-h-screen flex flex-col bg-slate-50\"><a href=\"#main-content\" class=\"\n          sr-only focus:not-sr-only\n          focus:fixed focus:top-2 focus:left-2 focus:z-50\n          focus:px-3 focus:py-2 focus:rounded-md\n          focus:bg-cyan-700 focus:text-white focus:text-sm focus:font-medium\n          focus:shadow-lg\n        \">Pular para o conteúdo</a><header class=\"sticky top-0 z-20 bg-white border-b border-slate-200\"><div class=\"flex h-14 items-center justify-between px-4 sm:px-6\"><a aria-label=\"Ir para o dashboard\" class=\"font-semibold text-slate-900 hover:text-cyan-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded\" href=\"/app\" data-discover=\"true\">Igreja Conect</a><div class=\"flex items-center gap-3\"><a aria-label=\"Alertas\" class=\"relative inline-flex items-center justify-center h-9 w-9 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2\" href=\"/app/alertas\" data-discover=\"true\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"h-"
+}

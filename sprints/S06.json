@@ -1,0 +1,871 @@
+{
+  "_type": "harness-sprint-v6",
+  "id": "S06",
+  "cycle": 2,
+  "scope": "financeiro",
+  "name": "Foundation Financeiro — Caixas + Lançamentos + Dashboard",
+  "goal": "Implementar a foundation do Módulo Financeiro: migration Caixa.ativo (RN-FIN-01), services de Caixa e Lancamento, dashboard de saldos, listas e detalhe de Caixa, e formulário de Novo Lançamento, com defesa em 3 camadas (UI/loader/service), trava de saldo no service, e cobertura de testes de borda do brief §7.3.",
+  "status": "in_progress",
+  "estimatedDays": 8,
+  "estimatedHours": 64,
+  "dependsOn": [
+    "S05"
+  ],
+  "userStories": [
+    "US-FIN-001 (F1 — CRUD de Caixas)",
+    "US-FIN-002 (F2 — CRUD de Lançamentos)",
+    "US-FIN-003 (F3 — Dízimos vinculados a Membro)",
+    "US-FIN-005 (F5 — Trava de Saldo no service)",
+    "US-FIN-007 (F7 — Dashboard de saldos)",
+    "US-FIN-008 (F8 — RBAC fina 3 camadas)"
+  ],
+  "specCoverage": {
+    "endpoints_specced_d4": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "testes_borda_cobertos": [
+      3,
+      4,
+      5,
+      9,
+      11,
+      12
+    ],
+    "rns_implemented": [
+      "RN-FIN-01",
+      "RN-FIN-04",
+      "RN-FIN-05",
+      "RN-MEM-03 (Camada 2 em dashboard)"
+    ]
+  },
+  "ragsReferenced": [
+    "pattern-trava-saldo-service",
+    "decision-caixa-soft-delete",
+    "convention-monetary-values",
+    "security-rbac-matrix",
+    "pattern-3-layer-rbac",
+    "lgpd-igreja-conect",
+    "architecture-financeiro",
+    "convention-prisma-sqlite",
+    "lesson-route-service-bypass",
+    "lesson-prisma-7-commit-settle-e2e"
+  ],
+  "tasks": [
+    {
+      "id": "S06-T01",
+      "title": "Migration: adicionar Caixa.ativo (Boolean @default(true)) + @@index([ativo])",
+      "type": "infra",
+      "owner": "backend",
+      "estimatedHours": 1.5,
+      "dependsOn": [],
+      "specRefs": [
+        "PRD D.4 F1",
+        "PRD D.9 (Caixa.ativo approved)",
+        "SPEC D.2.1",
+        "RAG decision-caixa-soft-delete"
+      ],
+      "rags": [
+        "decision-caixa-soft-delete",
+        "convention-prisma-sqlite"
+      ],
+      "files": {
+        "create": [
+          "prisma/migrations/<timestamp>_add_ativo_to_caixa/migration.sql"
+        ],
+        "modify": [
+          "prisma/schema.prisma (model Caixa: +ativo +@@index)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "Teste de integração verifica que listarCaixas({ apenasAtivos: true }) exclui Caixa com ativo=false",
+        "testPath": "app/lib/caixas.server.test.ts (a ser criado em S06-T02)",
+        "acceptance": "Migration aplica sem erro, seed cria Caixa Geral com ativo=true, retrocompat: caixas existentes ficam ativo=true (DEFAULT 1)"
+      },
+      "acceptanceCriteria": [
+        "Migration gerada via `pnpm prisma migrate dev --name add_ativo_to_caixa` (não editada à mão)",
+        "SQL gerado: `ALTER TABLE caixas ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT 1; CREATE INDEX caixas_ativo_idx ON caixas(ativo);`",
+        "Schema pós-migration: `model Caixa { ... ativo Boolean @default(true) ... @@index([ativo]) @@map(\"caixas\") }`",
+        "Prisma client regenerado: `pnpm prisma generate`",
+        "Teste de retrocompat: `prisma/seed.ts` cria Caixa Geral com ativo=true (verificar `setupTestDb` + seed idempotente)",
+        "db:reset (dropa dev.db + recria + seed + migrate) roda sem erros e mantém Caixa Geral com ativo=true"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T02",
+      "title": "Service `caixas.server.ts` — `listarCaixas` com filtro `apenasAtivos` + `assertCanSeeFinancials` PRIMEIRO + schema `CaixaCreateSchema`",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 3,
+      "dependsOn": [
+        "S06-T01"
+      ],
+      "specRefs": [
+        "PRD D.4 F1 (listar)",
+        "SPEC D.4 GET /app/financeiro/caixas"
+      ],
+      "rags": [
+        "decision-caixa-soft-delete",
+        "security-rbac-matrix",
+        "pattern-3-layer-rbac",
+        "convention-monetary-values"
+      ],
+      "files": {
+        "create": [
+          "app/lib/caixas.server.ts",
+          "app/lib/schemas/caixas.ts"
+        ],
+        "modify": []
+      },
+      "tdd": {
+        "testFirst": "Teste vermelho: listarCaixas({ apenasAtivos: true }, adminUser) com 1 caixa ativo + 1 arquivado retorna só o ativo. Verde após implementação.",
+        "testPath": "app/lib/caixas.server.test.ts",
+        "acceptance": "Cobertura 100% do branch (apenasAtivos: true|false|undefined, com q, sem q, 0 caixas)"
+      },
+      "acceptanceCriteria": [
+        "Service `caixas.server.ts` exporta `listarCaixas(options, user)` com assinatura: `{ apenasAtivos?: boolean; q?: string }`",
+        "Camada 3 RBAC PRIMEIRO: `assertCanSeeFinancials(user)` lança 403 se cargo não está em {ADMIN, PASTOR, FINANCEIRO, SECRETARIO}",
+        "Filtro padrão: `where: { ativo: options.apenasAtivos !== false ? true : undefined }` (default true; undefined mostra todos)",
+        "Busca textual: `where.nome = { contains: options.q }` (case-insensitive no SQLite)",
+        "Ordenação: `orderBy: { nome: 'asc' }`",
+        "Select mínimo: `id, nome, saldoCentavos, ativo, createdAt`",
+        "Para cada caixa: computar `lancamentosMes` via `prisma.lancamento.count({ where: { caixaId, dataCompetencia: { gte: firstDayOfMonth } } })`",
+        "Retorno: `{ ativos: CaixaResumo[], arquivados: CaixaResumo[] }` (sempre 2 arrays para toggle on/off sem refetch)",
+        "Schema `CaixaCreateSchema` em `app/lib/schemas/caixas.ts` — `z.object({ nome: z.string().min(2).max(80).regex(/^[\\w\\sÀ-ÿ-]+$/, 'Nome inválido.') }).strict()`",
+        "Tipos: `export type CaixaCreateInput = z.infer<typeof CaixaCreateSchema>`; `export type CaixaResumo` (id, nome, saldoCentavos, ativo, lancamentosMes, createdAt)",
+        "JSDoc completo com `@param`, `@returns`, `@throws`, `@example`",
+        "Edge case: 0 caixas → `{ ativos: [], arquivados: [] }`",
+        "Testes integração: 4 cenários (admin 1 seed visível, admin com toggle ON vê arquivados, q match/no match, 0 caixas edge case)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T03",
+      "title": "Service `criarCaixa` + estender `rbac.server.ts` com `assertCanManageCaixa` (helper novo, 3 perfis)",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 2.5,
+      "dependsOn": [
+        "S06-T02"
+      ],
+      "specRefs": [
+        "PRD D.4 F1 (criação)",
+        "SPEC D.4 POST /app/financeiro/caixas"
+      ],
+      "rags": [
+        "security-rbac-matrix",
+        "lgpd-igreja-conect §2.5 (sem nome/saldo em log)"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "app/lib/rbac.server.ts (+assertCanManageCaixa)",
+          "app/lib/caixas.server.ts (+criarCaixa)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "Teste vermelho: criarCaixa({ nome: 'Cantina' }, adminUser) cria Caixa; criarCaixa({}, secretarioUser) → 403; criarCaixa({ nome: 'Caixa Geral' }, adminUser) → 409 (P2002). Verde após.",
+        "testPath": "app/lib/caixas.server.test.ts",
+        "acceptance": "100% cobertura de branches (sucesso, 403, 409 dup, 422 Zod)"
+      },
+      "acceptanceCriteria": [
+        "Helper `assertCanManageCaixa(user: SessionUser): void` em `app/lib/rbac.server.ts` — lista {ADMIN, PASTOR, FINANCEIRO} (3 perfis, NÃO inclui SECRETARIO)",
+        "Lança `Response(403, 'Você não tem permissão para criar ou arquivar caixas.')` se cargo não está na lista",
+        "JSDoc completo no helper (RAG `pattern-3-layer-rbac` §2.1)",
+        "Service `criarCaixa(input: CaixaCreateInput, user): Promise<Caixa>` em `caixas.server.ts`",
+        "Camada 3 RBAC PRIMEIRO: `assertCanManageCaixa(user)`",
+        "Validação Zod: `CaixaCreateSchema.parse(input)` — Zod lança ZodError (action captura → 422)",
+        "I/O: `prisma.caixa.create({ data: { nome, ativo: true, saldoCentavos: 0 } })` (YAGNI: não aceita saldo inicial arbitrário — RAG `pattern-trava-saldo-service` §5 anti-exemplo)",
+        "Captura `P2002` (unique constraint em `nome`): lança `Response(409, 'Já existe um caixa com este nome.')`",
+        "`safeLog({ action: 'create_caixa', resource: 'caixa:<id>', userId, result: 'ok' })` — SEM `nome` ou `saldoCentavos` no log (RAG `lgpd-igreja-conect` §2.5)",
+        "JSDoc completo no service",
+        "Testes: 4 cenários (admin OK, secretario 403, dup 409, Zod 422)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T04",
+      "title": "Service `arquivarCaixa` + `reabrirCaixa` (RN-FIN-01 + 4 testes de borda de `Caixa.ativo`)",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 3,
+      "dependsOn": [
+        "S06-T02"
+      ],
+      "specRefs": [
+        "PRD D.4 F1 (arquivar/reabrir)",
+        "PRD D.9 (4 testes de borda)",
+        "SPEC D.4 PATCH /caixas/:id/arquivar e /reabrir"
+      ],
+      "rags": [
+        "decision-caixa-soft-delete",
+        "security-rbac-matrix",
+        "lgpd-igreja-conect §2.5"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "app/lib/caixas.server.ts (+arquivarCaixa, +reabrirCaixa)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD dos 4 testes do brief §D.9 ANTES do service: (1) arquivar rejeita criarLancamento; (2) arquivar rejeita transferência; (3) listarCaixas padrão esconde arquivados; (4) reabrir restaura acesso. Ver detalhe em acceptanceCriteria.",
+        "testPath": "app/lib/caixas.server.test.ts (cobre 1, 3, 4); `lancamentos.server.test.ts` (cobre 1 com chamada ao service); `transferencias.server.test.ts` (cobre 2 — placeholder em S07-T02)",
+        "acceptance": "4 testes VERDES antes de S06 fechar (teste #2 é cross-sprint — S07 valida)"
+      },
+      "acceptanceCriteria": [
+        "`arquivarCaixa(id, user)`: assertCanManageCaixa PRIMEIRO; findUnique valida existência (404); idempotência (409 se já arquivado); `prisma.caixa.update({ ativo: false })` — **NÃO** muta saldoCentavos; safeLog com action 'arquivar_caixa'",
+        "`reabrirCaixa(id, user)`: simétrico; safeLog action 'reabrir_caixa'",
+        "Teste #1: `criarLancamento({ tipo: 'ENTRADA', categoria: 'OFERTA', valorCentavos: 100, caixaId: caixaArquivado.id, ... }, adminUser)` → `Response(409, 'Caixa arquivado.')`",
+        "Teste #2 (cross-sprint S07): `transferirEntreCaixas({ caixaOrigemId: caixaArquivado.id, ... }, adminUser)` → `Response(409, 'Caixa de origem arquivado.')` — covered em S07-T02",
+        "Teste #3: `listarCaixas({ apenasAtivos: true }, adminUser)` NÃO inclui caixa com ativo=false",
+        "Teste #4: Após `reabrirCaixa(caixaArquivadoId, adminUser)`, `caixa.ativo === true` E `saldoCentavos` preservado (testa que arquivar é reversível sem perder histórico)",
+        "Idempotência explícita: `arquivarCaixa(caixaJaArquivado, adminUser)` → `Response(409, 'Caixa já está arquivado.')`",
+        "JSDoc completo em ambos services",
+        "Testes integração: 6 cenários (admin ok arquivar, admin ok reabrir, idempotência x2, 403 secretario, 404 inexistente)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T05",
+      "title": "Helper canônico `assertSaldoSuficiente(caixaId, valorCentavos, context)` em `finance.server.ts`",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 2,
+      "dependsOn": [],
+      "specRefs": [
+        "PRD D.4 F5 (trava)",
+        "brief §7.3 teste #3 (saldo=0 + 1¢)",
+        "SPEC D.8.1"
+      ],
+      "rags": [
+        "pattern-trava-saldo-service §2.1 (código de referência)",
+        "convention-monetary-values",
+        "decision-caixa-soft-delete"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "app/lib/finance.server.ts (+assertSaldoSuficiente)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "Teste VERMELHO: assertSaldoSuficiente(caixaId, 1, 'ctx') com caixa saldo=0 → throws 409. Verde após.",
+        "testPath": "app/lib/finance.server.test.ts",
+        "acceptance": "100% cobertura de branches (valor inválido, caixa inexistente, caixa arquivado, saldo<valor, borda exata, caso feliz)"
+      },
+      "acceptanceCriteria": [
+        "Helper `assertSaldoSuficiente(caixaId, valorCentavos, context)` em `app/lib/finance.server.ts` — implementação EXATA do RAG `pattern-trava-saldo-service` §2.1",
+        "Validação monetária ANTES do I/O: `valorCentavos` deve ser `Number.isInteger` e `> 0`, senão `Response(400, '<context>: valor deve ser inteiro > 0.')`",
+        "`prisma.caixa.findUnique({ select: { id, nome, saldoCentavos, ativo } })` — re-leitura anti-TOCTOU do saldo (RAG §2.5)",
+        "Se `caixa === null`: `Response(404, '<context>: caixa não encontrado.')`",
+        "Se `caixa.ativo === false`: `Response(409, '<context>: caixa \"<nome>\" está arquivado e não aceita movimentações.')` (decisão `Caixa.ativo` aprovada)",
+        "Se `saldoCentavos < valorCentavos`: `Response(409, 'Saldo insuficiente no caixa de origem. Disponível: R$ X,XX.')`",
+        "Caso feliz: silent return",
+        "JSDoc completo: `@description` (Camada 3 RN-FIN-04), `@param` (3x), `@returns`, `@throws` (400/404/409), `@example`",
+        "**NÃO** decrementa saldo aqui — apenas valida. Decremento real é do service chamador, dentro de `$transaction` (atomicidade)",
+        "Testes integração: 6 cenários (happy path, valor 0, valor negativo, valor float, caixa inexistente, caixa arquivado, saldo insuficiente, borda exata saldo=valor)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T06",
+      "title": "Schema Zod `LancamentoCreateSchema` (com superRefine RN-FIN-05) + `ExtratoFiltrosSchema`",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 1.5,
+      "dependsOn": [],
+      "specRefs": [
+        "PRD D.4 F2 + F3",
+        "brief §7.3 testes #4 e #5 (DIZIMO sem membro, OFERTA sem membro)",
+        "SPEC D.4 POST /lancamentos"
+      ],
+      "rags": [
+        "convention-monetary-values",
+        "pattern-trava-saldo-service §4.1 (código de referência)"
+      ],
+      "files": {
+        "create": [
+          "app/lib/schemas/lancamentos.ts"
+        ],
+        "modify": []
+      },
+      "tdd": {
+        "testFirst": "Testes Zod puros (sem DB): DIZIMO sem membroId → ZodError; OFERTA sem membroId → OK; DESPESA com membroId → ZodError; valor 0 → ZodError; valor negativo → ZodError.",
+        "testPath": "app/lib/schemas/lancamentos.test.ts (unit puro)",
+        "acceptance": "100% cobertura de branches (6 cenários obrigatórios)"
+      },
+      "acceptanceCriteria": [
+        "`LancamentoCreateSchema` em `app/lib/schemas/lancamentos.ts`",
+        "Campos: `tipo: z.enum(['ENTRADA', 'SAIDA'])`, `categoria: z.enum(['DIZIMO','OFERTA','CAMPANHA','DESPESA_OPERACIONAL','COMPRA_ESTOQUE','MANUTENCAO','TRANSFERENCIA'])`, `valorCentavos: z.number().int().positive()`, `caixaId: z.string().uuid()`, `membroId: z.string().uuid().optional().nullable()`, `dataCompetencia: z.coerce.date()`, `descricao: z.string().min(1).max(500)`",
+        "`.strict()` — campos extras no payload → ZodError",
+        "`superRefine` RN-FIN-05: `categoria === 'DIZIMO' && !membroId` → ZodError com `path: ['membroId']`",
+        "`superRefine`: `categoria !== 'DIZIMO' && categoria !== 'OFERTA' && membroId` → ZodError (DESPESA com membro é inválido)",
+        "`ExtratoFiltrosSchema`: `periodo: z.enum(['', 'mes_atual', 'mes_passado', 'ano_atual']).optional()`, `categoria: z.enum([7 valores]).optional()`, `page: z.coerce.number().int().min(1).default(1)`, `pageSize: z.coerce.number().int().min(1).max(100).default(25)`",
+        "Tipos: `export type LancamentoCreateInput = z.infer<typeof LancamentoCreateSchema>`; `export type ExtratoFiltros = z.infer<typeof ExtratoFiltrosSchema>`",
+        "JSDoc em cada schema explicando regras (RN-FIN-05, etc.)",
+        "Testes unit: 8 cenários (DIZIMO+com membro OK, DIZIMO sem membro fail, OFERTA sem membro OK, DESPESA com membro fail, valor 0 fail, valor negativo fail, descricao vazia fail, descricao 501+ chars fail)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T07",
+      "title": "Service `criarLancamento` (RN-FIN-04 + RN-FIN-05 — implementação canônica do RAG pattern-trava-saldo-service)",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 4,
+      "dependsOn": [
+        "S06-T05",
+        "S06-T06"
+      ],
+      "specRefs": [
+        "PRD D.4 F2 + F5",
+        "brief §7.3 testes #3, #4, #5, #12 (CRÍTICO — bloqueador de sprint)",
+        "SPEC D.4 POST /lancamentos"
+      ],
+      "rags": [
+        "pattern-trava-saldo-service §4.1 (código de referência canônico)",
+        "convention-monetary-values",
+        "security-rbac-matrix",
+        "decision-caixa-soft-delete",
+        "lgpd-igreja-conect §2.5"
+      ],
+      "files": {
+        "create": [
+          "app/lib/lancamentos.server.ts"
+        ],
+        "modify": []
+      },
+      "tdd": {
+        "testFirst": "TDD do teste #3 (BLOQUEADOR): criarLancamento(SAIDA, 1 centavo, caixa com saldo=0) → 409. Verde após.",
+        "testPath": "app/lib/lancamentos.server.test.ts",
+        "acceptance": "100% cobertura de branches + teste de borda #3 verde antes de S06 fechar"
+      },
+      "acceptanceCriteria": [
+        "Service `criarLancamento(input: LancamentoCreateInput, user: SessionUser): Promise<Lancamento>`",
+        "Camada 3 RBAC PRIMEIRO: `assertCanSeeFinancials(user)` (4 perfis: ADMIN, PASTOR, FINANCEIRO, SECRETARIO)",
+        "Bloqueio explícito: `categoria === 'TRANSFERENCIA'` → `Response(400, 'Categoria TRANSFERENCIA é exclusiva do sistema de transferências. Use a página /app/financeiro/transferencias/nova.')` (TRANSFERENCIA é cobertura defensiva, exclusiva de transferirEntreCaixas)",
+        "Validação monetária: `assertNonNegative(input.valorCentavos, 'Lançamento')` (RAG `convention-monetary-values` §2)",
+        "Se `tipo === 'SAIDA'`: `await assertSaldoSuficiente(input.caixaId, input.valorCentavos, 'Lançamento de saída (${categoria})')` (helper S06-T05)",
+        "`prisma.$transaction(async tx => { ... })` — 3 mutações correlacionadas (re-leitura anti-TOCTOU + create + update)",
+        "Re-leitura DENTRO do `$transaction`: `tx.caixa.findUniqueOrThrow({ select: { ativo: true, saldoCentavos: true } })` — se `ativo === false` lança 409 (re-checagem); se `saldoCentavos < valorCentavos` lança 409 (TOCTOU final)",
+        "`tx.lancamento.create({ data: input })`",
+        "`tx.caixa.update({ data: { saldoCentavos: tipo === 'ENTRADA' ? { increment } : { decrement } } })`",
+        "`safeLog({ action: 'create_lancamento', resource: 'lancamento:<id>', userId, result: 'ok' })` — SEM `valorCentavos`, `membroId`, `descricao` no log (RAG `lgpd-igreja-conect` §2.5)",
+        "JSDoc completo (canônico)",
+        "**Testes de borda (todos VERDES):**",
+        "  - #3 (BLOQUEADOR): caixa saldo=0 + SAIDA 1 centavo → 409, saldo permanece 0",
+        "  - #4: DIZIMO sem membroId → 400 (Zod DIZIMO exige)",
+        "  - #5: OFERTA sem membroId → OK, anônimo, saldo += valor",
+        "  - #12: caixa arquivado → 409 (helper antecipou)",
+        "  - Borda exata: caixa saldo=1000 + SAIDA 1000 → OK, saldo=0 (não negativo)",
+        "  - TRANSFERENCIA via criarLancamento → 400 (bloqueio explícito)",
+        "  - DESPESA com membroId → 400 (Zod)",
+        "  - SECRETARIO cria DIZIMO/OFERTA → OK (RN-FIN-01)",
+        "  - DISCIPULADOR cria → 403 (Camada 3)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T08",
+      "title": "Service `listarPorCaixa(caixaId, filtros, user)` + `getCaixaDetalhe(caixaId, filtros, user)` (paginação + filtro DIZIMO para SECRETARIO)",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 3,
+      "dependsOn": [
+        "S06-T02",
+        "S06-T06"
+      ],
+      "specRefs": [
+        "PRD D.4 F2 (listar extrato)",
+        "SPEC D.4 GET /app/financeiro/caixas/:id"
+      ],
+      "rags": [
+        "security-rbac-matrix",
+        "convention-monetary-values",
+        "pattern-3-layer-rbac",
+        "lgpd-igreja-conect §2.5"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "app/lib/lancamentos.server.ts (+listarPorCaixa)",
+          "app/lib/caixas.server.ts (+getCaixaDetalhe)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD: getCaixaDetalhe(caixaId, { categoria: 'DIZIMO' }, adminUser) retorna só DIZIMO; getCaixaDetalhe(caixaId, {}, secretarioUser) NÃO inclui DIZIMO. Verde após.",
+        "testPath": "app/lib/lancamentos.server.test.ts + app/lib/caixas.server.test.ts",
+        "acceptance": "100% cobertura de branches + SECRETARIO-filter test verde"
+      },
+      "acceptanceCriteria": [
+        "`listarPorCaixa(caixaId, filtros, user)`: Camada 3 `assertCanSeeFinancials(user)` PRIMEIRO",
+        "Validação de caixa: `prisma.caixa.findUnique({ where: { id: caixaId }, select: { id: true } })` — se `null`, retorna `null` (loader converte para 404)",
+        "Where base: `{ caixaId, ...filtrosPeriodo, ...filtrosCategoria }`",
+        "**Filtro DIZIMO para SECRETARIO (RBAC fina — RN-MEM-03):** se `user.cargo === 'SECRETARIO'`, adiciona `categoria: { not: 'DIZIMO' }` no where — não vaza dízimos",
+        "Paginação: `skip: (page - 1) * pageSize, take: pageSize`",
+        "Ordenação: `orderBy: [{ dataCompetencia: 'desc' }, { id: 'asc' }]` (determinística para transferências)",
+        "Include: `membro: { select: { id, nome } }` (null se órfão)",
+        "Retorno: `{ caixa, lancamentos: LancamentoExtrato[], total, page, pageSize }`",
+        "`getCaixaDetalhe(caixaId, filtros, user)` em `caixas.server.ts` — wrapper que chama `listarPorCaixa` + `prisma.caixa.findUnique` (full) + `prisma.lancamento.count` para `totalLancamentos`",
+        "Retorno `getCaixaDetalhe`: `{ caixa: CaixaDetalhe, lancamentos, total, page, pageSize }` ou `null` se caixa não existe",
+        "`safeLog({ action: 'view_extrato', resource: 'caixa:<id>', userId, result: 'ok' })` — sem valorCentavos ou nome",
+        "JSDoc completo em ambos",
+        "Testes: 7 cenários (admin vê todos, pastor vê todos, secretario SEM DIZIMO, discipulador 403, caixa inexistente null, dízimo órfão membro=null, caixa arquivado read-only OK, paginação)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T09",
+      "title": "Componentes UI: `<KpiSaldoTotal>`, `<CardSaldoCaixa>`, `<UltimasMovimentacoes>`, `<AtalhoFinanceiro>` + Sidebar",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 4,
+      "dependsOn": [
+        "S06-T08"
+      ],
+      "specRefs": [
+        "PRD D.4 F7 (Dashboard)",
+        "PRD §3.1 (métrica macro — FINANCEIRO vê saldos)"
+      ],
+      "rags": [
+        "convention-monetary-values",
+        "security-rbac-matrix",
+        "architecture-financeiro §3.4"
+      ],
+      "files": {
+        "create": [
+          "app/components/KpiSaldoTotal.tsx",
+          "app/components/CardSaldoCaixa.tsx",
+          "app/components/UltimasMovimentacoes.tsx",
+          "app/components/AtalhoFinanceiro.tsx"
+        ],
+        "modify": [
+          "app/components/Sidebar.tsx (adicionar item Financeiro condicional)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "Snapshot test ou render test de cada componente isolado com mocks",
+        "testPath": "app/components/*.test.tsx (Vitest + React Testing Library)",
+        "acceptance": "Componentes renderizam corretamente; KpiSaldoTotal mostra R$ X,XX; CardSaldoCaixa com border amber se saldo < R$ 10,00; UltimasMovimentacoes filtra DIZIMO para SECRETARIO"
+      },
+      "acceptanceCriteria": [
+        "<KpiSaldoTotal saldoCentavos, totalCaixas>: bg-cyan-700, formatBRLFromCents, contador de caixas ativos (singular/plural), data-testid='kpi-saldo-total'",
+        "<CardSaldoCaixa caixa, podeCriarLancamento>: border amber se `caixa.saldoCentavos < 1000` (R$ 10,00), botão '+ Lançar' condicional a `['ADMIN', 'PASTOR', 'FINANCEIRO', 'SECRETARIO'].includes(user.cargo)`, aria-label descritivo",
+        "<UltimasMovimentacoes items, podeVerMembro>: lista últimos 5, formato data dd/MM, ENTRADA verde / SAIDA vermelho, label categoria-legível (DIZIMO com nome do membro se `podeVerMembro` else 'Dízimo'), EmptyState se 0",
+        "<AtalhoFinanceiro label, href, variant?>: wrapper de Button as={Link} — pode reusar <Atalho> do ciclo 1 se compatível",
+        "Sidebar: adicionar `<NavLink to='/app/financeiro'>💰 Financeiro</NavLink>` visível APENAS para `['ADMIN', 'PASTOR', 'FINANCEIRO', 'SECRETARIO']` via `<Can>`",
+        "Formatação monetária 100% via `formatBRLFromCents` (helper do RAG `convention-monetary-values`)",
+        "EmptyState componente (se já existe do ciclo 1) reusado; senão criar com prop `action: ReactNode`",
+        "Lighthouse Accessibility ≥ 95 (aria-label descritivo no CardSaldoCaixa)",
+        "JSDoc em cada componente"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T10",
+      "title": "Rota `/app/financeiro` (Dashboard — loader `assertCanSeeFinancials` + service `getDashboardFinanceiro`)",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 3.5,
+      "dependsOn": [
+        "S06-T08",
+        "S06-T09"
+      ],
+      "specRefs": [
+        "PRD D.4 F7 (Dashboard)",
+        "SPEC D.4 GET /app/financeiro"
+      ],
+      "rags": [
+        "pattern-3-layer-rbac",
+        "lesson-route-service-bypass",
+        "architecture-financeiro §3.1"
+      ],
+      "files": {
+        "create": [
+          "app/routes/app/financeiro._index.tsx",
+          "app/lib/finance.server.ts (+getDashboardFinanceiro)"
+        ],
+        "modify": [
+          "app/routes.ts (registrar rota)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "Service unit: getDashboardFinanceiro(adminUser) com 3 caixas + 7 lançamentos retorna 3 caixas, 5 ultimos, saldoAgregado correto. Service filtra DIZIMO para SECRETARIO.",
+        "testPath": "app/lib/finance.server.test.ts (estender)",
+        "acceptance": "100% cobertura do service + 0 caixas edge case"
+      },
+      "acceptanceCriteria": [
+        "Estender `app/lib/finance.server.ts` com `getDashboardFinanceiro(user): Promise<DashboardFinanceiroData>`",
+        "Camada 3 RBAC PRIMEIRO: `assertCanSeeFinancials(user)`",
+        "Lógica: `caixas = prisma.caixa.findMany({ where: { ativo: true }, orderBy: { nome: 'asc' } })` + `lancamentosMes = count` por caixa (mesma query do listarCaixas)",
+        "`ultimosLancamentos = prisma.lancamento.findMany({ orderBy: { dataCompetencia: 'desc' }, take: 5, include: { caixa: { select: { id, nome } }, membro: { select: { id, nome } } } })`",
+        "**Filtro DIZIMO para SECRETARIO (service-side, não UI):** se `user.cargo === 'SECRETARIO'`, refazer query com `where: { categoria: { not: 'DIZIMO' } }`",
+        "`saldoAgregadoCentavos = await prisma.caixa.aggregate({ where: { ativo: true }, _sum: { saldoCentavos: true } })` → `_sum.saldoCentavos ?? 0`",
+        "Tipos: `export type DashboardFinanceiroData`, `CaixaResumo`, `LancamentoResumo`",
+        "Edge cases: 0 caixas (saldoAgregado=0, caixas=[]); 0 lançamentos (ultimosLancamentos=[])",
+        "Rota `app/routes/app/financeiro._index.tsx` — loader chama `assertCanSeeFinancials(user)` (Camada 2) + `getDashboardFinanceiro(user)` (Camada 3)",
+        "Componente: renderiza `<KpiSaldoTotal>`, `<CardSaldoCaixa>` em grid, `<AtalhoFinanceiro>` para Novo Lançamento / Nova Transferência / Gerenciar Caixas, `<UltimasMovimentacoes>`",
+        "Botão '+ Nova Caixa' no header, conditional a `['ADMIN', 'PASTOR', 'FINANCEIRO']`",
+        "ErrorBoundary: 403 se assertCanSeeFinancials lançar (DISCIPULADOR/LIDER_MINISTERIO)",
+        "JSDoc em service e loader",
+        "Testes integração do service: 5 cenários (admin 3 caixas, secretario SEM DIZIMO, discipulador 403, 0 caixas, saldoAgregado correto)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T11",
+      "title": "Rotas `/app/financeiro/caixas` (lista + toggle arquivados) e `/caixas/novo` (criação) + componentes",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 6,
+      "dependsOn": [
+        "S06-T03",
+        "S06-T04",
+        "S06-T09"
+      ],
+      "specRefs": [
+        "PRD D.4 F1 (lista + criar)",
+        "SPEC D.4 GET/POST /app/financeiro/caixas"
+      ],
+      "rags": [
+        "decision-caixa-soft-delete",
+        "security-rbac-matrix",
+        "pattern-3-layer-rbac",
+        "lesson-route-service-bypass",
+        "lgpd-igreja-conect §2.5"
+      ],
+      "files": {
+        "create": [
+          "app/components/CaixaSearchBar.tsx",
+          "app/components/TabelaCaixas.tsx",
+          "app/components/CardCaixa.tsx",
+          "app/components/BadgeStatus.tsx",
+          "app/components/ModalConfirmar.tsx",
+          "app/routes/app/financeiro.caixas._index.tsx",
+          "app/routes/app/financeiro.caixas.novo.tsx"
+        ],
+        "modify": [
+          "app/routes.ts (registrar 2 rotas)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD da action POST /caixas/nova: criarCaixa({ nome: 'Cantina' }, adminUser) → 302; criarCaixa({}, secretarioUser) → 403",
+        "testPath": "app/lib/caixas.server.test.ts (cobre service) + E2E em S06-T14",
+        "acceptance": "Service test 100% + 2 cenários E2E (admin cria, secretario 403)"
+      },
+      "acceptanceCriteria": [
+        "`<CaixaSearchBar>`: Form GET com input `q` e checkbox `mostrarArquivados` (default false)",
+        "`<BadgeStatus ativo>`: verde 'Ativo' / cinza 'Arquivado' (tailwind condicional)",
+        "`<TabelaCaixas items, podeGerenciar, tipo, onArquivar, onReabrir>`: tabela com colunas Nome, Saldo (formatBRLFromCents), Lançamentos (mês), Status, Ações; ações contextuais (olho sempre, arquivar/reabrir condicional a `podeGerenciar`)",
+        "`<CardCaixa>`: versão mobile (cards empilhados) com mesmas props",
+        "`<ModalConfirmar open, onClose, onConfirm, title, description, confirmLabel?, variant?>`: `role='dialog'`, `aria-modal='true'`, `aria-labelledby`, foco preso, Esc fecha, click no overlay fecha",
+        "Rota `financeiro.caixas._index.tsx`: loader chama `assertCanSeeFinancials` (Camada 2) + `listarCaixas({ apenasAtivos, q }, user)` (Camada 3); renderiza `<CaixaSearchBar>` + `<TabelaCaixas>` para ativos + (toggle on) `<TabelaCaixas>` para arquivados + `<ModalConfirmar>` para arquivar/reabrir via fetcher",
+        "Rota `financeiro.caixas.novo.tsx`: loader chama `assertCanManageCaixa` (Camada 2); action chama `CaixaCreateSchema.safeParse` + `criarCaixa` (Camada 3); form com `<Input name='nome' required>` + Cancelar/Criar; trata 409 (nome duplicado) com `formError`",
+        "Action usa `useFetcher` para chamar `POST /app/financeiro/caixas/<id>/transicao` (rota action-only — YAGNI: 1 arquivo `_transicao.tsx` lê `_op` do formData)",
+        "Testes integração: 4 cenários (admin lista com 1 seed, admin cria 'Cantina' OK, admin cria 'Caixa Geral' dup 409, secretario 403, SECRETARIO na lista SEM botão '+ Nova Caixa' Camada 1)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T12",
+      "title": "Rota `/app/financeiro/caixas/:id` (detalhe + extrato + arquivar/reabrir) + componentes ExtratoFiltros/ExtratoCaixa/CaixaHeader",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 5,
+      "dependsOn": [
+        "S06-T08",
+        "S06-T11"
+      ],
+      "specRefs": [
+        "PRD D.4 F1 + F2 + F5 (extrato + arquivar + traço)",
+        "brief §7.3 teste #12 (caixa arquivado rejeita movimentação)",
+        "SPEC D.4 GET /caixas/:id"
+      ],
+      "rags": [
+        "pattern-trava-saldo-service",
+        "decision-caixa-soft-delete",
+        "security-rbac-matrix",
+        "convention-monetary-values",
+        "pattern-3-layer-rbac"
+      ],
+      "files": {
+        "create": [
+          "app/components/CaixaHeader.tsx",
+          "app/components/ExtratoFiltros.tsx",
+          "app/components/ExtratoCaixa.tsx",
+          "app/components/CardLancamento.tsx",
+          "app/routes/app/financeiro.caixas.$id.tsx"
+        ],
+        "modify": [
+          "app/routes.ts (registrar rota)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD: getCaixaDetalhe(caixaGeralId, { periodo: 'mes_atual' }, adminUser) retorna só lançamentos do mês. getCaixaDetalhe(caixaInvalida, {}, adminUser) → null (loader converte para 404).",
+        "testPath": "app/lib/caixas.server.test.ts + app/lib/lancamentos.server.test.ts (estender)",
+        "acceptance": "100% cobertura do getCaixaDetalhe + 5 cenários E2E"
+      },
+      "acceptanceCriteria": [
+        "`<CaixaHeader caixa, podeGerenciar>`: nome, saldo atual (formatBRLFromCents), criado em (formatDate), total de lançamentos, `<BadgeStatus>`, InfoBox warning se arquivado",
+        "`<ExtratoFiltros defaultPeriodo, defaultCategoria, caixaId>`: Form GET com Select de período (Todos/Mês atual/Mês passado/Ano atual) + Select de categoria (8 opções, incluindo 'Transferência') + Filtrar/Limpar",
+        "`<ExtratoCaixa items, podeVerMembro>`: tabela com Data / Tipo (badge) / Categoria / Valor (verde/vermelho com +/-, formatBRLFromCents) / Membro (se podeVerMembro) / Descrição",
+        "`<CardLancamento>`: versão mobile (cards)",
+        "Rota `financeiro.caixas.$id.tsx`: loader chama `assertCanSeeFinancials` (Camada 2) + `ExtratoFiltrosSchema.parse` (searchParams) + `getCaixaDetalhe` (Camada 3); se `null` → `Response(404, 'Caixa não encontrado.')`",
+        "Componente: `<CaixaHeader>` + `<ExtratoFiltros>` + `<ExtratoCaixa>` + paginador (reusa `<Pagination>` do ciclo 1) + ações arquivar/reabrir (Camada 1 condicional a `podeGerenciar`) + InfoBox 'Caixa arquivado' se `!caixa.ativo`",
+        "**Filtro RBAC UI:** SECRETARIO vê tabela mas SEM coluna Membro E SEM botões arquivar/reabrir (Camada 1)",
+        "Botão '+ Novo Lançamento' (link `/app/financeiro/lancamentos/novo?caixaId=<id>`) OCULTO se `!caixa.ativo` (Camada 1 — Camada 3 service também barra mas UX melhor aqui)",
+        "Dízimo órfão (membro deletado): `l.membro === null` → exibir '(membro removido)' (UX graceful)",
+        "ErrorBoundary: 404 / 403 distintos",
+        "Testes integração: 5 cenários (admin vê 10 lançamentos, paginação 25/p, SECRETARIO SEM DIZIMO, caixa inexistente null, caixa arquivado read-only OK com dízimo órfão)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T13",
+      "title": "Rota `/app/financeiro/lancamentos/novo` (form completo) + componentes FormLancamento, MoneyInput",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 5,
+      "dependsOn": [
+        "S06-T06",
+        "S06-T07",
+        "S06-T10"
+      ],
+      "specRefs": [
+        "PRD D.4 F2 + F3 + F5 (métrica macro)",
+        "brief §7.1 métrica macro (FINANCEIRO lança dízimo em < 2 min)",
+        "brief §7.3 testes #3 #4 #5 (CRÍTICOS)",
+        "SPEC D.4 POST /lancamentos"
+      ],
+      "rags": [
+        "pattern-trava-saldo-service §4.1",
+        "convention-monetary-values",
+        "decision-caixa-soft-delete",
+        "security-rbac-matrix",
+        "pattern-3-layer-rbac",
+        "lgpd-igreja-conect §2.5"
+      ],
+      "files": {
+        "create": [
+          "app/components/MoneyInput.tsx",
+          "app/components/FormLancamento.tsx",
+          "app/routes/app/financeiro.lancamentos.novo.tsx"
+        ],
+        "modify": [
+          "app/lib/caixas.server.ts (+listarCaixasParaSelect)",
+          "app/lib/members.server.ts (verificar/criar listarMembrosParaAutocomplete)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD do service (S06-T07) cobre lógica; action test: parseBRLToCents('R$ 50,00') → 5000; criarLancamento action retorna 302 com sucesso, 400 com Zod, 409 com saldo",
+        "testPath": "app/lib/lancamentos.server.test.ts (S06-T07 cobre service); E2E em S06-T14",
+        "acceptance": "100% service + 6 cenários E2E (métrica macro, DIZIMO sem membro, saldo insuficiente, TRANSFERENCIA bypass, caixa arquivado, DISCIPULADOR 403)"
+      },
+      "acceptanceCriteria": [
+        "`<MoneyInput name, label, required, error?, hint?>`: formata BRL com vírgula (Intl pt-BR), envia string (action parseBRLToCents), placeholder '0,00', inputMode='decimal', data-testid",
+        "`<FormLancamento>`: 3 Sections (Identificação [tipo+categoria] / Valor-Data-Caixa [valor+data+caixa, membro condicional à categoria] / Descrição)",
+        "Campo Membro: aparece se `categoria === 'DIZIMO'` (obrigatório) ou `categoria === 'OFERTA'` (opcional, anônimo); some para outras categorias",
+        "InfoBox warning se caixa selecionado tem `ativo === false` (Camada 1 UX — Camada 3 service barra)",
+        "Estender `caixas.server.ts` com `listarCaixasParaSelect(user)`: chama `listarCaixas({ apenasAtivos: true })` e retorna top 50 para `<Select>`",
+        "Verificar/criar `members.server.ts` com `listarMembrosParaAutocomplete()`: top 200 membros com cargo, `select: { id, nome }`",
+        "Rota `financeiro.lancamentos.novo.tsx`: loader chama `assertCanSeeFinancials` (Camada 2) + `listarCaixasParaSelect` + `listarMembrosParaAutocomplete`; aceita `?caixaId=<uuid>` para pré-preenchimento (vindo de CardSaldoCaixa '+ Lançar')",
+        "Action: parseBRLToCents (try/catch → 400 inline), LancamentoCreateSchema.safeParse, criarLancamento (Camada 3), redirect 302 para `/app/financeiro/caixas/<caixaId>` com toast 'Lançamento registrado'",
+        "Action trata 400 (DIZIMO sem membro, TRANSFERENCIA via form) → fieldError; 409 (saldo insuficiente) → formError",
+        "Pré-preenchimento `?caixaId=<uuid>`: select de caixa já vem selecionado (defaultCaixaId)",
+        "**Cobertura E2E (métrica macro):** FINANCEIRO clica '+ Lançar' no CardSaldoCaixa → form pré-preenchido → preenche valor 50,00, membro Maria → submit → toast + redirect → extrato mostra 1 lançamento. Tudo em < 2 min",
+        "JSDoc em todos componentes e service",
+        "Testes: 6 cenários integração (happy path, DIZIMO sem membro 400, OFERTA anônimo OK, saldo insuficiente 409, TRANSFERENCIA 400 bypass, caixa arquivado 409); 4 cenários E2E (S06-T14)"
+      ],
+      "done": true
+    },
+    {
+      "id": "S06-T14",
+      "title": "Testes E2E Playwright — `e2e/financeiro-basico.spec.ts` (dízimo + extrato + RBAC + métrica macro)",
+      "type": "test",
+      "owner": "tester",
+      "estimatedHours": 4,
+      "dependsOn": [
+        "S06-T10",
+        "S06-T11",
+        "S06-T12",
+        "S06-T13"
+      ],
+      "specRefs": [
+        "brief §7.3 testes #9, #11 (E2E)",
+        "brief §7.1 métrica macro",
+        "PRD D.7.2 (gate Phase 5)"
+      ],
+      "rags": [
+        "lesson-prisma-7-commit-settle-e2e",
+        "architecture-financeiro §3.1",
+        "pattern-3-layer-rbac"
+      ],
+      "files": {
+        "create": [
+          "e2e/financeiro-basico.spec.ts"
+        ],
+        "modify": []
+      },
+      "tdd": {
+        "testFirst": "E2E escrito ANTES do fechamento da sprint (validação final do gate)",
+        "testPath": "e2e/financeiro-basico.spec.ts",
+        "acceptance": "5+ chains Playwright verdes, executa em < 60s"
+      },
+      "acceptanceCriteria": [
+        "Chain 1: login `financeiro@igreja.local` → `/app/financeiro` → vê 1 caixa (Caixa Geral seed) com saldo R$ 0,00 → clica '+ Lançar' → form pré-preenchido → preenche DIZIMO 50,00 membro Maria → submit → toast + redirect extrato → vê 1 lançamento verde +R$ 50,00",
+        "Chain 2: SECRETARIO loga → `/app/financeiro` 200 OK mas 'Últimas movimentações' **NÃO** lista DIZIMO (filtro service)",
+        "Chain 3: SECRETARIO loga → `/app/financeiro/caixas/novo` direto na URL → 403 (loader Camada 2)",
+        "Chain 4: DISCIPULADOR loga → `/app/financeiro` direto na URL → 403 (loader Camada 2)",
+        "Chain 5: DISCIPULADOR loga → `/app/financeiro/caixas/<id>` direto na URL → 403 (Camada 2 + Camada 3 redundante)",
+        "Chain 6: setup da métrica macro (PARTE 1 — S08 fecha PARTE 2): FINANCEIRO lança dízimo do Membro X; PASTOR abre `/app/membros/<X>?tab=fidelidade` e vê (S08 valida parte 2 — este E2E prepara o setup)",
+        "Chain 7 (smoke): caixa arquivado rejeita criarLancamento no form → erro 409 inline no campo",
+        "Workaround `dbSettle(100)` em transações recém-criadas (RAG `lesson-prisma-7-commit-settle-e2e`)",
+        "Total: < 60s para rodar todas as chains",
+        "Lighthouse Accessibility ≥ 95 nas 4 páginas (S06-T10, S06-T11, S06-T12, S06-T13) — varredura via `pnpm lhci autorun` (script a adicionar)"
+      ],
+      "done": false
+    },
+    {
+      "id": "S06-T15",
+      "title": "Auditoria segurança + LGPD — checklist S06 (3 camadas RBAC, safeLog, PII, trava saldo)",
+      "type": "review",
+      "owner": "security",
+      "estimatedHours": 2,
+      "dependsOn": [
+        "S06-T10",
+        "S06-T11",
+        "S06-T12",
+        "S06-T13",
+        "S06-T14"
+      ],
+      "specRefs": [
+        "PRD D.7.2 (gate qualidade)",
+        "PRD D.6 (riscos)"
+      ],
+      "rags": [
+        "lgpd-igreja-conect",
+        "security-rbac-matrix",
+        "pattern-3-layer-rbac",
+        "pattern-trava-saldo-service"
+      ],
+      "files": {
+        "create": [
+          ".harness/audit/security-s06.md",
+          ".harness/audit/lgpd-s06.md"
+        ],
+        "modify": []
+      },
+      "tdd": {
+        "testFirst": "N/A (auditoria manual + greps)",
+        "testPath": "N/A (relatório em .harness/audit/)",
+        "acceptance": "0 vuln critical/high; LGPD compliant (sem PII em log; sem CPF/RG/CNPJ)"
+      },
+      "acceptanceCriteria": [
+        "**Security audit (.harness/audit/security-s06.md):**",
+        "  - A01 (Broken Access Control): 3 camadas verificadas em TODAS as rotas /app/financeiro/** (loader assertCan* + service assertCan* + UI <Can>)",
+        "  - A03 (Injection): grep `dangerouslySetInnerHTML` em app/components/ → 0; Zod .strict() em todos os schemas",
+        "  - A04 (Insecure Design): trava saldo no service, defense in depth, idempotência, onDelete: Restrict em Caixa",
+        "  - A05 (Misconfiguration): erros 4xx/5xx genéricos (sem stack trace em prod); sem debug",
+        "  - A09 (Logging): grep `console.log` em app/lib/finance*.ts, app/lib/caixas*.ts, app/lib/lancamentos*.ts → apenas safeLog com allowlist; sem valorCentavos, sem nome, sem saldo",
+        "  - `prisma.*` direto em loader/action: grep `prisma\\.` em app/routes/app/financeiro/** → deve dar 0 (toda chamada via service)",
+        "  - Score: 0 critical, 0 high, < 3 medium, < 5 low",
+        "**LGPD audit (.harness/audit/lgpd-s06.md):**",
+        "  - §2.1 (sem CPF): grep `cpf:|rg:|cnpj:|pis:` em prisma/ e app/ → 0 (mantido)",
+        "  - §2.2 (Dízimos restritos): SECRETARIO via URL tem loader redirect (S08 cobre Fidelidade; aqui cobre dashboard)",
+        "  - §2.5 (logs sem PII): grep em `app/lib/finance*.ts`, `app/lib/caixas*.ts`, `app/lib/lancamentos*.ts` por 'valorCentavos' em string literal → 0 fora de JSDoc",
+        "  - Status: 'LGPD Compliant' (ou 'Warning' se algum medium achado)",
+        "  - Métrica macro verificada: FINANCEIRO lança dízimo em < 2 min (testado em S06-T14 Chain 1)"
+      ],
+      "done": false
+    }
+  ],
+  "workers": [
+    "backend",
+    "frontend",
+    "tester",
+    "security",
+    "lgpd-officer",
+    "code-reviewer"
+  ],
+  "coverageTarget": 85,
+  "serviceCoverageTarget": 100,
+  "gate": {
+    "type": "all-of",
+    "checks": [
+      {
+        "type": "coverage",
+        "min": 85,
+        "scope": "global"
+      },
+      {
+        "type": "coverage",
+        "min": 100,
+        "scope": "caixas.server.ts, lancamentos.server.ts, finance.server.ts (assertSaldoSuficiente)"
+      },
+      {
+        "type": "security",
+        "maxCritical": 0,
+        "maxHigh": 0
+      },
+      {
+        "type": "review",
+        "agent": "code-reviewer",
+        "min": 70
+      },
+      {
+        "type": "lgpd",
+        "min": "warning"
+      }
+    ]
+  },
+  "testesBordaObrigatorios": [
+    {
+      "id": 3,
+      "name": "Saldo=0 + SAIDA 1 centavo → 409 (BLOQUEADOR)",
+      "covered_in": "S06-T07"
+    },
+    {
+      "id": 4,
+      "name": "DIZIMO sem membro → 400",
+      "covered_in": "S06-T06 + S06-T07"
+    },
+    {
+      "id": 5,
+      "name": "OFERTA sem membro → OK anônimo",
+      "covered_in": "S06-T06 + S06-T07"
+    },
+    {
+      "id": 9,
+      "name": "SECRETARIO /app/financeiro 403 (UI sem item Sidebar)",
+      "covered_in": "S06-T14 Chain 4"
+    },
+    {
+      "id": 11,
+      "name": "DISCIPULADOR /app/financeiro/** 403",
+      "covered_in": "S06-T14 Chain 5"
+    },
+    {
+      "id": 12,
+      "name": "Caixa arquivado rejeita movimentação",
+      "covered_in": "S06-T04 + S06-T07"
+    }
+  ],
+  "userStoryCoverage": {
+    "US-FIN-001 (F1 CRUD Caixas)": "S06-T01, S06-T02, S06-T03, S06-T04, S06-T11, S06-T12",
+    "US-FIN-002 (F2 CRUD Lançamentos)": "S06-T05, S06-T06, S06-T07, S06-T08, S06-T13",
+    "US-FIN-003 (F3 Dízimos vinculados)": "S06-T06, S06-T07, S06-T13",
+    "US-FIN-005 (F5 Trava saldo)": "S06-T05, S06-T07",
+    "US-FIN-007 (F7 Dashboard)": "S06-T09, S06-T10",
+    "US-FIN-008 (F8 RBAC fina)": "Todas as tasks (assertCanSeeFinancials, assertCanManageCaixa, <Can> em UI, SECRETARIO filtro DIZIMO)"
+  },
+  "notes": "Sprint foundation do Módulo Financeiro. Entrega Caixa.ativo migration + services de Caixa/Lancamento + Dashboard + Listas + Detalhe + Novo Lançamento. Cobre 9/12 endpoints do SPEC D.4, 6/12 testes de borda do brief §7.3 (3 restantes em S07 #6/7/8 e 1 em S08 #10). Métrica macro PARTE 1 (FINANCEIRO lança dízimo, vê no extrato). PARTE 2 (PASTOR vê na aba Fidelidade) é S08. RBAC 3 camadas verificada em todas as rotas. Caixas arquivados rejeitam movimentação (decisão Caixa.ativo integrada). 64h estimadas (~8 dias × 1 dev). Próxima: S07 (Transferências)."
+}

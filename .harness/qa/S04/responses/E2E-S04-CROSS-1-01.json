@@ -1,0 +1,12 @@
+{
+  "status": 500,
+  "headers": {
+    "vary": "Origin",
+    "content-type": "text/html",
+    "date": "Sun, 14 Jun 2026 02:28:33 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": ""
+}

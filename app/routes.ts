@@ -37,10 +37,10 @@ export default [
 
     // /app/** — autenticado. O middleware de auth vive em
     // `routes/app/_middleware.tsx` e é aplicado a TODAS as rotas filhas.
-    layout("routes/app/_middleware.tsx", [
-        // Layout visual (Topbar + Sidebar + Outlet) envolve todas as
-        // páginas autenticadas.
-        layout("routes/app.tsx", [
+        layout("routes/app/_middleware.tsx", [
+            // Layout visual (Topbar + Sidebar + Outlet) envolve todas as
+            // páginas autenticadas em /app/**.
+            route("app", "routes/app.tsx", [
             // Dashboard placeholder (S02-T10)
             index("routes/app/_index.tsx"),
 
@@ -54,7 +54,13 @@ export default [
             route("membros/novo", "routes/app/membros.novo.tsx"),
             // S02-T08: editar membro (loader+action)
             route("membros/:id/editar", "routes/app/membros.$id.editar.tsx"),
+
+            // S06 — Módulo Financeiro
+            route("financeiro", "routes/app/financeiro._index.tsx"),
+            route("financeiro/caixas", "routes/app/financeiro.caixas._index.tsx"),
+            route("financeiro/caixas/novo", "routes/app/financeiro.caixas.novo.tsx"),
+            route("financeiro/caixas/:id", "routes/app/financeiro.caixas.$id.tsx"),
+            route("financeiro/lancamentos/novo", "routes/app/financeiro.lancamentos.novo.tsx"),
         ]),
     ]),
-
 ] satisfies RouteConfig;

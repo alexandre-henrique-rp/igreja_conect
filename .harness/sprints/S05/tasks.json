@@ -1,0 +1,284 @@
+{
+  "id": "S05",
+  "name": "Quality Gate Final — Auditorias, Smoke Test, Hardening, Documentação",
+  "goal": "Fechar com qualidade: auditoria de segurança + LGPD + code review, corrigir débitos técnicos, smoke test E2E completo, README e gate de cobertura ≥ 85%.",
+  "estimatedDays": 1,
+  "dependsOn": ["S00", "S01", "S02", "S03", "S04"],
+  "userStories": ["US-AUTH-001", "US-AUTH-002", "US-MEM-001", "US-MEM-002", "US-MEM-003", "US-MEM-004", "US-MEM-005"],
+  "tasks": [
+    {
+      "id": "S05-T01",
+      "title": "Auditoria de Segurança — checklist OWASP Top 10 + LGPD",
+      "type": "test",
+      "estimatedHours": 3,
+      "owner": "security",
+      "dependsOn": ["S00", "S01", "S02", "S03", "S04"],
+      "tdd": {
+        "testFirst": "N/A (auditoria manual + greps)",
+        "testPath": "N/A (relatório em .harness/audit/)",
+        "acceptance": "Checklist A01-A10 com status Mitigado/A confirmar; 0 vuln critical/high"
+      },
+      "files": {
+        "create": [".harness/audit/security-s05.md"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "A01 (Broken Access Control): 3 camadas RBAC verificadas em Fidelidade e Config Acolhimento",
+        "A02 (Cryptographic Failures): bcrypt cost 10; cookies httpOnly/sameSite/secure(prod)",
+        "A03 (Injection): Prisma parametrizado; Zod em todos os inputs; zero dangerouslySetInnerHTML",
+        "A04 (Insecure Design): defense in depth + idempotência + onDelete Restrict",
+        "A05 (Misconfiguration): erros genéricos 4xx/5xx; sem debug em prod",
+        "A06 (Components): `pnpm audit` roda; sem critical/high",
+        "A07 (Auth Failures): TTL 7d sliding + 30d abs; senha ≥ 8 chars (validar no Zod login)",
+        "A08 (Integrity): migrations versionadas; sem $queryRaw sem justificativa",
+        "A09 (Logging): safeLog com allowlist; sem PII",
+        "A10 (SSRF): sem integrações externas no MVP",
+        "Relatório final com score de 0 vuln critical/high"
+      ],
+      "rags": ["lgpd-igreja-conect", "security-rbac-matrix"]
+    },
+    {
+      "id": "S05-T02",
+      "title": "Auditoria LGPD — checklist de conformidade (6 decisões técnicas)",
+      "type": "test",
+      "estimatedHours": 2,
+      "owner": "lgpd-officer",
+      "dependsOn": ["S00", "S01", "S02", "S03", "S04"],
+      "tdd": {
+        "testFirst": "N/A (auditoria + greps)",
+        "testPath": "N/A (relatório em .harness/audit/)",
+        "acceptance": "Todas as 6 decisões do RAG lgpd-igreja-conect.md §2 verificadas com teste que prova"
+      },
+      "files": {
+        "create": [".harness/audit/lgpd-s05.md"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "§2.1 (sem CPF): grep `cpf:|rg:|cnpj:|pis:` em prisma/ e app/ → 0 resultados",
+        "§2.2 (dízimos restritos): E2E fidelidade-bypass.spec.ts passa (UI+URL+service)",
+        "§2.3 (senha hash): bcrypt cost 10 em auth.server.ts; senha nunca em log",
+        "§2.4 (cookie): flags httpOnly + sameSite=lax + secure(prod) em session.server.ts",
+        "§2.5 (logs sem PII): grep em console.log/console.error do app/ por email/telefone → 0",
+        "§2.6 (matriz por perfil): 6 perfis testados em pelo menos 1 cenário cada",
+        "Relatório final com status 'LGPD Compliant'"
+      ],
+      "rags": ["lgpd-igreja-conect"]
+    },
+    {
+      "id": "S05-T03",
+      "title": "Code review geral — verificar YAGNI, KISS, JSDoc, TDD, debt registry",
+      "type": "test",
+      "estimatedHours": 3,
+      "owner": "planning-reviewer",
+      "dependsOn": ["S05-T01", "S05-T02"],
+      "tdd": {
+        "testFirst": "N/A (revisão manual)",
+        "testPath": "N/A (relatório em .harness/audit/)",
+        "acceptance": "Planning-reviewer score ≥ 70"
+      },
+      "files": {
+        "create": [".harness/audit/planning-reviewer-s05.md", "sprints/cross-sprint.json#debtRegistry"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "YAGNI: nenhuma abstração especulativa (sem plugin system, sem strategy pattern não justificado)",
+        "KISS: funções ≤ 30 linhas, arquivos ≤ 300 linhas, complexidade ciclomática ≤ 10",
+        "JSDoc: 100% das funções públicas com @param, @returns, @throws, @example",
+        "TDD: cada task tem teste correspondente (verificável em `git log` ou na criação)",
+        "Sem código comentado morto, sem console.log esquecido",
+        "Score final ≥ 70 (planning-reviewer)"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S05-T04",
+      "title": "Smoke test E2E completo — `e2e/smoke.spec.ts` cobre fluxo do north star (50 membros + discipulado + alertas)",
+      "type": "test",
+      "estimatedHours": 4,
+      "owner": "tester",
+      "dependsOn": ["S05-T01", "S05-T02", "S05-T03"],
+      "tdd": {
+        "testFirst": "Smoke E2E do north star do PRD: 'Admin cadastra 50 membros, vincula 12 a cada discipulador, gera alertas — sem nunca ver dados financeiros de quem não deveria'",
+        "testPath": "e2e/smoke.spec.ts",
+        "acceptance": "Script único que executa o cenário do PRD §7.3 e valida que funciona end-to-end"
+      },
+      "files": {
+        "create": ["e2e/smoke.spec.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Login com admin seed",
+        "Cria 50 membros (script ou seed dinâmico)",
+        "Cria 5 discipuladores; vincula 12 discípulos a cada (boundary 12)",
+        "Tenta 13º vínculo → bloqueado com mensagem clara",
+        "Configura acolhimento para Membro X (ADMIN)",
+        "Cadastra visitante; Membro X vê alerta em /app/alertas",
+        "Verifica que SECRETARIO logado NÃO vê aba Fidelidade",
+        "Verifica que DISCIPULADOR logado vê apenas seus discípulos em /app/membros",
+        "Tempo total: smoke E2E roda em < 60s"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S05-T05",
+      "title": "Verificar cobertura global ≥ 85% (gate qa-gate)",
+      "type": "test",
+      "estimatedHours": 1,
+      "owner": "tester",
+      "dependsOn": ["S05-T04"],
+      "tdd": {
+        "testFirst": "`pnpm test:coverage` mostra ≥ 85% lines/branches/functions/statements",
+        "testPath": "N/A (relatório do Vitest)",
+        "acceptance": "Relatório anexado em .harness/audit/coverage-s05.md"
+      },
+      "files": {
+        "create": [".harness/audit/coverage-s05.md"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Coverage global ≥ 85% (Vitest --coverage)",
+        "Services de regra de negócio 100% (assignDisciple, isDescendantOf, getDizipuladorById, etc)",
+        "Nenhum teste skipped sem justificativa",
+        "Relatório anexado em .harness/audit/"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S05-T06",
+      "title": "Hardening — corrigir débitos técnicos identificados na auditoria",
+      "type": "infra",
+      "estimatedHours": 4,
+      "owner": "backend",
+      "dependsOn": ["S05-T01", "S05-T02", "S05-T03"],
+      "tdd": {
+        "testFirst": "Cada débito técnico tem teste que falha antes do fix; passa depois",
+        "testPath": "Conforme debt registry",
+        "acceptance": "Todos os débitos classificados como 'must-fix' na auditoria estão resolvidos"
+      },
+      "files": {
+        "create": [],
+        "modify": ["(conforme debt registry)"]
+      },
+      "acceptanceCriteria": [
+        "Debt registry em `sprints/cross-sprint.json#debtRegistry` lista débitos com severidade (blocker/major/minor)",
+        "Débitos blocker/major: corrigidos e testados",
+        "Débitos minor: documentados para sprints futuras",
+        "Após correção, re-roda suíte E2E completa para garantir zero regressão"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S05-T07",
+      "title": "Criar README.md com setup, credenciais do seed, comandos úteis, status das features",
+      "type": "docs",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "N/A (verificação manual)",
+        "testPath": "N/A",
+        "acceptance": "Dev novo consegue seguir o README do zero até o app rodando"
+      },
+      "files": {
+        "create": ["README.md"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Seções: Overview, Stack, Pré-requisitos, Setup (pnpm install, prisma migrate dev, prisma db seed, pnpm dev)",
+        "Credenciais do ADMIN seed: admin@igreja.local / admin123 (com aviso 'trocar em produção')",
+        "Comandos úteis: pnpm dev, pnpm test, pnpm test:e2e, pnpm typecheck, pnpm prisma studio, pnpm db:reset",
+        "Status das features MVP (com checks)",
+        "Links para SPEC, PRD, RAGs",
+        "Seção 'LGPD & Segurança' com 5 bullets do que está garantido"
+      ],
+      "rags": ["lgpd-igreja-conect", "convention-prisma-sqlite"]
+    },
+    {
+      "id": "S05-T08",
+      "title": "Adicionar script `db:reset` no package.json (dropa dev.db, recria + seed)",
+      "type": "infra",
+      "estimatedHours": 0.5,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "`pnpm db:reset` remove dev.db, executa migrations e seed",
+        "testPath": "N/A (verificação manual)",
+        "acceptance": "Após rodar, app sobe com DB limpo e admin@igreja.local funcional"
+      },
+      "files": {
+        "create": [],
+        "modify": ["package.json"]
+      },
+      "acceptanceCriteria": [
+        "Script: `\"db:reset\": \"prisma migrate reset --force && pnpm prisma db seed\"`",
+        "Documentado no README como workflow seguro em dev",
+        "Não roda em produção (acidental `NODE_ENV=production` deve dar erro ou warning)"
+      ],
+      "rags": ["convention-prisma-sqlite"]
+    },
+    {
+      "id": "S05-T09",
+      "title": "Adicionar `pnpm db:reset` + workflow de backup antes de migrations destrutivas (PRD R3)",
+      "type": "infra",
+      "estimatedHours": 0.5,
+      "owner": "backend",
+      "dependsOn": ["S05-T08"],
+      "tdd": {
+        "testFirst": "Script de snapshot copia dev.db antes de migrate destrutivo",
+        "testPath": "N/A (script em scripts/backup-db.sh ou similar)",
+        "acceptance": "Documentado no README + script executável"
+      },
+      "files": {
+        "create": ["scripts/backup-db.sh"],
+        "modify": ["package.json"]
+      },
+      "acceptanceCriteria": [
+        "Script shell: `cp dev.db dev.db.bak.$(date +%s)`",
+        "Adicionado a scripts npm: `\"db:backup\": \"sh scripts/backup-db.sh\"`",
+        "Documentado como workflow seguro (PRD R3)"
+      ],
+      "rags": ["convention-prisma-sqlite"]
+    },
+    {
+      "id": "S05-T10",
+      "title": "Validar gate agregado (qa-gate) — coverage + security + planning + LGPD",
+      "type": "test",
+      "estimatedHours": 1,
+      "owner": "qa-gate",
+      "dependsOn": ["S05-T01", "S05-T02", "S05-T03", "S05-T04", "S05-T05", "S05-T06"],
+      "tdd": {
+        "testFirst": "N/A (gate agregado)",
+        "testPath": "N/A (relatório em .harness/audit/)",
+        "acceptance": "Todos os 4 sub-gates passam; release-ready"
+      },
+      "files": {
+        "create": [".harness/audit/qa-gate-s05.md"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Coverage ≥ 85% (sub-gate tester)",
+        "0 vuln critical/high (sub-gate security)",
+        "Planning-reviewer ≥ 70 (sub-gate planning-reviewer)",
+        "LGPD compliant (sub-gate lgpd-officer)",
+        "JSDoc 100% em funções públicas (sub-gate documentation)",
+        "0 teste skipped sem justificativa",
+        "pnpm typecheck + pnpm dev + smoke E2E passam",
+        "Status final: 'MVP Pronto para Release'"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    }
+  ],
+  "definitionOfDone": [
+    "Auditoria de segurança completa (0 critical/high)",
+    "Auditoria LGPD completa (6 decisões verificadas)",
+    "Planning-reviewer score ≥ 70",
+    "Coverage global ≥ 85%",
+    "Smoke E2E do north star do PRD passa",
+    "Todos os débitos técnicos blocker/major corrigidos",
+    "README.md completo (dev novo consegue setup do zero)",
+    "Comandos `db:reset` e `db:backup` documentados e funcionais",
+    "qa-gate agregado: APROVADO para release"
+  ],
+  "coverageTarget": 85,
+  "notes": "Sprint final. Não cria feature nova — fecha qualidade. Faz auditoria (security, LGPD, planning-reviewer) + corrige débitos + smoke E2E + documentação. Gate agregado do qa-gate libera o MVP."
+}

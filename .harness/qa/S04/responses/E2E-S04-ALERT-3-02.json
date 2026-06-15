@@ -1,0 +1,13 @@
+{
+  "status": 302,
+  "headers": {
+    "vary": "Origin",
+    "location": "/app",
+    "set-cookie": "__session=IjNmYjM2NzMwLTQ2OTktNDI5YS1hMjk2LTIxMTYwMzgzMWViYiI%3D.x%2B3uU7UiLkNb3HVTw7hYzBu1VasQ2%2FnD%2Bo4D7PuHvt4; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax",
+    "date": "Sat, 13 Jun 2026 21:16:38 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": "__session=IjNmYjM2NzMwLTQ2OTktNDI5YS1hMjk2LTIxMTYwMzgzMWViYiI%3D.x%2B3uU7UiLkNb3HVTw7hYzBu1VasQ2%2FnD%2Bo4D7PuHvt4; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax"
+}

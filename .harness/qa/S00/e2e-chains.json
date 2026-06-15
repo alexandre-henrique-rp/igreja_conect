@@ -1,0 +1,42 @@
+{
+  "sprint": "S00",
+  "name": "Setup & Infraestrutura",
+  "generatedAt": "2026-06-13T13:50:00Z",
+  "generatedBy": "tester-agent (post-hoc reconciliation)",
+  "note": "S00 é setup/infraestrutura (Prisma client, model Session, helpers de auth, seed idempotente, setup de testes). Não há fluxos E2E cross-module aplicáveis — chains E2E começam em S01 (e2e/auth.spec.ts). Os 107 testes da S00 são testes unit/integration que validam a base técnica.",
+  "chains": [],
+  "stats": {
+    "chainsPlanned": 0,
+    "chainsRun": 0,
+    "chainsApplicableInSprint": false,
+    "reason": "Setup não tem fluxos user-facing; primeiro sprint com E2E real é S01"
+  },
+  "coverage": {
+    "current": 94.08,
+    "required": 75,
+    "scope": "sprint",
+    "byModule": {
+      "auth.server": { "lines": 90.0, "branches": 83.33, "functions": 100 },
+      "session.server": { "lines": 100, "branches": 92.85, "functions": 80 },
+      "rbac.server": { "lines": 100, "branches": 100, "functions": 100 },
+      "errors.ts": { "lines": 100, "branches": 100, "functions": 100 },
+      "prisma.server": { "lines": 93.75, "branches": 70, "functions": 66.66 },
+      "audit.server": { "lines": 100, "branches": 100, "functions": 100 },
+      "rate-limit.server": { "lines": 100, "branches": 100, "functions": 100 },
+      "validators/auth": { "lines": 100, "branches": 100, "functions": 100 },
+      "validators/common": { "lines": 100, "branches": 100, "functions": 100 },
+      "schemas/auth": { "lines": 100, "branches": 92.3, "functions": 100 }
+    }
+  },
+  "tests": {
+    "total": 107,
+    "passing": 107,
+    "failing": 0
+  },
+  "typecheck": "pass",
+  "links": {
+    "coverageReport": "coverage/index.html",
+    "sprintPlan": "sprints/S00.json",
+    "sprintStatus": "sprints/S00.status.json"
+  }
+}

@@ -1,0 +1,342 @@
+{
+  "_type": "harness-security-audit-v6",
+  "agent": "security",
+  "timestamp": "2026-06-13T12:30:00Z",
+  "sprint": "S02",
+  "sprintName": "Membros: Listagem + CRUD básico",
+  "auditType": "preventive",
+  "auditTypeRationale": "Código de feature S02 (app/lib/members.server.ts, app/lib/schemas/membros.ts, app/routes/app/membros.*.tsx) NÃO EXISTE no repositório. Auditoria valida CONTRATOS (sprints/S02.json), DESIGN DOCS (design/private-membros-{list,detail,form}.md), RAGs (security-rbac-matrix, lgpd-igreja-conect), schema Prisma, e débitos herdados. Recomenda-se re-rodar em modo 'real' após implementação.",
+  "scope": {
+    "read": [
+      "prisma/schema.prisma",
+      "app/lib/rbac.server.ts",
+      "app/lib/session.server.ts",
+      "app/lib/validators/auth.ts",
+      "app/lib/errors.ts",
+      "sprints/S02.json",
+      "sprints/cross-sprint.json",
+      "design/private-membros-list.DESIGN.md",
+      "design/private-membros-list.PROMPT.md",
+      "design/private-membros-detail.DESIGN.md",
+      "design/private-membros-detail.PROMPT.md",
+      "design/private-membros-form.DESIGN.md",
+      ".harness/RAG/security-rbac-matrix.md",
+      ".harness/RAG/lgpd-igreja-conect.md",
+      ".env"
+    ],
+    "write": [
+      ".harness/security/S02-audit.md",
+      "sprints/S02.security.json"
+    ]
+  },
+  "owaspCoverage": {
+    "A01": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "M1",
+          "severity": "medium",
+          "title": "assertCanDeleteMembers não existe em rbac.server.ts",
+          "evidence": "app/lib/rbac.server.ts (apenas assertCanSeeFinancials, assertCanWriteMembers, assertIsAdmin, assertCanManageConfiguracaoGeral)",
+          "remediation": "Criar helper em app/lib/rbac.server.ts com allowed = [ADMIN, PASTOR]"
+        },
+        {
+          "id": "M3",
+          "severity": "medium",
+          "title": "LIDER_MINISTERIO tem escopo MVP relaxado (vê lista global)",
+          "evidence": "sprints/cross-sprint.json:362-368 (DEBT-010), design/private-membros-list.DESIGN.md:185",
+          "remediation": "Aceitar para MVP, documentar, ticket S2+ para refinar"
+        }
+      ]
+    },
+    "A02": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "L3",
+          "severity": "low",
+          "title": "SESSION_SECRET fallback inseguro (re-emerge de S01 M1)",
+          "evidence": "app/lib/session.server.ts:29 — secrets: [process.env.SESSION_SECRET ?? 'dev-only-not-secret']",
+          "remediation": "Fail-fast no boot se NODE_ENV=production e SESSION_SECRET ausente (já reportado em S01)"
+        }
+      ]
+    },
+    "A03": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "L1",
+          "severity": "low",
+          "title": "Busca textual q sem escape explícito de wildcards LIKE (%)",
+          "evidence": "S02.json §53 menciona normalize() mas não menciona escape de % e _",
+          "remediation": "q.trim().slice(0, 100).replace(/[%_\\\\]/g, '\\\\$&') antes de contains"
+        }
+      ],
+      "passes": {
+        "sqlInjection": "0 uso de $queryRaw/$executeRaw em código de feature (verificado)",
+        "xss": "0 uso de dangerouslySetInnerHTML/innerHTML/eval/new Function (verificado)",
+        "unicodeSafety": "design/private-membros-list.DESIGN.md §6.3 explicita normalize('NFD') — S02-T02 §53 confirma contrato"
+      }
+    },
+    "A04": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "M2",
+          "severity": "medium",
+          "title": "MembroCreateSchema incompleto em validators/auth.ts:17-26",
+          "evidence": "Faltam endereço (logradouro/numero/bairro/cidade/estado/cep), dataConversao, dataBatismo, regex telefone BR, refine dataBatismo >= dataConversao. Arquivo errado (deveria ser app/lib/schemas/membros.ts conforme S02-T01 §22).",
+          "remediation": "Mover/criar MembroCreateSchema em app/lib/schemas/membros.ts com todos os campos e validações"
+        },
+        {
+          "id": "L2",
+          "severity": "low",
+          "title": "Mensagem de delete com discípulos vaza contagem indiretamente",
+          "evidence": "S02-T07 §197: 'Desvincule os discípulos antes de excluir.'",
+          "remediation": "Manter mensagem amigável; considerar incluir contagem ('Desvincule os 5 discípulos') que é mais útil; confirmar que assertCanDeleteMembers é chamado ANTES de contar (camada 3)"
+        }
+      ],
+      "passes": {
+        "antiEnumeration": "S02-T02 §54: getMembroById lança 404 (não 403) para DISCIPULADOR fora de escopo — excelente",
+        "antiDoSPagination": "design §6.1: pageSize clamp ≤ 100; S02-T02 §53 confirma",
+        "emailDuplicadoMessage": "S02-T06 §171: 422 com fieldError.email claro (não vaza se email existe)"
+      }
+    },
+    "A05": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "M1-reemerge",
+          "severity": "low",
+          "title": "MEMBRO_SAFE_SELECT ainda não implementada (contrato existe)",
+          "evidence": "S02-T02 §52: 'Constante MEMBRO_SAFE_SELECT (sem senhaHash) — exportada' — arquivo app/lib/members.server.ts não existe",
+          "remediation": "Implementar conforme contrato; verificar com grep em app/routes/app/membros.*.tsx após implementação"
+        },
+        {
+          "id": "L3-reemerge",
+          "severity": "low",
+          "title": "SESSION_SECRET fallback (ver A02.L3)"
+        }
+      ],
+      "passes": {
+        "corsOpen": "0 Access-Control-Allow-Origin encontrado (PASS)",
+        "senhaHashInPayload": "grep -rn 'senhaHash' app/routes/app/ → 0 em código de produção; 1 em _middleware.test.ts:61 (fixture OK); total app/routes/ = 4 (todos .test.tsx)",
+        "debugMode": "Sem debug mode em prod (vite padrão sem override)"
+      }
+    },
+    "A06": {
+      "checked": true,
+      "status": "pass",
+      "findings": [],
+      "notes": "S02 não adiciona deps novas; zod já em S00; sem risco de supply chain."
+    },
+    "A07": {
+      "checked": true,
+      "status": "pass",
+      "findings": [],
+      "notes": "S02 não mexe em auth; reusa S01 (aprovado)."
+    },
+    "A08": {
+      "checked": true,
+      "status": "pass",
+      "findings": [],
+      "notes": "S02 não introduz mutação cross-origin; forms RR7 method=post; cookie sameSite=lax (S01)."
+    },
+    "A09": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "M4",
+          "severity": "medium",
+          "title": "createMembro/updateMembro/deleteMembro sem safeLog (LGPD art. 37)",
+          "evidence": "S02-T02 menciona createMembro, updateMembro, deleteMembro mas NÃO menciona safeLog",
+          "remediation": "Adicionar safeLog({ userId, action, resource, resourceId, result }) em cada mutação"
+        }
+      ],
+      "passes": {
+        "safeLogAllowlist": "app/lib/audit.server.ts:11-18 já filtra email/senhaHash/password (verificado em S01)"
+      }
+    },
+    "A10": {
+      "checked": true,
+      "status": "n/a",
+      "findings": [],
+      "notes": "S02 não faz fetch user-controlled; opera só no DB local."
+    }
+  },
+  "lgpdCoverage": {
+    "applies": true,
+    "findings": [
+      {
+        "id": "M2-lgpd",
+        "severity": "medium",
+        "title": "MembroCreateSchema incompleto — risco de divergência schema/form",
+        "evidence": "validators/auth.ts:17-26 vs S02-T01 §26-32",
+        "remediation": "Mover/criar schema completo em app/lib/schemas/membros.ts"
+      },
+      {
+        "id": "M3-lgpd",
+        "severity": "medium",
+        "title": "LIDER_MINISTERIO escopo MVP relaxado (vê PII de membros de outros ministérios)",
+        "evidence": "DEBT-010 (cross-sprint.json:362-368), design/private-membros-list.DESIGN.md:185",
+        "remediation": "Aceitar para MVP, documentar em LGPD-RAG, ticket S2+"
+      },
+      {
+        "id": "M4-lgpd",
+        "severity": "medium",
+        "title": "Mutações de membros sem audit log (LGPD art. 37)",
+        "evidence": "S02-T02 não menciona safeLog em create/update/delete",
+        "remediation": "Adicionar safeLog em cada mutação"
+      },
+      {
+        "id": "M5-lgpd",
+        "severity": "medium",
+        "title": "Audit log de leitura de PII fora do MVP (LGPD art. 37 parcial)",
+        "evidence": "DEBT-012 (cross-sprint.json:381-386) — decisão consciente",
+        "remediation": "Aceitar para MVP; ticket S2+ para implementar"
+      }
+    ],
+    "rnMEM02": {
+      "applies": true,
+      "status": "pass",
+      "evidence": "grep -iE '\\bcpf\\b|\\brg\\b|\\bcnpj\\b|\\bpis\\b|titulo[_-]?eleitor|cartao[_-]?sus' prisma/schema.prisma app/lib/ app/components/ → 0 matches. MembroCreateSchema em validators/auth.ts:24 tem comentário explícito 'Sem CPF, RG, dados fiscais (RN-MEM-02)'."
+    },
+    "senhaHash": {
+      "applies": true,
+      "status": "pass",
+      "evidence": "grep -rn 'senhaHash' app/routes/app/ → 0 em código de produção (1 match em _middleware.test.ts:61, fixture OK). Total app/routes/: 4 matches, TODOS em .test.tsx. MEMBRO_SAFE_SELECT contrato definido em S02-T02 §52 — ainda não implementado mas esperado."
+    },
+    "rbac": {
+      "applies": true,
+      "status": "pass-with-finding",
+      "evidence": "app/lib/rbac.server.ts já tem 4 helpers; falta assertCanDeleteMembers (M1). design/private-membros-list.DESIGN.md:179-186 define escopo por perfil. design/private-membros-detail.DESIGN.md:190-198 define matriz pode-ver/editar/excluir/ver-fidelidade."
+    },
+    "cookie": {
+      "applies": true,
+      "status": "pass",
+      "evidence": "S01 cookie __session com httpOnly=true, sameSite=lax, secure=prod (validado S01-audit)"
+    }
+  },
+  "findings": [
+    {
+      "id": "M1",
+      "severity": "medium",
+      "category": "A01",
+      "title": "assertCanDeleteMembers ausente em rbac.server.ts",
+      "file": "app/lib/rbac.server.ts (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S02-T02 §57: 'deleteMembro — só ADMIN/PASTOR'. rbac.server.ts tem apenas assertCanSeeFinancials, assertCanWriteMembers, assertIsAdmin, assertCanManageConfiguracaoGeral.",
+      "remediation": "Criar export function assertCanDeleteMembers(user: SessionUser): void com allowed = ['ADMIN', 'PASTOR']. Adicionar teste em rbac.server.test.ts com it.each para os 6 perfis.",
+      "effort": "xs"
+    },
+    {
+      "id": "M2",
+      "severity": "medium",
+      "category": "A04",
+      "title": "MembroCreateSchema incompleto em validators/auth.ts (arquivo errado)",
+      "file": "app/lib/validators/auth.ts",
+      "line": 17,
+      "evidence": "Schema atual tem: nome, tipo, email, telefone, profissao, estadoCivil. Faltam: logradouro, numero, bairro, cidade, estado, cep, dataConversao, dataBatismo, regex telefone BR, refine dataBatismo >= dataConversao. Deveria estar em app/lib/schemas/membros.ts conforme S02-T01 §22.",
+      "remediation": "(a) Criar app/lib/schemas/membros.ts com MembroCreateSchema completo. (b) Adicionar z.coerce.date() para dataConversao/dataBatismo. (c) Adicionar refine: if (dataBatismo && dataConversao) dataBatismo >= dataConversao. (d) Regex telefone (10/11 dígitos), regex CEP (8 dígitos). (e) Mensagens PT-BR. (f) MembroUpdateSchema = MembroCreateSchema.partial() exceto senhaHash.",
+      "effort": "s"
+    },
+    {
+      "id": "M3",
+      "severity": "medium",
+      "category": "A01",
+      "title": "LIDER_MINISTERIO escopo MVP relaxado (vê lista global de membros)",
+      "file": "sprints/cross-sprint.json + design/private-membros-list.DESIGN.md",
+      "line": "cross-sprint.json:362-368 (DEBT-010)",
+      "evidence": "Decisão consciente: 'MVP aceita escopo relaxado (vê lista global) — sprint 2+ adiciona model LiderMinisterio'. Risco: líder vê PII (endereço, telefone, email) de membros que não estão no seu ministério.",
+      "remediation": "(a) Aceitar para MVP (decisão consciente). (b) Adicionar nota em MembroCreateSchema JSDoc. (c) Criar ticket S2+ para refinar com model LiderMinisterio. (d) Considerar anonimização parcial de telefone para líder que não é do ministério (hardening opcional).",
+      "effort": "xs"
+    },
+    {
+      "id": "M4",
+      "severity": "medium",
+      "category": "A09",
+      "title": "createMembro/updateMembro/deleteMembro sem safeLog (LGPD art. 37)",
+      "file": "app/lib/members.server.ts (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S02-T02 menciona createMembro, updateMembro, deleteMembro mas NÃO menciona safeLog. LGPD art. 37 exige registro de operações de tratamento.",
+      "remediation": "Adicionar safeLog({ userId: user.id, action: 'create_membro' | 'update_membro' | 'delete_membro', resource: 'Membro', resourceId: membro.id, result: 'ok' }) em cada mutação. Adicionar teste em members.server.test.ts com spy em safeLog.",
+      "effort": "xs"
+    },
+    {
+      "id": "M5",
+      "severity": "medium",
+      "category": "LGPD-art-37",
+      "title": "Audit log de leitura de PII fora do MVP",
+      "file": "sprints/cross-sprint.json",
+      "line": "381-386 (DEBT-012)",
+      "evidence": "Decisão consciente documentada: 'Fora do MVP (PRD §4 explicitamente). Sprint 2+.'",
+      "remediation": "Aceitar para MVP. Criar ticket S2+ para implementar log de leitura (com hash de identificador, não o valor em si).",
+      "effort": "xs"
+    },
+    {
+      "id": "L1",
+      "severity": "low",
+      "category": "A03",
+      "title": "Busca textual q sem escape explícito de wildcards LIKE (%)",
+      "file": "app/lib/members.server.ts (ausente)",
+      "line": null,
+      "evidence": "S02-T02 §53 menciona 'normaliza q (trim+slice+normalize acentos)' mas NÃO menciona escape de % e _. design/private-membros-list.DESIGN.md:169 explicita: 'trim + escape de % e _ (SQLite LIKE usa esses wildcards)'.",
+      "remediation": "No service listMembros: const safeQ = q.trim().slice(0, 100).replace(/[%_\\\\]/g, '\\\\$&') antes de contains. Adicionar teste com input '%admin%' que retorna 0 resultados.",
+      "effort": "xs"
+    },
+    {
+      "id": "L2",
+      "severity": "low",
+      "category": "A04",
+      "title": "Mensagem de delete com discípulos pode vazar contagem",
+      "file": "app/routes/app/membros.$id.tsx (ausente)",
+      "line": null,
+      "evidence": "S02-T07 §197: 'Delete com discípulos vinculados → 409 com mensagem Desvincule os discípulos antes de excluir.' Vetor: atacante enumera IDs para inferir estrutura de discipulado.",
+      "remediation": "Manter mensagem amigável; considerar incluir contagem ('Desvincule os 5 discípulos') que é mais útil. Confirmar que assertCanDeleteMembers é chamado ANTES de contar discípulos (camada 3) — DISCIPULADOR recebe 403 imediato sem vazar contagem.",
+      "effort": "xs"
+    },
+    {
+      "id": "L3",
+      "severity": "low",
+      "category": "A02",
+      "title": "SESSION_SECRET fallback inseguro (re-emerge de S01 M1)",
+      "file": "app/lib/session.server.ts",
+      "line": 29,
+      "evidence": "secrets: [process.env.SESSION_SECRET ?? 'dev-only-not-secret']",
+      "remediation": "Fail-fast no boot se NODE_ENV === 'production' e SESSION_SECRET ausente. (Já reportado em S01-audit M1 — re-emerge aqui porque S02 amplia raio de explosão.)",
+      "effort": "xs"
+    }
+  ],
+  "contractAlignment": {
+    "totalContractItems": 13,
+    "alignedItems": 9,
+    "gapsPreventivos": 4,
+    "gaps": ["M1", "M2", "M4", "L1"],
+    "note": "9/13 itens do contrato S02.json + design docs já especificam corretamente o comportamento de segurança esperado. 4/13 têm gaps preventivos que devem ser fechados na implementação (S02-T01/T02)."
+  },
+  "stats": {
+    "critical": 0,
+    "high": 0,
+    "medium": 5,
+    "low": 3,
+    "info": 0,
+    "total": 8
+  },
+  "passThreshold": {
+    "maxCritical": 0,
+    "maxHigh": 0,
+    "currentCritical": 0,
+    "currentHigh": 0,
+    "passes": true
+  },
+  "blockingFindings": 0,
+  "passed": true,
+  "reAuditRequired": true,
+  "reAuditTrigger": "Rodar esta auditoria em modo 'real' (não preventiva) após implementação S02-T01..T11, com código concreto em app/lib/{members.server,schemas/membros}.ts e app/routes/app/membros.*.tsx. Validar 6 itens: (1) MEMBRO_SAFE_SELECT exportada e usada; (2) q com normalize('NFD') + escape LIKE wildcards; (3) getMembroById lança 404 para DISCIPULADOR fora de escopo; (4) assertCanDeleteMembers em rbac.server.ts; (5) senhaHash continua 0 em app/routes/app/; (6) cpf/rg/cnpj continua 0 em schema + form + componentes."
+}

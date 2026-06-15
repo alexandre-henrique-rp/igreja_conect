@@ -1,4 +1,40 @@
 import bcrypt from "bcryptjs";
+import { prisma } from "~/db/prisma.server";
+import type { SessionUser } from "./session.types";
+
+/**
+ * Verifica credenciais de login e retorna um `SessionUser` seguro.
+ *
+ * Mantém mensagem unificada no caller: retorna `null` tanto para e-mail
+ * inexistente quanto para senha incorreta.
+ *
+ * @description Valida e-mail/senha e retorna usuário sem dados sensíveis.
+ * @param {string} email - E-mail do membro.
+ * @param {string} senha - Senha em texto puro.
+ * @returns {Promise<SessionUser | null>} Usuário seguro ou `null` se inválido.
+ * @example
+ *   const user = await verifyCredentials("admin@igreja.local", "senha");
+ */
+export async function verifyCredentials(
+  email: string,
+  senha: string
+): Promise<SessionUser | null> {
+  const membro = await prisma.membro.findUnique({
+    where: { email },
+    select: { id: true, nome: true, cargo: true, senhaHash: true },
+  });
+
+  if (!membro || !membro.senhaHash) return null;
+
+  const ok = await verifyPassword(senha, membro.senhaHash);
+  if (!ok) return null;
+
+  return {
+    id: membro.id,
+    nome: membro.nome,
+    cargo: membro.cargo,
+  };
+}
 
 /**
  * Cost factor do bcrypt. 10 = ~50ms por hash em hardware comum (ADR-002).

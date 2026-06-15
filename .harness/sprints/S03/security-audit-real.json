@@ -1,0 +1,234 @@
+{
+  "_type": "harness-security-audit-v6",
+  "agent": "security",
+  "timestamp": "2026-06-13T16:44:39Z",
+  "sprint": "S03",
+  "scope": "app/** (server.ts, routes, components, lib, schemas)",
+  "owaspCoverage": {
+    "A01": {
+      "checked": true,
+      "findings": [
+        {
+          "severity": "low",
+          "file": "app/routes/app/membros.$id.discipulador.tsx",
+          "line": 47,
+          "evidence": "action() não faz checagem RBAC explícita antes de chamar unassignDisciple. Camada 3 protege, mas defense in depth recomenda camada 2.",
+          "remediation": "Adicionar assertCanWriteMembers(user) antes de unassignDisciple."
+        },
+        {
+          "severity": "low",
+          "file": "app/routes/app/ministerios._index.tsx",
+          "line": 108,
+          "evidence": "Checagem RBAC manual (CAN_MANAGE array) + queries Prisma diretas. Bypassa service ministries.server.ts que tem assertCanManageMinisterios na camada 3.",
+          "remediation": "Refatorar para usar os services do módulo (createMinisterio, deleteMinisterio, etc.) em vez de Prisma direto."
+        }
+      ]
+    },
+    "A02": {
+      "checked": true,
+      "findings": []
+    },
+    "A03": {
+      "checked": true,
+      "findings": []
+    },
+    "A04": {
+      "checked": true,
+      "findings": [
+        {
+          "severity": "medium",
+          "file": "app/routes/app/membros.$id.discipulado.tsx",
+          "line": 63,
+          "evidence": "Action de assignDisciple/unassignDisciple sem rate limiting. Atacante pode tentar brute force de UUIDs.",
+          "remediation": "Adicionar checkRateLimit por IP nas actions mutantes ou implementar middleware global."
+        },
+        {
+          "severity": "medium",
+          "file": "app/routes/app/membros.$id.tipo.tsx",
+          "line": 51,
+          "evidence": "Action de promoverTipo sem rate limiting.",
+          "remediation": "Adicionar checkRateLimit por IP na action."
+        },
+        {
+          "severity": "medium",
+          "file": "app/routes/app/ministerios._index.tsx",
+          "line": 102,
+          "evidence": "CRUD de ministérios sem rate limiting. Possível DoS via criação massiva.",
+          "remediation": "Adicionar checkRateLimit por IP nas actions."
+        }
+      ]
+    },
+    "A05": {
+      "checked": true,
+      "findings": [
+        {
+          "severity": "medium",
+          "file": "app/lib/session.server.ts",
+          "line": 34,
+          "evidence": "SESSION_SECRET com fallback hardcoded 'dev-only-not-secret'. Se a env var não for definida em produção, qualquer um pode forjar cookies.",
+          "remediation": "Adicionar validação em startup que falhe se SESSION_SECRET não estiver definida em produção. Remover fallback ou usar aviso claro."
+        }
+      ]
+    },
+    "A06": {
+      "checked": true,
+      "findings": [
+        {
+          "severity": "medium",
+          "file": "package.json (devDependency)",
+          "line": 0,
+          "evidence": "esbuild < 0.28.1 com CVE high (GHSA-gv7w-rqvm-qjhr) — missing binary integrity verification. Apenas em dev/build.",
+          "remediation": "Atualizar esbuild para >= 0.28.1 via pnpm update."
+        }
+      ]
+    },
+    "A07": {
+      "checked": true,
+      "findings": []
+    },
+    "A08": {
+      "checked": true,
+      "findings": [
+        {
+          "severity": "low",
+          "file": "app/lib/session.server.ts",
+          "line": 30,
+          "evidence": "CSRF mitigado por sameSite:'lax', mas sem token CSRF explícito em nenhuma action.",
+          "remediation": "Para app gerenciado (admin), risco baixo. Documentar decisão."
+        }
+      ]
+    },
+    "A09": {
+      "checked": true,
+      "findings": []
+    },
+    "A10": {
+      "checked": true,
+      "findings": []
+    }
+  },
+  "lgpdCoverage": {
+    "applies": true,
+    "findings": [
+      {
+        "severity": "medium",
+        "category": "LGPD art. 6 (segurança)",
+        "title": "Email do usuário exposto em query string",
+        "file": "app/routes/public/login.tsx",
+        "line": 183,
+        "evidence": "const defaultEmail = searchParams.get('email') ?? undefined; — email é passado como parâmetro ?email= na URL, vazando PII para histórico, referrer, logs.",
+        "remediation": "Usar sessionStorage ou cookie efêmero para persistir o email entre renderizações, ou remover auto-preenchimento via URL.",
+        "effort": "low"
+      }
+    ],
+    "checks": {
+      "consentimento": { "passed": true, "note": "MVP não implementa fluxo de consentimento, apenas coleta dados administrativos (brief §4 aceito)." },
+      "dadosSensiveis": { "passed": true, "note": "MEMBRO_SAFE_SELECT exclui senhaHash. Schema não tem CPF/RG/CNPJ (RN-MEM-02)." },
+      "direitoExclusao": { "passed": true, "note": "deleteMembro implementado para ADMIN/PASTOR, com validação de discípulos." },
+      "retencaoDados": { "passed": true, "note": "Fora do MVP (brief §4). Sessões têm TTL absoluto de 30 dias." },
+      "logsAuditoria": { "passed": true, "note": "safeLog com allowlist (sem PII). Implementado em auth.server, members.server." },
+      "transferenciaInternacional": { "passed": true, "note": "Não há transferência internacional de dados." },
+      "criptografia": { "passed": true, "note": "Senhas com bcrypt cost 10. Cookie httpOnly. SQLite local sem criptografia em repouso (aceitável para MVP)." }
+    }
+  },
+  "findings": [
+    {
+      "id": "SEC-001",
+      "severity": "medium",
+      "category": "LGPD",
+      "title": "Email do usuário exposto em query string",
+      "file": "app/routes/public/login.tsx",
+      "line": 183,
+      "evidence": "const defaultEmail = searchParams.get('email') ?? undefined; — PII vaza via URL (histórico, referrer, logs de servidor).",
+      "remediation": "Substituir por armazenamento efêmero (sessionStorage) ou remover auto-preenchimento via URL.",
+      "effort": "low"
+    },
+    {
+      "id": "SEC-002",
+      "severity": "medium",
+      "category": "OWASP A04",
+      "title": "Ausência de rate limiting nas rotas S03",
+      "files": [
+        "app/routes/app/membros.$id.discipulado.tsx",
+        "app/routes/app/membros.$id.tipo.tsx",
+        "app/routes/app/ministerios._index.tsx"
+      ],
+      "evidence": "Apenas /login tem rate limit. Rotas S03 (assignDisciple, promoverTipo, CRUD ministérios) sem proteção.",
+      "remediation": "Adicionar checkRateLimit por IP nas actions ou implementar middleware global de rate limiting.",
+      "effort": "medium"
+    },
+    {
+      "id": "SEC-003",
+      "severity": "medium",
+      "category": "OWASP A05",
+      "title": "SESSION_SECRET com fallback hardcoded",
+      "file": "app/lib/session.server.ts",
+      "line": 34,
+      "evidence": "secrets: [process.env.SESSION_SECRET ?? 'dev-only-not-secret'] — fallback público e conhecido.",
+      "remediation": "Validar em startup que SESSION_SECRET está definida em produção. Falhar com erro claro se ausente.",
+      "effort": "low"
+    },
+    {
+      "id": "SEC-004",
+      "severity": "medium",
+      "category": "OWASP A06",
+      "title": "esbuild com vulnerabilidade high (dev-only)",
+      "file": "package.json (devDependency via esbuild)",
+      "line": 0,
+      "evidence": "CVE GHSA-gv7w-rqvm-qjhr — esbuild < 0.28.1 sem verificação de integridade binária. Apenas em dev.",
+      "remediation": "Atualizar esbuild para >= 0.28.1 via pnpm update.",
+      "effort": "low"
+    },
+    {
+      "id": "SEC-005",
+      "severity": "low",
+      "category": "OWASP A01",
+      "title": "Camada 2 RBAC ausente em action de discipulador.tsx",
+      "file": "app/routes/app/membros.$id.discipulador.tsx",
+      "line": 47,
+      "evidence": "Action chama unassignDisciple sem checagem RBAC explícita. Camada 3 protege (assertCanWriteMembers), mas defense in depth ficou comprometido.",
+      "remediation": "Adicionar assertCanWriteMembers(user) antes da chamada ao service.",
+      "effort": "low"
+    },
+    {
+      "id": "SEC-006",
+      "severity": "low",
+      "category": "OWASP A01",
+      "title": "ministerios._index.tsx bypassa service (camada 3)",
+      "file": "app/routes/app/ministerios._index.tsx",
+      "line": 108,
+      "evidence": "Usa Prisma direto + checagem RBAC inline (CAN_MANAGE) em vez do service que tem assertCanManageMinisterios.",
+      "remediation": "Refatorar para usar createMinisterio, deleteMinisterio, listMinisterios do service.",
+      "effort": "medium"
+    },
+    {
+      "id": "SEC-007",
+      "severity": "low",
+      "category": "OWASP A08",
+      "title": "CSRF sem token explícito",
+      "file": "app/lib/session.server.ts",
+      "line": 30,
+      "evidence": "CSRF mitigado apenas por sameSite:'lax' no cookie. Sem token CSRF para mutações POST/DELETE.",
+      "remediation": "Para app gerenciado (admin), risco baixo. Documentar decisão ou implementar double-submit cookie.",
+      "effort": "low"
+    }
+  ],
+  "stats": {
+    "critical": 0,
+    "high": 0,
+    "medium": 4,
+    "low": 3
+  },
+  "passThreshold": {
+    "maxCritical": 0,
+    "maxHigh": 0
+  },
+  "passed": true,
+  "notes": [
+    "LGPD: RAG lgpd-igreja-conect.md seguido consistentemente. MEMBRO_SAFE_SELECT, safeLog, session cookie, bcrypt implementados conforme especificado.",
+    "RBAC: 3 camadas implementadas na maioria das rotas. defense in depth funcional com fallback para camada 3.",
+    "SEC-001 (email em URL) é o maior risco de PII identificado nesta auditoria.",
+    "SEC-006 (ministerios bypassando service) é uma dívida técnica de integração — o service existe mas a rota foi implementada antes de sua conclusão.",
+    "Nenhuma vulnerabilidade crítica ou high encontrada no código de aplicação (apenas devDependency high esbuild). Gate pode passar com 0 critical e 0 high."
+  ]
+}

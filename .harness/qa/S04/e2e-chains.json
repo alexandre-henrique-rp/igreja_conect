@@ -1,0 +1,258 @@
+{
+  "$schema": "../S03/e2e-chains.json#",
+  "sprint": "S04",
+  "name": "Config Acolhimento + Central de Alertas + Dashboard (S04-T11)",
+  "generatedAt": "2026-06-13T18:00:00Z",
+  "generatedBy": "tester-agent",
+  "purpose": "Validar end-to-end a geração atômica de alerta ao cadastrar visitante, RBAC da Configuração de Acolhimento, Central de Alertas, filtros, escopo e privacidade LGPD.",
+  "userStoriesCovered": ["US-MEM-001", "US-MEM-004"],
+  "specRef": "SPEC §11.5; sprints/S04.json S04-T11; RN-MEM-05",
+  "gate": "S04-T11 E2E cross-module visitante→alerta + Central de Alertas + Config Acolhimento RBAC",
+  "coverageTarget": 85,
+  "prereqs": {
+    "seededAdmin": {
+      "email": "admin@igreja.local",
+      "senha": "admin123",
+      "note": "Criado por prisma/seed.ts (S00-T07). Idempotente."
+    },
+    "additionalSeedNeeded": {
+      "id": "SEED-S04-INLINE",
+      "title": "Seed inline nos specs S04: responsável, secretário, userA, userB, pastor e ministérios/membros de apoio",
+      "note": "Cada spec cria usuários idempotentes via Prisma no beforeAll e limpa dados no afterAll/finally."
+    },
+    "devServer": "pnpm dev sobe automaticamente via playwright.config.ts → webServer (http://localhost:5173).",
+    "rateLimitStrategy": "Cada chain usa x-forwarded-for único (10.0.40.<chainId>) para isolar o bucket in-memory de login.",
+    "crossFileIsolation": "Os specs usam lock em /tmp/igreja-conect-e2e-s04.lock para serializar cadeias que alteram a config singleton."
+  },
+  "chains": [
+    {
+      "id": "E2E-S04-ALERT-1",
+      "name": "visitante→alerta: ADMIN configura Membro X; SECRETARIO cadastra visitante; Membro X vê alerta com nome+telefone",
+      "type": "cross-module",
+      "step": 1,
+      "tags": ["alertas", "acolhimento", "visitante", "RN-MEM-05", "US-MEM-001"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.1",
+      "criticality": "GATE — falha aqui bloqueia qa-gate.",
+      "sequence": [
+        { "step": 1, "name": "login_admin", "method": "POST", "path": "/login", "expectedStatus": 302, "records": ["adminCookie"] },
+        { "step": 2, "name": "admin_configura_acolhimento_membro", "method": "POST", "path": "/app/config/acolhimento", "payload": { "responsavelVisitanteTipo": "MEMBRO", "responsavelId": "{context.responsavel.id}" }, "expectedStatus": 302 },
+        { "step": 3, "name": "login_secretario", "method": "POST", "path": "/login", "expectedStatus": 302, "records": ["secretarioCookie"] },
+        { "step": 4, "name": "secretario_cadastra_visitante", "method": "POST", "path": "/app/membros/novo", "payload": { "nome": "{context.visitanteNome}", "tipo": "VISITANTE", "telefone": "{context.visitanteTelefone}" }, "expectedStatus": 302, "records": ["visitanteId"] },
+        { "step": 5, "name": "responsavel_vê_alerta", "action": "navigate", "path": "/app/alertas", "method": "GET", "expectedStatus": 200, "assertions": ["body contém nome do visitante", "body contém telefone do visitante", "body contém título Novo visitante cadastrado"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "reset_config_acolhimento", "delete_visitante", "delete_responsavel", "delete_secretario"] }
+    },
+    {
+      "id": "E2E-S04-ALERT-2",
+      "name": "atomicidade: falha simulada no cadastro com config ativa não deixa visitante nem alerta",
+      "type": "business-rule",
+      "step": 2,
+      "tags": ["atomicidade", "rollback", "RN-MEM-05"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.2",
+      "criticality": "GATE — falha aqui bloqueia qa-gate.",
+      "sequence": [
+        { "step": 1, "name": "login_admin", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 2, "name": "admin_configura_acolhimento", "method": "POST", "path": "/app/config/acolhimento", "expectedStatus": 302 },
+        { "step": 3, "name": "login_secretario", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 4, "name": "criar_membro_existente", "method": "POST", "path": "/app/membros/novo", "payload": { "nome": "Existente Atomicidade", "tipo": "CONGREGADO", "email": "{context.emailDuplicado}" }, "expectedStatus": 302 },
+        { "step": 5, "name": "tentar_visitante_duplicado", "method": "POST", "path": "/app/membros/novo", "payload": { "nome": "Duplicado Atomicidade", "tipo": "VISITANTE", "email": "{context.emailDuplicado}", "telefone": "{context.visitanteTelefone}" }, "expectedStatus_any": [422, 500], "assertions": ["contador de membros com email duplicado permanece 1", "não há alerta com nome Duplicado Atomicidade"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "reset_config_acolhimento", "delete_membros_s04"] }
+    },
+    {
+      "id": "E2E-S04-ALERT-3",
+      "name": "marcar lido: botão some/badge muda após ação",
+      "type": "ui",
+      "step": 3,
+      "tags": ["alertas", "marcar-lido"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.3",
+      "criticality": "normal",
+      "sequence": [
+        { "step": 1, "name": "seed_alerta_nao_lido", "action": "db", "expectedStatus": 200 },
+        { "step": 2, "name": "login_destinatario", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 3, "name": "abrir_alertas", "action": "navigate", "path": "/app/alertas", "method": "GET", "expectedStatus": 200, "assertions": ["body contém botão Marcar lido"] },
+        { "step": 4, "name": "clicar_marcar_lido", "action": "click", "target": "button:Marcar lido", "expectedStatus": 200, "assertions": ["body não contém botão Marcar lido para o alerta"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "delete_alertas_s04", "delete_destinatario"] }
+    },
+    {
+      "id": "E2E-S04-ALERT-4",
+      "name": "marcar resolvido: card some do filtro Não lidos",
+      "type": "ui",
+      "step": 4,
+      "tags": ["alertas", "resolvido", "filtro"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.4",
+      "criticality": "GATE — falha aqui bloqueia qa-gate.",
+      "sequence": [
+        { "step": 1, "name": "seed_alerta_admin", "action": "db", "expectedStatus": 200 },
+        { "step": 2, "name": "login_admin", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 3, "name": "abrir_alertas", "action": "navigate", "path": "/app/alertas", "method": "GET", "expectedStatus": 200, "assertions": ["body contém botão Resolver"] },
+        { "step": 4, "name": "clicar_resolver", "action": "click", "target": "button:Resolver", "expectedStatus": 200 },
+        { "step": 5, "name": "filtro_nao_lidos", "action": "navigate", "path": "/app/alertas?filter=naoLidos", "method": "GET", "expectedStatus": 200, "assertions": ["body não contém alerta resolvido"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "delete_alertas_s04", "delete_admin_teste"] }
+    },
+    {
+      "id": "E2E-S04-ALERT-5",
+      "name": "privacidade LGPD: response body de /app/alertas não contém email nem senhaHash",
+      "type": "privacy",
+      "step": 5,
+      "tags": ["LGPD", "alertas", "privacidade"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.5",
+      "criticality": "GATE — falha aqui bloqueia qa-gate.",
+      "sequence": [
+        { "step": 1, "name": "seed_alerta_com_email_visitante", "action": "db", "expectedStatus": 200 },
+        { "step": 2, "name": "login_destinatario", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 3, "name": "GET_alertas", "method": "GET", "path": "/app/alertas", "expectedStatus": 200, "assertions": ["body não contém 'email'", "body não contém 'senhaHash'"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "delete_alertas_s04", "delete_destinatario"] }
+    },
+    {
+      "id": "E2E-S04-ALERT-6",
+      "name": "escopo: user A não vê alertas de user B",
+      "type": "rbac",
+      "step": 6,
+      "tags": ["alertas", "escopo", "RBAC"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.6",
+      "criticality": "GATE — falha aqui bloqueia qa-gate.",
+      "sequence": [
+        { "step": 1, "name": "seed_alerta_userB", "action": "db", "expectedStatus": 200 },
+        { "step": 2, "name": "login_userA", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 3, "name": "GET_alertas_userA", "method": "GET", "path": "/app/alertas", "expectedStatus": 200, "assertions": ["body não contém alerta exclusivo de userB"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "delete_alertas_s04", "delete_userA_userB"] }
+    },
+    {
+      "id": "E2E-S04-ALERT-7",
+      "name": "filtro: abas Todos/Não lidos/Resolvidos alteram a lista",
+      "type": "ui",
+      "step": 7,
+      "tags": ["alertas", "filtros", "tabs"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.7",
+      "criticality": "GATE — falha aqui bloqueia qa-gate.",
+      "sequence": [
+        { "step": 1, "name": "seed_alertas_lido_resolvido", "action": "db", "expectedStatus": 200 },
+        { "step": 2, "name": "login_destinatario", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 3, "name": "abrir_alertas", "action": "navigate", "path": "/app/alertas", "method": "GET", "expectedStatus": 200, "assertions": ["tabs-filtro-alertas presente", "Todos, Não lidos e Resolvidos presentes"] },
+        { "step": 4, "name": "clicar_nao_lidos", "action": "click", "target": "link:Não lidos", "expectedStatus": 200, "assertions": ["lista contém apenas não lidos"] },
+        { "step": 5, "name": "clicar_resolvidos", "action": "click", "target": "link:Resolvidos", "expectedStatus": 200, "assertions": ["lista contém apenas resolvidos"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "delete_alertas_s04", "delete_destinatario"] }
+    },
+    {
+      "id": "E2E-S04-CONFIG-1",
+      "name": "ADMIN GET /app/config/acolhimento vê formulário habilitado",
+      "type": "ui",
+      "step": 1,
+      "tags": ["config-acolhimento", "admin", "RBAC"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.8",
+      "criticality": "normal",
+      "sequence": [
+        { "step": 1, "name": "login_admin", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 2, "name": "GET_config", "method": "GET", "path": "/app/config/acolhimento", "expectedStatus": 200, "assertions": ["select responsavelVisitanteTipo presente", "mensagem Apenas ADMIN ausente"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "reset_config_acolhimento"] }
+    },
+    {
+      "id": "E2E-S04-CONFIG-2",
+      "name": "ADMIN POST salva com Membro → redirect com sucesso",
+      "type": "business-rule",
+      "step": 2,
+      "tags": ["config-acolhimento", "admin", "RN-MEM-05"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.9",
+      "criticality": "normal",
+      "sequence": [
+        { "step": 1, "name": "login_admin", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 2, "name": "POST_config_membro", "method": "POST", "path": "/app/config/acolhimento", "payload": { "responsavelVisitanteTipo": "MEMBRO", "responsavelId": "{context.responsavel.id}" }, "expectedStatus": 302 },
+        { "step": 3, "name": "GET_config_apos_salvar", "method": "GET", "path": "/app/config/acolhimento", "expectedStatus": 200, "assertions": ["body contém nome do responsável"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "reset_config_acolhimento", "delete_responsavel"] }
+    },
+    {
+      "id": "E2E-S04-CONFIG-3",
+      "name": "ADMIN troca para Ministério → limpa Membro e seta Ministério",
+      "type": "business-rule",
+      "step": 3,
+      "tags": ["config-acolhimento", "admin", "exclusividade"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.10",
+      "criticality": "normal",
+      "sequence": [
+        { "step": 1, "name": "login_admin", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 2, "name": "POST_config_membro", "method": "POST", "path": "/app/config/acolhimento", "expectedStatus": 302 },
+        { "step": 3, "name": "POST_config_ministerio", "method": "POST", "path": "/app/config/acolhimento", "payload": { "responsavelVisitanteTipo": "MINISTERIO", "responsavelId": "{context.ministerio.id}" }, "expectedStatus": 302 },
+        { "step": 4, "name": "GET_config_apos_troca", "method": "GET", "path": "/app/config/acolhimento", "expectedStatus": 200, "assertions": ["body contém ministério", "body não contém membro antigo"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "reset_config_acolhimento", "delete_responsavel", "delete_ministerio"] }
+    },
+    {
+      "id": "E2E-S04-CONFIG-4",
+      "name": "SECRETARIO GET vê form desabilitado/mensagem de restrição",
+      "type": "rbac",
+      "step": 4,
+      "tags": ["config-acolhimento", "secretario", "RBAC"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.11",
+      "criticality": "normal",
+      "sequence": [
+        { "step": 1, "name": "login_secretario", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 2, "name": "GET_config_secretario", "method": "GET", "path": "/app/config/acolhimento", "expectedStatus": 200, "assertions": ["body contém Apenas ADMIN pode alterar", "select responsavelVisitanteTipo ausente"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout"] }
+    },
+    {
+      "id": "E2E-S04-CONFIG-5",
+      "name": "SECRETARIO POST direto → 403",
+      "type": "rbac",
+      "step": 5,
+      "tags": ["config-acolhimento", "secretario", "RBAC"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.12",
+      "criticality": "GATE — falha aqui bloqueia qa-gate.",
+      "sequence": [
+        { "step": 1, "name": "login_secretario", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 2, "name": "POST_config_secretario_bypass", "method": "POST", "path": "/app/config/acolhimento", "payload": { "responsavelVisitanteTipo": "MEMBRO", "responsavelId": "{context.responsavel.id}" }, "expectedStatus": 403 }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "reset_config_acolhimento", "delete_responsavel"] }
+    },
+    {
+      "id": "E2E-S04-CROSS-1",
+      "name": "cross-module crítico: cadastra visitante com config ativa → responsável recebe alerta → confirma nome+telefone → marca lido",
+      "type": "cross-module",
+      "step": 1,
+      "tags": ["visitante", "alerta", "acolhimento", "RN-MEM-05", "GATE"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.40.13",
+      "criticality": "GATE — falha aqui bloqueia qa-gate.",
+      "sequence": [
+        { "step": 1, "name": "login_admin", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 2, "name": "admin_configura_acolhimento_membro", "method": "POST", "path": "/app/config/acolhimento", "expectedStatus": 302 },
+        { "step": 3, "name": "login_secretario", "method": "POST", "path": "/login", "expectedStatus": 302 },
+        { "step": 4, "name": "secretario_cadastra_visitante", "method": "POST", "path": "/app/membros/novo", "expectedStatus": 302, "records": ["visitanteId"] },
+        { "step": 5, "name": "responsavel_vê_alerta", "action": "navigate", "path": "/app/alertas", "method": "GET", "expectedStatus": 200, "assertions": ["nome e telefone presentes"] },
+        { "step": 6, "name": "responsavel_marca_lido", "action": "click", "target": "button:Marcar lido", "expectedStatus": 200, "assertions": ["botão Marcar lido não aparece"] }
+      ],
+      "cleanup": { "always": true, "steps": ["logout", "reset_config_acolhimento", "delete_visitante", "delete_responsavel", "delete_secretario"] }
+    }
+  ],
+  "coverage": {
+    "current": null,
+    "required": 85,
+    "passed": false,
+    "byModule": {}
+  },
+  "status": "pending",
+  "notes": [
+    "Chain E2E-S04-ALERT-2 usa falha de transação observável via E2E (email duplicado com config ativa) para validar rollback. Simular falha interna específica de criarAlertaVisitante exigiria mock/injeção no backend, fora do escopo deste agent.",
+    "As chains de filtro/resolvido validam o comportamento esperado do SPEC; se a rota ainda não implementar ?filter=, o teste falha e deve ser reportado sem editar app."
+  ]
+}

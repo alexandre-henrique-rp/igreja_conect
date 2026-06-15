@@ -1,0 +1,162 @@
+{
+  "_type": "harness-code-review-v6",
+  "agent": "code-reviewer",
+  "sprint": "S02",
+  "timestamp": "2026-06-13T15:12:45Z",
+  "score": 66,
+  "passThreshold": 70,
+  "passed": false,
+  "stats": {
+    "filesChecked": 9,
+    "tddRatio": "9:9 (entregues); 1:0 (T02 invertido); 0:7 (tasks faltando)",
+    "documentedRatio": "100% (todos os 9 arquivos S02 entregues têm JSDoc)",
+    "simplicityScore": 28
+  },
+  "principles": {
+    "tdd": {
+      "score": 11,
+      "max": 40,
+      "issues": [
+        "S02-T02 (members.server.ts) — implementação FALTA, teste de 353 linhas espera",
+        "S02-T04, T05, T06, T07, T08, T09, T12 — 7 tasks com code+test ausentes",
+        "S02-T12 (e2e/membros-crud.spec.ts) — E2E ausente (mesmo padrão de S01-T10)"
+      ]
+    },
+    "jsdoc": {
+      "score": 27,
+      "max": 30,
+      "issues": [
+        "MembroCreateSchema e MembroUpdateSchema — JSDoc descritivo sem @description/@param formais",
+        "Componentes FormMembro/Sidebar/TopbarAutenticada — não implementados (sem JSDoc a auditar)"
+      ]
+    },
+    "simplicity": {
+      "score": 28,
+      "max": 30,
+      "issues": [
+        "MembroListItem duplicado entre TabelaMembros e CardMembro (2ª vez — regra de 3)",
+        "TIPO_BADGE + TIPO_LABELS duplicados (2ª vez)",
+        "TabelaMembros 95 linhas JSX com 2 SVGs inline (Ver/Editar) — 2ª repetição"
+      ]
+    }
+  },
+  "issues": [
+    {
+      "id": "CODE-ISS-S02-001",
+      "severity": "high",
+      "file": "app/lib/members.server.ts",
+      "issue": "S02-T02 — service não implementado. members.server.test.ts (353 linhas, 24 testes) importa ./members.server que não existe, quebrando vitest.",
+      "suggestion": "Implementar 5 funções: listMembros (RBAC fina + paginação + normalização q), getMembroById (404 para DISCIPULADOR fora de escopo), createMembro (P2002 → EmailDuplicadoError), updateMembro (escopo), deleteMembro (só ADMIN/PASTOR + BusinessRuleError 409). Exportar MEMBRO_SAFE_SELECT."
+    },
+    {
+      "id": "CODE-ISS-S02-002",
+      "severity": "high",
+      "file": "app/routes/app/membros._index.tsx",
+      "issue": "S02-T04 — rota de listagem não implementada",
+      "suggestion": "Loader com Zod (pageSize ≤ 100), listMembros, carregar ministerios/discipuladores. Render: PageHeader + FiltrosMembros + Tabela/CardMembro + Pagination + EmptyState."
+    },
+    {
+      "id": "CODE-ISS-S02-003",
+      "severity": "high",
+      "file": "app/components/FormMembro.tsx",
+      "issue": "S02-T05 — formulário de cadastro/edição não implementado",
+      "suggestion": "Sections (Identificação, Contato, Eclesiástico, Endereço) com FormField + Input/Select. Máscaras telefone/CEP. Acessibilidade WCAG completa. Prop isEdit."
+    },
+    {
+      "id": "CODE-ISS-S02-004",
+      "severity": "high",
+      "file": "app/components/Section.tsx",
+      "issue": "S02-T05 — wrapper de fieldset não implementado",
+      "suggestion": "Criar <Section title=\"...\"> com <fieldset> + <legend> semântico."
+    },
+    {
+      "id": "CODE-ISS-S02-005",
+      "severity": "high",
+      "file": "app/routes/app/membros.novo.tsx",
+      "issue": "S02-T06 — rota de criação não implementada",
+      "suggestion": "Action POST com MembroCreateSchema.safeParse + createMembro + redirect 302. EmailDuplicadoError → 422 com fieldError.email."
+    },
+    {
+      "id": "CODE-ISS-S02-006",
+      "severity": "high",
+      "file": "app/routes/app/membros.$id.tsx",
+      "issue": "S02-T07 — rota de detalhe não implementada",
+      "suggestion": "Loader getMembroById + ResumoMembro + AcoesMembro. Action intent=delete → deleteMembro. Delete com discípulos → 409. ErrorBoundary 404/403."
+    },
+    {
+      "id": "CODE-ISS-S02-007",
+      "severity": "high",
+      "file": "app/routes/app/membros.$id.editar.tsx",
+      "issue": "S02-T08 — rota de edição não implementada",
+      "suggestion": "Loader getMembroById + map defaultValues. Action MembroUpdateSchema.safeParse + updateMembro + redirect. DISCIPULADOR fora de escopo → 403."
+    },
+    {
+      "id": "CODE-ISS-S02-008",
+      "severity": "high",
+      "file": "app/routes/app.tsx + Sidebar.tsx + TopbarAutenticada.tsx",
+      "issue": "S02-T09 — layout autenticado não implementado",
+      "suggestion": "app.tsx envolve rotas /app/**. Loader conta alertasNaoLidos. Sidebar com 5 itens (Dashboard/Membros/Ministérios/Alertas/Config) + item ativo bg-cyan-50. Botão Sair (POST /logout)."
+    },
+    {
+      "id": "CODE-ISS-S02-009",
+      "severity": "medium",
+      "file": "e2e/membros-crud.spec.ts",
+      "issue": "S02-T12 — E2E Playwright com 7 chains não entregue",
+      "suggestion": "Criar 7 chains: criar visitante, editar, excluir, DISCIPULADOR escopo, DISCIPULADOR GET /outroId → 404, email malformado → 422, grep no payload sem senhaHash."
+    },
+    {
+      "id": "CODE-ISS-S02-010",
+      "severity": "medium",
+      "file": "app/routes.ts",
+      "issue": "S02-T11 — rotas S02 NÃO registradas (apenas /app está em routes.ts)",
+      "suggestion": "Adicionar layout('routes/app.tsx', [index(...), route('membros', ...), ...])."
+    },
+    {
+      "id": "CODE-ISS-S02-011",
+      "severity": "low",
+      "file": "app/lib/schemas/membros.ts:63, 114",
+      "issue": "JSDoc dos schemas é descritivo (narrativo) mas sem tags estruturadas (@description, @param)",
+      "suggestion": "Padronizar com @description formal + lista de campos em texto formatado."
+    },
+    {
+      "id": "CODE-ISS-S02-012",
+      "severity": "low",
+      "file": "app/components/TabelaMembros.tsx:147-188",
+      "issue": "2 SVGs inline (Ver/Editar) repetem ~20 linhas de padrão idêntico",
+      "suggestion": "Extrair <LinhaAcoes membroId={m.id} nome={m.nome} canEdit={canEdit} />."
+    },
+    {
+      "id": "CODE-ISS-S02-013",
+      "severity": "low",
+      "file": "app/components/TabelaMembros.tsx:40-46 + CardMembro.tsx:37-43",
+      "issue": "MembroListItem duplicado entre 2 arquivos",
+      "suggestion": "Extrair para app/lib/types.ts quando 3ª rota usar."
+    },
+    {
+      "id": "CODE-ISS-S02-014",
+      "severity": "low",
+      "file": "(git)",
+      "issue": "Arquivos S02 untracked, sem commit granular que comprove TDD-first",
+      "suggestion": "Pedir a backend/frontend commit granular: 1 commit por task S02 com teste antes do código."
+    }
+  ],
+  "recommendation": "rework",
+  "loopbackTo": "phase.5.build",
+  "nextActions": [
+    "Backend: implementar app/lib/members.server.ts (S02-T02) — coração da sprint",
+    "Backend: implementar 4 rotas em app/routes/app/membros.* (S02-T04, T06, T07, T08)",
+    "Frontend: implementar FormMembro + Section (S02-T05)",
+    "Frontend: implementar app.tsx + Sidebar + TopbarAutenticada (S02-T09)",
+    "Backend: registrar rotas S02 em app/routes.ts (S02-T11)",
+    "Tester: criar e2e/membros-crud.spec.ts com 7 chains (S02-T12)",
+    "Todos: commit granular por task após implementação",
+    "Após concluir: pedir re-review (S02.code-review-2)"
+  ],
+  "positiveAspects": [
+    "Gate LGPD com .strict() testado explicitamente em 4 cenários (cpf/rg/cnpj/senhaHash)",
+    "Acessibilidade WCAG 2.1 nomeada por critério (não apenas 'acessível')",
+    "members.server.test.ts é o teste de RBAC fina mais bem escrito do projeto (24 cenários × 5 perfis)",
+    "Padrão TDD 'cenário por comportamento' mantido (sem testes vazios)",
+    "YAGNI explícito e comentado em todos os componentes (Pagination null em total<=1, FiltrosMembros role=search direto, etc)"
+  ]
+}

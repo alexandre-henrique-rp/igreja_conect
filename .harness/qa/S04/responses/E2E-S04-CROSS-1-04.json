@@ -1,0 +1,12 @@
+{
+  "status": 302,
+  "headers": {
+    "vary": "Origin",
+    "location": "/app/membros/b0b6b086-c386-44a4-b728-a5c49b9ab2c1",
+    "date": "Sat, 13 Jun 2026 21:16:40 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": ""
+}

@@ -1,0 +1,119 @@
+{
+  "id": "S01",
+  "name": "Auth Backend + Login UI",
+  "status": "completed",
+  "startedAt": "2026-06-13T13:50:00Z",
+  "completedAt": "2026-06-13T12:02:00Z",
+  "goal": "Implementar login com email+senha, logout server-side, middleware de proteção em /app/** e a página de login + landing — habilitando US-AUTH-001 e US-AUTH-002.",
+  "metrics": {
+    "tasksPlanned": 11,
+    "tasksCompleted": 11,
+    "testsAdded": 61,
+    "testsTotalInProject": 199,
+    "testsPassing": 199,
+    "testsFailing": 0,
+    "lineCoverage": 89.31,
+    "branchCoverage": 84.02,
+    "functionCoverage": 77.77,
+    "statementCoverage": 88.12,
+    "coverageTarget": 85,
+    "coverageMet": true,
+    "typecheck": "pass",
+    "buildSsr": "pass",
+    "e2eChainsPlanned": 8,
+    "e2eChainsPassing": 8
+  },
+  "userStoriesUnblocked": ["US-AUTH-001", "US-AUTH-002"],
+  "fanOutWorkers": {
+    "backend": {
+      "tasks": ["S01-T01", "S01-T02", "S01-T03", "S01-T04", "S01-T05"],
+      "status": "completed",
+      "testsAdded": 33
+    },
+    "frontend": {
+      "tasks": ["S01-T06", "S01-T07", "S01-T08", "S01-T09", "S01-T11"],
+      "status": "completed",
+      "testsAdded": 61
+    },
+    "tester": {
+      "tasks": ["S01-T10"],
+      "status": "completed",
+      "e2eChains": 8
+    },
+    "security": {
+      "critical": 0,
+      "high": 0,
+      "medium": 4,
+      "low": 4,
+      "gate": "pass"
+    },
+    "lgpd-officer": {
+      "parecer": "CONFORME COM RESSALVAS",
+      "critical": 0,
+      "high": 0,
+      "advisory": 1,
+      "gate": "pass"
+    },
+    "code-reviewer": {
+      "score": 76,
+      "threshold": 70,
+      "gate": "pass",
+      "tdd": "27/40",
+      "jsdoc": "28/30",
+      "simplicidade": "21/30"
+    }
+  },
+  "deliverables": {
+    "backend": [
+      "app/lib/auth.server.ts (verifyCredentials)",
+      "app/lib/schemas/auth.ts (LoginSchema Zod)",
+      "app/routes/public/login.tsx (action com rate-limit + createSession)",
+      "app/routes/logout.tsx (endpoint POST /logout)",
+      "app/routes/app/_middleware.tsx (authMiddleware + redirect /login?next=...)"
+    ],
+    "frontend": [
+      "app/components/Button.tsx (variants + loading + as=Link)",
+      "app/components/Input.tsx (label + hint + error + aria-invalid)",
+      "app/components/Checkbox.tsx (label encapsula input)",
+      "app/components/ErrorAlert.tsx (3 tons + role=alert)",
+      "app/components/TopbarPublica.tsx (sticky + skip link WCAG)",
+      "app/components/FormLogin.tsx (Topbar + form + toggle senha)",
+      "app/components/CardInfo.tsx (h2 + ul + bullets coloridos)",
+      "app/routes/public/index.tsx (Landing com Topbar + CardInfo)",
+      "app/app.css (Tailwind 4 + @theme tokens + font stack sistema)"
+    ],
+    "refactor": [
+      "app/lib/session.types.ts (tipo SessionUser fora de *.server.ts)",
+      "app/lib/user-context.ts (userContext fora de *.server.ts)",
+      "app/routes/app/_index.tsx (importa userContext de ~/lib/user-context)"
+    ],
+    "infra": [
+      "e2e/auth.spec.ts (8 chains Playwright, 902 linhas)"
+    ]
+  },
+  "issuesResolved": [
+    "Build SSR bloqueado por 'Server-only module referenced by client' — fix: mover SessionUser para session.types.ts, userContext para user-context.ts, authMiddleware tornar-se privado, _index.tsx importar de ~/lib/user-context."
+  ],
+  "advisoriesForS05": [
+    "DEBT: SESSION_SECRET tem fallback 'dev-only-not-secret' (security M1) — gerar real em S05",
+    "DEBT: Ausência de security headers HTTP (security M3) — criar security-headers.server.ts em S05",
+    "DEBT: Identidade de cliente (rate-limit) não valida proxy confiável (security M2) — documentar em deploy runbook",
+    "Advisory LGPD: 'manter conectado' sem efeito (art. 9º) — implementar checkbox persistente em sprint 2+",
+    "Code review: action() do login.tsx tem 84 linhas + profundidade 4 — quebrar em 3 helpers (rateLimitResponse, parseLoginForm, successResponse)"
+  ],
+  "artifacts": {
+    "qaChains": "qa/S01/e2e-chains.json",
+    "qaResults": "qa/S01/results/",
+    "qaResponses": "qa/S01/responses/",
+    "security": ".harness/security/S01-audit.md",
+    "lgpd": ".harness/lgpd/S01-parecer.md",
+    "codeReview": ".harness/reviews/S01-code-review.md",
+    "e2e": "e2e/auth.spec.ts",
+    "summaries": [
+      "sprints/S01.security.json",
+      "sprints/S01.lgpd.json",
+      "sprints/S01.review.json"
+    ]
+  },
+  "nextSprint": "S02"
+}

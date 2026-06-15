@@ -1,0 +1,12 @@
+{
+  "status": 401,
+  "headers": {
+    "vary": "Origin",
+    "content-type": "text/html",
+    "date": "Sun, 14 Jun 2026 02:28:26 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": "<!DOCTYPE html><html lang=\"pt-BR\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"modulepreload\" href=\"/node_modules/.pnpm/@react-router+dev@7.17.0_@react-router+serve@7.17.0_react-router@7.17.0_react-dom@19.2._c2175259156071906b52404c14226f7a/node_modules/@react-router/dev/dist/config/defaults/entry.client.tsx\"/><link rel=\"modulepreload\" href=\"/app/root.tsx\"/><link rel=\"modulepreload\" href=\"/app/routes/public/login.tsx\"/><link data-re"
+}

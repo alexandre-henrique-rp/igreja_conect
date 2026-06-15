@@ -1,0 +1,304 @@
+{
+  "id": "S01",
+  "name": "Auth Backend + Login UI",
+  "goal": "Implementar login com email+senha, logout server-side, middleware de proteção em /app/** e a página de login + landing — habilitando US-AUTH-001 e US-AUTH-002.",
+  "estimatedDays": 2,
+  "dependsOn": ["S00"],
+  "userStories": ["US-AUTH-001", "US-AUTH-002"],
+  "tasks": [
+    {
+      "id": "S01-T01",
+      "title": "Estender `app/lib/auth.server.ts` com `verifyCredentials(email, senha)`",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S00-T03"],
+      "tdd": {
+        "testFirst": "verifyCredentials retorna objeto user para credenciais válidas; null para inválidas",
+        "testPath": "app/lib/auth.server.test.ts",
+        "acceptance": "Cobre: membro não encontrado, senha errada, hash confere, membro sem senhaHash (retorna null)"
+      },
+      "files": {
+        "create": [],
+        "modify": ["app/lib/auth.server.ts"]
+      },
+      "acceptanceCriteria": [
+        "`verifyCredentials(email: string, senha: string): Promise<{ id, nome, cargo } | null>`",
+        "Mensagem unificada: retorna `null` tanto para email inexistente quanto senha errada (anti-enumeração — SPEC §5.1)",
+        "Mensagens de log via `safeLog({ userId, action: 'login_attempt', result: 'ok'|'fail' })` (LGPD §2.5)",
+        "NÃO loga email nem senha (verificável via spy)",
+        "JSDoc completo"
+      ],
+      "rags": ["lgpd-igreja-conect", "security-rbac-matrix"]
+    },
+    {
+      "id": "S01-T02",
+      "title": "Criar schema Zod `LoginSchema` em `app/lib/schemas/auth.ts`",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": ["S00-T14"],
+      "tdd": {
+        "testFirst": "LoginSchema aceita email válido + senha ≥ 1 char + manterConectado boolean opcional",
+        "testPath": "app/lib/schemas/auth.test.ts",
+        "acceptance": "Cobre email inválido, senha vazia, manterConectado string→boolean"
+      },
+      "files": {
+        "create": ["app/lib/schemas/auth.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Schema: `email` (z.string().email()), `senha` (z.string().min(1).max(200)), `manterConectado` (z.coerce.boolean().optional())",
+        "Mensagens em PT-BR: 'E-mail inválido. Verifique o formato.', 'Senha obrigatória.'",
+        "Exporta `LoginInput` (z.infer<typeof LoginSchema>)"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S01-T03",
+      "title": "Criar action do login em `app/routes/public/login.tsx` (com rate limit + createSession)",
+      "type": "backend",
+      "estimatedHours": 3,
+      "owner": "backend",
+      "dependsOn": ["S01-T01", "S01-T02", "S00-T04", "S00-T08"],
+      "tdd": {
+        "testFirst": "Action POST com credenciais válidas → 302 + Set-Cookie. Inválidas → 401 com formError. 5 falhas → 429.",
+        "testPath": "app/routes/public/login.test.tsx (integration)",
+        "acceptance": "Cobre os 4 cenários de erro + sucesso + redirecionamento via `?next=`"
+      },
+      "files": {
+        "create": [],
+        "modify": ["app/routes/public/login.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Rate limit aplicado ANTES de qualquer processamento pesado (chave: IP + 'login')",
+        "Zod safeParse: falha → 422 com fieldErrors",
+        "verifyCredentials: null → 401 com formError 'E-mail ou senha incorretos.' (unificado)",
+        "Sucesso: `createSession(user.id)`, `Set-Cookie sid=...; HttpOnly; SameSite=Lax; Secure(prod); Path=/; Max-Age=7d`, redirect para `?next` ou `/app`",
+        "Cookie name: `__session` (convenção do RR7 createCookie)",
+        "Regeneração de sessionId (anti-fixation): o cookie novo é gerado a cada login bem-sucedido (já garantido pelo createSession)"
+      ],
+      "rags": ["lgpd-igreja-conect", "security-rbac-matrix", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S01-T04",
+      "title": "Criar endpoint `/logout` (POST) em `app/routes/logout.tsx`",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": ["S00-T04"],
+      "tdd": {
+        "testFirst": "POST /logout remove Session do DB e seta Max-Age=0 no cookie",
+        "testPath": "app/routes/logout.test.tsx",
+        "acceptance": "Após logout, GET /app redireciona para /login"
+      },
+      "files": {
+        "create": ["app/routes/logout.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Action: `deleteSession(sid)`, retorna `redirect(\"/login\")` com `Set-Cookie: __session=; Max-Age=0`",
+        "Idempotente: se cookie não existe, ainda retorna 302",
+        "Registrado em `app/routes.ts` como `route(\"/logout\", \"routes/logout.tsx\")`",
+        "safeLog registra `{ userId, action: 'logout', result: 'ok' }`"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S01-T05",
+      "title": "Criar middleware de auth em `app/routes/app/_middleware.ts` (redireciona anônimos para /login?next=...)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S00-T04"],
+      "tdd": {
+        "testFirst": "Request sem cookie em /app/membros → 302 para /login?next=/app/membros. Com cookie válido → injeta { user } no context.",
+        "testPath": "app/routes/app/_middleware.test.ts",
+        "acceptance": "Cobre anônimo, autenticado, sessão expirada"
+      },
+      "files": {
+        "create": ["app/routes/app/_middleware.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Chama `getUserFromRequest(request)`. Se null → `throw redirect(\\`/login?next=\\${encodeURIComponent(pathname+search)}\\`)`",
+        "Se autenticado → `return { user }` (loaders/actions filhos leem de `context.user`)",
+        "Sessão expirada → mesmo comportamento de anônimo (302)",
+        "JSDoc explicando que TODA rota dentro de `app/` passa por aqui"
+      ],
+      "rags": ["security-rbac-matrix", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S01-T06",
+      "title": "Criar componentes base de UI em `app/components/` (Button, Input, Checkbox, ErrorAlert, TopbarPublica)",
+      "type": "frontend",
+      "estimatedHours": 3,
+      "owner": "frontend",
+      "dependsOn": ["S00-T15"],
+      "tdd": {
+        "testFirst": "Button com variant primary tem classe bg-cyan-700; Input com error tem aria-invalid; Checkbox renderiza label",
+        "testPath": "app/components/{Button,Input,Checkbox,ErrorAlert,TopbarPublica}.test.tsx",
+        "acceptance": "Cada componente tem 1 teste de render mínimo"
+      },
+      "files": {
+        "create": [
+          "app/components/Button.tsx",
+          "app/components/Input.tsx",
+          "app/components/Checkbox.tsx",
+          "app/components/ErrorAlert.tsx",
+          "app/components/TopbarPublica.tsx"
+        ],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "<Button>: variants primary/secondary/ghost/danger; sizes sm/md; support `as={Link}` via `to` prop; loading state com spinner + aria-busy",
+        "<Input>: label, hint, error (com aria-invalid + role=alert), leadingIcon/trailingAction; tipos text/email/password/tel; fullWidth via cn",
+        "<Checkbox>: label + name + defaultChecked; estrutura label encapsula input",
+        "<ErrorAlert>: tone error/warning/info; estrutura com role=alert",
+        "<TopbarPublica>: sticky top, logo à esquerda, slot `entrarHref` opcional à direita",
+        "Todos com JSDoc, sem libs externas (exceto cn via clsx)",
+        "Tailwind 4 utility-first (sem @apply), tokens via @theme no app.css (configurar)"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S01-T07",
+      "title": "Criar `<FormLogin>` (componente cliente) e integrar em `app/routes/public/login.tsx`",
+      "type": "frontend",
+      "estimatedHours": 3,
+      "owner": "frontend",
+      "dependsOn": ["S01-T03", "S01-T06"],
+      "tdd": {
+        "testFirst": "FormLogin renderiza formError; defaultEmail preenche input; submit com form vazio dispara action",
+        "testPath": "app/components/FormLogin.test.tsx",
+        "acceptance": "Teste usa MemoryRouter para mockar useActionData"
+      },
+      "files": {
+        "create": ["app/components/FormLogin.tsx"],
+        "modify": ["app/routes/public/login.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Props: `formError?`, `defaultEmail?`, `fieldErrors?`, `motivo?: 'expirado'`",
+        "Render: TopbarPublica + card centralizado com form de login",
+        "Inputs: email (autoComplete=email, required), senha (autoComplete=current-password, required, toggle visibility), checkbox 'Manter-me conectado'",
+        "Mensagem informativa quando `motivo === 'expirado'`: 'Sua sessão expirou. Faça login novamente.'",
+        "Link 'Esqueceu a senha? Procure o Admin da sua igreja.' (sem fluxo de recuperação — YAGNI)",
+        "Botão submit 'Entrar' com loading state durante submitting",
+        "Footer com copyright"
+      ],
+      "rags": ["lgpd-igreja-conect", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S01-T08",
+      "title": "Atualizar `<Landing>` em `app/routes/public/index.tsx` com TopbarPublica + conteúdo institucional",
+      "type": "frontend",
+      "estimatedHours": 2,
+      "owner": "frontend",
+      "dependsOn": ["S01-T06"],
+      "tdd": {
+        "testFirst": "Landing renderiza `<h1>Igreja Conect</h1>` e botão Entrar com href /login",
+        "testPath": "app/routes/public/index.test.tsx",
+        "acceptance": "Cobre render + redirect quando autenticado"
+      },
+      "files": {
+        "create": [],
+        "modify": ["app/routes/public/index.tsx"]
+      },
+      "acceptanceCriteria": [
+        "Loader: chama `getUserFromRequest(request)`. Se autenticado → `throw redirect(\"/app\")`. Senão retorna null.",
+        "Render: TopbarPublica com entrarHref='/login', main com h1 'Igreja Conect', descrição, CardInfo (disponíveis / em desenvolvimento) — ver DESIGN public-landing",
+        "Acessibilidade: `<main id=\"main-content\">` para skip link, h1 por página"
+      ],
+      "rags": ["lgpd-igreja-conect"]
+    },
+    {
+      "id": "S01-T09",
+      "title": "Criar `<CardInfo>` e aplicar na Landing",
+      "type": "frontend",
+      "estimatedHours": 1,
+      "owner": "frontend",
+      "dependsOn": ["S01-T06"],
+      "tdd": {
+        "testFirst": "CardInfo com 3 items renderiza 3 <li>",
+        "testPath": "app/components/CardInfo.test.tsx",
+        "acceptance": "Teste de render mínimo"
+      },
+      "files": {
+        "create": ["app/components/CardInfo.tsx"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Props: `title`, `items: string[]`, `tone: 'available' | 'planned'`, `description?`",
+        "Visual: section com h2 + ul (items com bullet colorido por tone)",
+        "JSDoc + sem deps externas"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S01-T10",
+      "title": "Teste E2E (Playwright) — `e2e/auth.spec.ts` cobre login, logout, rate limit, sessão expirada, bypass anônimo",
+      "type": "test",
+      "estimatedHours": 4,
+      "owner": "tester",
+      "dependsOn": ["S01-T03", "S01-T04", "S01-T05", "S01-T07"],
+      "tdd": {
+        "testFirst": "E2E: login admin seed → /app; logout → /login; 5 falhas → 429; acesso anônimo em /app/membros → redirect",
+        "testPath": "e2e/auth.spec.ts",
+        "acceptance": "7 chains do design T8.4 do public-login.PROMPT.md"
+      },
+      "files": {
+        "create": ["e2e/auth.spec.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Chain 1 (login sucesso): POST credenciais válidas → 302 + Set-Cookie sid httpOnly",
+        "Chain 2 (credenciais inválidas): senha errada → 401 com mensagem unificada",
+        "Chain 3 (validação): email malformado → 422 com erro no campo",
+        "Chain 4 (rate limit): 5 falhas em <15min → 429",
+        "Chain 5 (autenticado em /login): redireciona para /app",
+        "Chain 6 (sessão expirada): acessar /login?motivo=expirado vê mensagem",
+        "Chain 7 (privacidade): spy em console.log/safeLog nunca recebe senha",
+        "Bypass anônimo: GET /app/membros sem cookie → 302 /login?next=/app/membros"
+      ],
+      "rags": ["lgpd-igreja-conect", "security-rbac-matrix"]
+    },
+    {
+      "id": "S01-T11",
+      "title": "Configurar `app.css` com Tailwind 4 (@theme tokens: cyan-700, slate, etc) + globals",
+      "type": "frontend",
+      "estimatedHours": 1,
+      "owner": "frontend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "N/A (verificação visual/manual)",
+        "testPath": "N/A",
+        "acceptance": "Build SSR inclui CSS gerado"
+      },
+      "files": {
+        "create": [],
+        "modify": ["app/app.css"]
+      },
+      "acceptanceCriteria": [
+        "Importa Tailwind 4: `@import \"tailwindcss\";`",
+        "Define tokens via `@theme`: `--color-cyan-700: #0e7490;` (e variantes semânticas)",
+        "Font stack do sistema (sem Google Fonts — LGPD)",
+        "Reset básico para `<body>` com bg slate-50"
+      ],
+      "rags": ["lgpd-igreja-conect"]
+    }
+  ],
+  "definitionOfDone": [
+    "Todos os 11 testes da sprint passando (1 por task + E2E)",
+    "Coverage da sprint ≥ 80% (auth.server, session.server, rbac.server, login route)",
+    "`pnpm typecheck` passa sem erros",
+    "E2E `e2e/auth.spec.ts` passa (7 chains)",
+    "Cookie `__session` tem flags: httpOnly, sameSite=lax, secure em prod (verificável via DevTools)",
+    "Senha nunca em log, payload, ou query string (grep + spy)",
+    "Rate limit funcional (429 após 5 falhas)",
+    "Anônimo em /app/** redireciona para /login?next=...",
+    "Logout invalida sessão no DB (verificável: row deletada)",
+    "JSDoc completo em funções públicas"
+  ],
+  "coverageTarget": 80,
+  "notes": "Sprint desbloqueia US-AUTH-001 e US-AUTH-002. Após esta sprint, o usuário consegue logar e ver o app autenticado (apenas Dashboard placeholder em S04)."
+}

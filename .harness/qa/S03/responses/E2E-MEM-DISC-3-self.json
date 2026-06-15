@@ -1,0 +1,12 @@
+{
+  "status": 422,
+  "headers": {
+    "vary": "Origin",
+    "content-type": "application/json",
+    "date": "Sat, 13 Jun 2026 21:16:32 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": "{\"formError\":\"Você não pode ser seu próprio discipulador.\"}"
+}

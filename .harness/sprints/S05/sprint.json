@@ -1,0 +1,53 @@
+{
+  "sprintId": "S05",
+  "name": "Quality Gate Final — Auditorias, Smoke Test, Hardening, Documentação",
+  "status": "completed",
+  "startedAt": "2026-06-13T22:55:00Z",
+  "completedAt": "2026-06-13T23:30:00Z",
+  "goal": "Fechar com qualidade: auditoria de segurança + LGPD + code review, corrigir débitos técnicos, smoke test E2E completo, README e gate de cobertura ≥ 85%.",
+  "metrics": {
+    "tasksCompleted": 10,
+    "tasksTotal": 10,
+    "testsTotalInProject": 905,
+    "testsPassing": 905,
+    "coverage": 88.21,
+    "typecheck": "pass",
+    "buildSsr": "pass",
+    "criticalVulns": 0,
+    "highVulns": 0,
+    "mediumVulns": 3,
+    "lowVulns": 5,
+    "reviewScore": 90,
+    "lgpdStatus": "compliant"
+  },
+  "gate": "all-of passed",
+  "artifacts": {
+    "code-review": "code-review.md",
+    "security-audit": "security-audit.md",
+    "lgpd-parecer": "lgpd-parecer.md",
+    "smoke-e2e": "qa/S05/smoke-report.md + e2e/smoke.spec.ts (5/5 chains passing)",
+    "coverage-report": "qa/S05/coverage-report.md",
+    "hardening-report": ".harness/qa-gate/S05/hardening-report.md",
+    "readme": "README.md (9.2 KB)"
+  },
+  "workers": {
+    "tester": {"chainsRun": 5, "coverage": 88.21, "e2ePassing": "5/5", "passed": true},
+    "security": {"critical": 0, "high": 0, "medium": 3, "low": 5, "passed": true},
+    "lgpdOfficer": {"status": "compliant", "critical": 0, "high": 0, "medium": 0, "low": 0, "passed": true},
+    "planningReviewer": {"score": 90, "recommendation": "PASS", "passed": true},
+    "backend": {"debitsFixed": 3, "debitsDeferred": 3, "readmeCreated": true, "scriptsAdded": ["db:reset", "db:seed", "db:backup", "db:restore"], "passed": true}
+  },
+  "tasks": {
+    "S05-T01": "security-audit.md (PASS, 0 critical/high)",
+    "S05-T02": "lgpd-parecer.md (COMPLIANT)",
+    "S05-T03": "code-review.md (90/100 PASS)",
+    "S05-T04": "e2e/smoke.spec.ts (5/5 chains)",
+    "S05-T05": "coverage 88.21% (gate ≥85% PASS)",
+    "S05-T06": "hardening-report.md (3 débitos corrigidos)",
+    "S05-T07": "README.md criado (9.2 KB)",
+    "S05-T08": "db:reset + db:seed (já existiam)",
+    "S05-T09": "db:backup + db:restore adicionados em prisma/db-reset.sh",
+    "S05-T10": "qa-gate agregado APROVADO"
+  },
+  "notes": "Sprint final do MVP. Todos os gates passaram. Débitos remanescentes (3 médios) são advisory e foram registrados para S06+. RAG candidates: pattern-3-layer-rbac.md, lgpd-bases-legais-igreja.md, lesson-route-service-bypass.md, lesson-prisma-7-commit-settle-e2e."
+}

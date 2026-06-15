@@ -3,27 +3,27 @@
  *
  * **Loader:**
  * - `assertCanSeeFinancials(user)` — Camada 2 RBAC.
- * - Busca caixa + lançamentos com filtros (período, categoria).
- * - SECRETARIO: tabela SEM coluna Membro, SEM botões arquivar/reabrir.
+ * - Delega para `getCaixaDetalhe()` (caixas.server.ts) que aplica RBAC Camada 3,
+ *   filtros, paginação, e registra auditoria.
+ * - SECRETARIO: `listarPorCaixa()` filtra DIZIMO na service layer.
  *
  * **ErrorBoundary:** 403 (perfil), 404 (caixa não existe).
  *
- * @see app/lib/caixas.server.ts
- * @see app/lib/lancamentos.server.ts (a ser implementado pelo backend)
+ * @see app/lib/caixas.server.ts (getCaixaDetalhe)
+ * @see app/lib/lancamentos.server.ts (listarPorCaixa)
  */
 import { Link } from "react-router";
 import { z } from "zod";
 import type { Route } from "./+types/financeiro.caixas.$id";
-import type { Prisma } from "../../../generated/prisma/client";
-import { prisma } from "~/db/prisma.server";
 import { userContext } from "~/lib/user-context";
 import { assertCanSeeFinancials } from "~/lib/rbac.server";
+import { getCaixaDetalhe } from "~/lib/caixas.server";
 import { CaixaHeader } from "~/components/CaixaHeader";
 import { ExtratoFiltros } from "~/components/ExtratoFiltros";
 import { ExtratoCaixa } from "~/components/ExtratoCaixa";
 import { Pagination } from "~/components/Pagination";
 import { Can } from "~/components/Can";
-import type { CaixaResumo, LancamentoResumo } from "~/lib/finance.server";
+import type { LancamentoResumo } from "~/lib/finance.server";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Detalhe do Caixa — Igreja Conect" }];
@@ -39,25 +39,19 @@ const FiltrosSchema = z.object({
 
 type Filtros = z.infer<typeof FiltrosSchema>;
 
-/**
- * Constrói o filtro de data baseado no período.
- */
-function buildPeriodFilter(periodo: Filtros["periodo"]): Date | undefined {
-  const now = new Date();
-  switch (periodo) {
-    case "mes":
-      return new Date(now.getFullYear(), now.getMonth(), 1);
-    case "trimestre":
-      return new Date(now.getFullYear(), now.getMonth() - 2, 1);
-    case "ano":
-      return new Date(now.getFullYear(), 0, 1);
-    default:
-      return undefined;
-  }
-}
+/** Mapa de períodos da UI → períodos do service. */
+const PERIOD_MAP: Record<string, string> = {
+  todos: "todos",
+  mes: "mes_atual",
+  trimestre: "trimestre",
+  ano: "ano_atual",
+};
 
 /**
- * Loader: busca caixa + lançamentos com filtros.
+ * Loader: busca caixa + lançamentos via service layer.
+ *
+ * Delega para `getCaixaDetalhe()` que aplica RBAC Camada 3, filtros,
+ * paginação, auditoria e anti-TOCTOU (quando aplicável).
  */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const user = context.get(userContext);
@@ -67,23 +61,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const caixaId = params.id;
   if (!caixaId) throw new Response("ID do caixa não informado.", { status: 400 });
 
-  // Busca caixa
-  const caixa = await prisma.caixa.findUnique({
-    where: { id: caixaId },
-    select: {
-      id: true,
-      nome: true,
-      saldoCentavos: true,
-      ativo: true,
-      createdAt: true,
-    },
-  });
-
-  if (!caixa) {
-    throw new Response("Caixa não encontrado.", { status: 404 });
-  }
-
-  // Parse filtros
+  // Parse filtros da URL
   const url = new URL(request.url);
   const raw: Record<string, string> = {};
   url.searchParams.forEach((v, k) => { raw[k] = v; });
@@ -92,73 +70,33 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     ? parsed.data
     : { periodo: "todos", categoria: "todas", page: 1, pageSize: 50 };
 
-  const { periodo, categoria, page, pageSize } = filtros;
-
-  // Monta where de lancamentos
-  const whereLancamento: Prisma.LancamentoWhereInput = { caixaId };
-
-  const periodoFilter = buildPeriodFilter(periodo);
-  if (periodoFilter) {
-    whereLancamento.dataCompetencia = { gte: periodoFilter };
-  }
-
-  if (categoria && categoria !== "todas") {
-    whereLancamento.categoria = categoria as any;
-  }
-
-  // SECRETARIO: filtra DIZIMO
-  if (user.cargo === "SECRETARIO") {
-    whereLancamento.categoria = { not: "DIZIMO" as any };
-  }
-
-  // Total de lançamentos
-  const total = await prisma.lancamento.count({
-    where: whereLancamento,
-  });
-
-  // Lançamentos paginados
-  const lancamentosRaw = await prisma.lancamento.findMany({
-    where: whereLancamento,
-    orderBy: { dataCompetencia: "desc" },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-    include: {
-      caixa: { select: { id: true, nome: true } },
-      membro: { select: { id: true, nome: true } },
+  // Busca via service layer (RBAC + filtros + paginação + auditoria)
+  const result = await getCaixaDetalhe(
+    caixaId,
+    {
+      periodo: PERIOD_MAP[filtros.periodo] ?? "todos",
+      categoria: filtros.categoria,
+      page: filtros.page,
+      pageSize: filtros.pageSize,
     },
-  });
+    user
+  );
 
-  const lancamentos: LancamentoResumo[] = lancamentosRaw.map((l) => ({
-    id: l.id,
-    tipo: l.tipo,
-    categoria: l.categoria,
-    valorCentavos: l.valorCentavos,
-    dataCompetencia: l.dataCompetencia,
-    descricao: l.descricao,
-    caixa: l.caixa,
-    membro: l.membro,
-  }));
+  if (!result) {
+    throw new Response("Caixa não encontrado.", { status: 404 });
+  }
 
-  // Monta CaixaResumo com lancamentosMes (do mês atual)
-  const now = new Date();
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lancamentosMes = await prisma.lancamento.count({
-    where: { caixaId, dataCompetencia: { gte: firstDayOfMonth } },
-  });
-
-  const caixaResumo: CaixaResumo = {
-    ...caixa,
-    lancamentosMes,
-  };
+  const { caixa, lancamentos, total, page, pageSize } = result;
+  const totalPages = Math.ceil(total / pageSize);
 
   return {
     user,
-    caixa: caixaResumo,
-    lancamentos,
+    caixa,
+    lancamentos: lancamentos as LancamentoResumo[],
     total,
     page,
     pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    totalPages,
     filtros,
     /** Search params serializados para a Pagination preservar filtros. */
     _qs: url.searchParams.toString(),

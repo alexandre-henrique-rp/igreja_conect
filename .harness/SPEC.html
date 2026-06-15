@@ -1,0 +1,1424 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Igreja Conect — Especificação Técnica (MVP)</title>
+<meta name="description" content="Especificação técnica do MVP: stack, arquitetura, modelo de dados, fluxos de auth e membros, RBAC, validação, endpoints, testes e pendências." />
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2937;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --line-strong: #d1d5db;
+    --accent: #0e7490;
+    --accent-bg: #ecfeff;
+    --good: #047857;
+    --good-bg: #ecfdf5;
+    --warn: #b45309;
+    --warn-bg: #fffbeb;
+    --bad: #b91c1c;
+    --bad-bg: #fef2f2;
+    --code-bg: #f3f4f6;
+    --code-block-bg: #0f172a;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.62;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 24px 96px;
+    font-size: 15.5px;
+  }
+  h1, h2, h3, h4 { line-height: 1.25; color: #0f172a; }
+  h1 { font-size: 2.1rem; margin: 0 0 8px; }
+  h2 { font-size: 1.55rem; margin: 48px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.2rem; margin: 28px 0 8px; }
+  h4 { font-size: 1.05rem; margin: 20px 0 6px; }
+  p { margin: 8px 0 12px; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 4px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, kbd, pre, samp { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; color: #be185d; }
+  pre { background: var(--code-block-bg); color: #e2e8f0; padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: #e2e8f0; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.92rem; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: #f9fafb; font-weight: 600; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  blockquote {
+    margin: 12px 0; padding: 10px 14px;
+    border-left: 4px solid var(--accent);
+    background: var(--accent-bg);
+    border-radius: 0 6px 6px 0;
+    color: #155e75;
+  }
+  .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+  .toc { background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin: 16px 0 32px; }
+  .toc ol { margin: 6px 0 0; columns: 2; }
+  .toc li { margin: 2px 0; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em;
+    background: #e5e7eb; color: #374151;
+  }
+  .badge.good  { background: var(--good-bg);  color: var(--good);  }
+  .badge.warn  { background: var(--warn-bg);  color: var(--warn);  }
+  .badge.bad   { background: var(--bad-bg);   color: var(--bad);   }
+  .badge.blue  { background: var(--accent-bg); color: var(--accent); }
+  .badge.gray  { background: #f3f4f6; color: #4b5563; }
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li { padding: 4px 0 4px 26px; position: relative; }
+  .checklist li::before { content: "\2610"; position: absolute; left: 0; color: var(--muted); }
+  .checklist li.done { color: var(--good); }
+  .checklist li.done::before { content: "\2611"; color: var(--good); }
+  .method-GET    { background: #dbeafe; color: #1e3a8a; }
+  .method-POST   { background: #dcfce7; color: #14532d; }
+  .method-PUT    { background: #fef3c7; color: #78350f; }
+  .method-PATCH  { background: #fef3c7; color: #78350f; }
+  .method-DELETE { background: #fee2e2; color: #7f1d1d; }
+  .endpoint-table code { white-space: nowrap; }
+  .endpoint-table .path { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.88em; }
+  .mermaid-wrap { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 16px 0; overflow-x: auto; }
+  pre.mermaid { background: transparent; color: inherit; padding: 0; border-radius: 0; }
+  footer { margin-top: 64px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+</head>
+<body>
+
+<h1>Igreja Conect — Especificação Técnica (MVP)</h1>
+<p class="meta">
+  <strong>Versão:</strong> 0.1 (MVP) &middot;
+  <strong>Data:</strong> 2026-06-12 &middot;
+  <strong>Status:</strong> Aguardando revisão do <code>spec-reviewer</code> &middot;
+  <strong>Escopo:</strong> Auth + Módulo de Membros + Central de Alertas
+</p>
+
+<nav class="toc" aria-label="Sumário">
+  <strong>Neste documento</strong>
+  <ol>
+    <li><a href="#objetivo">Objetivo</a></li>
+    <li><a href="#stack">Stack e versões</a></li>
+    <li><a href="#arquitetura">Arquitetura</a></li>
+    <li><a href="#modelo-dados">Modelo de dados</a></li>
+    <li><a href="#auth">Fluxo de autenticação</a></li>
+    <li><a href="#membros">Fluxo de Membros</a></li>
+    <li><a href="#rbac">RBAC (defense in depth)</a></li>
+    <li><a href="#privacidade">Privacidade e filtro de payload</a></li>
+    <li><a href="#validacao">Validação de payload</a></li>
+    <li><a href="#endpoints">Endpoints (contratos)</a></li>
+    <li><a href="#testes">Testes obrigatórios</a></li>
+    <li><a href="#pendencias">Pendências de design</a></li>
+    <li><a href="#pronto-fase-5">Critérios de pronto (Fase 5)</a></li>
+    <li><a href="#referencias">Referências</a></li>
+  </ol>
+</nav>
+
+<h2 id="objetivo">1. Objetivo</h2>
+
+<p>
+Esta especificação é a <strong>fonte de verdade para implementação</strong> do MVP do <a href="PRD.html">Igreja Conect</a>. Cobre autenticação, módulo de membros e central de alertas — com todos os contratos de payload, regras de negócio, edge cases e testes obrigatórios.
+</p>
+
+<p>
+<strong>Não-escopo explícito:</strong> módulos Financeiro, Estoque, Manutenção, Cron, e qualquer feature listada em <a href="PRD.html#fora-escopo">PRD §4</a>. Suas tabelas já existem no schema para evitar migração em sprints futuras, mas <strong>nenhum service, loader ou action é entregue no MVP</strong>.
+</p>
+
+<h2 id="stack">2. Stack e versões</h2>
+
+<p>
+Versões fixadas em <code>package.json</code>. Major version não pode ser atualizado sem aprovação do usuário (constraint <code>brief.md §5.1</code>).
+</p>
+
+<table>
+  <thead><tr><th>Camada</th><th>Tecnologia</th><th>Versão</th><th>Origem</th></tr></thead>
+  <tbody>
+    <tr><td>Framework web (SSR)</td><td><code>react-router</code></td><td><code>7.16.0</code></td><td><code>package.json → dependencies</code></td></tr>
+    <tr><td>Runtime do framework</td><td><code>@react-router/node</code> + <code>@react-router/serve</code></td><td><code>7.16.0</code></td><td><code>package.json</code></td></tr>
+    <tr><td>Dev framework</td><td><code>@react-router/dev</code></td><td><code>7.16.0</code></td><td><code>devDependencies</code></td></tr>
+    <tr><td>UI runtime</td><td><code>react</code> + <code>react-dom</code></td><td><code>^19.2.6</code></td><td><code>package.json</code></td></tr>
+    <tr><td>Linguagem</td><td>TypeScript (strict)</td><td><code>^5.9.3</code></td><td><code>tsconfig.json → compilerOptions.strict</code></td></tr>
+    <tr><td>Tipos React</td><td><code>@types/react</code> / <code>@types/react-dom</code></td><td><code>^19.2.14</code> / <code>^19.2.3</code></td><td><code>devDependencies</code></td></tr>
+    <tr><td>Tipos Node</td><td><code>@types/node</code></td><td><code>^22.19.21</code></td><td>Node 22 LTS</td></tr>
+    <tr><td>Bundler / Dev server</td><td><code>vite</code></td><td><code>^8.0.3</code></td><td><code>devDependencies</code></td></tr>
+    <tr><td>Plugin RR7</td><td>integrado em <code>@react-router/dev</code></td><td><code>7.16.0</code></td><td>—</td></tr>
+    <tr><td>Estilização</td><td><code>tailwindcss</code> + <code>@tailwindcss/vite</code></td><td><code>^4.2.2</code></td><td>plugin em <code>vite.config.ts</code></td></tr>
+    <tr><td>ORM</td><td><code>prisma</code> + <code>@prisma/client</code></td><td><code>^7.8.0</code></td><td>generator <code>prisma-client</code> + output em <code>generated/prisma/</code></td></tr>
+    <tr><td>Driver SQLite</td><td><code>@prisma/adapter-better-sqlite3</code></td><td><code>^7.8.0</code></td><td>usado no <code>app/db/prisma.server.ts</code></td></tr>
+    <tr><td>Tipos driver</td><td><code>@types/better-sqlite3</code></td><td><code>^7.6.13</code></td><td><code>devDependencies</code></td></tr>
+    <tr><td>Bot detection</td><td><code>isbot</code></td><td><code>^5.1.36</code></td><td>usado em <code>entry.server.tsx</code></td></tr>
+    <tr><td>Variáveis de ambiente</td><td><code>dotenv</code></td><td><code>^17.4.2</code></td><td>carrega <code>.env</code> em dev</td></tr>
+    <tr><td>Gerenciador de pacotes</td><td><code>pnpm</code></td><td><code>11.6.0</code></td><td><code>packageManager</code> no <code>package.json</code></td></tr>
+    <tr><td>Hash de senha</td><td><code>bcryptjs</code> <span class="badge blue">A adicionar</span></td><td>latest estável</td><td>ADR-002 (compat SSR)</td></tr>
+    <tr><td>Validação de payload</td><td><code>zod</code> <span class="badge warn">A confirmar</span></td><td>latest estável</td><td>ADR-003 — pode virar Valibot/TypeBox</td></tr>
+    <tr><td>Testes unit</td><td><code>vitest</code> <span class="badge warn">A confirmar</span></td><td>latest estável</td><td>compat com Vite/TS</td></tr>
+    <tr><td>Testes E2E</td><td>Playwright (já via MCP opencode)</td><td>latest</td><td>disponível nativamente</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Versões marcadas <code>A adicionar</code> / <code>A confirmar</code></strong> precisam ser instaladas pelo backend agent da Fase 5. Ver <a href="#pendencias">§12</a>.</p>
+
+<h2 id="arquitetura">3. Arquitetura</h2>
+
+<p>
+Monólito modular React Router 7 com SSR. Estrutura canônica de pastas (RAG <code>architecture-monolith-modular.md</code>):
+</p>
+
+<pre><code>app/
+├── root.tsx               # Layout HTML raiz, ErrorBoundary
+├── routes.ts              # Config declarativa de rotas
+├── app.css                # Tailwind 4 entrypoint
+├── routes/
+│   ├── public/            # /, /login (sem auth)
+│   └── app/               # /app/** (com auth, layout autenticado)
+├── api/                   # Endpoints não-página (server-only)
+│   └── auth/
+│       └── login.ts
+├── lib/                   # Services + helpers puros (com sufixo .server.ts)
+│   ├── auth.server.ts     # requireUser, requireRole, verifyCredentials
+│   ├── session.server.ts  # create/get/delete/renew
+│   ├── rbac.server.ts     # assertCanSeeFinancials, assertCanWriteMembers, etc.
+│   ├── members.server.ts  # CRUD de Membro + transição de tipo
+│   ├── discipleship.server.ts # assign + trava 12
+│   ├── alerts.server.ts   # criação e listagem
+│   └── money.server.ts    # formatBRLFromCents (citado p/ sprints futuras)
+├── db/
+│   └── prisma.server.ts   # Singleton do Prisma Client
+└── components/            # Componentes React puros, sem I/O
+</code></pre>
+
+<p><strong>Regras de dependência (não negociáveis, ver RAG):</strong></p>
+<ol>
+  <li><code>routes/</code> pode importar de <code>lib/</code> e <code>db/</code>. Nunca o contrário.</li>
+  <li><code>lib/</code> pode importar de <code>db/</code>. <strong>Não</strong> importa de <code>routes/</code> ou <code>components/</code>.</li>
+  <li><code>db/</code> é o único lugar que importa o <code>PrismaClient</code>.</li>
+  <li><code>components/</code> não acessa <code>db/</code>. Recebe dados via props ou loader.</li>
+  <li>Sufixo <code>.server.ts</code> em todo arquivo que toca <code>db</code>, <code>process.env</code>, <code>bcrypt</code>, <code>cookie</code> ou <code>fs</code>.</li>
+</ol>
+
+<h3>3.1 Visão geral (do ARCH.md §1)</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+graph TB
+  Browser[Browser do usuário<br/>Pastor / Secretário / etc.]
+
+  subgraph Node["Processo Node 22 (único)"]
+    RR[React Router 7<br/>SSR + future flags v8_*]
+    Loader[Loaders / Actions]
+    MW[Auth + RBAC Middleware]
+    Service[Services<br/>app/lib/*.server.ts]
+    DB[(Prisma Client<br/>app/db/prisma.server.ts)]
+    Bcrypt[bcrypt / bcryptjs]
+    Session[Session Store<br/>cookie signed]
+  end
+
+  SQLite[(SQLite<br/>prisma/dev.db)]
+
+  Browser -->|HTTPS| RR
+  RR --> MW
+  MW --> Loader
+  Loader --> Service
+  Service --> DB
+  Service --> Bcrypt
+  Service --> Session
+  DB --> SQLite
+  Session -.->|cookie httpOnly| Browser
+</pre>
+</div>
+
+<p><strong>Princípios:</strong> monólito modular • defense in depth (RBAC em 3 camadas) • co-localização (rotas + componentes + services por feature) • sem abstração prematura (YAGNI/KISS).</p>
+
+<h3>3.2 Decisões arquiteturais (referência)</h3>
+<ul>
+  <li><strong>ADR-001</strong> — Session cookie httpOnly em vez de JWT (logout server-side, seguro contra XSS).</li>
+  <li><strong>ADR-002</strong> — <code>bcryptjs</code> em vez de <code>bcrypt</code> nativo (compat SSR, sem binários).</li>
+  <li><strong>ADR-003</strong> — <code>zod</code> para validação (sugestão, <code>[A CONFIRMAR]</code>).</li>
+  <li><strong>ADR-004</strong> — Monólito modular em vez de microsserviços.</li>
+  <li><strong>ADR-005</strong> — Singleton do Prisma Client via <code>globalThis</code>.</li>
+</ul>
+
+<h2 id="modelo-dados">4. Modelo de dados</h2>
+
+<p>
+Fonte de verdade: <code>prisma/schema.prisma</code> (12 models, 6 enums). Esta seção é um <strong>índice</strong> com foco de uso — não duplica o schema.
+</p>
+
+<h3>4.1 Models por módulo (estado no MVP)</h3>
+<table>
+  <thead><tr><th>Módulo</th><th>Models</th><th>Estado no MVP</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Membros</strong></td><td><code>Membro</code>, <code>Ministerio</code>, <code>MinisterioMembro</code></td><td>✅ UI completa + service</td></tr>
+    <tr><td><strong>Auth</strong></td><td>(parte de <code>Membro</code>: <code>senhaHash</code>, <code>cargo</code>, <code>email</code>) + <code>Session</code> <span class="badge warn">A criar</span></td><td>✅ Endpoints no MVP</td></tr>
+    <tr><td><strong>Alertas</strong></td><td><code>Alerta</code>, <code>AlertaDestinatario</code></td><td>✅ UI básica + service</td></tr>
+    <tr><td><strong>Configuração</strong></td><td><code>ConfiguracaoGeral</code></td><td>✅ Service + 1 tela Admin</td></tr>
+    <tr><td><strong>Financeiro</strong></td><td><code>Caixa</code>, <code>TransferenciaCaixa</code>, <code>Lancamento</code></td><td>❌ Schema apenas, zero UI/service</td></tr>
+    <tr><td><strong>Estoque</strong></td><td><code>ItemEstoque</code>, <code>MovimentacaoEstoque</code>, <code>ManutencaoAtivo</code></td><td>❌ Schema apenas, zero UI/service</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2 Subset MVP — leitura operacional</h3>
+
+<h4>4.2.1 <code>Membro</code></h4>
+<p>Campos persistidos: <code>id</code> (uuid), <code>nome</code>, <code>tipo</code> (default <code>VISITANTE</code>), <code>cargo</code> (nullable → sem acesso admin), <code>email</code> (unique, nullable), <code>senhaHash</code> (nullable), <code>telefone</code>, <code>profissao</code>, <code>estadoCivil</code>, <code>dataConversao</code>, <code>dataBatismo</code>, <code>logradouro</code> … <code>cep</code>, <code>discipuladorId</code> (nullable, Restrict on delete), timestamps.</p>
+<p><strong>Uso no MVP:</strong> <code>cargo</code> + <code>senhaHash</code> populados para os 6 perfis administrativos; nulos para membros comuns. <code>tipo</code> é o segmento pastoral. <code>discipuladorId</code> materializa RN-MEM-04 (auto-rel 1:N, máx 12 — checado no service, não no schema).</p>
+
+<h4>4.2.2 <code>Ministerio</code> + <code>MinisterioMembro</code></h4>
+<p>Cadastro simples + junção N:N com <code>@@unique([membroId, ministerioId])</code>. <code>onDelete: Cascade</code> na junção é aceitável (RAG <code>convention-prisma-sqlite.md §2.7</code>).</p>
+
+<h4>4.2.3 <code>Alerta</code> + <code>AlertaDestinatario</code></h4>
+<p>Junção N:N com <code>lido: Boolean</code> por destinatário. Suporta múltiplos destinatários por alerta (ex: <em>responsável por acolhimento</em> é um Ministério → alerta para todos os membros daquele Ministério).</p>
+
+<h4>4.2.4 <code>ConfiguracaoGeral</code></h4>
+<p><strong>Singleton</strong> (sempre 1 linha). Armazena <code>responsavelVisitanteTipo</code> (<code>MEMBRO</code> | <code>MINISTERIO</code>), e o ID do responsável (uma das colunas fica null). Service acessa via <code>findFirst</code> (não <code>findUnique</code>).</p>
+
+<h4>4.2.5 <code>Session</code> <span class="badge warn">A criar — migration inicial</span></h4>
+<p>
+Sem esta tabela, não há como invalidar sessões no servidor (logout real). Estrutura sugerida (RAG <code>architecture-monolith-modular.md</code> e ARCH §17.2):
+</p>
+
+<pre><code>model Session {
+  id                  String   @id @default(uuid())
+  membroId            String
+  membro              Membro   @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  expiresAt           DateTime
+  absoluteExpiresAt   DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  @@map("sessions")
+}
+</code></pre>
+
+<p>Requer adicionar back-relation <code>sessions Session[]</code> em <code>Membro</code>. <strong>Decisão</strong> confirmada no brief; <strong>implementação</strong> pelo backend agent da Fase 5.</p>
+
+<h3>4.3 Enums (resumo, fonte: <code>prisma/schema.prisma</code>)</h3>
+<table>
+  <thead><tr><th>Enum</th><th>Valores</th><th>Onde se aplica</th></tr></thead>
+  <tbody>
+    <tr><td><code>Cargo</code></td><td><code>ADMIN</code>, <code>PASTOR</code>, <code>SECRETARIO</code>, <code>DISCIPULADOR</code>, <code>FINANCEIRO</code>, <code>LIDER_MINISTERIO</code></td><td>RBAC. <code>Membro.cargo</code></td></tr>
+    <tr><td><code>TipoMembro</code></td><td><code>MEMBRO_ATIVO</code>, <code>CONGREGADO</code>, <code>VISITANTE</code></td><td>Segmentação pastoral. <code>Membro.tipo</code></td></tr>
+    <tr><td><code>TipoLancamento</code></td><td><code>ENTRADA</code>, <code>SAIDA</code></td><td>Movimentação financeira (sprint 1+)</td></tr>
+    <tr><td><code>CategoriaLancamento</code></td><td><code>DIZIMO</code>, <code>OFERTA</code>, <code>CAMPANHA</code>, <code>DESPESA_OPERACIONAL</code>, <code>COMPRA_ESTOQUE</code>, <code>MANUTENCAO</code>, <code>TRANSFERENCIA</code></td><td>Natureza do lançamento</td></tr>
+    <tr><td><code>TipoItemEstoque</code></td><td><code>CONSUMO</code>, <code>PATRIMONIO</code></td><td>Define fluxo (consumo vs. manutenção)</td></tr>
+    <tr><td><code>StatusItemPatrimonio</code></td><td><code>DISPONIVEL</code>, <code>EM_MANUTENCAO</code>, <code>BAIXADO_PERDA</code></td><td>Lifecycle de ativo</td></tr>
+  </tbody>
+</table>
+
+<h3>4.4 Relacionamentos críticos (subset MVP)</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+erDiagram
+  Membro ||--o{ Membro : "discipulador (1:N, máx 12)"
+  Membro ||--o{ MinisterioMembro : "pertence"
+  Ministerio ||--o{ MinisterioMembro : "tem"
+  Membro ||--o{ AlertaDestinatario : "recebe"
+  Alerta ||--o{ AlertaDestinatario : "tem"
+  Ministerio ||--o{ ConfiguracaoGeral : "responsável visitante"
+  Membro ||--o{ Session : "tem"
+</pre>
+</div>
+
+<h3>4.5 Decisões de modelagem aplicadas no MVP</h3>
+<ul>
+  <li><code>output = "../generated/prisma"</code> (não em <code>node_modules</code>), gitignored.</li>
+  <li><code>onDelete: Restrict</code> em <code>Membro.discipulador</code> (preserva árvore de discipulado) e em todo campo financeiro/auditoria.</li>
+  <li><code>onDelete: Cascade</code> permitido em junção pura (<code>MinisterioMembro</code>, <code>AlertaDestinatario</code>).</li>
+  <li>Toda migration em dev via <code>prisma migrate dev</code>. Nunca <code>db push</code>.</li>
+  <li>Convenção monetária: <code>Int</code> em centavos (ver RAG <code>convention-monetary-values.md</code>). No MVP não há escrita de centavos, mas o helper <code>formatBRLFromCents</code> já pode existir para a aba de Fidelidade Financeira renderizar placeholder.</li>
+</ul>
+
+<h2 id="auth">5. Fluxo de autenticação</h2>
+
+<h3>5.1 Login</h3>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as Pastor
+  participant FE as Login form
+  participant RR as React Router (action)
+  participant SVC as lib/auth.server.ts
+  participant BCRYPT as bcryptjs
+  participant SESS as lib/session.server.ts
+  participant DB as Prisma + SQLite
+
+  U->>FE: preenche email + senha
+  U->>FE: submit
+  FE->>RR: POST /login (form-data)
+  RR->>SVC: verifyCredentials(email, senha)
+  SVC->>DB: membro.findUnique({ email })
+  alt não encontrado
+    SVC-->>RR: null
+    RR-->>FE: 401 + formError "Credenciais inválidas"
+  else encontrado
+    SVC->>BCRYPT: compare(senhaPlain, membro.senhaHash)
+    alt hash diverge
+      BCRYPT-->>SVC: false
+      SVC-->>RR: null
+      RR-->>FE: 401 + formError "Credenciais inválidas"
+    else hash confere
+      BCRYPT-->>SVC: true
+      SVC->>SESS: createSession(membro.id)
+      SESS->>DB: session.create({ membroId, expiresAt, absoluteExpiresAt })
+      SESS-->>SVC: sessionId
+      SVC-->>RR: { user: { id, nome, cargo } }
+      RR-->>FE: 302 Set-Cookie sid=...; Location=/app
+    end
+  end
+</pre>
+</div>
+
+<p><strong>Contrato do action <code>/login</code>:</strong></p>
+<ul>
+  <li><strong>Request:</strong> form-data <code>email: string</code>, <code>senha: string</code>.</li>
+  <li><strong>Validação (Zod):</strong> <code>email</code> válido; <code>senha</code> string não vazia, máx 200 chars.</li>
+  <li><strong>Resposta sucesso:</strong> 302 para <code>/app</code> (ou <code>?next=</code>), cookie <code>sid</code> httpOnly.</li>
+  <li><strong>Resposta falha:</strong> 401 com <code>{ formError: "Credenciais inválidas" }</code> (não diferenciar "email não existe" de "senha errada").</li>
+  <li><strong>Efeito colateral:</strong> nada é logado com PII (RAG <code>lgpd-igreja-conect.md §2.5</code>). Apenas <code>safeLog({ userId, action: "login_attempt", result: "ok"|"fail" })</code>.</li>
+</ul>
+
+<h3>5.2 Logout</h3>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as Usuário
+  participant FE as Header (botão Sair)
+  participant RR as React Router (action)
+  participant SESS as lib/session.server.ts
+  participant DB as Prisma
+
+  U->>FE: clica Sair
+  FE->>RR: POST /logout
+  RR->>SESS: deleteSession(sid)
+  SESS->>DB: session.delete({ where: { id: sid } })
+  SESS-->>RR: ok
+  RR-->>FE: 302 Set-Cookie sid=; Max-Age=0; Location=/login
+</pre>
+</div>
+
+<p><strong>Contrato:</strong></p>
+<ul>
+  <li><strong>Request:</strong> POST <code>/logout</code> (CSRF seguro via cookie sameSite=lax).</li>
+  <li><strong>Resposta:</strong> 302 para <code>/login</code> com cookie <code>sid</code> expirado (<code>Max-Age=0</code>).</li>
+  <li><strong>Idempotente:</strong> se <code>sid</code> já não existe, responde 302 do mesmo jeito.</li>
+</ul>
+
+<h3>5.3 Middleware de proteção</h3>
+
+<p>
+Localização: <code>app/routes/app/_middleware.ts</code>. Executa antes de <strong>todo</strong> loader/action dentro do grupo <code>app/</code>.
+</p>
+
+<pre><code>// app/routes/app/_middleware.ts (esqueleto)
+import { redirect } from "react-router";
+import { getUserFromRequest } from "~/lib/session.server";
+import type { Route } from "./+types/_middleware";
+
+export async function middleware({ request }: Route.MiddlewareArgs) {
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    const url = new URL(request.url);
+    const next = encodeURIComponent(url.pathname + url.search);
+    throw redirect(`/login?next=${next}`);
+  }
+  return { user };
+}
+</code></pre>
+
+<p><strong>Comportamento:</strong></p>
+<ul>
+  <li><strong>Anônimo</strong> em rota privada → 302 para <code>/login?next=…</code>.</li>
+  <li><strong>Autenticado</strong> em rota privada → injeta <code>{ user }</code> em <code>context</code>; loaders/actions filhos leem de <code>context.user</code>.</li>
+  <li><strong>Sessão expirada</strong> → 302 para <code>/login?next=…</code> (mesmo comportamento de anônimo).</li>
+  <li><strong>Cache de user</strong>: o backend agent pode implementar cache em <code>Map&lt;sessionId, User&gt;</code> com TTL curto (5 min) para evitar 1 SELECT por request (RAG <code>convention-prisma-sqlite.md §2.2</code>).</li>
+</ul>
+
+<h3>5.4 Seed admin (idempotente)</h3>
+
+<p>
+Localização: <code>prisma/seed.ts</code>. Roda com <code>pnpm prisma db seed</code>. Padrão:
+</p>
+
+<pre><code>// prisma/seed.ts (esqueleto, RAG convention-prisma-sqlite §2.8)
+import { PrismaClient } from "../generated/prisma/client";
+import bcrypt from "bcryptjs";
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const email = "admin@igreja.local";
+  const existente = await prisma.membro.findUnique({ where: { email } });
+  if (existente) {
+    console.log("ADMIN já existe, seed idempotente ok.");
+    return;
+  }
+  await prisma.membro.create({
+    data: {
+      nome: "Administrador",
+      email,
+      senhaHash: await bcrypt.hash("admin123", 10),
+      tipo: "MEMBRO_ATIVO",
+      cargo: "ADMIN",
+    },
+  });
+  console.log("ADMIN seed criado.");
+}
+
+main().finally(() => prisma.$disconnect());
+</code></pre>
+
+<p>
+<strong>Registro no <code>package.json</code>:</strong>
+</p>
+<pre><code>"prisma": {
+  "seed": "tsx prisma/seed.ts"
+}
+</code></pre>
+
+<p>
+<strong>Idempotência garantida por:</strong> <code>findUnique({ email })</code> antes do <code>create</code>. Para <strong>tornar atômico</strong> em ambientes com múltiplos workers, usar <code>upsert</code>:
+</p>
+
+<pre><code>await prisma.membro.upsert({
+  where: { email },
+  create: { /* mesmo payload */ },
+  update: {}, // no-op
+});
+</code></pre>
+
+<h3>5.5 TTL de sessão e política de senha (pendentes)</h3>
+<p>Decisões exatas registradas em <a href="#pendencias">§12</a>. Sugestão: TTL 7d sliding, teto 30d abs; senha ≥ 8 chars sem forçar complexidade.</p>
+
+<h2 id="membros">6. Fluxo de Membros</h2>
+
+<h3>6.0 User Stories formais (acceptanceCriteria)</h3>
+<p>6 user stories derivadas do <a href="PRD.html#personas">PRD §2</a>, cada uma com critérios de aceite verificáveis em teste. Numeração US-MEM-* segue o prefixo do módulo.</p>
+
+<h4>US-AUTH-001 — Login com email e senha</h4>
+<ul>
+  <li><strong>Como</strong> qualquer um dos 6 perfis administrativos.</li>
+  <li><strong>Quero</strong> entrar com email + senha.</li>
+  <li><strong>Para</strong> acessar o painel autenticado.</li>
+  <li><strong>Acceptance criteria:</strong>
+    <ol>
+      <li>Submeter <code>POST /login</code> com email válido + senha correta → 302 para <code>/app</code>, Set-Cookie <code>sid</code> httpOnly.</li>
+      <li>Submeter com senha incorreta → 401 com <code>{ formError: "Credenciais inválidas" }</code> (não diferencia "email inexistente" de "senha errada").</li>
+      <li>Cookie de sessão tem <code>httpOnly=true</code>, <code>sameSite=lax</code>, <code>secure</code> em prod.</li>
+      <li>Após 7 dias sem atividade, sessão expira (teto absoluto 30 dias).</li>
+    </ol>
+  </li>
+</ul>
+
+<h4>US-AUTH-002 — Logout invalida a sessão</h4>
+<ul>
+  <li><strong>Como</strong> usuário autenticado.</li>
+  <li><strong>Quero</strong> sair do sistema.</li>
+  <li><strong>Para</strong> que ninguém reuse minha sessão.</li>
+  <li><strong>Acceptance criteria:</strong>
+    <ol>
+      <li><code>POST /logout</code> remove o registro <code>Session</code> no DB.</li>
+      <li>Cookie <code>sid</code> é limpo (<code>Max-Age=0</code>).</li>
+      <li>Requisições subsequentes com o mesmo <code>sid</code> resultam em 302 → <code>/login</code>.</li>
+    </ol>
+  </li>
+</ul>
+
+<h4>US-MEM-001 — Cadastrar visitante gera alerta (RN-MEM-05)</h4>
+<ul>
+  <li><strong>Como</strong> Secretário (ou qualquer perfil autenticado).</li>
+  <li><strong>Quero</strong> cadastrar uma pessoa nova como <code>VISITANTE</code>.</li>
+  <li><strong>Para</strong> iniciar o processo de acolhimento.</li>
+  <li><strong>Acceptance criteria:</strong>
+    <ol>
+      <li>Submeter <code>POST /app/membros</code> com <code>tipo: "VISITANTE"</code> → 302 para <code>/app/membros/:id</code>.</li>
+      <li>Atomically, um <code>Alerta</code> é criado com <code>AlertaDestinatario</code> apontando para o <code>responsavelMembroId</code> (ou para todos os membros do <code>responsavelMinisterioId</code>).</li>
+      <li>Se a criação do alerta falhar, o visitante <strong>não</strong> é persistido (rollback da transação).</li>
+      <li>Acessar <code>GET /app/alertas</code> como o responsável mostra o novo alerta com título "Novo visitante cadastrado".</li>
+    </ol>
+  </li>
+</ul>
+
+<h4>US-MEM-002 — Vincular 12 discípulos a 1 discipulador (RN-MEM-04)</h4>
+<ul>
+  <li><strong>Como</strong> Discipulador.</li>
+  <li><strong>Quero</strong> associar membros a mim como discípulos.</li>
+  <li><strong>Para</strong> conduzi-los espiritualmente.</li>
+  <li><strong>Acceptance criteria:</strong>
+    <ol>
+      <li><code>POST /app/membros/:id/discipulador</code> com <code>{ discipuladorId: meuId }</code> → 302 OK para 1º ao 12º discípulo.</li>
+      <li>Tentar vincular o 13º → 422 com mensagem "Discipulador já possui 12 discípulos ativos. Reatribua antes de vincular mais."</li>
+      <li>Tentar vincular <code>discipuladorId === discId</code> (auto-vínculo) → 400 com mensagem clara.</li>
+      <li>Tentar criar loop A→B→A → 422 com "Vínculo em loop detectado".</li>
+    </ol>
+  </li>
+</ul>
+
+<h4>US-MEM-003 — Listar membros com filtros</h4>
+<ul>
+  <li><strong>Como</strong> Secretário.</li>
+  <li><strong>Quero</strong> ver a lista de membros com filtros e busca.</li>
+  <li><strong>Para</strong> encontrar rapidamente um cadastro.</li>
+  <li><strong>Acceptance criteria:</strong>
+    <ol>
+      <li><code>GET /app/membros?tipo=VISITANTE&amp;q=maria</code> retorna apenas visitantes cujo nome contém "maria" (case-insensitive).</li>
+      <li>Para Discipulador, o resultado é automaticamente restrito aos seus discípulos (RBAC fina).</li>
+      <li>Paginação: <code>?page=2&amp;pageSize=25</code> retorna a 2ª página de 25 itens.</li>
+      <li>Payload <strong>nunca</strong> inclui <code>senhaHash</code> (assertion: grep no response).</li>
+    </ol>
+  </li>
+</ul>
+
+<h4>US-MEM-004 — Admin configura acolhimento (RN-MEM-05)</h4>
+<ul>
+  <li><strong>Como</strong> Admin.</li>
+  <li><strong>Quero</strong> apontar 1 Membro <em>ou</em> 1 Ministério como responsável pelo acolhimento.</li>
+  <li><strong>Para</strong> que o sistema saiba para quem enviar o alerta de visitante.</li>
+  <li><strong>Acceptance criteria:</strong>
+    <ol>
+      <li><code>GET /app/config/acolhimento</code> é acessível a qualquer usuário autenticado (lê); a tela mostra a config atual.</li>
+      <li><code>PUT /app/config/acolhimento</code> só é permitido para <code>ADMIN</code> — outros perfis recebem 403.</li>
+      <li>Payload: <code>{ responsavelVisitanteTipo: "MEMBRO" | "MINISTERIO", responsavelId: string }</code>.</li>
+      <li>Após salvar, o próximo cadastro de visitante gera alerta para o novo responsável.</li>
+    </ol>
+  </li>
+</ul>
+
+<h4>US-MEM-005 — Aba "Fidelidade Financeira" bloqueada para perfis não autorizados (RN-MEM-03)</h4>
+<ul>
+  <li><strong>Como</strong> Discipulador (ou Secretário, Líder de Ministério).</li>
+  <li><strong>Eu não devo</strong> ver a aba de dízimos de nenhum membro.</li>
+  <li><strong>Acceptance criteria:</strong>
+    <ol>
+      <li>UI: a aba Fidelidade Financeira <strong>não aparece</strong> no perfil do membro.</li>
+      <li>Bypass via URL <code>GET /app/membros/:id?tab=financeiro</code> retorna 403.</li>
+      <li>Service <code>getDizimosByMembro</code> chamado direto lança <code>ForbiddenError</code> para perfil inadequado.</li>
+      <li>Teste E2E comprova os 3 caminhos (UI ausente, URL 403, service lança).</li>
+    </ol>
+  </li>
+</ul>
+
+<h3>6.1 CRUD: listar com filtros e busca</h3>
+
+<p><strong>Loader: <code>app/routes/app/membros/index.tsx</code></strong></p>
+
+<pre><code>// app/lib/members.server.ts (trecho)
+import { prisma } from "~/db/prisma.server";
+import type { Cargo, TipoMembro } from "../../generated/prisma/client";
+
+export interface ListMembrosFilter {
+  tipo?: TipoMembro;
+  ministerioId?: string;
+  discipuladorId?: string;
+  q?: string; // busca textual por nome (case-insensitive contains)
+  page?: number;
+  pageSize?: number;
+}
+
+export async function listMembros(filter: ListMembrosFilter, actor: { id: string; cargo: Cargo | null }) {
+  const where: any = {};
+  if (filter.tipo) where.tipo = filter.tipo;
+  if (filter.ministerioId) where.ministerios = { some: { ministerioId: filter.ministerioId } };
+  if (filter.discipuladorId) where.discipuladorId = filter.discipuladorId;
+  if (filter.q) where.nome = { contains: filter.q };
+
+  // RBAC fina: DISCIPULADOR e LIDER_MINISTERIO só veem "seus" membros
+  if (actor.cargo === "DISCIPULADOR") {
+    where.discipuladorId = actor.id; // override (filtro adicional)
+  } else if (actor.cargo === "LIDER_MINISTERIO") {
+    where.ministerios = { some: { ministerio: { /* líder é do min */ } } };
+    // Implementação completa exige model LiderMinisterio (sprint 2+).
+    // No MVP, LIDER_MINISTERIO com filtro sem ministério vê lista global (escopo relaxado).
+  }
+
+  const page = filter.page ?? 1;
+  const pageSize = filter.pageSize ?? 25;
+  const [items, total] = await Promise.all([
+    prisma.membro.findMany({
+      where,
+      select: MEMBRO_SAFE_SELECT, // ver §8.1 — nunca senhaHash
+      orderBy: { nome: "asc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.membro.count({ where }),
+  ]);
+  return { items, total, page, pageSize };
+}
+</code></pre>
+
+<p><strong>Exemplo de URL:</strong> <code>GET /app/membros?tipo=VISITANTE&amp;ministerioId=abc&amp;discipuladorId=xyz&amp;q=maria&amp;page=1</code></p>
+
+<h3>6.2 CRUD: criar membro</h3>
+
+<p><strong>Schema Zod (sugestão):</strong></p>
+<pre><code>// app/lib/schemas/membros.ts
+import { z } from "zod";
+
+export const MembroCreateSchema = z.object({
+  nome: z.string().min(2, "Nome deve ter ao menos 2 caracteres.").max(120),
+  tipo: z.enum(["MEMBRO_ATIVO", "CONGREGADO", "VISITANTE"]).default("VISITANTE"),
+  email: z.string().email("E-mail inválido.").optional().or(z.literal("")),
+  telefone: z.string().regex(/^\+?[\d\s()-]{8,20}$/, "Telefone inválido.").optional().or(z.literal("")),
+  profissao: z.string().max(80).optional(),
+  estadoCivil: z.string().max(40).optional(),
+  dataConversao: z.coerce.date().optional(),
+  dataBatismo: z.coerce.date().optional(),
+  logradouro: z.string().max(120).optional(),
+  numero: z.string().max(20).optional(),
+  bairro: z.string().max(80).optional(),
+  cidade: z.string().max(80).optional(),
+  estado: z.string().length(2, "Use a sigla do estado (ex: SP).").optional(),
+  cep: z.string().regex(/^\d{5}-?\d{3}$/, "CEP inválido.").optional(),
+  // NÃO incluir cpf, rg, dados fiscais (RN-MEM-02)
+  // senhaHash nunca vem do form; só via fluxo separado de criação de Admin
+});
+</code></pre>
+
+<p><strong>Payload de exemplo (criar visitante):</strong></p>
+<pre><code>{
+  "nome": "Maria da Silva",
+  "tipo": "VISITANTE",
+  "telefone": "(11) 98765-4321",
+  "email": "maria.silva@example.com",
+  "logradouro": "Rua das Flores",
+  "numero": "123",
+  "bairro": "Centro",
+  "cidade": "São Paulo",
+  "estado": "SP",
+  "cep": "01000-000"
+}
+</code></pre>
+
+<p><strong>Resposta de sucesso:</strong> 302 → <code>/app/membros/&lt;id&gt;</code>.</p>
+<p><strong>Resposta de erro de validação (422):</strong></p>
+<pre><code>{
+  "formErrors": [],
+  "fieldErrors": {
+    "email": ["E-mail inválido."],
+    "cep": ["CEP inválido."]
+  }
+}
+</code></pre>
+
+<h3>6.3 CRUD: atualizar e excluir</h3>
+<ul>
+  <li><strong>PUT/PATCH <code>/app/membros/:id</code>:</strong> mesmo schema (parcial). Service valida e atualiza. <code>senhaHash</code> só atualizável por rota separada (Admin ou auto-troca).</li>
+  <li><strong>DELETE <code>/app/membros/:id</code>:</strong> bloqueado se houver discípulos vinculados (<code>onDelete: Restrict</code>). Erro 409 com mensagem clara. Requer desvincular antes.</li>
+</ul>
+
+<h3>6.4 Transição de tipo de membro (RN-MEM-06)</h3>
+
+<p>Manual. Endpoint dedicado: <code>PATCH /app/membros/:id/tipo</code> com payload <code>{ tipo: "CONGREGADO" | "MEMBRO_ATIVO" }</code>.</p>
+<p><strong>Garantia (RN-MEM-06):</strong> o sistema <strong>não</strong> tem job nenhum que promova visitante automaticamente. <strong>Teste estático</strong> no CI: <code>grep -rE "tipo.*=.*MEMBRO_ATIVO" app/</code> só pode aparecer em ações humanas (não em <code>setTimeout</code>, <code>setInterval</code>, <code>cron</code>, <code>node-cron</code>, <code>bull</code>, etc.).</p>
+
+<h3>6.5 Vínculo de Discipulado (RN-MEM-04)</h3>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+  A[POST /app/membros/:id/discipulador] --> B{discId === discipuladorId?}
+  B -- sim --> X1[400 Auto-vínculo não permitido]
+  B -- não --> C[count discípulos ativos do discipulador]
+  C --> D{count >= 12?}
+  D -- sim --> X2[422 Discipulador já possui 12 discípulos]
+  D -- não --> E{isDescendantOf?<br/>anti-loop}
+  E -- sim --> X3[422 Vínculo em loop detectado]
+  E -- não --> F[membro.update discipuladorId]
+  F --> G[200 / 302 OK]
+</pre>
+</div>
+
+<p><strong>Payload:</strong> <code>{ discipuladorId: string }</code>.</p>
+<p><strong>Resposta de erro (422):</strong></p>
+<pre><code>{
+  "formError": "Discipulador já possui 12 discípulos ativos. Reatribua antes de vincular mais."
+}
+</code></pre>
+
+<p><strong>Testes de borda obrigatórios:</strong></p>
+<ul>
+  <li>12 discípulos: passa.</li>
+  <li>13º: bloqueia com mensagem clara.</li>
+  <li>Auto-vínculo: bloqueia.</li>
+  <li>Loop A→B e B→A: bloqueia (anti-ciclo).</li>
+</ul>
+
+<h3>6.6 Ministérios (N:N)</h3>
+<ul>
+  <li><strong>GET <code>/app/ministerios</code>:</strong> lista todos.</li>
+  <li><strong>POST <code>/app/membros/:id/ministerios</code>:</strong> payload <code>{ ministerioId: string }</code> → cria <code>MinisterioMembro</code>.</li>
+  <li><strong>DELETE <code>/app/membros/:id/ministerios/:ministerioId</code>:</strong> remove vínculo.</li>
+</ul>
+
+<h3>6.7 Configuração de acolhimento (RN-MEM-05)</h3>
+
+<p>Localização: <code>app/routes/app/config/acolhimento.tsx</code> — <strong>Admin only</strong>.</p>
+
+<p><strong>Loader:</strong> lê <code>ConfiguracaoGeral</code> (cria singleton se não existir).</p>
+
+<p><strong>Action:</strong> payload <code>{ responsavelVisitanteTipo: "MEMBRO" | "MINISTERIO", responsavelId: string }</code>.</p>
+
+<p><strong>Comportamento:</strong> se <code>responsavelVisitanteTipo = "MEMBRO"</code>, <code>responsavelMembroId</code> preenchido e <code>responsavelMinisterioId = null</code>. Vice-versa. <code>configGeral</code> é singleton: service usa <code>upsert</code> com <code>id: "singleton"</code> ou <code>findFirst + create</code> no seed.</p>
+
+<h3>6.8 Geração de alerta ao cadastrar visitante (RN-MEM-05)</h3>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as Secretário
+  participant FE as Form Membro
+  participant RR as React Router (action)
+  participant SVC as lib/members.server.ts
+  participant ALERT as lib/alerts.server.ts
+  participant TX as db.$transaction
+  participant DB as SQLite
+
+  U->>FE: preenche tipo=VISITANTE
+  U->>FE: submit
+  FE->>RR: POST /app/membros
+  RR->>SVC: criarMembro(input, user)
+  SVC->>SVC: Zod parse
+  SVC->>TX: $transaction
+  TX->>DB: membro.create({ tipo: VISITANTE })
+  TX->>DB: configGeral.findFirst()
+  alt responsavelMembroId definido
+    TX->>DB: alerta.create({ destinatario: { membroId } })
+  else responsavelMinisterioId definido
+    TX->>DB: ministerioMembro.findMany
+    TX->>DB: alerta.create({ destinatarios: { all membroIds do min } })
+  end
+  TX-->>SVC: { membro, alerta? }
+  SVC-->>RR: membro
+  RR-->>FE: 302 /app/membros/:id
+</pre>
+</div>
+
+<p><strong>Atomicidade (RN-MEM-05):</strong> se a criação do alerta falhar, o visitante <strong>não</strong> é criado. <code>db.$transaction</code> garante.</p>
+
+<p><strong>Conteúdo do alerta:</strong></p>
+<pre><code>{
+  "titulo": "Novo visitante cadastrado",
+  "mensagem": "Maria da Silva precisa de acolhimento. Telefone: (11) 98765-4321."
+}
+</code></pre>
+
+<p><strong>Privacidade:</strong> a mensagem do alerta <strong>pode</strong> incluir telefone e nome (são dados de contato, não sensíveis) mas <strong>não inclui</strong> email nem endereço completo. Ver RAG <code>lgpd-igreja-conect.md §2.5</code>.</p>
+
+<h3>6.9 Aba "Fidelidade Financeira" (RN-MEM-03) — bloqueada</h3>
+
+<p>Componente <code>app/components/MembroFidelidade.tsx</code>. Renderização condicional baseada em <code>user.cargo</code>.</p>
+
+<p><strong>Para perfis permitidos (<code>ADMIN</code>, <code>PASTOR</code>, <code>FINANCEIRO</code>):</strong> chama loader <code>/app/membros/:id?tab=financeiro</code> que retorna placeholder "Módulo Financeiro ainda não disponível". Quando o Financeiro entrar em sprint 1+, este loader é substituído pelo real.</p>
+
+<p><strong>Para perfis negados:</strong> o componente <strong>não é renderizado</strong>. O loader <strong>retorna 403</strong> se acessado via URL. Service <strong>lança <code>ForbiddenError</code></strong> se chamado direto.</p>
+
+<h2 id="rbac">7. RBAC (defense in depth)</h2>
+
+<p>
+Toda decisão de acesso passa por <strong>3 camadas independentes</strong> (RAG <code>security-rbac-matrix.md §2</code>). Falha isolada em uma camada <strong>não</strong> vaza dados.
+</p>
+
+<table>
+  <thead><tr><th>Camada</th><th>Onde</th><th>O que verifica</th><th>Falha →</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1. UI</strong></td><td><code>app/components/**</code></td><td>Render condicional por <code>user.cargo</code></td><td>Esconde controle (UX), <strong>não é fonte de verdade</strong></td></tr>
+    <tr><td><strong>2. Loader/Action</strong></td><td><code>app/routes/**/loader.ts</code>, <code>action.ts</code></td><td><code>assertCan(user, action, resource)</code> antes de qualquer I/O</td><td>Lança <code>Response(null, { status: 403 })</code></td></tr>
+    <tr><td><strong>3. Service</strong></td><td><code>app/lib/**.server.ts</code></td><td>Helper <code>assertCanSeeFinancials(perfil)</code> revalida</td><td>Lança <code>ForbiddenError</code> (erro de domínio)</td></tr>
+  </tbody>
+</table>
+
+<h3>7.1 Matriz RBAC MVP (6 perfis × 5 operações)</h3>
+<table>
+  <thead>
+    <tr><th>Perfil \ Operação</th><th>Membros CRUD</th><th>Vê Dízimos (RN-MEM-03)</th><th>Vê Config. Acolhimento</th><th>Vincula Discípulo</th><th>Recebe Alerta</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>ADMIN</code></td><td>✅ Total</td><td>✅</td><td>✅ Escreve</td><td>✅</td><td>✅ (se for responsável)</td></tr>
+    <tr><td><code>PASTOR</code></td><td>✅ Total</td><td>✅</td><td>👁 Lê</td><td>✅</td><td>✅ (se for responsável)</td></tr>
+    <tr><td><code>SECRETARIO</code></td><td>✅ Total</td><td>❌ <strong>BLOQUEADO</strong></td><td>👁 Lê</td><td>✅</td><td>✅ (se for responsável)</td></tr>
+    <tr><td><code>DISCIPULADOR</code></td><td>✅ (escopo: seus discípulos)</td><td>❌ <strong>BLOQUEADO</strong></td><td>👁 Lê</td><td>✅ (auto-vínculo de discípulos)</td><td>✅ (se for responsável)</td></tr>
+    <tr><td><code>LIDER_MINISTERIO</code></td><td>✅ (escopo: seu min.) <span class="badge warn">A refinar</span></td><td>❌ <strong>BLOQUEADO</strong></td><td>👁 Lê</td><td>✅ (limitado)</td><td>✅ (se for responsável)</td></tr>
+    <tr><td><code>FINANCEIRO</code></td><td>✅ Total</td><td>✅</td><td>👁 Lê</td><td>✅</td><td>✅ (se for responsável)</td></tr>
+  </tbody>
+</table>
+
+<h3>7.2 Helpers obrigatórios em <code>app/lib/rbac.server.ts</code></h3>
+
+<pre><code>// app/lib/rbac.server.ts (esqueleto canônico)
+import type { Cargo } from "../../generated/prisma/client";
+
+export type SessionUser = { id: string; cargo: Cargo | null };
+
+const FINANCIAL: Cargo[] = ["ADMIN", "PASTOR", "FINANCEIRO"];
+const ALL_ADMIN: Cargo[] = ["ADMIN", "PASTOR", "SECRETARIO", "DISCIPULADOR", "FINANCEIRO", "LIDER_MINISTERIO"];
+
+export function assertCanSeeFinancials(user: SessionUser): void {
+  if (!user.cargo || !FINANCIAL.includes(user.cargo)) {
+    throw new Response("Acesso restrito a perfis financeiros.", { status: 403 });
+  }
+}
+
+export function assertCanWriteMembers(user: SessionUser): void {
+  if (!user.cargo || !ALL_ADMIN.includes(user.cargo)) {
+    throw new Response("Acesso restrito a usuários autenticados.", { status: 401 });
+  }
+}
+
+export function assertIsAdmin(user: SessionUser): void {
+  if (user.cargo !== "ADMIN") {
+    throw new Response("Acesso restrito ao Admin.", { status: 403 });
+  }
+}
+
+export function assertCanManageConfiguracaoGeral(user: SessionUser): void {
+  if (user.cargo !== "ADMIN") {
+    throw new Response("Apenas Admin pode editar configurações gerais.", { status: 403 });
+  }
+}
+</code></pre>
+
+<p><strong>Regras de uso (RAG §4):</strong></p>
+<ul>
+  <li>Helpers <strong>lançam</strong> <code>Response</code> (não retornam boolean). Loaders/actions capturam para renderizar <code>ErrorBoundary</code>.</li>
+  <li>Se 3+ <code>if (user.cargo === "X")</code> aparecerem espalhados, abstrair para <code>canX(user)</code>. Regra de 3 (YAGNI).</li>
+  <li>Nunca confiar só na UI. <code>assertCan*</code> é a <strong>fonte de verdade</strong>.</li>
+</ul>
+
+<h3>7.3 Fluxo de bypass via URL (RN-MEM-03) — defesa em 3 camadas</h3>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as Discipulador
+  participant FE as Browser
+  participant RR as React Router
+  participant MW as Middleware
+  participant LDR as Loader /app/membros/$id
+  participant SVC as lib/finance.server.ts (getDizimosByMembro)
+
+  U->>FE: GET /app/membros/:id?tab=financeiro
+  FE->>RR: request
+  RR->>MW: middleware()
+  MW-->>RR: { user: Discipulador }
+  RR->>LDR: loader({ params, context })
+  LDR->>LDR: assertCanSeeFinancials(context.user)
+  LDR-->>FE: 403 Forbidden
+  alt bypass via API direta
+    U->>RR: GET /app/membros/:id/api/dizimos
+    RR->>SVC: getDizimosByMembro(membroId, user)
+    SVC->>SVC: assertCanSeeFinancials(user) [camada 3]
+    SVC-->>RR: ForbiddenError
+    RR-->>FE: 403 Forbidden
+  end
+</pre>
+</div>
+
+<h2 id="privacidade">8. Privacidade e filtro de payload</h2>
+
+<h3>8.1 O que <strong>nunca</strong> é persistido</h3>
+<ul>
+  <li>CPF, RG, CNPJ, título de eleitor, PIS, cartão SUS (RN-MEM-02).</li>
+  <li>Dados fiscais, salário, capacidade financeira.</li>
+  <li>Geolocalização, fingerprinting, analytics de terceiros.</li>
+</ul>
+
+<h3>8.2 O que <strong>nunca</strong> é retornado em API / loader</h3>
+<ul>
+  <li><code>Membro.senhaHash</code> — sempre omitido via <code>select</code> explícito no Prisma.</li>
+  <li><code>Lancamento.valorCentavos</code> para perfis sem permissão (camada 3 + UI).</li>
+  <li>Endereço completo para perfis que não precisam (ex: <code>DISCIPULADOR</code> vê só contato, não endereço residencial — decisão de produto a confirmar).</li>
+</ul>
+
+<h3>8.3 <code>select</code> explícito — padrão obrigatório</h3>
+
+<pre><code>// app/lib/members.server.ts (constante de seleção)
+export const MEMBRO_SAFE_SELECT = {
+  id: true,
+  nome: true,
+  tipo: true,
+  cargo: true,
+  email: true,
+  telefone: true,
+  profissao: true,
+  estadoCivil: true,
+  dataConversao: true,
+  dataBatismo: true,
+  logradouro: true,
+  numero: true,
+  bairro: true,
+  cidade: true,
+  estado: true,
+  cep: true,
+  discipuladorId: true,
+  createdAt: true,
+  updatedAt: true,
+  // NUNCA: senhaHash
+} as const;
+</code></pre>
+
+<p>Todo service que retorna <code>Membro</code> usa este <code>select</code> (ou uma variação que ainda assim exclui <code>senhaHash</code>).</p>
+
+<h3>8.4 Logger seguro (RAG <code>lgpd-igreja-conect.md §2.5</code>)</h3>
+
+<pre><code>// app/lib/audit.server.ts
+const ALLOWED_FIELDS = new Set(["userId", "action", "resource", "result", "timestamp", "ip"]);
+
+export function safeLog(event: Record<string, unknown>) {
+  const filtered = Object.fromEntries(
+    Object.entries(event).filter(([k]) => ALLOWED_FIELDS.has(k))
+  );
+  console.log(JSON.stringify { audit: filtered });
+}
+</code></pre>
+
+<p><strong>Proibido em logs:</strong> <code>senha</code> (mesmo hasheada), <code>Membro.email</code>, <code>Membro.telefone</code>, <code>Membro.endereço</code>, <code>Lancamento.valorCentavos</code>.</p>
+
+<h3>8.5 Checklist OWASP Top 10 (avaliação do agente <code>security</code>)</h3>
+<table>
+  <thead><tr><th>ID</th><th>Risco</th><th>Aplicação na Igreja Conect</th><th>Status MVP</th></tr></thead>
+  <tbody>
+    <tr><td>A01</td><td>Broken Access Control</td><td>RBAC em 3 camadas (UI, loader, service). <code>assertCanSeeFinancials</code>, <code>assertIsAdmin</code> etc. Bloqueio de bypass via URL (RAG <code>security-rbac-matrix.md</code>).</td><td><span class="badge good">Mitigado</span></td></tr>
+    <tr><td>A02</td><td>Cryptographic Failures</td><td>Senhas em bcrypt cost 10. Cookies <code>httpOnly</code> + <code>secure</code> + <code>sameSite=lax</code>. HTTPS obrigatório em prod via <code>secure: process.env.NODE_ENV === "production"</code>. Sem dado fiscal/CPF (RAG <code>lgpd-igreja-conect.md §2.1</code>).</td><td><span class="badge good">Mitigado</span></td></tr>
+    <tr><td>A03</td><td>Injection</td><td>Prisma parametrizado (não monta SQL). Inputs validados por Zod. <code>textContent</code> no React (sem <code>dangerouslySetInnerHTML</code>).</td><td><span class="badge good">Mitigado</span></td></tr>
+    <tr><td>A04</td><td>Insecure Design</td><td>Defense in depth (RBAC 3 camadas), idempotência do seed, <code>onDelete: Restrict</code> em campos críticos. ADRs documentados (ARCH §10).</td><td><span class="badge good">Mitigado</span></td></tr>
+    <tr><td>A05</td><td>Security Misconfiguration</td><td>Sem debug em prod (Node env). Erros genéricos em 4xx/5xx. Cookies estritos.</td><td><span class="badge good">Mitigado</span></td></tr>
+    <tr><td>A06</td><td>Vulnerable &amp; Outdated Components</td><td>Versões fixadas no <code>package.json</code> (brief §5.1). <code>pnpm audit</code> no CI.</td><td><span class="badge warn">A validar</span></td></tr>
+    <tr><td>A07</td><td>Identification &amp; Auth Failures</td><td>Sessão server-side (logout invalida). TTL 7d sliding + teto 30d abs. Senha ≥ 8 chars (a confirmar). Sem credenciais default em prod (seed <em>apenas</em> em dev).</td><td><span class="badge warn">A confirmar política</span></td></tr>
+    <tr><td>A08</td><td>Software &amp; Data Integrity Failures</td><td>Migrations versionadas (<code>prisma migrate dev</code>). Sem <code>$queryRaw</code> sem justificativa. Sem deserialização de objeto externo.</td><td><span class="badge good">Mitigado</span></td></tr>
+    <tr><td>A09</td><td>Security Logging Failures</td><td><code>safeLog</code> com allowlist (RAG <code>lgpd-igreja-conect.md §2.5</code>). Loga <code>userId, action, resource, result, timestamp</code> — sem PII.</td><td><span class="badge good">Mitigado</span></td></tr>
+    <tr><td>A10</td><td>Server-Side Request Forgery</td><td>Sem integrações externas no MVP (sem gateway Pix, sem e-mail). Quando entrarem, validar URL com allowlist no service.</td><td><span class="badge good">N/A no MVP</span></td></tr>
+  </tbody>
+</table>
+
+<h2 id="validacao">9. Validação de payload</h2>
+
+<h3>9.1 Decisão pendente: Zod vs Valibot vs TypeBox</h3>
+<p>
+ADR-003 sugere <strong>Zod</strong> (ecossistema maduro, <code>z.infer&lt;&gt;</code> casa com TS, mensagens de erro localizáveis). Pendente de confirmação na Fase 3. Ver <a href="#pendencias">§12</a>.
+</p>
+
+<h3>9.2 Padrão de uso (assumindo Zod)</h3>
+<ul>
+  <li>Schemas em <code>app/lib/schemas/*.ts</code> (um arquivo por domínio).</li>
+  <li>Exporta <code>Schema</code> (Zod) + <code>Input</code> (<code>z.infer&lt;typeof Schema&gt;</code>).</li>
+  <li>Action consome com <code>Schema.safeParse()</code>; em falha, retorna <code>{ fieldErrors, formErrors }</code>.</li>
+  <li>Loader <strong>não</strong> valida (só lê). Validation é da borda de input (form → action).</li>
+</ul>
+
+<h3>9.3 Mensagens de erro padronizadas</h3>
+<table>
+  <thead><tr><th>Status</th><th>Quando</th><th>Resposta</th></tr></thead>
+  <tbody>
+    <tr><td><code>400 Bad Request</code></td><td>Payload malformado (JSON inválido, tipo errado)</td><td><code>{ formError: "Requisição inválida." }</code></td></tr>
+    <tr><td><code>401 Unauthorized</code></td><td>Sem sessão ou sessão inválida</td><td>302 → <code>/login?next=...</code> (loader) ou <code>{ formError: "Sessão expirada." }</code> (action)</td></tr>
+    <tr><td><code>403 Forbidden</code></td><td>Autenticado, mas sem permissão</td><td><code>{ formError: "Você não tem permissão para esta operação." }</code></td></tr>
+    <tr><td><code>404 Not Found</code></td><td>Recurso inexistente</td><td><code>{ formError: "Membro não encontrado." }</code></td></tr>
+    <tr><td><code>409 Conflict</code></td><td>Violação de regra de negócio (ex: trava 12, saldo)</td><td><code>{ formError: "Discipulador já possui 12 discípulos ativos." }</code></td></tr>
+    <tr><td><code>422 Unprocessable Entity</code></td><td>Validação semântica falhou (campos obrigatórios, formato)</td><td><code>{ fieldErrors: { email: ["E-mail inválido."] } }</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="endpoints">10. Endpoints (contratos)</h2>
+
+<p>
+Tabela completa de endpoints no MVP. <strong>Método × Path × Quem chama × Permissão × Payload × Response × Erros.</strong>
+</p>
+
+<table class="endpoint-table">
+  <thead>
+    <tr><th>Método</th><th>Path</th><th>Quem chama</th><th>Permissão</th><th>Payload</th><th>Response OK</th><th>Erros</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/login</code></td>
+      <td>Anônimo</td>
+      <td>—</td>
+      <td>—</td>
+      <td>200 HTML (form)</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-POST">POST</span></td>
+      <td class="path"><code>/login</code></td>
+      <td>Anônimo</td>
+      <td>—</td>
+      <td>form: <code>email</code>, <code>senha</code></td>
+      <td>302 → <code>/app</code>, Set-Cookie sid</td>
+      <td>401, 422</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-POST">POST</span></td>
+      <td class="path"><code>/logout</code></td>
+      <td>Autenticado</td>
+      <td>qualquer</td>
+      <td>—</td>
+      <td>302 → <code>/login</code>, Max-Age=0</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app</code></td>
+      <td>Autenticado</td>
+      <td>qualquer</td>
+      <td>—</td>
+      <td>200 HTML (dashboard básico)</td>
+      <td>401</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app/membros</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RBAC fina)</td>
+      <td>query: <code>tipo</code>, <code>ministerioId</code>, <code>discipuladorId</code>, <code>q</code>, <code>page</code></td>
+      <td>200 HTML + JSON <code>{ items, total, page, pageSize }</code></td>
+      <td>401, 403</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app/membros/novo</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RN-MEM-01)</td>
+      <td>—</td>
+      <td>200 HTML (form vazio)</td>
+      <td>401</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-POST">POST</span></td>
+      <td class="path"><code>/app/membros</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RN-MEM-01)</td>
+      <td>JSON <code>MembroCreateSchema</code></td>
+      <td>302 → <code>/app/membros/:id</code></td>
+      <td>401, 422</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app/membros/:id</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RBAC fina)</td>
+      <td>query: <code>tab=fidelidade</code> (opcional)</td>
+      <td>200 HTML (ficha + abas)</td>
+      <td>401, 403, 404</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app/membros/:id/editar</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RN-MEM-01)</td>
+      <td>—</td>
+      <td>200 HTML (form preenchido)</td>
+      <td>401, 403, 404</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-PUT">PUT</span></td>
+      <td class="path"><code>/app/membros/:id</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RN-MEM-01)</td>
+      <td>JSON parcial <code>MembroUpdateSchema</code></td>
+      <td>302 → <code>/app/membros/:id</code></td>
+      <td>401, 403, 404, 422</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-PATCH">PATCH</span></td>
+      <td class="path"><code>/app/membros/:id/tipo</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RN-MEM-06 manual)</td>
+      <td><code>{ tipo: "CONGREGADO" | "MEMBRO_ATIVO" }</code></td>
+      <td>302 → <code>/app/membros/:id</code></td>
+      <td>401, 403, 404, 422</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-DELETE">DELETE</span></td>
+      <td class="path"><code>/app/membros/:id</code></td>
+      <td>Autenticado</td>
+      <td>Admin ou PASTOR (RN-MEM-01 + integridade)</td>
+      <td>—</td>
+      <td>302 → <code>/app/membros</code></td>
+      <td>401, 403, 404, 409 (com discípulos vinculados)</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-POST">POST</span></td>
+      <td class="path"><code>/app/membros/:id/discipulador</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RN-MEM-04)</td>
+      <td><code>{ discipuladorId: string }</code></td>
+      <td>302 → <code>/app/membros/:id</code></td>
+      <td>401, 422 (auto-vínculo, trava 12, loop)</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-DELETE">DELETE</span></td>
+      <td class="path"><code>/app/membros/:id/discipulador</code></td>
+      <td>Autenticado</td>
+      <td>qualquer</td>
+      <td>—</td>
+      <td>302 → <code>/app/membros/:id</code></td>
+      <td>401, 404</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app/membros/:id/discipulos</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RBAC fina)</td>
+      <td>—</td>
+      <td>200 HTML (lista de discípulos)</td>
+      <td>401, 403, 404</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app/ministerios</code></td>
+      <td>Autenticado</td>
+      <td>qualquer</td>
+      <td>—</td>
+      <td>200 HTML</td>
+      <td>401</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-POST">POST</span></td>
+      <td class="path"><code>/app/membros/:id/ministerios</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (RN-MEM-01)</td>
+      <td><code>{ ministerioId: string }</code></td>
+      <td>302 → <code>/app/membros/:id</code></td>
+      <td>401, 404, 422</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-DELETE">DELETE</span></td>
+      <td class="path"><code>/app/membros/:id/ministerios/:ministerioId</code></td>
+      <td>Autenticado</td>
+      <td>qualquer</td>
+      <td>—</td>
+      <td>302 → <code>/app/membros/:id</code></td>
+      <td>401, 404</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app/alertas</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (escopo: próprios)</td>
+      <td>—</td>
+      <td>200 HTML (lista de alertas)</td>
+      <td>401</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-PATCH">PATCH</span></td>
+      <td class="path"><code>/app/alertas/:id/lido</code></td>
+      <td>Autenticado</td>
+      <td>próprio destinatário</td>
+      <td>—</td>
+      <td>302 → <code>/app/alertas</code></td>
+      <td>401, 403, 404</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-PATCH">PATCH</span></td>
+      <td class="path"><code>/app/alertas/:id/resolver</code></td>
+      <td>Autenticado</td>
+      <td>próprio destinatário</td>
+      <td>—</td>
+      <td>302 → <code>/app/alertas</code></td>
+      <td>401, 403, 404</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-GET">GET</span></td>
+      <td class="path"><code>/app/config/acolhimento</code></td>
+      <td>Autenticado</td>
+      <td>qualquer (lê); Admin (escreve)</td>
+      <td>—</td>
+      <td>200 HTML (form)</td>
+      <td>401</td>
+    </tr>
+    <tr>
+      <td><span class="badge method-PUT">PUT</span></td>
+      <td class="path"><code>/app/config/acolhimento</code></td>
+      <td>Autenticado</td>
+      <td><strong>Admin</strong> (RN-MEM-05)</td>
+      <td><code>{ responsavelVisitanteTipo: "MEMBRO"|"MINISTERIO", responsavelId: string }</code></td>
+      <td>302 → <code>/app/config/acolhimento</code></td>
+      <td>401, 403, 404, 422</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Endpoints NÃO entregues no MVP</strong> (citados apenas para mostrar o que está fora): <code>/app/financeiro/**</code>, <code>/app/estoque/**</code>, <code>/app/manutencao/**</code>, <code>/app/relatorios/**</code>, <code>/api/integracoes/**</code>.
+</p>
+
+<h2 id="testes">11. Testes obrigatórios</h2>
+
+<h3>11.1 Estratégia em 3 camadas</h3>
+<table>
+  <thead><tr><th>Camada</th><th>Ferramenta</th><th>O que testa</th><th>Localização</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Unit</strong></td><td>Vitest <span class="badge warn">A confirmar</span></td><td>Services puros, helpers, validação, componentes puros</td><td><code>app/**/*.test.ts</code> co-localizado</td></tr>
+    <tr><td><strong>Integração</strong></td><td>Vitest + Prisma test DB</td><td>Services com DB real (SQLite in-memory)</td><td><code>app/**/*.integration.test.ts</code></td></tr>
+    <tr><td><strong>E2E</strong></td><td>Playwright (MCP)</td><td>Fluxos críticos: login, RBAC (RN-MEM-03), trava 12 (RN-MEM-04), alerta visitante (RN-MEM-05)</td><td><code>e2e/**/*.spec.ts</code></td></tr>
+  </tbody>
+</table>
+
+<h3>11.2 Cobertura mínima</h3>
+<ul>
+  <li><strong>Global:</strong> ≥ 85% (gate do phase 5).</li>
+  <li><strong>Services de regra de negócio:</strong> 100% (todo branch).</li>
+  <li><strong>Nenhum teste skipped</strong> sem justificativa no PR.</li>
+</ul>
+
+<h3>11.3 Casos obrigatórios derivados das regras de negócio</h3>
+<table>
+  <thead><tr><th>Regra</th><th>Teste</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td><code>RN-MEM-02</code></td><td>Schema/service rejeita payload com <code>cpf</code> (qualquer string é ignorada; TS impede em tempo de compilação)</td><td>Integração (schema) + Unit (Zod)</td></tr>
+    <tr><td><code>RN-MEM-03</code></td><td>Bypass via URL <code>?tab=fidelidade</code> retorna 403 para SECRETARIO, DISCIPULADOR, LIDER_MINISTERIO. Aba ausente na UI.</td><td>E2E (Playwright) + Unit (assertCanSeeFinancials)</td></tr>
+    <tr><td><code>RN-MEM-04</code></td><td>Boundary: 12 passa, 13 falha. Anti-loop. Auto-vínculo.</td><td>Unit + Integração</td></tr>
+    <tr><td><code>RN-MEM-05</code></td><td>Cadastrar visitante gera alerta na Central de Alertas do responsável. Atômico (se alerta falha, visitante não é criado).</td><td>Integração</td></tr>
+    <tr><td><code>RN-MEM-06</code></td><td>Assertion estática: nenhum <code>setTimeout</code>, <code>setInterval</code>, <code>cron</code>, <code>node-cron</code>, <code>bull</code>, <code>agenda</code> no código que escreve em <code>Membro.tipo</code>. CI grep.</td><td>Static (CI)</td></tr>
+  </tbody>
+</table>
+
+<h3>11.4 Helpers de teste</h3>
+<ul>
+  <li><strong>DB em memória:</strong> <code>new PrismaClient({ datasourceUrl: "file::memory:?cache=shared" })</code> para integration tests.</li>
+  <li><strong>Login helper (E2E):</strong> função que troca o <code>user.cargo</code> entre cenários (ex: <code>loginAs(page, "DISCIPULADOR")</code>).</li>
+  <li><strong>Seed de massa:</strong> utilitário que cria N discípulos em volta de 1 discipulador para testar boundary.</li>
+</ul>
+
+<h3>11.5 e2eChains (cadeias críticas para o tester agent)</h3>
+<ol>
+  <li>
+    <strong>Chain 1 — Login + criar visitante + alerta aparece</strong>
+    <ul>
+      <li>Sequence: <code>POST /login</code> → <code>POST /app/membros</code> (visitante) → <code>GET /app/alertas</code> do responsável</li>
+      <li>DataFlow: <code>POST /login</code> retorna <code>Set-Cookie: sid</code>. <code>POST /app/membros</code> usa esse cookie + payload com <code>tipo: "VISITANTE"</code>, retorna 302. Transação interna cria <code>Alerta</code> + <code>AlertaDestinatario</code> (vinculado ao <code>responsavelMembroId</code>). <code>GET /app/alertas</code> filtra por <code>membroId</code> do usuário logado e inclui o novo alerta.</li>
+    </ul>
+  </li>
+  <li>
+    <strong>Chain 2 — RBAC dízimos: 3 perfis tentam acessar aba Fidelidade</strong>
+    <ul>
+      <li>Sequence: <code>POST /login</code> (perfil X) → <code>GET /app/membros/:id?tab=financeiro</code> → assert 403 (se perfil não permitido) ou 200 com placeholder (se permitido)</li>
+      <li>DataFlow: middleware injeta <code>user</code> no <code>context</code>. Loader <code>/app/membros/:id</code> chama <code>assertCanSeeFinancials(user)</code>. Se 403, o componente <code>MembroFidelidade</code> não recebe dados. Cross-module: <code>user.cargo</code> é o pivot de toda a matriz.</li>
+    </ul>
+  </li>
+  <li>
+    <strong>Chain 3 — Trava de 12 discípulos: 12 passam, 13º bloqueia</strong>
+    <ul>
+      <li>Sequence: <code>POST /login</code> (DISCIPULADOR) → 12× <code>POST /app/membros/:id/discipulador</code> → 13ª chamada deve retornar 422 com mensagem clara</li>
+      <li>DataFlow: cada chamada incrementa o <code>discipuladorId</code> em um Membro. Service <code>assignDisciple</code> faz <code>count()</code> antes do <code>update()</code>. Boundary test no número 12 (passa) e 13 (falha).</li>
+    </ul>
+  </li>
+</ol>
+
+<h3>11.6 crossModuleHints (dados que fluem entre módulos)</h3>
+<ul>
+  <li><strong>De <code>POST /app/membros</code> para <code>GET /app/membros/:id</code>:</strong> o campo <code>tipo</code> recém-criado aparece na ficha (cache: loader do detalhe refaz query, sem invalidação de cache explícita).</li>
+  <li><strong>De <code>POST /app/membros</code> (visitante) para <code>GET /app/alertas</code>:</strong> o <code>Alerta.id</code> + <code>Alerta.titulo</code> + <code>Alerta.mensagem</code> aparecem na Central do responsável. Endpoint: <code>GET /app/alertas</code> lê <code>AlertaDestinatario.membroId === user.id</code>.</li>
+  <li><strong>De <code>PUT /app/config/acolhimento</code> para <code>POST /app/membros</code>:</strong> o <code>responsavelMembroId</code> ou <code>responsavelMinisterioId</code> é lido no momento do cadastro do visitante, dentro da mesma transação.</li>
+</ul>
+
+<h2 id="pendencias">12. Pendências de design</h2>
+
+<p>Itens <strong>fora do escopo</strong> desta task, registrados para resolução em fases seguintes (ARCH §16.4 e Anexo do brief).</p>
+
+<h3>12.1 Pendências de decisão <span class="badge warn">[A CONFIRMAR]</span></h3>
+<table>
+  <thead><tr><th>#</th><th>Item</th><th>Sugestão</th><th>Quem decide</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Biblioteca de validação (Zod vs Valibot vs TypeBox)</td><td>Zod (ecossistema maduro)</td><td>Designer / usuário</td></tr>
+    <tr><td>2</td><td>TTL exato da sessão e política de sliding renewal</td><td>7 dias sliding, teto 30 dias absolutos</td><td>Designer</td></tr>
+    <tr><td>3</td><td>Política de senha (mín. comprimento, complexidade, histórico)</td><td>≥ 8 chars, sem forçar complexidade no MVP</td><td>Designer</td></tr>
+    <tr><td>4</td><td>Comportamento da aba "Fidelidade Financeira" para perfis bloqueados</td><td>Não renderizar (sugestão)</td><td>Designer</td></tr>
+    <tr><td>5</td><td>Rate limit no <code>/login</code></td><td>5 tentativas / 15min / IP, in-memory</td><td>Backend agent</td></tr>
+    <tr><td>6</td><td>Model <code>Session</code> ainda não existe no schema</td><td>Adicionar como primeira migration (estrutura §4.2.5)</td><td>Backend agent</td></tr>
+    <tr><td>7</td><td>Duplicata <code>app/prisma.config.ts</code> vs <code>prisma.config.ts</code></td><td>Manter apenas o da raiz, deletar <code>app/prisma.config.ts</code></td><td>Backend agent + usuário</td></tr>
+    <tr><td>8</td><td>Bug em <code>app/routes.ts</code>: linha 11 trata <code>app/api/auth/login.ts</code> como rota</td><td>Remover a linha; tratar endpoints via <code>app/api/</code> como resource routes</td><td>Backend agent</td></tr>
+  </tbody>
+</table>
+
+<h3>12.2 Pendências de modelagem (sprint 2+)</h3>
+<ul>
+  <li><strong>LIDER_MINISTERIO — escopo de "seu ministério":</strong> o schema atual não tem relação explícita <code>Membro (LIDER) ↔ Ministerio</code>. A RBAC fina depende de uma tabela nova (ex: <code>LiderMinisterio</code>) ou de convenção (ex: 1º líder cadastrado no Ministério). Pendente: decidir e adicionar migration.</li>
+  <li><strong>Auditoria de leitura (LGPD art. 37):</strong> candidato natural para sprint 2+. Não no MVP.</li>
+  <li><strong>Direitos do titular (LGPD art. 18):</strong> endpoints <code>/app/privacidade/**</code> para titular exercer direitos. Candidato sprint 2+.</li>
+</ul>
+
+<h2 id="pronto-fase-5">13. Critérios de pronto da Fase 5 (gate <code>all-of</code>)</h2>
+
+<p>A Fase 5 (Build + Quality) só termina quando <strong>todos</strong> os critérios abaixo forem verdadeiros. Aggregate gate do <code>qa-gate</code> agent.</p>
+
+<ul class="checklist">
+  <li><strong>Cobertura ≥ 85%</strong> (avaliado pelo agente <code>tester</code>).</li>
+  <li><strong>0 vulnerabilidades critical/high</strong> (avaliado pelo agente <code>security</code>).</li>
+  <li><strong>planning-reviewer score ≥ 70</strong>.</li>
+  <li><strong>LGPD compliant</strong> (avaliado pelo agente <code>lgpd-officer</code>): sem coleta de CPF, senha hasheada, cookie httpOnly, dízimos restritos por perfil, com testes que provam o bloqueio.</li>
+  <li>Todas as funções públicas com <strong>JSDoc completo</strong> (<code>@param</code>, <code>@returns</code>, <code>@throws</code>, <code>@example</code>).</li>
+  <li>Nenhum teste <strong>skipped</strong> sem justificativa no PR.</li>
+  <li>Todas as 5 regras de negócio RN-MEM-02 a RN-MEM-06 com <strong>teste que prova</strong> o comportamento.</li>
+  <li><code>pnpm typecheck</code> passa (sem <code>any</code> implícito, sem erro de tipo).</li>
+  <li><code>pnpm dev</code> sobe; seed cria Admin; login funciona; CRUD de membros funciona; alerta de visitante aparece.</li>
+  <li><code>README.md</code> documenta setup, credenciais do Admin seed, comando <code>pnpm db:reset</code>.</li>
+</ul>
+
+<h2 id="referencias">14. Referências</h2>
+
+<h3>14.1 Documentos do projeto</h3>
+<ul>
+  <li><a href="PRD.html">PRD.html</a> — Product Requirements Document (este MVP).</li>
+  <li><code>.harness/brief.md</code> — Brief aprovado (escopo e decisões de produto).</li>
+  <li><code>agents/AGENTS.md</code> — Memória de longo prazo para agentes LLM (stack, convenções, RBAC, padrões).</li>
+  <li><code>docs/architecture/ARCH.md</code> — Arquitetura técnica (diagramas, ADRs, fluxos, pendências).</li>
+  <li><code>docs/REGRAS_DE_NEGOCIO.md</code> — As 14 RNs (RN-MEM-01 a 06, RN-FIN-01 a 05, RN-EST-01 a 05).</li>
+  <li><code>docs/DESCRIÇÃO_DOS_MODULOS.md</code> — Descrição dos módulos + matriz RBAC humana.</li>
+  <li><code>prisma/schema.prisma</code> — Fonte de verdade do modelo de dados.</li>
+</ul>
+
+<h3>14.2 RAGs (memória de longo prazo do projeto)</h3>
+<ul>
+  <li><code>.harness/RAG/architecture-monolith-modular.md</code> — Estrutura de pastas, regras de fronteira entre camadas.</li>
+  <li><code>.harness/RAG/security-rbac-matrix.md</code> — Matriz RBAC + helpers canônicos + anti-padrões.</li>
+  <li><code>.harness/RAG/lgpd-igreja-conect.md</code> — Aplicação da LGPD no projeto (6 decisões técnicas).</li>
+  <li><code>.harness/RAG/convention-prisma-sqlite.md</code> — Gotchas do Prisma 7 + SQLite (singleton, enums, DateTime).</li>
+  <li><code>.harness/RAG/convention-monetary-values.md</code> — Valores em centavos (Int) — convenção para quando o Financeiro entrar.</li>
+</ul>
+
+<h3>14.3 Referências externas</h3>
+<ul>
+  <li>Lei 13.709/2018 (LGPD) — texto integral em <code>~/.config/opencode/training/lgpd-brasil.md</code>.</li>
+  <li>React Router 7 docs — loaders, actions, middleware, future flags <code>v8_*</code>.</li>
+  <li>Prisma 7 docs — generator <code>prisma-client</code>, adapter <code>better-sqlite3</code>.</li>
+  <li>Tailwind 4 docs — plugin Vite, <code>@theme</code> tokens.</li>
+  <li>OWASP Top 10 — referência para checklist de segurança no gate do phase 5.</li>
+</ul>
+
+<h3>14.4 Comandos úteis (referência rápida)</h3>
+<pre><code>pnpm dev                          # dev server (HMR)
+pnpm build                        # build de produção
+pnpm typecheck                    # react-router typegen && tsc
+pnpm prisma migrate dev --name X  # migration nomeada
+pnpm prisma db seed               # seed (idempotente)
+pnpm prisma studio                # GUI do banco (porta 5555)
+pnpm test                         # Vitest unit + integração
+pnpm test:e2e                     # Playwright E2E
+pnpm db:reset                     # dropa dev.db, recria + seed
+</code></pre>
+
+<hr />
+
+<footer>
+  <p>
+    Igreja Conect — Especificação Técnica do MVP (v0.1). Mantida pelo <code>requirements</code> agent na Fase 2 do Harness v6.
+    Documento irmão: <a href="PRD.html">PRD.html</a>. Pendências em <a href="#pendencias">§12</a>. Gate de qualidade em <a href="#pronto-fase-5">§13</a>.
+  </p>
+</footer>
+
+</body>
+</html>

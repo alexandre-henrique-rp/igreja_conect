@@ -1,0 +1,394 @@
+{
+  "id": "S00",
+  "name": "Setup & Infraestrutura",
+  "goal": "Estabelecer a fundação técnica do MVP: Prisma client singleton, model Session, helpers de auth, seed idempotente, limpeza de pendências e setup de testes — sem UI ainda.",
+  "estimatedDays": 1,
+  "dependsOn": [],
+  "userStories": ["US-AUTH-001", "US-AUTH-002"],
+  "tasks": [
+    {
+      "id": "S00-T01",
+      "title": "Criar singleton do Prisma Client (app/db/prisma.server.ts)",
+      "type": "db",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "prisma.server.ts expõe instância única e reaproveita em HMR",
+        "testPath": "app/db/prisma.server.test.ts",
+        "acceptance": "Duas importações consecutivas retornam a mesma referência de client (verificável em dev)"
+      },
+      "files": {
+        "create": ["app/db/prisma.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Arquivo `app/db/prisma.server.ts` exporta `prisma` como singleton via `globalThis`",
+        "Adapter `PrismaBetterSQLite3` configurado com `DATABASE_URL` (default `file:./dev.db`)",
+        "Em produção, uma única instância; em dev, reaproveita entre reloads",
+        "Sufixo `.server.ts` impede bundling no cliente",
+        "Import path em outros services: `import { prisma } from \"~/db/prisma.server\"`"
+      ],
+      "rags": ["convention-prisma-sqlite", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S00-T02",
+      "title": "Adicionar model Session ao schema Prisma + migration",
+      "type": "db",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S00-T01"],
+      "tdd": {
+        "testFirst": "Migration aplica sem erro e model Session fica disponível no client gerado",
+        "testPath": "prisma/migrations/<ts>_add_session/migration.sql (gerada, não editada)",
+        "acceptance": "`pnpm prisma migrate dev --name add_session_model` cria tabela `sessions` com todas as colunas especificadas"
+      },
+      "files": {
+        "create": ["prisma/migrations/<ts>_add_session/migration.sql"],
+        "modify": ["prisma/schema.prisma"]
+      },
+      "acceptanceCriteria": [
+        "Model `Session` adicionado conforme SPEC §4.2.5 (id uuid, membroId FK, expiresAt, absoluteExpiresAt, createdAt, updatedAt)",
+        "Back-relation `sessions Session[]` adicionada em `Membro`",
+        "Migration gerada via `prisma migrate dev` (não editada à mão)",
+        "`migration_lock.toml` commitado junto",
+        "`onDelete: Cascade` em `membro` relation (logout invalida)"
+      ],
+      "rags": ["convention-prisma-sqlite"]
+    },
+    {
+      "id": "S00-T03",
+      "title": "Criar `app/lib/auth.server.ts` com hashPassword e verifyPassword (bcryptjs)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S00-T01"],
+      "tdd": {
+        "testFirst": "hashPassword retorna hash bcrypt válido; verifyPassword confirma e rejeita senha errada",
+        "testPath": "app/lib/auth.server.test.ts",
+        "acceptance": "Teste vermelho: verifyPassword('outra', hashDeX) === false. Verde após implementação."
+      },
+      "files": {
+        "create": ["app/lib/auth.server.ts"],
+        "modify": ["package.json"]
+      },
+      "acceptanceCriteria": [
+        "Exporta `hashPassword(plain: string): Promise<string>` com bcrypt cost 10",
+        "Exporta `verifyPassword(plain: string, hash: string): Promise<boolean>`",
+        "Ambas com JSDoc completo (`@param`, `@returns`, `@throws`, `@example`)",
+        "bcryptjs adicionado em dependencies (não devDependencies) — produção precisa",
+        "Sufixo `.server.ts` impede bundling no cliente"
+      ],
+      "rags": ["lgpd-igreja-conect", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S00-T04",
+      "title": "Criar `app/lib/session.server.ts` (createSession, getUserFromRequest, deleteSession, sliding renewal)",
+      "type": "backend",
+      "estimatedHours": 4,
+      "owner": "backend",
+      "dependsOn": ["S00-T02", "S00-T03"],
+      "tdd": {
+        "testFirst": "createSession persiste em DB; getUserFromRequest resolve user a partir do cookie; deleteSession remove o registro",
+        "testPath": "app/lib/session.server.test.ts",
+        "acceptance": "Teste vermelho: após deleteSession, getUserFromRequest com mesmo cookie retorna null. Verde após implementação."
+      },
+      "files": {
+        "create": ["app/lib/session.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Constantes `SLIDING_TTL_MS = 7d` e `ABSOLUTE_TTL_MS = 30d` (decisão §7.2 do design)",
+        "Cookie configurado: `httpOnly: true`, `sameSite: \"lax\"`, `secure: NODE_ENV === \"production\"`, `path: \"/\"`",
+        "`createSession(membroId)` insere registro em `Session` com `expiresAt = now + 7d` e `absoluteExpiresAt = now + 30d`",
+        "`getUserFromRequest(request)` lê cookie, busca Session+Membro, retorna `{id, nome, cargo}` ou `null`",
+        "Sliding renewal: ao resolver sessão válida, atualiza `expiresAt = min(now+7d, absoluteExpiresAt)`",
+        "`deleteSession(sid)` remove o registro (logout server-side)",
+        "JSDoc completo em todas as funções públicas",
+        "Sessão expirada (passou absoluteExpiresAt) → retorna null (mesmo que cookie válido)"
+      ],
+      "rags": ["lgpd-igreja-conect", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S00-T05",
+      "title": "Criar `app/lib/rbac.server.ts` com helpers canônicos (assertCanSeeFinancials, assertCanWriteMembers, assertIsAdmin)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S00-T01"],
+      "tdd": {
+        "testFirst": "assertCanSeeFinancials lança 403 para SECRETARIO; passa para ADMIN",
+        "testPath": "app/lib/rbac.server.test.ts",
+        "acceptance": "Teste cobre as 6 células da matriz para cada helper"
+      },
+      "files": {
+        "create": ["app/lib/rbac.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Helpers lançam `Response(403)` (não retornam boolean) — capturado por ErrorBoundary do RR7",
+        "Constantes: `FINANCIAL_CARGOS = [\"ADMIN\", \"PASTOR\", \"FINANCEIRO\"]`, `ALL_ADMIN_CARGOS`",
+        "Helpers: `assertCanSeeFinancials`, `assertCanWriteMembers`, `assertIsAdmin`, `assertCanManageConfiguracaoGeral`",
+        "Tipo `SessionUser = { id: string; nome: string; cargo: Cargo | null }`",
+        "JSDoc completo em todos os helpers"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S00-T06",
+      "title": "Criar `app/lib/audit.server.ts` (safeLog com allowlist)",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "safeLog filtra campos não-autorizados (email, senha, etc)",
+        "testPath": "app/lib/audit.server.test.ts",
+        "acceptance": "Teste vermelho: safeLog({email:'x', userId:'1'}) gera log SEM email. Verde após implementação."
+      },
+      "files": {
+        "create": ["app/lib/audit.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "ALLOWED_FIELDS = `Set([\"userId\", \"action\", \"resource\", \"result\", \"timestamp\", \"ip\"])`",
+        "Função `safeLog(event: Record<string, unknown>): void` filtra e imprime `console.log(JSON.stringify({ audit: filtered }))`",
+        "Teste prova que campos sensíveis (email, telefone, senhaHash) são descartados",
+        "JSDoc com exemplo de uso"
+      ],
+      "rags": ["lgpd-igreja-conect"]
+    },
+    {
+      "id": "S00-T07",
+      "title": "Criar `prisma/seed.ts` idempotente (ADMIN inicial) + adicionar `tsx` em devDependencies + registrar no package.json",
+      "type": "db",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S00-T01", "S00-T03"],
+      "tdd": {
+        "testFirst": "Rodar `pnpm prisma db seed` 2x seguidas não duplica ADMIN",
+        "testPath": "prisma/seed.test.ts (integration)",
+        "acceptance": "Teste vermelho: 2ª execução imprime 'ADMIN já existe'. Verde após usar upsert com findUnique guard."
+      },
+      "files": {
+        "create": ["prisma/seed.ts"],
+        "modify": ["package.json"]
+      },
+      "acceptanceCriteria": [
+        "Cria ADMIN `admin@igreja.local` com senha `admin123` (hash bcrypt), `tipo: MEMBRO_ATIVO`, `cargo: ADMIN`",
+        "Idempotente: 2ª execução detecta via `findUnique({where:{email}})` e imprime mensagem sem duplicar",
+        "Senha `admin123` deve ser trocada em produção (documentado no README da S05)",
+        "`tsx` adicionado em devDependencies",
+        "`package.json` tem `\"prisma\": { \"seed\": \"tsx prisma/seed.ts\" }`"
+      ],
+      "rags": ["convention-prisma-sqlite", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S00-T08",
+      "title": "Criar `app/lib/rate-limit.server.ts` (helper in-memory: 5 tentativas / 15min / IP)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "Após 5 chamadas com `result: 'fail'`, a 6ª retorna 429",
+        "testPath": "app/lib/rate-limit.server.test.ts",
+        "acceptance": "Teste usa fake timers para validar janela de 15min"
+      },
+      "files": {
+        "create": ["app/lib/rate-limit.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Implementação: `Map<key, { count, firstAt }>` em memória (decisão §7.5 do design)",
+        "`check(key): { allowed: boolean, retryAfter?: number }` — 5 falhas em 15min bloqueia",
+        "Reset ao acertar (success)",
+        "Limitação documentada no JSDoc: não persiste após restart, não escala para multi-instance",
+        "JSDoc completo"
+      ],
+      "rags": ["lgpd-igreja-conect", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S00-T09",
+      "title": "Criar `app/lib/money.server.ts` (formatBRLFromCents — placeholder para Sprint 0)",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "formatBRLFromCents(12345) === 'R$ 123,45'",
+        "testPath": "app/lib/money.server.test.ts",
+        "acceptance": "Cobre 0, 1, 99, 100, 12345 (formatação pt-BR)"
+      },
+      "files": {
+        "create": ["app/lib/money.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "`formatBRLFromCents(cents: number): string` retorna `R$ 0,00` formatado pt-BR",
+        "Usa `Intl.NumberFormat(\"pt-BR\", { style: \"currency\", currency: \"BRL\" })`",
+        "Placeholder criado para satisfazer import da aba Fidelidade (S03)",
+        "JSDoc com exemplo"
+      ],
+      "rags": ["convention-monetary-values"]
+    },
+    {
+      "id": "S00-T10",
+      "title": "Criar `app/lib/errors.ts` (BusinessRuleError, ForbiddenError, NotFoundError, EmailDuplicadoError)",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "BusinessRuleError instancia com message e statusCode",
+        "testPath": "app/lib/errors.test.ts",
+        "acceptance": "Cada subclasse de Error tem sua mensagem e status testáveis"
+      },
+      "files": {
+        "create": ["app/lib/errors.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Classes: `BusinessRuleError extends Error { statusCode }`, `ForbiddenError`, `NotFoundError`, `EmailDuplicadoError`, `NomeDuplicadoError`",
+        "JSDoc em cada classe com exemplo",
+        "Convenção: actions capturam e retornam status apropriado"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S00-T11",
+      "title": "Limpeza: deletar `app/prisma.config.ts` (duplicata)",
+      "type": "infra",
+      "estimatedHours": 0.5,
+      "owner": "backend",
+      "dependsOn": ["S00-T01"],
+      "tdd": {
+        "testFirst": "pnpm prisma migrate dev funciona apenas com `prisma.config.ts` na raiz",
+        "testPath": "N/A (verificação manual)",
+        "acceptance": "Após deletar, comandos Prisma continuam funcionando (config raiz basta)"
+      },
+      "files": {
+        "create": [],
+        "modify": [],
+        "delete": ["app/prisma.config.ts"]
+      },
+      "acceptanceCriteria": [
+        "`app/prisma.config.ts` removido do filesystem",
+        "`prisma.config.ts` na raiz permanece intacto",
+        "`pnpm prisma migrate dev` continua funcionando"
+      ],
+      "rags": ["convention-prisma-sqlite"]
+    },
+    {
+      "id": "S00-T12",
+      "title": "Corrigir `app/routes.ts` linha 11 (resource route mal declarada) + deletar `app/api/auth/login.ts` (placeholder vazio)",
+      "type": "infra",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "N/A (verificação manual via build)",
+        "testPath": "N/A",
+        "acceptance": "Build SSR não emite warning sobre rota malformada"
+      },
+      "files": {
+        "create": [],
+        "modify": ["app/routes.ts"],
+        "delete": ["app/api/auth/login.ts"]
+      },
+      "acceptanceCriteria": [
+        "`app/routes.ts` não tem mais `index(\"app/api/auth/login.ts\")` na linha 11",
+        "Estrutura final: `index(\"routes/public/index.tsx\")`, `route(\"/login\", \"routes/public/login.tsx\")` (login será página de formulário, não API)",
+        "`app/api/auth/login.ts` deletado (era placeholder vazio)",
+        "`pnpm typecheck` passa sem erros"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S00-T13",
+      "title": "Configurar Vitest + helpers de teste (test/setup.ts com DB in-memory)",
+      "type": "test",
+      "estimatedHours": 3,
+      "owner": "tester",
+      "dependsOn": ["S00-T01"],
+      "tdd": {
+        "testFirst": "Teste 1: vitest roda. Teste 2: helper `setupTestDb()` cria DB limpo por teste",
+        "testPath": "tests/setup.test.ts",
+        "acceptance": "Cada arquivo *.test.ts que chama `setupTestDb()` roda contra SQLite in-memory isolado"
+      },
+      "files": {
+        "create": ["vitest.config.ts", "tests/setup.ts", "tests/helpers/db.ts"],
+        "modify": ["package.json"]
+      },
+      "acceptanceCriteria": [
+        "Vitest 2.x adicionado em devDependencies",
+        "`vitest.config.ts` configurado com alias `~/*` → `./app/*`",
+        "`tests/setup.ts` carrega dotenv, define `DATABASE_URL=file::memory:?cache=shared`",
+        "Helper `setupTestDb()` em `tests/helpers/db.ts`: cria Prisma client, aplica migrations no DB em memória, expõe `cleanup()`",
+        "Scripts em `package.json`: `test` (vitest run), `test:watch` (vitest), `test:coverage` (vitest run --coverage)",
+        "Playwright MCP já está disponível nativamente (não instalar)"
+      ],
+      "rags": ["convention-prisma-sqlite"]
+    },
+    {
+      "id": "S00-T14",
+      "title": "Adicionar e configurar Zod 3.x em `app/lib/schemas/` (estrutura, sem regras de negócio)",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": ["S00-T13"],
+      "tdd": {
+        "testFirst": "`z.string().email().safeParse(\"x\")` retorna erro",
+        "testPath": "app/lib/schemas/zod.test.ts",
+        "acceptance": "Smoke test de que Zod está disponível e funcional"
+      },
+      "files": {
+        "create": ["app/lib/schemas/index.ts", "app/lib/schemas/zod.test.ts"],
+        "modify": ["package.json"]
+      },
+      "acceptanceCriteria": [
+        "Zod 3.x adicionado em dependencies",
+        "Barrel `app/lib/schemas/index.ts` criado (vazio por enquanto, schemas virão nas S01-S04)",
+        "Teste smoke de Zod passa"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S00-T15",
+      "title": "Adicionar `app/lib/cn.ts` (helper de classes Tailwind condicionais)",
+      "type": "backend",
+      "estimatedHours": 0.5,
+      "owner": "backend",
+      "dependsOn": [],
+      "tdd": {
+        "testFirst": "cn('a', false && 'b', undefined, 'c') === 'a c'",
+        "testPath": "app/lib/cn.test.ts",
+        "acceptance": "Cobre array, object, boolean, string"
+      },
+      "files": {
+        "create": ["app/lib/cn.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Função `cn(...inputs: ClassValue[]): string`",
+        "Implementação em 5 linhas: `twMerge(clsx(...inputs))` OU versão sem deps",
+        "Decisão: implementar com clsx (1 dep, 1kb) — vale o ganho",
+        "JSDoc com exemplo"
+      ],
+      "rags": []
+    }
+  ],
+  "definitionOfDone": [
+    "Todos os 15 testes da sprint passando (1 por task)",
+    "`pnpm typecheck` passa sem erros",
+    "`pnpm prisma migrate dev` aplica migration `add_session_model` sem warnings",
+    "`pnpm prisma db seed` cria ADMIN e é idempotente (rodar 2x não duplica)",
+    "`pnpm test` roda suite Vitest (mesmo que vazia)",
+    "Cobertura da sprint (services + lib) ≥ 75%",
+    "JSDoc completo em todas as funções públicas criadas",
+    "Nenhuma task com deps que não existem (0 órfãos)",
+    "Sem regressão: `pnpm dev` sobe o app (mesmo que páginas ainda sejam placeholders)"
+  ],
+  "coverageTarget": 75,
+  "notes": "Sprint fundacional. Não entrega feature visível ao usuário final — apenas infraestrutura. Crítico para destravar S01 (auth) e S02 (membros). Pendência crítica resolvida: model Session adicionado ao schema."
+}

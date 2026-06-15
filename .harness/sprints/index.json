@@ -1,0 +1,110 @@
+{
+  "_type": "harness-sprints-index-v6",
+  "generatedAt": "2026-06-13T23:30:00Z",
+  "generatedBy": "orchestrator",
+  "totalSprints": 6,
+  "sprints": [
+    {
+      "id": "S00",
+      "name": "Setup Inicial",
+      "status": "completed",
+      "completedAt": "2026-06-12T19:36:00Z",
+      "coverage": 94.08,
+      "testsPassing": 107,
+      "gate": "all-of passed",
+      "reworkApplied": false,
+      "artifacts": [
+        "code-review",
+        "security-audit",
+        "lgpd-parecer"
+      ]
+    },
+    {
+      "id": "S01",
+      "name": "Auth — Login + Logout + Middleware /app",
+      "status": "completed",
+      "completedAt": "2026-06-13T12:02:00Z",
+      "coverage": 89.31,
+      "testsPassing": 199,
+      "gate": "all-of passed",
+      "reworkApplied": false,
+      "artifacts": [
+        "code-review",
+        "security-audit",
+        "lgpd-parecer"
+      ]
+    },
+    {
+      "id": "S02",
+      "name": "Membros — Listagem + CRUD Básico",
+      "status": "completed",
+      "completedAt": "2026-06-13T12:55:00Z",
+      "coverage": 86.69,
+      "testsPassing": 417,
+      "gate": "all-of passed (after rework 1/2)",
+      "reworkApplied": true,
+      "artifacts": [
+        "code-review",
+        "security-audit",
+        "lgpd-parecer"
+      ]
+    },
+    {
+      "id": "S03",
+      "name": "Membros — Tipos, Discipulado, Ministérios, Fidelidade",
+      "status": "completed",
+      "completedAt": "2026-06-13T17:08:00Z",
+      "coverage": 86.86,
+      "testsPassing": 705,
+      "gate": "all-of passed",
+      "reworkApplied": false,
+      "artifacts": [
+        "code-review",
+        "security-audit",
+        "lgpd-parecer"
+      ]
+    },
+    {
+      "id": "S04",
+      "name": "Config Acolhimento + Central de Alertas + Dashboard com KPIs",
+      "status": "completed",
+      "completedAt": "2026-06-13T22:30:00Z",
+      "coverage": 88.21,
+      "testsPassing": 872,
+      "gate": "all-of passed (after rework 1/2)",
+      "reworkApplied": true,
+      "artifacts": [
+        "code-review",
+        "security-audit",
+        "lgpd-parecer"
+      ]
+    },
+    {
+      "id": "S05",
+      "name": "Quality Gate Final — Auditorias, Smoke Test, Hardening, Documentação",
+      "status": "completed",
+      "completedAt": "2026-06-13T23:30:00Z",
+      "coverage": 88.21,
+      "testsPassing": 905,
+      "gate": "all-of passed",
+      "reworkApplied": false,
+      "artifacts": [
+        "code-review",
+        "security-audit",
+        "lgpd-parecer",
+        "smoke-e2e",
+        "coverage-report",
+        "hardening-report",
+        "readme"
+      ]
+    }
+  ],
+  "summary": {
+    "totalSprintsCompleted": 6,
+    "totalTestsPassing": 905,
+    "currentCoverage": 88.21,
+    "totalReworksApplied": 2,
+    "mvpStatus": "READY FOR RELEASE",
+    "releaseDate": "2026-06-13"
+  }
+}

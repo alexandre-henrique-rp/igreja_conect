@@ -1,8 +1,8 @@
 /**
- * Teste do componente <Sidebar /> (S02-T09).
+ * Teste do componente <Sidebar /> (S02-T09 / S06-T09).
  *
- * Valida 5 itens de menu, item ativo destacado (bg-cyan-50), link de Sair
- * e responsividade (lg:block).
+ * Valida 6 itens de menu (incluindo Financeiro com RBAC condicional),
+ * item ativo destacado (bg-cyan-50), link de Sair e responsividade (lg:block).
  */
 import { describe, it, expect } from "vitest";
 import { createRoutesStub } from "react-router";
@@ -33,13 +33,35 @@ describe("<Sidebar />", () => {
     expect(html).toContain('aria-label="Menu principal"');
   });
 
-  it("renderiza 5 itens do menu principal", () => {
+  it("renderiza 6 itens do menu principal para ADMIN", () => {
     const html = renderSidebar("/app");
     expect(html).toContain("Dashboard");
     expect(html).toContain("Membros");
+    expect(html).toContain("Financeiro");
     expect(html).toContain("Ministérios");
     expect(html).toContain("Alertas");
     expect(html).toContain("Configurações");
+  });
+
+  it("Financeiro aparece para cargos autorizados", () => {
+    const authorize = (cargo: string) => {
+      const html = renderSidebar("/app", { id: "u1", nome: "User", cargo });
+      return html.includes("Financeiro");
+    };
+    expect(authorize("ADMIN")).toBe(true);
+    expect(authorize("PASTOR")).toBe(true);
+    expect(authorize("FINANCEIRO")).toBe(true);
+    expect(authorize("SECRETARIO")).toBe(true);
+  });
+
+  it("Financeiro NÃO aparece para cargos sem permissão", () => {
+    const html = renderSidebar("/app", { id: "u1", nome: "User", cargo: "DISCIPULADOR" });
+    expect(html).not.toContain("Financeiro");
+  });
+
+  it("Financeiro NÃO aparece se cargo for null", () => {
+    const html = renderSidebar("/app", { id: "u1", nome: "User", cargo: null });
+    expect(html).not.toContain("Financeiro");
   });
 
   it("item ativo tem bg-cyan-50 e aria-current='page'", () => {
@@ -53,6 +75,7 @@ describe("<Sidebar />", () => {
     const html = renderSidebar("/app");
     expect(html).toContain('href="/app"');
     expect(html).toContain('href="/app/membros"');
+    expect(html).toContain('href="/app/financeiro"');
     expect(html).toContain('href="/app/ministerios"');
     expect(html).toContain('href="/app/alertas"');
     expect(html).toContain('href="/app/config/acolhimento"');

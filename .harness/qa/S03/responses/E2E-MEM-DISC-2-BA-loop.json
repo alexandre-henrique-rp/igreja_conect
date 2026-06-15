@@ -1,0 +1,12 @@
+{
+  "status": 422,
+  "headers": {
+    "vary": "Origin",
+    "content-type": "application/json",
+    "date": "Sat, 13 Jun 2026 21:16:33 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": "{\"formError\":\"Vínculo em loop detectado. Não é possível atribuir como discípulo alguém que está acima na cadeia.\"}"
+}

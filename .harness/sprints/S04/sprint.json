@@ -1,0 +1,34 @@
+{
+  "sprintId": "S04",
+  "name": "Config Acolhimento + Central de Alertas + Dashboard com KPIs",
+  "status": "completed",
+  "completedAt": "2026-06-13T22:30:00Z",
+  "metrics": {
+    "tasksCompleted": 12,
+    "testsTotalInProject": 872,
+    "testsPassing": 872,
+    "coverage": 88.21,
+    "typecheck": "pass",
+    "buildSsr": "pass",
+    "criticalVulns": 0,
+    "highVulns": 0,
+    "mediumVulns": 0,
+    "lowVulns": 0,
+    "reviewScore": 80,
+    "lgpdStatus": "compliant",
+    "e2eChains": "28/28 passing"
+  },
+  "gate": "all-of passed (after rework 1/2)",
+  "rework": {
+    "applied": true,
+    "attempt": 1,
+    "reason": "SEC-001/002/003/004/005, LGPD, review score 68<70, E2E 11 falhas",
+    "result": "all-of passed"
+  },
+  "artifacts": {
+    "code-review": "code-review.json",
+    "security-audit": "GERADO durante rework (0 critical, 0 high, 0 medium, 0 low)",
+    "lgpd-parecer": "GERADO durante rework (compliant)"
+  },
+  "notes": "Fechou US-MEM-001 (alerta atômico visitante) + US-MEM-004 (config acolhimento). Rework corrigiu 11 E2E + 5 security + 2 LGPD + review 68→80. RAG doc novo: lesson-prisma-7-vite-8-ssr-incompat."
+}

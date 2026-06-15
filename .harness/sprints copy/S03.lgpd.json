@@ -1,0 +1,403 @@
+{
+  "_type": "harness-lgpd-audit-v6",
+  "agent": "lgpd-officer",
+  "sprint": "S03",
+  "timestamp": "2026-06-13T13:05:00Z",
+  "scope": "S03 (tasks S03-T01 a S03-T13, gate principal RN-MEM-03 Fidelidade 3 camadas, gate secundário RN-MEM-06 sem cron)",
+  "parecer": "NAO_CONFORME",
+  "parecerPath": ".harness/lgpd/S03-parecer.md",
+  "lawBasis": "Lei 13.709/2018 (LGPD) + Res. CD/ANPD 4/2023 + Res. CD/ANPD 15/2024 + Res. CD/ANPD 18/2024",
+  "personalDataInventory": {
+    "sensitiveFields": [
+      "Membro.dataConversao (Art. 5, II - convicção religiosa)",
+      "Membro.dataBatismo (Art. 5, II - filiacao a organizacao religiosa)",
+      "Membro.tipo (Art. 5, II - engajamento religioso)",
+      "Membro.discipuladorId (Art. 5, II - mapa de influencia pastoral)",
+      "Membro.ministerios (N:N, Art. 5, II - engajamento religioso)",
+      "Lancamento[membroId,categoria=DIZIMO] (Art. 5, II - religiao + financeiro)"
+    ],
+    "commonFields": [
+      "Membro.nome (Art. 5, I - identificacao)",
+      "Membro.email (Art. 5, I)",
+      "Membro.telefone (Art. 5, I)",
+      "Membro.endereco (logradouro, numero, bairro, cidade, estado, cep) (Art. 5, I)",
+      "Membro.profissao (Art. 5, I, opcional)",
+      "Membro.estadoCivil (Art. 5, I, opcional)"
+    ],
+    "absentFieldsVerified": "RN-MEM-02 PASS: grep cpf|rg|cnpj|titulo_eleitor|pis|cartaoSus em prisma/schema.prisma = 0 resultados",
+    "internationalTransfers": [],
+    "totalFieldsProcessed": 22,
+    "sensitiveFieldsProcessed": 6,
+    "encryption": "senhaHash: bcrypt (S01-T01). Demais campos: texto plano. Sem PII sensivel em repouso criptografado (decisao consciente - RAG lgpd-igreja-conect §2.1 - igreja nao tem cpf/cnpj/dado fiscal; dataConversao/dataBatismo sao campos opcionais com finalidade pastoral explicita)"
+  },
+  "lgpdCoverage": {
+    "principles": {
+      "finalidade_art_6_I": {
+        "compliant": true,
+        "findings": []
+      },
+      "necessidade_art_6_III": {
+        "compliant": true,
+        "findings": [],
+        "evidence": "RN-MEM-02 (sem dado fiscal) e RN-MEM-04 (12 discipulos) verificados"
+      },
+      "seguranca_art_6_VII": {
+        "compliant": false,
+        "findings": [
+          "LGPD-FIND-S03-001",
+          "LGPD-FIND-S03-002",
+          "LGPD-FIND-S03-003"
+        ]
+      },
+      "responsabilizacao_art_6_X": {
+        "compliant": false,
+        "findings": [
+          "LGPD-FIND-S03-004",
+          "LGPD-FIND-S03-005"
+        ]
+      }
+    },
+    "rights18": {
+      "implemented": [
+        "correcao (S02)",
+        "eliminacao parcial (S02 deleteMembro)",
+        "outros 3 herdados de S02"
+      ],
+      "faltando": [
+        "confirmacao (I)",
+        "acesso (II)",
+        "anonimizacao (IV)",
+        "portabilidade (V)",
+        "info_compartilhamento (VII)",
+        "info_nao_consentimento (VIII)",
+        "revogacao (IX)",
+        "oposicao (§1)"
+      ],
+      "findings": [],
+      "note": "Sprint 2+ por declaracao PRD §4 - NAO bloqueia S03"
+    },
+    "dpo": {
+      "designated": false,
+      "contactPublic": false,
+      "findings": [],
+      "note": "Sprint 2+ por declaracao PRD §4 - NAO bloqueia S03"
+    },
+    "incidentResponse": {
+      "planExists": false,
+      "prazoANPDConhecido": false,
+      "findings": [],
+      "note": "Sprint 2+ por declaracao PRD §4 - NAO bloqueia S03"
+    },
+    "internationalTransfer": {
+      "occurs": false,
+      "legalBasisDocumented": "N/A",
+      "findings": []
+    },
+    "cookies": {
+      "bannerImplemented": false,
+      "granularConsent": false,
+      "findings": [],
+      "note": "Sprint 2+ - MVP sem autenticacao publica alem do login"
+    },
+    "retention": {
+      "policyDefined": false,
+      "findings": [],
+      "note": "Sprint 2+ por declaracao PRD §4"
+    },
+    "ripd": {
+      "exists": false,
+      "required": false,
+      "findings": [],
+      "note": "Nao obrigatorio para S03 - nao ha perfilamento automatizado, nao ha tratamento de dado sensivel em larga escala (< 5000 membros - abaixo do gatilho ANPD)"
+    }
+  },
+  "gatePrincipal": {
+    "id": "RN-MEM-03",
+    "name": "Fidelidade Financeira - 3 Camadas (Defense in Depth)",
+    "specRef": "US-MEM-005, RN-MEM-03, security-rbac-matrix.md §2, cross-sprint.json CF-04",
+    "camadas": {
+      "camada_1_ui": {
+        "descricao": "<TabFidelidadeFinanceira> NAO renderiza para SECRETARIO/DISCIPULADOR/LIDER_MINISTERIO",
+        "verificacao": "grep -rn 'TabFidelidadeFinanceira' app/",
+        "resultado": "0 resultados - arquivo app/components/TabFidelidadeFinanceira.tsx NAO EXISTE",
+        "status": "fail"
+      },
+      "camada_2_loader": {
+        "descricao": "rota membros.$id.tsx força tab='dados' se !canSeeFinancials && tab==='fidelidade'",
+        "verificacao": "grep -n 'canSeeFinancials' app/routes/app/membros.\\$id.tsx",
+        "resultado": "0 resultados - loader ainda é versao S02 (comentario explicito linha 261-262 confirma que abas entrarao em S03)",
+        "status": "fail"
+      },
+      "camada_3_service": {
+        "descricao": "getDizimosByMembro chama assertCanSeeFinancials ANTES de qualquer query",
+        "verificacao": "grep -n 'assertCanSeeFinancials' app/lib/finance.server.ts",
+        "resultado": "arquivo NAO EXISTE - helper canônico (rbac.server.ts:45-49) está pronto mas nao tem caller",
+        "status": "fail"
+      },
+      "camada_e2e": {
+        "descricao": "e2e/fidelidade-bypass.spec.ts cobre 3 chains (UI, URL, service)",
+        "verificacao": "ls e2e/fidelidade-bypass.spec.ts",
+        "resultado": "arquivo NAO EXISTE - cross-sprint.json CF-04 (criticality: 'GATE - lgpd-officer valida') sem cobertura",
+        "status": "fail"
+      }
+    },
+    "status": "fail"
+  },
+  "gateSecundario": {
+    "id": "RN-MEM-06",
+    "name": "Sem automacao de promocao de tipo (zero cron/scanner)",
+    "verificacao": "grep -rE 'setTimeout|setInterval|node-cron|\\bbull\\b' app/",
+    "resultado": "0 resultados",
+    "status": "pass",
+    "observacao": "Gate passa por INERCIA - nao ha codigo de promocao (porque S03-T02 promoverTipo nao foi implementado). Quando S03-T02 for entregue, é OBRIGATORIO safeLog (LGPD-FIND-S03-004)."
+  },
+  "auditoriaGrep": [
+    {
+      "id": 1,
+      "cmd": "grep -rE 'setTimeout|setInterval|node-cron|bull' app/",
+      "esperado": 0,
+      "obtido": 0,
+      "status": "pass",
+      "gate": "RN-MEM-06"
+    },
+    {
+      "id": 2,
+      "cmd": "grep -n 'assertCanSeeFinancials' app/lib/finance.server.ts",
+      "esperado": ">=1 PRIMEIRO",
+      "obtido": "arquivo nao existe",
+      "status": "fail",
+      "gate": "RN-MEM-03 Camada 3"
+    },
+    {
+      "id": 3,
+      "cmd": "grep -rn 'TabFidelidadeFinanceira' app/",
+      "esperado": "render condicional",
+      "obtido": 0,
+      "status": "fail",
+      "gate": "RN-MEM-03 Camada 1"
+    },
+    {
+      "id": 4,
+      "cmd": "grep -n 'canSeeFinancials' app/routes/app/membros.\\$id.tsx",
+      "esperado": "camada 2 no loader",
+      "obtido": 0,
+      "status": "fail",
+      "gate": "RN-MEM-03 Camada 2"
+    },
+    {
+      "id": 5,
+      "cmd": "grep -E '\\b(cpf|rg|cnpj|titulo_eleitor|pis|cartaoSus)\\b' prisma/schema.prisma",
+      "esperado": 0,
+      "obtido": 0,
+      "status": "pass",
+      "gate": "RN-MEM-02"
+    },
+    {
+      "id": 6,
+      "cmd": "grep -rn 'promoverTipo' app/lib/",
+      "esperado": ">=1",
+      "obtido": 0,
+      "status": "fail",
+      "gate": "S03-T02"
+    },
+    {
+      "id": 7,
+      "cmd": "grep -rn 'discipleship|assignDisciple|isDescendantOf|MAX_DISCIPULOS' app/",
+      "esperado": ">=1",
+      "obtido": 0,
+      "status": "fail",
+      "gate": "S03-T01"
+    },
+    {
+      "id": 8,
+      "cmd": "grep -rn 'ministries|createMinisterio' app/",
+      "esperado": ">=1",
+      "obtido": 0,
+      "status": "fail",
+      "gate": "S03-T04"
+    },
+    {
+      "id": 9,
+      "cmd": "grep -rn 'fidelidade' e2e/",
+      "esperado": ">=1",
+      "obtido": 0,
+      "status": "fail",
+      "gate": "S03-T12/CF-04"
+    },
+    {
+      "id": 10,
+      "cmd": "grep -rn 'discipulado' e2e/",
+      "esperado": ">=1",
+      "obtido": 0,
+      "status": "fail",
+      "gate": "S03-T12/CF-05"
+    },
+    {
+      "id": 11,
+      "cmd": "grep -n 'safeLog' app/lib/audit.server.ts",
+      "esperado": "allowlist",
+      "obtido": "6 matches (helper pronto, reusavel)",
+      "status": "pass",
+      "gate": "infra herdada"
+    },
+    {
+      "id": 12,
+      "cmd": "grep -rn 'MEMBRO_SAFE_SELECT' app/lib/members.server.ts",
+      "esperado": "1 definicao + N usos",
+      "obtido": "1 definicao + 6 usos (S02)",
+      "status": "pass",
+      "gate": "LGPD AC-16"
+    }
+  ],
+  "findings": [
+    {
+      "id": "LGPD-FIND-S03-001",
+      "severity": "high",
+      "category": "rbac-fidelidade-ui",
+      "legalBasis": "Art. 6, VII (seguranca) + Art. 46 (medidas adequadas) + RN-MEM-03 Camada 1 + RAG security-rbac-matrix.md §2 + cross-sprint.json CF-04",
+      "title": "Camada 1 (UI) de RN-MEM-03 ausente - <TabFidelidadeFinanceira> nao existe",
+      "file": "app/components/TabFidelidadeFinanceira.tsx",
+      "line": null,
+      "evidence": "grep -rn 'TabFidelidadeFinanceira' app/ = 0 resultados. Arquivo nao existe. Tambem: <Can> e <TabsMembro> nao existem.",
+      "impact": "SECRETARIO, DISCIPULADOR, LIDER_MINISTERIO podem ter acesso a aba Fidelidade via DevTools (remover display:none, ativar aba escondida) ou desativacao de JavaScript. RN-MEM-03 e uma regra de negocio pastoral (acesso a dizimos e restrito a perfis financeiros) que tem base legal Art. 6, III (necessidade - minimizacao de exposicao) e Art. 11 (dado sensivel religioso).",
+      "proposedChange": "Criar app/components/Can.tsx (helper client-side: <Can allow={['ADMIN','PASTOR','FINANCEIRO']}>...</Can>). Criar app/components/TabFidelidadeFinanceira.tsx (placeholder S03 - modulo financeiro nao disponivel ainda, mas a aba ja deve existir com mensagem 'Modulo Financeiro ainda nao disponivel'). Criar app/components/TabsMembro.tsx (orquestra 4 abas: Dados, Discipulado, Ministerios, Fidelidade - a ultima so renderiza se canSeeFinancials).",
+      "effort": "low (3-4h total)",
+      "regulatoryRisk": "ANPD pode autuar por Art. 46 (medidas inadequadas) + Art. 6, VII. Em caso de incidente de vazamento de dizimos, a ausencia de defesa em UI agrava a sancao. Probabilidade: MEDIA (auditoria de rotina). Impacto: ALTO (multa + dano a confianca da congregacao)."
+    },
+    {
+      "id": "LGPD-FIND-S03-002",
+      "severity": "high",
+      "category": "rbac-fidelidade-loader",
+      "legalBasis": "Art. 6, VII + Art. 46 + RN-MEM-03 Camada 2 + cross-sprint.json CF-04",
+      "title": "Camada 2 (loader) de RN-MEM-03 ausente - bypass via URL ?tab=fidelidade funciona",
+      "file": "app/routes/app/membros.$id.tsx",
+      "line": 54,
+      "evidence": "grep -n 'canSeeFinancials' app/routes/app/membros.\\$id.tsx = 0 resultados. Loader atual (S02) nao trata query string tab. Comentario explicito linha 261-262: 'as abas (Dados, Discipulado, Ministerios, Fidelidade) entram em S03. Por ora a tela e um resumo unico.'",
+      "impact": "SECRETARIO acessando /app/membros/<id>?tab=fidelidade via URL manipulada tem a aba ativa = Fidelidade (ou ve a aba mesmo nao estando pronta, dependendo de como a UI renderizar). Bypass trivial independente da Camada 1.",
+      "proposedChange": "Estender loader (linha 54-66 atual): calcular canSeeFinancials (FINANCIAL_CARGOS.includes(user.cargo)); ler searchParams.tab; se !canSeeFinancials && tab === 'fidelidade', redirecionar para ?tab=dados (302) ou renderizar aba ativa = 'dados' (decisao de UX). Retornar canSeeFinancials no payload para a UI usar como prop.",
+      "effort": "low (1-2h)",
+      "regulatoryRisk": "Mesma magnitude do LGPD-FIND-S03-001. Bypass de URL e vetor classico de vazamento - 'esconder botao na UI' nao e seguranca."
+    },
+    {
+      "id": "LGPD-FIND-S03-003",
+      "severity": "high",
+      "category": "rbac-fidelidade-service",
+      "legalBasis": "Art. 6, VII + Art. 46 + RN-MEM-03 Camada 3 + RAG security-rbac-matrix.md §2 (helper canônico) + cross-sprint.json CF-04",
+      "title": "Camada 3 (service) de RN-MEM-03 ausente - app/lib/finance.server.ts nao existe",
+      "file": "app/lib/finance.server.ts",
+      "line": null,
+      "evidence": "arquivo nao existe. Helper assertCanSeeFinancials existe em app/lib/rbac.server.ts:45-49 (S00-T05) mas NAO TEM CALLER. grep -rn 'assertCanSeeFinancials' app/ retorna apenas a definicao.",
+      "impact": "A Camada 3 e a defesa MATERIAL - garante que se o loader esquecer, o service barra. Sem ela, qualquer outro service que chame getDizimosByMembro (futuro) tera o mesmo problema. Tambem: sem o service, o teste unitario da Camada 3 fica impossivel (LGPD-FIND-S03-006 - sem E2E, defense in depth e teatro).",
+      "proposedChange": "Criar app/lib/finance.server.ts com: (1) getDizimosByMembro(membroId, user) - assertCanSeeFinancials PRIMEIRO, depois prisma.lancamento.findMany({where: {membroId, categoria: 'DIZIMO'}}). Por enquanto retorna [] (placeholder ate S04+ ter dados financeiros). (2) JSDoc explicando 'RN-MEM-03 - Camada 3 - mesmo se o loader esquecer, este service barra'. (3) Teste unitario cobrindo os 6 perfis (S03-T11).",
+      "effort": "low (1h - e um placeholder de 5 linhas + JSDoc + teste)",
+      "regulatoryRisk": "ALTA - sem Camada 3, qualquer chamada direta (curl, Postman, fetch de outro service) bypassa o controle. Esta e a camada que o controlador pode provar para a ANPD em auditoria ('o service sempre valida')."
+    },
+    {
+      "id": "LGPD-FIND-S03-004",
+      "severity": "medium",
+      "category": "auditoria-responsabilizacao",
+      "legalBasis": "Art. 6, X (responsabilizacao e prestacao de contas) + RAG lgpd-igreja-conect.md §2.5 (safeLog)",
+      "title": "promoverTipo (S03-T02) nao usa safeLog - decisao de promocao nao tera rastro",
+      "file": "app/lib/members.server.ts",
+      "line": null,
+      "evidence": "S03-T02 (linha 56 do sprint plan) ja pede safeLog no AC: 'safeLog: { userId, action: \"promover_tipo\", membroId, novoTipo, result }'. Mas o service nao foi estendido ainda (S03-T02 pendente).",
+      "impact": "Sem log, a ANPD nao consegue reconstruir historico de promocoes (Art. 6, X). Em caso de auditoria, controlador fica sem evidencia. Tambem: registrar promocoes e uma boa pratica de gestao pastoral - permite auditar se a promocao VISITANTE->CONGREGADO->MEMBRO_ATIVO seguiu a vontade da congregacao.",
+      "proposedChange": "Quando S03-T02 for implementado, garantir: safeLog({ userId: user.id, action: 'promover_tipo', membroId: id, novoTipo, result: 'ok' }) no caminho de sucesso. safeLog({...result: 'forbidden'}) se RBAC barrar. ALLOWED_FIELDS (audit.server.ts:11-18) ja filtra campos sensiveis.",
+      "effort": "low (1 linha)",
+      "regulatoryRisk": "MEDIA - em auditoria, ANPD pode pedir demonstracao de Art. 6, X. Sem log, recomendacao formal. Em incidente (promocao nao-autorizada), log seria a unica evidencia."
+    },
+    {
+      "id": "LGPD-FIND-S03-005",
+      "severity": "medium",
+      "category": "auditoria-responsabilizacao",
+      "legalBasis": "Art. 6, X (responsabilizacao) + RAG lgpd-igreja-conect.md §2.5 (safeLog)",
+      "title": "assignDisciple/unassignDisciple (S03-T01) nao usam safeLog - mudanca de rede pastoral nao tera rastro",
+      "file": "app/lib/discipleship.server.ts",
+      "line": null,
+      "evidence": "S03-T01 (linha 56 do sprint plan, item 5) menciona getDiscipuladoData. S03-T06 cobre o fluxo. Mas o service nao foi criado. AC nao menciona safeLog explicitamente, mas e obrigatorio por analogia com LGPD-FIND-S03-004.",
+      "impact": "Mudancas na rede de discipulado (mapa de influencia pastoral) sao dado sensivel (Art. 5, II). Sem log, ANPD nao tem como reconstruir 'quem foi discipulador de quem e quando'. Tambem dificulta gestao pastoral (se discipulador sair, quem assume?).",
+      "proposedChange": "Quando S03-T01 for implementado, garantir: safeLog({ userId, action: 'assign_disciple', discipuladorId, discipuloId, result }) e safeLog({ userId, action: 'unassign_disciple', discipuloId, result }). Considerar adicionar tambem safeLog em getDiscipuladoData (action: 'view_discipleship', membroId) para reconstruir acesso - mas isso ja e fora do MVP (RAG §3 - audit log de leitura fora do MVP).",
+      "effort": "low (2-3 linhas)",
+      "regulatoryRisk": "MEDIA - mesma magnitude do LGPD-FIND-S03-004."
+    },
+    {
+      "id": "LGPD-FIND-S03-006",
+      "severity": "medium",
+      "category": "e2e-coverage",
+      "legalBasis": "Art. 46 (medidas adequadas) + RAG security-rbac-matrix.md §7 (testes E2E obrigatorios) + cross-sprint.json CF-04 e CF-05",
+      "title": "E2E de RN-MEM-03 e RN-MEM-04 ausente - defense in depth sem prova",
+      "file": "e2e/fidelidade-bypass.spec.ts e e2e/discipulado.spec.ts",
+      "line": null,
+      "evidence": "ls e2e/ mostra apenas auth.spec.ts (S01). grep -rn 'fidelidade' e2e/ = 0. grep -rn 'discipulado' e2e/ = 0.",
+      "impact": "Sem E2E, qualquer refactor futuro pode quebrar Camada 1, 2 ou 3 sem que ningem perceba ate producao. Defense in depth so e real quando ha teste de bypass de TODAS as 3 camadas. Caso contrario e 'privacy theater' (RAG lgpd-brasil.md §5.1).",
+      "proposedChange": "Criar e2e/fidelidade-bypass.spec.ts (CF-04) com 3 chains: (1) UI: SECRETARIO logado acessa /app/membros/<id> - espera ver 3 abas, NAO espera Fidelidade. (2) URL: SECRETARIO acessa /app/membros/<id>?tab=fidelidade - espera aba ativa = Dados, Fidelidade ausente. (3) Service: chamada direta a getDizimosByMembro com user SECRETARIO - espera 403. Criar e2e/discipulado.spec.ts (CF-05) com chains 1-3: 12 discipulos OK, 13 bloqueado, auto-vinculo bloqueado, loop bloqueado. Playwright ja esta configurado (playwright.config.ts).",
+      "effort": "medium (5h conforme S03-T12 AC)",
+      "regulatoryRisk": "ALTA - defense in depth sem E2E nao e defense in depth. E a forma que ANPD distingue implementacao real de promessa. CF-04 no cross-sprint.json marca criticality como 'GATE - lgpd-officer valida' - e de fato um gate."
+    }
+  ],
+  "stats": {
+    "critical": 0,
+    "high": 3,
+    "medium": 3,
+    "low": 0,
+    "informational": 0
+  },
+  "thresholds": {
+    "maxCritical": 0,
+    "maxHigh": 0,
+    "maxMedium": 3,
+    "lgpdStatus": "non-compliant",
+    "ruleApplied": "state-machine.json §fase 5: 1+ critical OU 1+ high (Art. 18/48/46) BLOQUEIA. S03 tem 3 high em Art. 46/Art. 6, VII = BLOQUEIA."
+  },
+  "passed": false,
+  "blockers": [
+    "LGPD-FIND-S03-001",
+    "LGPD-FIND-S03-002",
+    "LGPD-FIND-S03-003"
+  ],
+  "advisory": [
+    "LGPD-FIND-S03-004",
+    "LGPD-FIND-S03-005",
+    "LGPD-FIND-S03-006"
+  ],
+  "fidelidade_3_camadas": {
+    "ui": "fail",
+    "loader": "fail",
+    "service": "fail"
+  },
+  "rn_mem_06_zero_cron": "pass",
+  "rn_mem_02_sem_cpf": "pass",
+  "conformance": {
+    "art_5_definicao": "pass",
+    "art_6_I_finalidade": "pass",
+    "art_6_III_necessidade": "pass",
+    "art_6_VII_seguranca": "fail",
+    "art_6_X_responsabilizacao": "parcial",
+    "art_7_base_legal": "pass",
+    "art_11_sensiveis": "parcial (modelagem OK, sem fluxo de consentimento destacado)",
+    "art_18_direitos_titular": "advisory (Sprint 2+ por PRD §4)",
+    "art_37_registros": "advisory (Sprint 2+ por PRD §4)",
+    "art_38_ripd": "pass (nao obrigatorio para S03)",
+    "art_46_medidas_seguranca": "fail (gate RN-MEM-03)",
+    "art_48_incidentes": "advisory (Sprint 2+ por PRD §4)",
+    "art_49_transferencia_internacional": "pass (N/A)"
+  },
+  "summary": "Sprint S03 (Tipos, Discipulado, Ministerios, Fidelidade Financeira bloqueada) foi declarada in_progress em .harness/state.json (startedAt 2026-06-13T13:00:00Z), mas 0 das 13 tasks planejadas (S03-T01 a S03-T13) foi efetivamente entregue. O gate principal RN-MEM-03 (Fidelidade 3 camadas, cross-sprint.json CF-04) falha em TODAS as 4 camadas de defesa: Camada 1 (UI - TabFidelidadeFinanceira nao existe), Camada 2 (loader - bypass ?tab=fidelidade nao tratado), Camada 3 (service - finance.server.ts nao existe, assertCanSeeFinancials sem caller), e Camada E2E (e2e/fidelidade-bypass.spec.ts nao existe). O gate secundario RN-MEM-06 (zero automacao de promocao) PASSA por inércia - nao ha codigo de promocao (S03-T02 promoverTipo tambem pendente), mas isso nao é defense in depth real. Verificacoes positivas: RN-MEM-02 (sem dado fiscal) PASS, infraestrutura herdada (audit.server.ts safeLog, rbac.server.ts assertCanSeeFinancials, MEMBRO_SAFE_SELECT) PASS, RN-MEM-06 PASS. Bloqueio: 3 findings HIGH em Art. 46 + Art. 6, VII = state-machine.json §fase 5 BLOQUEIA. harness-advance NAO deve ser chamado. Loopback para phase.5.build com orientacao: implementar Camada 3 PRIMEIRO (foundation), depois Camada 2, Camada 1, e por fim E2E (sem E2E, defense in depth vira theater).",
+  "parecerFinal": "NAO_CONFORME",
+  "nextAction": "Bloquear advance. Loopback para phase.5.build. Recomendar ordem de rework: S03-T11 (Camada 3 service) -> S03-T01, T02, T03, T04, T13 (backend) -> S03-T07, T05, T09 (frontend) -> S03-T06, T08, T10 (rotas) -> S03-T12 (E2E fidelidade-bypass + discipulado). Re-rodar lgpd-officer apos rework.",
+  "loopbackTo": "phase.5.build",
+  "top3Recomendacoes": [
+    "Implementar as 3 camadas de RN-MEM-03 EM ORDEM (Camada 3 -> Camada 2 -> Camada 1 -> E2E). Camada 3 (finance.server.ts com assertCanSeeFinancials PRIMEIRO) é a defesa MATERIAL - sem ela, qualquer chamada direta bypassa o controle.",
+    "Aplicar safeLog em toda mutacao de PII sensivel: promoverTipo (LGPD-FIND-S03-004), assignDisciple/unassignDisciple (LGPD-FIND-S03-005). Pattern RAG lgpd-igreja-conect.md §2.5. ALLOWED_FIELDS ja filtra campos sensiveis.",
+    "Adicionar teste E2E do gate CF-04 (fidelidade-bypass) e CF-05 (discipulado) cobrindo 3 chains (UI, URL, service). Sem E2E, defense in depth vira privacy theater (RAG lgpd-brasil.md §5.1). Considerar constante RN_MEM_03_BYPASS_USERS para cobertura completa dos 3 perfis bloqueados."
+  ],
+  "lessonLearned": "Gate de conformidade nao pode ser declarado PASS por inercia. RN-MEM-06 passou por ausencia de codigo (nao ha automacao porque nao ha codigo de automacao). RN-MEM-03 falhou por ausencia de codigo (nao ha defesa porque nao ha codigo de defesa). Ambos sao evidencias negativas - mas a primeira é aceitavel (controle de ausencia valido), a segunda é bloqueante (controle prometido nao existe). Distincao: ausencia de codigo que DEVERIA existir é achado; ausencia de codigo que NAO DEVERIA existir é conformidade.",
+  "ragCandidate": "Criar RAG/pattern-rbac-defense-in-depth.md consolidando o pattern de 3 camadas (UI + loader + service + E2E) com template copy-paste para assertCanSeeFinancials, snippet do getDizimosByMembro com assertCanSeeFinancials PRIMEIRO, estrutura de teste E2E obrigatoria (3 chains), e licao: 'toda feature gated por RBAC DEVE ter 3 chains E2E'. Referenciar security-rbac-matrix.md (aprovado) e lgpd-igreja-conect.md §2.2.",
+  "blockingFindings": {
+    "critical": 0,
+    "high": 3,
+    "medium": 3,
+    "low": 0,
+    "informational": 0
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "project": "igreja-conect",
+  "phase": "phase.4.planejamento",
+  "generatedAt": "2026-06-12T18:00:00Z",
+  "generatedBy": "sprint-tasker",
+  "version": "1.0",
+  "scope": "MVP — Auth + Módulo de Membros + Central de Alertas",
+  "coverageSummary": {
+    "totalUserStories": 6,
+    "coveredUserStories": 6,
+    "coveragePercent": 100,
+    "userStoriesBySprint": {
+      "S00": ["US-AUTH-001", "US-AUTH-002"],
+      "S01": ["US-AUTH-001", "US-AUTH-002"],
+      "S02": ["US-MEM-001 (parcial — criação sem alerta)", "US-MEM-003"],
+      "S03": ["US-MEM-002", "US-MEM-005"],
+      "S04": ["US-MEM-001 (atomicidade visitante→alerta)", "US-MEM-004"],
+      "S05": ["Todas (smoke test + auditoria)"]
+    }
+  },
+  "totals": {
+    "totalSprints": 6,
+    "totalTasks": 73,
+    "totalEstimatedHours": 172.5,
+    "totalEstimatedDays": 10,
+    "sprintsSummary": [
+      { "id": "S00", "name": "Setup & Infraestrutura", "tasks": 15, "hours": 25, "days": 1 },
+      { "id": "S01", "name": "Auth Backend + Login UI", "tasks": 11, "hours": 23, "days": 2 },
+      { "id": "S02", "name": "Membros: Listagem + CRUD básico", "tasks": 12, "hours": 35.5, "days": 2 },
+      { "id": "S03", "name": "Membros: Tipos, Discipulado, Ministérios, Fidelidade", "tasks": 13, "hours": 39, "days": 2 },
+      { "id": "S04", "name": "Config Acolhimento + Alertas + Dashboard", "tasks": 12, "hours": 29, "days": 2 },
+      { "id": "S05", "name": "Quality Gate Final", "tasks": 10, "hours": 21, "days": 1 }
+    ]
+  },
+  "sprints": [
+    {
+      "id": "S00",
+      "name": "Setup & Infraestrutura",
+      "goal": "Fundação técnica: Prisma client, model Session, helpers de auth, seed idempotente, cleanup de pendências, setup de testes.",
+      "path": "sprints/S00.json",
+      "dependsOn": [],
+      "estimatedDays": 1,
+      "estimatedHours": 25,
+      "taskCount": 15,
+      "coverageTarget": 75,
+      "userStoriesCovered": ["US-AUTH-001", "US-AUTH-002"],
+      "criticalDecisions": [
+        "Adicionar model Session ao schema (resolve pendência do SPEC §12.1 #6)",
+        "Deletar app/prisma.config.ts (pendência #7)",
+        "Corrigir app/routes.ts:11 (pendência #8)"
+      ]
+    },
+    {
+      "id": "S01",
+      "name": "Auth Backend + Login UI",
+      "goal": "Login com email+senha, logout server-side, middleware de proteção, landing + login page.",
+      "path": "sprints/S01.json",
+      "dependsOn": ["S00"],
+      "estimatedDays": 2,
+      "estimatedHours": 23,
+      "taskCount": 11,
+      "coverageTarget": 80,
+      "userStoriesCovered": ["US-AUTH-001", "US-AUTH-002"]
+    },
+    {
+      "id": "S02",
+      "name": "Membros: Listagem + CRUD básico",
+      "goal": "CRUD completo de membros (listar com filtros, criar, detalhar, editar, excluir) com RBAC fina.",
+      "path": "sprints/S02.json",
+      "dependsOn": ["S01"],
+      "estimatedDays": 2,
+      "estimatedHours": 35.5,
+      "taskCount": 12,
+      "coverageTarget": 80,
+      "userStoriesCovered": ["US-MEM-001 (parcial)", "US-MEM-003"]
+    },
+    {
+      "id": "S03",
+      "name": "Membros: Tipos, Discipulado, Ministérios, Fidelidade bloqueada",
+      "goal": "Trava de 12 discípulos (RN-MEM-04), promoção manual (RN-MEM-06), N:N ministérios, Fidelidade bloqueada (RN-MEM-03).",
+      "path": "sprints/S03.json",
+      "dependsOn": ["S02"],
+      "estimatedDays": 2,
+      "estimatedHours": 39,
+      "taskCount": 13,
+      "coverageTarget": 90,
+      "userStoriesCovered": ["US-MEM-002", "US-MEM-005", "US-MEM-001 (continua)"]
+    },
+    {
+      "id": "S04",
+      "name": "Config Acolhimento + Central de Alertas + Dashboard",
+      "goal": "Fechar US-MEM-001 (alerta atômico ao cadastrar visitante), entregar US-MEM-004, Central de Alertas e Dashboard com KPIs.",
+      "path": "sprints/S04.json",
+      "dependsOn": ["S03"],
+      "estimatedDays": 2,
+      "estimatedHours": 29,
+      "taskCount": 12,
+      "coverageTarget": 85,
+      "userStoriesCovered": ["US-MEM-001", "US-MEM-004"]
+    },
+    {
+      "id": "S05",
+      "name": "Quality Gate Final",
+      "goal": "Auditoria (security + LGPD + planning-reviewer), smoke E2E do north star, hardening, README.",
+      "path": "sprints/S05.json",
+      "dependsOn": ["S00", "S01", "S02", "S03", "S04"],
+      "estimatedDays": 1,
+      "estimatedHours": 21,
+      "taskCount": 10,
+      "coverageTarget": 85,
+      "userStoriesCovered": ["Todas (smoke + auditoria)"]
+    }
+  ],
+  "agentAllocation": {
+    "backend": 45,
+    "frontend": 17,
+    "tester": 7,
+    "security": 1,
+    "lgpd-officer": 1,
+    "planning-reviewer": 1,
+    "qa-gate": 1
+  },
+  "ragsUsed": [
+    "architecture-monolith-modular",
+    "security-rbac-matrix",
+    "lgpd-igreja-conect",
+    "convention-prisma-sqlite",
+    "convention-monetary-values"
+  ],
+  "crossSprintFlowsFile": "sprints/cross-sprint.json",
+  "outputContract": {
+    "files": [
+      { "path": "sprints/index.json", "required": true, "status": "created" },
+      { "path": "sprints/S00.json", "required": true, "status": "created" },
+      { "path": "sprints/S01.json", "required": true, "status": "created" },
+      { "path": "sprints/S02.json", "required": true, "status": "created" },
+      { "path": "sprints/S03.json", "required": true, "status": "created" },
+      { "path": "sprints/S04.json", "required": true, "status": "created" },
+      { "path": "sprints/S05.json", "required": true, "status": "created" },
+      { "path": "sprints/cross-sprint.json", "required": true, "status": "created" }
+    ]
+  },
+  "readyForCoverageCheck": true
+}

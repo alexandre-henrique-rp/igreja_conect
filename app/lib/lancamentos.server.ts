@@ -66,43 +66,8 @@ import type { LancamentoCreateInput } from "./schemas/lancamentos";
  *     descricao: "Oferta do culto",
  *   }, adminUser);
  */
-const PERFIS_CRIAR_LANCAMENTO = ["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"] as const;
-
-/**
- * Cria um lançamento financeiro (entrada ou saída).
- *
- * **Camada 3 RBAC PRIMEIRO:** 4 perfis (ADMIN, PASTOR, FINANCEIRO, SECRETARIO).
- *
- * **Bloqueio TRANSFERENCIA:** categoria TRANSFERENCIA é exclusiva do sistema
- * de transferências (S07). Este service rejeita com 400.
- *
- * **Validação Zod:** `LancamentoCreateSchema.parse(input)` — propaga ZodError
- * (action captura → 422).
- *
- * **Trava de saldo (RN-FIN-04):**
- * - Para SAÍDAS: `assertSaldoSuficiente` é chamada ANTES da transação.
- * - Dentro de `$transaction`: re-leitura anti-TOCTOU do caixa, re-valida
- *   saldo para SAÍDA, cria lançamento, atualiza saldo.
- *
- * @description Camada 3 — cria lançamento com atomicidade e trava de saldo.
- * @param {LancamentoCreateInput} input - Dados validados do lançamento.
- * @param {SessionUser} user - Usuário autenticado.
- * @returns {Promise<Object>} Lançamento criado.
- * @throws {ZodError} Se input inválido (propagado, action → 422).
- * @throws {Response} 400 se categoria TRANSFERENCIA.
- * @throws {Response} 403 se usuário não tem perfil financeiro.
- * @throws {Response} 409 se saldo insuficiente ou caixa arquivado.
- * @throws {Response} 404 se caixa não existe.
- * @example
- *   const lanc = await criarLancamento({
- *     tipo: "ENTRADA",
- *     categoria: "OFERTA",
- *     valorCentavos: 1000,
- *     caixaId: caixa.id,
- *     dataCompetencia: "2026-06-01",
- *     descricao: "Oferta do culto",
- *   }, adminUser);
- */
+// Nota: PERFIS_CRIAR_LANCAMENTO é usado inline abaixo (ADMIN, PASTOR, FINANCEIRO, SECRETARIO)
+// para manter o RBAC explícito. Array separado removido por ser dead code.
 export async function criarLancamento(
   input: LancamentoCreateInput,
   user: SessionUser
@@ -237,6 +202,7 @@ export async function listarPorCaixa(
     switch (filtros.periodo) {
       case 'mes_atual': startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
       case 'mes_passado': startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1); break;
+      case 'trimestre': startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); break;
       case 'ano_atual': startDate = new Date(now.getFullYear(), 0, 1); break;
       default: startDate = new Date(0);
     }

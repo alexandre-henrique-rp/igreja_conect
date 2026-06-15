@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Igreja Conect — Product Requirements Document (MVP)</title>
+<meta name="description" content="Product Requirements Document do MVP do Igreja Conect: autenticação e módulo de membros, com regras de negócio, RBAC, LGPD e critérios de pronto." />
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2937;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --line-strong: #d1d5db;
+    --accent: #1d4ed8;
+    --accent-bg: #eff6ff;
+    --good: #047857;
+    --good-bg: #ecfdf5;
+    --warn: #b45309;
+    --warn-bg: #fffbeb;
+    --bad: #b91c1c;
+    --bad-bg: #fef2f2;
+    --code-bg: #f3f4f6;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.6;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 96px;
+  }
+  h1, h2, h3, h4 { line-height: 1.25; color: #111827; }
+  h1 { font-size: 2.1rem; margin: 0 0 8px; }
+  h2 { font-size: 1.55rem; margin: 48px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.2rem; margin: 28px 0 8px; }
+  h4 { font-size: 1.05rem; margin: 20px 0 6px; }
+  p { margin: 8px 0 12px; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 4px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, kbd, pre, samp { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.92em; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px; overflow-x: auto; }
+  pre code { background: transparent; padding: 0; color: inherit; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f9fafb; font-weight: 600; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  blockquote {
+    margin: 12px 0; padding: 10px 14px;
+    border-left: 4px solid var(--accent);
+    background: var(--accent-bg);
+    border-radius: 0 6px 6px 0;
+    color: #1e3a8a;
+  }
+  .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+  .toc { background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin: 16px 0 32px; }
+  .toc ol { margin: 6px 0 0; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em;
+    background: #e5e7eb; color: #374151;
+  }
+  .badge.good  { background: var(--good-bg);  color: var(--good);  }
+  .badge.warn  { background: var(--warn-bg);  color: var(--warn);  }
+  .badge.bad   { background: var(--bad-bg);   color: var(--bad);   }
+  .badge.blue  { background: var(--accent-bg); color: var(--accent); }
+  .badge.gray  { background: #f3f4f6; color: #4b5563; }
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin: 16px 0 24px;
+  }
+  .kpi { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: #fff; }
+  .kpi .num { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+  .kpi .lbl { color: var(--muted); font-size: 0.88rem; }
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li { padding: 4px 0 4px 26px; position: relative; }
+  .checklist li::before { content: "\2610"; position: absolute; left: 0; color: var(--muted); }
+  .checklist li.done { color: var(--good); }
+  .checklist li.done::before { content: "\2611"; color: var(--good); }
+  footer { margin-top: 64px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+</head>
+<body>
+
+<h1>Igreja Conect — Product Requirements Document</h1>
+<p class="meta">
+  <strong>Versão:</strong> 0.1 (MVP) &middot;
+  <strong>Data:</strong> 2026-06-12 &middot;
+  <strong>Status:</strong> Aguardando revisão do PRD-reviewer &middot;
+  <strong>Escopo:</strong> Autenticação + Módulo de Membros
+</p>
+
+<nav class="toc" aria-label="Sumário">
+  <strong>Neste documento</strong>
+  <ol>
+    <li><a href="#sumario-executivo">Sumário executivo</a></li>
+    <li><a href="#personas">Personas e casos de uso</a></li>
+    <li><a href="#escopo-mvp">Escopo do MVP</a> — <a href="#escopo-auth">Auth</a> &middot; <a href="#escopo-membros">Membros</a> &middot; <a href="#escopo-alertas">Central de Alertas</a></li>
+    <li><a href="#fora-escopo">Fora do escopo</a></li>
+    <li><a href="#regras-negocio">Regras de negócio</a></li>
+    <li><a href="#privacidade">Privacidade e LGPD</a></li>
+    <li><a href="#aceitacao">Critérios de aceitação (DoD)</a></li>
+    <li><a href="#riscos">Riscos e mitigações</a></li>
+    <li><a href="#roadmap">Roadmap de alto nível</a></li>
+    <li><a href="#glossario">Glossário</a></li>
+    <li><a href="#aprovacoes">Aprovações e revisões</a></li>
+  </ol>
+</nav>
+
+<h2 id="sumario-executivo">1. Sumário executivo</h2>
+
+<p>
+A <strong>Igreja Conect</strong> é uma plataforma web interna (Single Page + SSR) que centraliza a gestão eclesiástica de uma única igreja local. Este PRD cobre o <strong>MVP</strong>, que entrega dois pilares: <em>autenticação</em> (login com sessão segura) e <em>gestão de membros + discipulado + acolhimento de visitantes</em>. O objetivo é substituir controles informais (planilhas, cadernos, WhatsApp) por um sistema único, auditável, com privacidade financeira desde o dia 1.
+</p>
+
+<p><strong>TL;DR em 5 bullets:</strong></p>
+<ul>
+  <li><span class="badge blue">Membros</span> CRUD completo de pessoas (membros ativos, congregados, visitantes), com filtros e busca textual.</li>
+  <li><span class="badge blue">Discipulado</span> Vínculo de cada membro a 1 discipulador, com trava rígida de <strong>máximo 12 discípulos por líder</strong>.</li>
+  <li><span class="badge blue">Acolhimento</span> Ao cadastrar um visitante, o sistema gera automaticamente um alerta para o responsável configurado pelo <em>Admin</em>.</li>
+  <li><span class="badge good">Privacidade</span> Histórico de dízimos visível <strong>apenas</strong> para Admin, Pastor e Financeiro — bloqueado em 3 camadas (UI, loader, service).</li>
+  <li><span class="badge gray">LGPD</span> Sem CPF, sem dados fiscais; senhas com hash bcrypt; cookies httpOnly; prontos para auditoria.</li>
+</ul>
+
+<p>
+A aceitação final é o próprio <em>Admin</em> rodando este cenário em ambiente local: <em>"consigo cadastrar 50 membros reais, vincular todos a discipuladores respeitando o limite de 12, e gerar alertas de visitante — sem nunca ver dados financeiros de quem não deveria."</em>
+</p>
+
+<div class="kpi-grid" aria-label="Métricas-alvo do MVP">
+  <div class="kpi"><div class="num">85%</div><div class="lbl">Cobertura mínima de testes</div></div>
+  <div class="kpi"><div class="num">0</div><div class="lbl">Vulnerabilidades critical/high</div></div>
+  <div class="kpi"><div class="num">6</div><div class="lbl">Perfis administrativos (RBAC)</div></div>
+  <div class="kpi"><div class="num">12</div><div class="lbl">Máx. discípulos por discipulador</div></div>
+</div>
+
+<h2 id="personas">2. Personas e casos de uso</h2>
+
+<p>
+A Igreja Conect reconhece 6 perfis administrativos. <strong>Todos os 6 perfis já existem</strong> no sistema desde o MVP (o <code>enum Cargo</code> no banco já está preparado), mas apenas as colunas relativas a <em>Membros</em> têm UI funcional nesta entrega. As demais (Financeiro, Estoque) entram em sprints futuras sem quebrar schema.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th><th>Perfil (enum)</th><th>Persona</th>
+      <th>No MVP (Membros)</th>
+      <th>Em sprints futuras</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td><td><code>ADMIN</code></td><td>Pastor-presidente / TI da igreja</td>
+      <td>CRUD total + configurações gerais</td><td>Financeiro total, Estoque total, Manutenção + baixa por perda</td>
+    </tr>
+    <tr>
+      <td>2</td><td><code>PASTOR</code></td><td>Pastor titular</td>
+      <td>CRUD total + visualiza dízimos</td><td>Financeiro total, Estoque somente leitura</td>
+    </tr>
+    <tr>
+      <td>3</td><td><code>SECRETARIO</code></td><td>Secretário(a) administrativo(a)</td>
+      <td>CRUD total</td><td>Financeiro (com trava de saldo), Estoque (autoriza retirada)</td>
+    </tr>
+    <tr>
+      <td>4</td><td><code>DISCIPULADOR</code></td><td>Líder de célula / discipulador</td>
+      <td>CRUD de membros (apenas seus discípulos)</td><td>Sem acesso a financeiro</td>
+    </tr>
+    <tr>
+      <td>5</td><td><code>LIDER_MINISTERIO</code></td><td>Líder de ministério (louvor, infantil…)</td>
+      <td>CRUD de membros do seu ministério</td><td>Sem acesso a financeiro</td>
+    </tr>
+    <tr>
+      <td>6</td><td><code>FINANCEIRO</code></td><td>Tesoureiro(a)</td>
+      <td>CRUD total + visualiza dízimos</td><td>Financeiro total (com trava de saldo)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Observação crítica:</strong> os perfis 1, 2 e 6 (Admin, Pastor, Financeiro) são os únicos que podem visualizar a aba <em>"Fidelidade Financeira"</em> no perfil do membro. No MVP a aba existe na UI, mas os dados de dízimos <strong>não</strong> são populados (módulo Financeiro está fora de escopo). Quando o Financeiro entrar em sprint futura, a trava de visibilidade já estará aplicada desde o dia 1.
+</p>
+
+<h3>2.1 Casos de uso principais do MVP</h3>
+<ul>
+  <li><strong>UC-01 — Login:</strong> Pastor digita email e senha, sistema valida hash bcrypt, abre sessão, redireciona para o painel autenticado.</li>
+  <li><strong>UC-02 — Listar e filtrar membros:</strong> Secretário consulta a lista de membros, aplica filtros (tipo, ministério, discipulador) e busca por nome.</li>
+  <li><strong>UC-03 — Cadastrar visitante:</strong> Qualquer perfil autenticado cadastra uma pessoa como <code>VISITANTE</code>. Sistema gera alerta automático para o responsável configurado pelo Admin.</li>
+  <li><strong>UC-04 — Vincular discípulo:</strong> Discipulador associa um membro a si mesmo. Sistema bloqueia o 13º discípulo com mensagem clara.</li>
+  <li><strong>UC-05 — Configurar acolhimento:</strong> Admin define um Membro ou Ministério como responsável padrão pelo acolhimento de novos visitantes.</li>
+  <li><strong>UC-06 — Marcar alerta como lido:</strong> Responsável pelo acolhimento acessa a Central de Alertas e marca o alerta do novo visitante como lido/resolvido.</li>
+</ul>
+
+<h2 id="escopo-mvp">3. Escopo do MVP</h2>
+
+<p>O MVP entrega 3 blocos: autenticação, módulo de membros e central de alertas. Tudo o que <strong>não</strong> está listado abaixo é explicitamente fora de escopo (ver <a href="#fora-escopo">§4</a>).</p>
+
+<h3 id="escopo-auth">3.1 Autenticação</h3>
+<ul>
+  <li><strong>Login</strong> com <code>email</code> + <code>senha</code>. Senha armazenada como hash bcrypt em <code>Membro.senhaHash</code>.</li>
+  <li><strong>Sessão via cookie httpOnly</strong> assinado, sem JWT e sem <code>localStorage</code>. Decisão confirmada pelo usuário no briefing.</li>
+  <li><strong>Logout</strong> invalida a sessão no servidor (registro removido) e limpa o cookie.</li>
+  <li><strong>Middleware de proteção</strong> nas rotas autenticadas: anônimos são redirecionados para <code>/login</code>.</li>
+  <li><strong>Seed do primeiro Admin</strong> via Prisma, idempotente (rodar 2x não duplica).</li>
+  <li>Senhas <strong>nunca</strong> trafegam em logs, nunca retornam em payloads de API, nunca aparecem na hidratação SSR.</li>
+</ul>
+
+<h3 id="escopo-membros">3.2 Módulo de Membros</h3>
+
+<p>O módulo entrega a ficha cadastral unificada, segmentação por tipo, vínculo de discipulado, gestão de ministérios, aba de fidelidade financeira (bloqueada por perfil) e configuração de acolhimento de visitantes.</p>
+
+<h4>3.2.1 Sub-funcionalidades</h4>
+<ul>
+  <li><strong>CRUD completo</strong> de membros (criar, listar, detalhar, editar, excluir). Qualquer perfil autenticado pode escrever.</li>
+  <li><strong>Ficha cadastral</strong> com dados pessoais + eclesiásticos + endereço. <strong>Sem CPF</strong>, <code>profissao</code> e <code>estadoCivil</code> opcionais.</li>
+  <li><strong>Segmentação por tipo:</strong> <code>MEMBRO_ATIVO</code>, <code>CONGREGADO</code>, <code>VISITANTE</code>. A transição entre tipos é <strong>100% manual</strong> — o sistema não conta presença automaticamente.</li>
+  <li><strong>Listagem com filtros</strong>: por tipo, por ministério, por discipulador, e busca textual por nome.</li>
+  <li><strong>Vínculo de discipulado</strong> (Gerenciador de Vínculo) com 2 travas rígidas: 1 discípulo → 1 discipulador; 1 discipulador → <strong>máximo 12 discípulos ativos</strong>.</li>
+  <li><strong>Vinculação a ministérios</strong> (relação N:N). Ex: louvor, infantil, diaconal.</li>
+  <li><strong>Configuração de destino de visitantes</strong> (somente Admin): aponta 1 Membro <em>ou</em> 1 Ministério como responsável pelo acolhimento.</li>
+  <li><strong>Aba "Fidelidade Financeira"</strong> presente no perfil do membro, mas <strong>bloqueada/oculta</strong> para perfis sem permissão. No MVP, renderiza estado vazio "Módulo Financeiro ainda não disponível".</li>
+</ul>
+
+<h4>3.2.2 Tipos de membro (transição manual)</h4>
+<table>
+  <thead>
+    <tr><th>Tipo</th><th>Significado</th><th>Quem registra</th><th>Como se move</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>VISITANTE</code></td><td>Primeira visita, ainda sem vínculo</td><td>Qualquer perfil autenticado</td><td>Manual → <code>CONGREGADO</code></td></tr>
+    <tr><td><code>CONGREGADO</code></td><td>Frequenta mas ainda não é membro pleno</td><td>Líder / Secretário</td><td>Manual → <code>MEMBRO_ATIVO</code></td></tr>
+    <tr><td><code>MEMBRO_ATIVO</code></td><td>Vínculo eclesiástico pleno</td><td>Pastor / Admin</td><td>Permanece</td></tr>
+  </tbody>
+</table>
+
+<h4>3.2.3 Gerenciador de Vínculo de Discipulado</h4>
+<ul>
+  <li>1 discípulo → exatamente 1 discipulador (relação 1:N).</li>
+  <li>1 discipulador → até <strong>12 discípulos</strong>. Tentar o 13º é <strong>bloqueado</strong> com mensagem clara e amigável.</li>
+  <li>Auto-vínculo bloqueado (não posso ser meu próprio discipulador).</li>
+  <li>Loop bloqueado (A discípulo de B, B discípulo de A) — anti-ciclo.</li>
+</ul>
+
+<h4>3.2.4 Ministérios</h4>
+<ul>
+  <li>Cadastro simples (nome + descrição).</li>
+  <li>Vínculo N:N entre Membro e Ministério (uma pessoa pode estar em vários ministérios).</li>
+  <li>Admin pode configurar 1 Ministério como responsável pelo acolhimento de visitantes (alternativa ao Membro responsável).</li>
+</ul>
+
+<h4>3.2.5 Configuração de acolhimento (somente Admin)</h4>
+<ul>
+  <li>Aponta 1 <strong>Membro</strong> <em>ou</em> 1 <strong>Ministério</strong> como responsável pelo acolhimento de novos visitantes.</li>
+  <li>Esta configuração é o gatilho que faz a Central de Alertas receber o aviso sempre que alguém cadastrar um visitante.</li>
+</ul>
+
+<h4>3.2.6 Aba "Fidelidade Financeira"</h4>
+<ul>
+  <li>Componente restrito acoplado ao perfil do membro.</li>
+  <li>Listagem decrescente de dízimos (mais recente primeiro).</li>
+  <li><strong>Visível apenas</strong> para <code>ADMIN</code>, <code>PASTOR</code>, <code>FINANCEIRO</code>.</li>
+  <li>No MVP, a aba existe na UI mas renderiza o estado "Módulo Financeiro ainda não disponível" — os dados virão nas sprints futuras.</li>
+</ul>
+
+<h3 id="escopo-alertas">3.3 Central de Alertas</h3>
+<p>
+A Central de Alertas é a única forma de comunicação interna do MVP. Não há push, não há e-mail. Tudo passa pela tela.
+</p>
+<ul>
+  <li><strong>Tela única</strong> que lista os alertas do usuário logado.</li>
+  <li>No MVP, o <strong>único gatilho</strong> é "novo visitante cadastrado" (RN-MEM-05).</li>
+  <li>Ações: marcar como <em>lido</em> e marcar como <em>resolvido</em>.</li>
+  <li>Sem priorização, sem agrupamento, sem filtros no MVP (mantém escopo enxuto).</li>
+</ul>
+
+<h2 id="fora-escopo">4. Fora do escopo (explícito)</h2>
+
+<p>
+Tudo abaixo está <strong>fora</strong> do MVP e só entra em sprints futuras, com PRDs próprios. <span class="badge warn">Não-Goal</span>
+</p>
+
+<table>
+  <thead><tr><th>Item</th><th>Status</th><th>Por que está fora</th></tr></thead>
+  <tbody>
+    <tr><td>Módulo Financeiro (caixas, dízimos, ofertas, transferências, despesas)</td><td><span class="badge gray">Schema apenas</span></td><td>Complexidade isolada; entra em sprint 1</td></tr>
+    <tr><td>Módulo de Estoque (consumo, patrimônio, movimentação)</td><td><span class="badge gray">Schema apenas</span></td><td>Depende de decisões de upload; entra em sprint 3</td></tr>
+    <tr><td>Manutenção de Ativos + Cron de Alertas</td><td><span class="badge gray">Schema apenas</span></td><td>Exige scheduler; entra em sprint 4</td></tr>
+    <tr><td>Recuperação de senha por e-mail</td><td><span class="badge bad">Não incluso</span></td><td>Sem SMTP no MVP; ADMIN redefine manualmente</td></tr>
+    <tr><td>2FA / MFA</td><td><span class="badge bad">Não incluso</span></td><td>Sistema interno; senhas fortes bastam no MVP</td></tr>
+    <tr><td>Auditoria de leitura (LGPD art. 37 — quem viu o quê)</td><td><span class="badge bad">Não incluso</span></td><td>Candidato natural para sprint 2+</td></tr>
+    <tr><td>Notificações por e-mail, push ou WhatsApp</td><td><span class="badge bad">Não incluso</span></td><td>Sem provedor configurado; central interna basta</td></tr>
+    <tr><td>App mobile nativo</td><td><span class="badge bad">Não incluso</span></td><td>Web responsivo é suficiente para 1 igreja</td></tr>
+    <tr><td>Gateway de pagamento (Pix, cartão)</td><td><span class="badge bad">Não incluso</span></td><td>Sistema opera por "caixas internos"</td></tr>
+    <tr><td>Multi-tenant / multi-igreja</td><td><span class="badge bad">Não incluso</span></td><td>Assume 1 única igreja local</td></tr>
+    <tr><td>Exportação de relatórios (PDF / Excel)</td><td><span class="badge bad">Não incluso</span></td><td>Sem demanda concreta no MVP</td></tr>
+    <tr><td>Upload de arquivos (laudos, fotos)</td><td><span class="badge bad">Não incluso</span></td><td>Sem S3/MinIO configurado</td></tr>
+  </tbody>
+</table>
+
+<h2 id="regras-negocio">5. Regras de Negócio</h2>
+
+<p>
+As 14 regras de negócio catalogadas em <code>docs/REGRAS_DE_NEGOCIO.md</code> estão agrupadas abaixo por módulo. O MVP implementa e testa apenas as do bloco <strong>Membros e Alertas</strong> (RN-MEM-*). As demais (RN-FIN-* e RN-EST-*) ficam como referência para sprints futuras.
+</p>
+
+<h3>5.1 Membros e Alertas (implementadas no MVP)</h3>
+<table>
+  <thead>
+    <tr><th>Código</th><th>Título</th><th>Resumo</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>RN-MEM-01</code></td>
+      <td>Perfis de operação (escrita)</td>
+      <td>Qualquer um dos 6 perfis autenticados pode cadastrar/editar membros.</td>
+    </tr>
+    <tr>
+      <td><code>RN-MEM-02</code></td>
+      <td>Restrição de dados sensíveis e LGPD</td>
+      <td>Sem CPF/RG/dados fiscais. <code>profissao</code> e <code>estadoCivil</code> opcionais.</td>
+    </tr>
+    <tr>
+      <td><code>RN-MEM-03</code></td>
+      <td>Privacidade estrita de dízimos</td>
+      <td>Apenas Admin, Pastor e Financeiro veem a aba de Fidelidade Financeira. Bloqueio em 3 camadas.</td>
+    </tr>
+    <tr>
+      <td><code>RN-MEM-04</code></td>
+      <td>Limitações da árvore de discipulado</td>
+      <td>1 discípulo → 1 discipulador; 1 discipulador → no máximo 12 discípulos ativos.</td>
+    </tr>
+    <tr>
+      <td><code>RN-MEM-05</code></td>
+      <td>Configuração de acolhimento a visitantes</td>
+      <td>Admin define Membro/Ministério responsável; cadastrar visitante gera alerta automático.</td>
+    </tr>
+    <tr>
+      <td><code>RN-MEM-06</code></td>
+      <td>Transição manual de status</td>
+      <td>Sem job que promova Visitante → Congregado → Membro Ativo automaticamente.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>5.2 Financeiro e Fluxo de Caixa (referência — sprint 1+)</h3>
+<table>
+  <thead><tr><th>Código</th><th>Título</th></tr></thead>
+  <tbody>
+    <tr><td><code>RN-FIN-01</code></td><td>Controle por Caixas Flutuantes (inicia com "Caixa Geral" como padrão)</td></tr>
+    <tr><td><code>RN-FIN-02</code></td><td>Rastreabilidade de transferências (imutável: valor, data, operador)</td></tr>
+    <tr><td><code>RN-FIN-03</code></td><td>Autonomia baseada em saldo real (Financeiro/Secretário aprovam se houver saldo)</td></tr>
+    <tr><td><code>RN-FIN-04</code></td><td>Trava abrangente de saldo insuficiente (nunca negativo)</td></tr>
+    <tr><td><code>RN-FIN-05</code></td><td>Ofertas anônimas permitidas (Dízimo sempre vinculado a membro)</td></tr>
+  </tbody>
+</table>
+
+<h3>5.3 Estoque e Manutenção (referência — sprint 3+)</h3>
+<table>
+  <thead><tr><th>Código</th><th>Título</th></tr></thead>
+  <tbody>
+    <tr><td><code>RN-EST-01</code></td><td>Escopo dual (Consumo vs. Patrimônio)</td></tr>
+    <tr><td><code>RN-EST-02</code></td><td>Restrição de baixa de consumo (só Admin e Secretário, com identificação do retirante)</td></tr>
+    <tr><td><code>RN-EST-03</code></td><td>Manutenção externa (assistência, OS, prazo)</td></tr>
+    <tr><td><code>RN-EST-04</code></td><td>Escalonamento de alertas (6 em 6 dias, 3 em 3 após 30 dias)</td></tr>
+    <tr><td><code>RN-EST-05</code></td><td>Baixa por perda total (com upload obrigatório de laudo)</td></tr>
+  </tbody>
+</table>
+
+<h2 id="privacidade">6. Privacidade e LGPD</h2>
+
+<p>
+A Igreja Conect trata dados pessoais de membros e dízimos. Por isso, segue a <strong>Lei 13.709/2018 (LGPD)</strong> com medidas técnicas verificáveis — não apenas promessas.
+</p>
+
+<h3>6.1 O que <strong>não</strong> coletamos <span class="badge good">LGPD art. 6°</span></h3>
+<ul>
+  <li><strong>CPF, RG, CNPJ, título de eleitor, PIS, cartão SUS</strong> — não existem no sistema. A igreja não emite nota fiscal, não faz desconto em folha, não precisa desses dados.</li>
+  <li><strong>Dados fiscais, salário, capacidade financeira</strong> — idem.</li>
+  <li><strong>Geolocalização, fingerprinting, analytics de terceiros</strong> — nada disso no MVP.</li>
+</ul>
+
+<h3>6.2 O que coletamos (e como protegemos)</h3>
+<ul>
+  <li><strong>Identificação:</strong> nome, data de conversão, data de batismo, tipo (membro, congregado, visitante).</li>
+  <li><strong>Contato:</strong> email (único), telefone.</li>
+  <li><strong>Endereço residencial:</strong> logradouro, número, bairro, cidade, estado, CEP.</li>
+  <li><strong>Opcionais:</strong> profissão, estado civil.</li>
+</ul>
+
+<h3>6.3 Senhas e sessão</h3>
+<ul>
+  <li>Senhas armazenadas <strong>apenas como hash bcrypt</strong> (cost 10). Nunca plain text, nunca log, nunca payload de resposta.</li>
+  <li>Cookie de sessão: <code>httpOnly</code>, <code>sameSite=lax</code>, <code>secure</code> em produção.</li>
+  <li>TTL sugerido de 7 dias com renovação sliding (renovado a cada request autenticado), teto de 30 dias absolutos.</li>
+</ul>
+
+<h3>6.4 Dízimos (regra de ouro)</h3>
+<p>
+O histórico financeiro de dízimos é considerado <strong>informação estritamente confidencial</strong>. Apenas 3 perfis veem: <code>ADMIN</code>, <code>PASTOR</code>, <code>FINANCEIRO</code>. Para os demais, a aba <em>simplesmente não existe na interface</em> — e se algum desavisado tentar acessar via URL direta, recebe 403 do servidor.
+</p>
+
+<blockquote>
+  <strong>Por que essa rigidez?</strong> Um vazamento de histórico de dízimos destrói a confiança da congregação e infringe a LGPD. Por isso, o bloqueio acontece em 3 camadas independentes: a UI esconde o controle, o loader da rota checa o perfil, o service revalida o perfil. Burlar uma camada não basta — o atacante teria que burlar 3.
+</blockquote>
+
+<h3>6.5 Direitos do titular (LGPD art. 18)</h3>
+<p>
+No MVP, pedidos de acesso, correção ou eliminação de dados são atendidos <strong>manualmente</strong> pelo Admin. Não há fluxo automatizado de "exercício de direitos" pelo titular; está registrado como candidato natural para sprint 2+.
+</p>
+
+<h2 id="aceitacao">7. Critérios de aceitação (Definition of Done)</h2>
+
+<p>O MVP é considerado <strong>pronto</strong> quando todos os itens abaixo forem verdadeiros.</p>
+
+<h3>7.1 Funcional <span class="badge blue">DoD</span></h3>
+<ul class="checklist">
+  <li class="done"><code>npm run dev</code> sobe o app, executa migrations e o seed cria 1 Admin inicial (<code>admin@igreja.local</code>, senha documentada).</li>
+  <li>É possível fazer login com o Admin e ver a lista de membros (vazia no início).</li>
+  <li>É possível cadastrar, listar, editar e excluir membros (CRUD completo).</li>
+  <li>É possível vincular 12 discípulos a um discipulador; ao tentar o 13º, o sistema <strong>bloqueia</strong> com mensagem clara.</li>
+  <li>Ao cadastrar um visitante, o alerta aparece na Central de Alertas do responsável configurado pelo Admin.</li>
+  <li>A aba "Fidelidade Financeira" <strong>some da UI</strong> para perfis <code>SECRETARIO</code>, <code>DISCIPULADOR</code>, <code>LIDER_MINISTERIO</code> e <strong>retorna 403</strong> se acessada via URL direta ou API.</li>
+</ul>
+
+<h3>7.2 Qualidade (gate do phase 5) <span class="badge good">Gate</span></h3>
+<ul class="checklist">
+  <li>Cobertura de testes <strong>≥ 85%</strong> (avaliado pelo agente <code>tester</code>).</li>
+  <li><strong>0 vulnerabilidades critical/high</strong> (avaliado pelo agente <code>security</code>).</li>
+  <li><code>planning-reviewer</code> score <strong>≥ 70</strong>.</li>
+  <li><strong>LGPD compliant</strong> (avaliado pelo agente <code>lgpd-officer</code>): sem coleta de CPF, senha hasheada, cookie httpOnly, dízimos restritos por perfil, com testes que provam o bloqueio.</li>
+  <li>Todas as funções públicas com JSDoc completo (<code>@param</code>, <code>@returns</code>, <code>@throws</code>, <code>@example</code>).</li>
+  <li>Nenhum teste skipped sem justificativa no PR.</li>
+</ul>
+
+<h3>7.3 Métrica principal (north star)</h3>
+<blockquote>
+  <em>"Um Admin consegue cadastrar 50 membros reais, vincular todos a discipuladores respeitando o limite de 12, e gerar alertas de visitante — sem nunca ver dados financeiros de ninguém que não deveria ver."</em>
+</blockquote>
+
+<h2 id="riscos">8. Riscos e mitigações</h2>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Mitigação</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>R1</td>
+      <td><strong>Vazamento de dados de dízimos</strong> por falha em esconder a aba (RN-MEM-03)</td>
+      <td>Média</td>
+      <td><span class="badge bad">Alto</span></td>
+      <td>Bloqueio em <strong>3 camadas</strong>: UI não renderiza, loader checa perfil, service retorna 403. Teste E2E cobre o caminho direto via URL/API.</td>
+    </tr>
+    <tr>
+      <td>R2</td>
+      <td><strong>RBAC mal implementado</strong> permite que um Discipulador edite membros de outra célula</td>
+      <td>Média</td>
+      <td><span class="badge bad">Alto</span></td>
+      <td>Middleware de autorização em <strong>todo</strong> action/loader, com testes unitários por perfil × endpoint × operação.</td>
+    </tr>
+    <tr>
+      <td>R3</td>
+      <td><strong>Migration do Prisma destrutiva</strong> em dev apaga dados de teste</td>
+      <td>Alta</td>
+      <td>Baixo (dev)</td>
+      <td>Seed idempotente + script <code>npm run db:reset</code> documentado. Snapshot do <code>dev.db</code> antes de PR destrutivo.</td>
+    </tr>
+    <tr>
+      <td>R4</td>
+      <td><strong>Vínculo de discipulado em loop</strong> (A→B, B→A) causa inconsistência</td>
+      <td>Baixa</td>
+      <td>Médio</td>
+      <td>Validação no service: <code>discipuladorId</code> ≠ próprio membro e ≠ descendente na cadeia. Teste cobrindo ambos os casos.</td>
+    </tr>
+    <tr>
+      <td>R5</td>
+      <td><strong>Cookie de sessão não expirando</strong> deixa usuário logado indefinidamente em máquina compartilhada</td>
+      <td>Média</td>
+      <td>Médio</td>
+      <td>TTL de 7 dias + sliding renewal + logout server-side invalida o registro.</td>
+    </tr>
+    <tr>
+      <td>R6</td>
+      <td><strong>SSR expõe dados sensíveis</strong> no HTML inicial (hidratação)</td>
+      <td>Baixa</td>
+      <td><span class="badge bad">Alto</span></td>
+      <td>Loaders filtram explicitamente campos sensíveis antes de retornar. Nunca retornar <code>senhaHash</code> em payload.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="roadmap">9. Roadmap de alto nível</h2>
+
+<p>
+A sequência abaixo é <strong>indicativa</strong>, sem datas firmes. Cada sprint entrega um módulo com cobertura ≥ 85% e gate de qualidade completo.
+</p>
+
+<ol>
+  <li><strong>Sprint 0 (atual — MVP):</strong> Autenticação + Módulo de Membros + Central de Alertas.</li>
+  <li><strong>Sprint 1:</strong> Financeiro — caixas e lançamentos (RN-FIN-01).</li>
+  <li><strong>Sprint 2:</strong> Financeiro — transferências entre caixas + trava de saldo (RN-FIN-02, 03, 04).</li>
+  <li><strong>Sprint 3:</strong> Estoque — consumo + movimentação (RN-EST-01, 02).</li>
+  <li><strong>Sprint 4:</strong> Estoque — patrimônio + manutenção externa (RN-EST-03, 05).</li>
+  <li><strong>Sprint 5:</strong> Cron de alertas de manutenção + relatórios consolidados (RN-EST-04).</li>
+</ol>
+
+<p>
+<strong>Critérios para mover de sprint</strong> (herdados do MVP):
+cobertura ≥ 85% • zero vulnerabilidades critical/high • LGPD compliant • <code>planning-reviewer</code> ≥ 70.
+</p>
+
+<h2 id="glossario">10. Glossário</h2>
+
+<table>
+  <thead><tr><th>Termo</th><th>Significado</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Membro</strong></td><td>Pessoa cadastrada no sistema. Diferenciada por <code>tipo</code> (Membro Ativo, Congregado, Visitante).</td></tr>
+    <tr><td><strong>Membro Ativo</strong></td><td>Vínculo eclesiástico pleno. <code>TipoMembro.MEMBRO_ATIVO</code>.</td></tr>
+    <tr><td><strong>Congregado</strong></td><td>Tipo intermediário: frequenta mas ainda não é membro pleno. <code>TipoMembro.CONGREGADO</code>.</td></tr>
+    <tr><td><strong>Visitante</strong></td><td>Primeira visita, ainda sem vínculo. <code>TipoMembro.VISITANTE</code>. Transição é <strong>manual</strong> (RN-MEM-06).</td></tr>
+    <tr><td><strong>Discipulador</strong></td><td>Membro com papel <code>Cargo.DISCIPULADOR</code> que lidera outros membros. Limite de 12 discípulos ativos (RN-MEM-04).</td></tr>
+    <tr><td><strong>Discípulo</strong></td><td>Membro vinculado a 1 discipulador via <code>Membro.discipuladorId</code>.</td></tr>
+    <tr><td><strong>Ministério</strong></td><td>Grupo/equipe da igreja (louvor, infantil, diaconal). Membro pode estar em N ministérios.</td></tr>
+    <tr><td><strong>Líder de Ministério</strong></td><td>Papel <code>Cargo.LIDER_MINISTERIO</code> — gerencia membros do(s) seu(s) ministério(s).</td></tr>
+    <tr><td><strong>Caixa</strong></td><td>Saldo financeiro apartado (Geral, Cantina, Missões). Saldo em <strong>centavos</strong> (Int) — quando o Financeiro entrar.</td></tr>
+    <tr><td><strong>Lançamento</strong></td><td>Entrada ou saída de um caixa. Pode ser dízimo (vinculado a membro) ou oferta anônima (RN-FIN-05).</td></tr>
+    <tr><td><strong>Trava de Saldo</strong></td><td>Bloqueio automático se um caixa não tiver saldo suficiente (RN-FIN-04).</td></tr>
+    <tr><td><strong>Alerta</strong></td><td>Notificação in-app (sem push, sem e-mail) para um usuário. <code>Alerta</code> + <code>AlertaDestinatario</code>.</td></tr>
+    <tr><td><strong>Central de Alertas</strong></td><td>Tela que lista alertas do usuário logado. No MVP, único gatilho é "novo visitante" (RN-MEM-05).</td></tr>
+    <tr><td><strong>Acolhimento de Visitante</strong></td><td>Fluxo configurado pelo Admin: 1 Membro ou 1 Ministério fica responsável por cada novo visitante.</td></tr>
+    <tr><td><strong>Aba "Fidelidade Financeira"</strong></td><td>Componente do perfil do membro que lista dízimos. <strong>Bloqueada</strong> para perfis sem permissão (RN-MEM-03).</td></tr>
+    <tr><td><strong>Seed</strong></td><td>Bootstrap do banco: cria o primeiro Admin via <code>prisma db seed</code> (idempotente).</td></tr>
+    <tr><td><strong>Session Cookie</strong></td><td>Cookie httpOnly assinado com <code>SESSION_SECRET</code>. Sem JWT, sem localStorage.</td></tr>
+    <tr><td><strong>Cargo</strong></td><td>Enum com os 6 perfis administrativos. <code>Membro.cargo</code> nullable = membro comum sem acesso.</td></tr>
+    <tr><td><strong>RBAC</strong></td><td>Role-Based Access Control. Controle de acesso por papel, verificado em 3 camadas (UI, loader, service).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="aprovacoes">11. Aprovações e revisões</h2>
+
+<p>
+Este documento passa por revisão dos seguintes papéis antes de virar guia de implementação:
+</p>
+<ul>
+  <li><strong>PRD-reviewer</strong> (gate <code>score-threshold ≥ 80</code>): valida completude, clareza para stakeholders, cobertura de regras de negócio.</li>
+  <li><strong>Pastor/Admin</strong> (gate <code>user-approval</code>): aprovação do escopo antes do início da Fase 3 (Design).</li>
+  <li><strong>planning-reviewer</strong> (gate <code>score-threshold ≥ 70</code>): valida viabilidade técnica do SPEC correspondente.</li>
+</ul>
+
+<h3>11.1 Changelog</h3>
+<table>
+  <thead><tr><th>Versão</th><th>Data</th><th>Autor</th><th>Mudança</th></tr></thead>
+  <tbody>
+    <tr><td>0.1</td><td>2026-06-12</td><td><code>requirements</code> agent</td><td>Versão inicial derivada do <code>brief.md</code>. Cobre Auth + Membros + Central de Alertas. Aguarda <code>prd-reviewer</code>.</td></tr>
+  </tbody>
+</table>
+
+<h3>11.2 Pendências registradas (não bloqueiam o PRD, serão resolvidas em fases seguintes)</h3>
+<ol>
+  <li><strong>Biblioteca de validação:</strong> Zod vs Valibot vs TypeBox (sugestão: Zod) — decisão na Fase 3 (Design).</li>
+  <li><strong>TTL exato da sessão e política de sliding renewal</strong> (sugestão: 7d sliding, teto 30d abs) — decisão na Fase 3 (Design).</li>
+  <li><strong>Política de senha:</strong> comprimento mínimo, complexidade (sugestão: ≥ 8 chars, sem forçar) — decisão na Fase 3 (Design).</li>
+  <li><strong>Comportamento da aba "Fidelidade Financeira" para perfis bloqueados:</strong> não renderizar (sugestão) ou renderizar placeholder? — decisão na Fase 3 (Design).</li>
+  <li><strong>Rate limit no <code>/login</code>:</strong> 5 tentativas / 15min / IP — implementação em memória no MVP (sem dependência externa).</li>
+  <li><strong>Model <code>Session</code></strong> ainda não existe no schema — backend agent da Fase 5 adiciona como primeira migration.</li>
+  <li><strong>Duplicata <code>app/prisma.config.ts</code> vs <code>prisma.config.ts</code></strong> — manter apenas o da raiz (decisão pendente com usuário).</li>
+  <li><strong>Bug em <code>app/routes.ts</code></strong>: linha 11 trata <code>app/api/auth/login.ts</code> como rota — corrigir removendo a linha e tratando endpoints via <code>app/api/</code> como resource routes.</li>
+</ol>
+
+<hr />
+
+<footer>
+  <p>
+    Igreja Conect — PRD do MVP (v0.1). Mantido pelo <code>requirements</code> agent na Fase 2 do Harness v6.
+    Documentos relacionados: <a href="SPEC.html">SPEC.html</a> (especificação técnica), <code>docs/architecture/ARCH.md</code> (arquitetura), <code>docs/REGRAS_DE_NEGOCIO.md</code> (regras de negócio), <code>.harness/brief.md</code> (brief).
+  </p>
+</footer>
+
+</body>
+</html>

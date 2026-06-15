@@ -1,0 +1,12 @@
+{
+  "status": 302,
+  "headers": {
+    "vary": "Origin",
+    "location": "/login?next=%2Fapp%2Fmembros%2Fnovo",
+    "date": "Sun, 14 Jun 2026 02:28:27 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": "(redirect)"
+}

@@ -1,0 +1,378 @@
+{
+  "id": "S03",
+  "name": "Membros: Tipos, Discipulado, Ministérios, Fidelidade Financeira bloqueada",
+  "goal": "Implementar a trava de 12 discípulos (RN-MEM-04), promoção manual de tipo (RN-MEM-06), gestão de ministérios N:N, e o bloqueio da aba Fidelidade Financeira para perfis não autorizados (RN-MEM-03) — habilitando US-MEM-002 e US-MEM-005.",
+  "estimatedDays": 2,
+  "dependsOn": ["S02"],
+  "userStories": ["US-MEM-002", "US-MEM-005", "US-MEM-001"],
+  "tasks": [
+    {
+      "id": "S03-T01",
+      "title": "Criar `app/lib/discipleship.server.ts` (assignDisciple, unassignDisciple, isDescendantOf, getDiscipuladoData)",
+      "type": "backend",
+      "estimatedHours": 5,
+      "owner": "backend",
+      "dependsOn": ["S02-T02", "S00-T10"],
+      "tdd": {
+        "testFirst": "Boundary 12 passa; 13 falha. Auto-vínculo falha. Loop A→B→A falha. Sucesso 1-12.",
+        "testPath": "app/lib/discipleship.server.test.ts (integration)",
+        "acceptance": "Cobertura 100% dos branches de isDescendantOf + boundary test 12/13"
+      },
+      "files": {
+        "create": ["app/lib/discipleship.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Constante `MAX_DISCIPULOS = 12` exportada",
+        "`assignDisciple(discId, discipuladorId, user)` — 4 etapas: (1) assertCanWriteMembers; (2) auto-vínculo → throw 400; (3) count >= 12 → throw 409; (4) isDescendantOf → throw 422; (5) update discipuladorId",
+        "`unassignDisciple(discId, user)` — update { discipuladorId: null }",
+        "`isDescendantOf(candidate, ancestor)` — recursivo, profundidade máx 10 (fail-safe: >10 considera descendente); pure function testável sem DB",
+        "`getDiscipuladoData(membroId, user)` — retorna { membro, discipuladorAtual, discipulosDoDiscipulador, cadeia, discipuladoresDisponiveis }",
+        "Todas funções com JSDoc completo",
+        "RN-MEM-06: nenhum cron/scanner — assertion estática via grep no CI (não código de runtime)"
+      ],
+      "rags": ["security-rbac-matrix", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S03-T02",
+      "title": "Estender `app/lib/members.server.ts` com `promoverTipo(id, novoTipo, user)`",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S02-T02"],
+      "tdd": {
+        "testFirst": "promoverTipo para CONGREGADO atualiza e retorna membro; tipo inválido lança erro Zod",
+        "testPath": "app/lib/members.server.test.ts (adiciona caso)",
+        "acceptance": "Cobre VISITANTE→CONGREGADO, CONGREGADO→MEMBRO_ATIVO, tentativa inválida"
+      },
+      "files": {
+        "create": [],
+        "modify": ["app/lib/members.server.ts"]
+      },
+      "acceptanceCriteria": [
+        "`promoverTipo(id, novoTipo, user)` — assertCanWriteMembers; getMembroById (escopo); update { tipo: novoTipo }",
+        "Valida novoTipo com Zod (enum)",
+        "RN-MEM-06: endpoint dedicado (PATCH /app/membros/:id/tipo) — não confundir com edição geral",
+        "safeLog: `{ userId, action: 'promover_tipo', membroId, novoTipo, result }`"
+      ],
+      "rags": ["security-rbac-matrix"]
+    },
+    {
+      "id": "S03-T03",
+      "title": "Criar schemas Zod em `app/lib/schemas/discipulado.ts` e `app/lib/schemas/ministerios.ts`",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": ["S00-T14"],
+      "tdd": {
+        "testFirst": "AssignDiscipleSchema aceita discipuladorId uuid; MinisterioCreateSchema aceita nome 2-80 chars + descricao opcional",
+        "testPath": "app/lib/schemas/{discipulado,ministerios}.test.ts",
+        "acceptance": "Cobre campos obrigatórios, opcionais, validações de tamanho"
+      },
+      "files": {
+        "create": ["app/lib/schemas/discipulado.ts", "app/lib/schemas/ministerios.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "AssignDiscipleSchema: `{ discipuladorId: z.string().uuid() }`",
+        "MinisterioCreateSchema: `nome (min 2, max 80)`, `descricao (max 500, optional)`",
+        "MinisterioUpdateSchema: partial() de Create",
+        "VincularMembroSchema: `{ membroId: z.string().uuid() }`",
+        "Mensagens PT-BR",
+        "Exporta Input types via z.infer"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S03-T04",
+      "title": "Criar `app/lib/ministries.server.ts` (CRUD ministérios + N:N membros)",
+      "type": "backend",
+      "estimatedHours": 3,
+      "owner": "backend",
+      "dependsOn": ["S03-T03", "S00-T10"],
+      "tdd": {
+        "testFirst": "createMinisterio rejeita nome duplicado via P2002; deleteMinisterio com membros lança 409; addMembroToMinisterio rejeita duplicata",
+        "testPath": "app/lib/ministries.server.test.ts (integration)",
+        "acceptance": "Cobertura CRUD completo + edge cases"
+      },
+      "files": {
+        "create": ["app/lib/ministries.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "`listMinisterios(user)` — inclui `membros: Membro[]` (count) e `primeiros5membros: Membro[]`",
+        "`createMinisterio(input, user)` — assertCanManageMinisterios (ADMIN, PASTOR, SECRETARIO); captura P2002 → NomeDuplicadoError",
+        "`updateMinisterio(id, input, user)` — idem",
+        "`deleteMinisterio(id, user)` — idem; se count(MinisterioMembro) > 0, lança 409",
+        "`addMembroToMinisterio(ministerioId, membroId, user)` — captura P2002 (já vinculado)",
+        "`removeMembroFromMinisterio(ministerioId, membroId, user)` — delete",
+        "Helper `canManageMinisterios(user)`",
+        "JSDoc completo"
+      ],
+      "rags": ["security-rbac-matrix"]
+    },
+    {
+      "id": "S03-T05",
+      "title": "Criar componentes de Discipulado: DiscipuladoPainel, ContadorDiscipulos, ModalSelecionarDiscipulador, CadeiaDiscipulado, ListaDiscipulos, Dialog (base)",
+      "type": "frontend",
+      "estimatedHours": 5,
+      "owner": "frontend",
+      "dependsOn": ["S02-T03"],
+      "tdd": {
+        "testFirst": "ContadorDiscipulos muda cor por proximidade do limite; Dialog tem aria-modal e foco preso; CadeiaDiscipulado renderiza setas",
+        "testPath": "app/components/{DiscipuladoPainel,ContadorDiscipulos,ModalSelecionarDiscipulador,CadeiaDiscipulado,ListaDiscipulos,Dialog}.test.tsx",
+        "acceptance": "6 componentes testados"
+      },
+      "files": {
+        "create": [
+          "app/components/DiscipuladoPainel.tsx",
+          "app/components/ContadorDiscipulos.tsx",
+          "app/components/ModalSelecionarDiscipulador.tsx",
+          "app/components/CadeiaDiscipulado.tsx",
+          "app/components/ListaDiscipulos.tsx",
+          "app/components/Dialog.tsx"
+        ],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "<ContadorDiscipulos>: atual/max=12, cor amber-700 quando >= 10, bold em 12, badge 'Limite atingido'",
+        "<Dialog>: portal no body, role=dialog, aria-modal=true, foco preso (useFocusTrap), Esc fecha, click overlay fecha, lock scroll",
+        "<ModalSelecionarDiscipulador>: lista de discipuladores com count; desabilita quem está no limite; exclui self e descendentes; busca textual; radio group",
+        "<CadeiaDiscipulado>: ol com setas →; links para cada membro",
+        "<ListaDiscipulos>: ul com botão desvincular (Form method=post)",
+        "<DiscipuladoPainel>: orquestra tudo; se !discipulador, mostra botão Vincular",
+        "Todos com JSDoc"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S03-T06",
+      "title": "Criar rota `app/routes/app/membros.$id.discipulado.tsx` (gerenciar vínculo)",
+      "type": "backend",
+      "estimatedHours": 3,
+      "owner": "backend",
+      "dependsOn": ["S03-T01", "S03-T05"],
+      "tdd": {
+        "testFirst": "Action intent=assign chama assignDisciple; intent=unassign chama unassignDisciple; 13º vinculado retorna 422; auto-vínculo 400; loop 422",
+        "testPath": "app/routes/app/membros.$id.discipulado.test.tsx (integration)",
+        "acceptance": "Cobre os 4 edge cases do SPEC §6.5"
+      },
+      "files": {
+        "create": ["app/routes/app/membros.$id.discipulado.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Loader: getMembroById + getDiscipuladoData",
+        "Action: dispatch por intent (assign/unassign); captura BusinessRuleError; retorna erro estruturado em failure",
+        "Render: PageHeader + Breadcrumb + DiscipuladoPainel",
+        "Mensagens de erro exibidas inline no painel (toast + ErrorAlert)",
+        "DISCIPULADOR acessando membro de outro → 404 (escopo)"
+      ],
+      "rags": ["security-rbac-matrix", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S03-T07",
+      "title": "Estender rota `app/routes/app/membros.$id.tsx` com abas (TabsMembro + TabDadosPessoais + TabDiscipulado + TabMinisterios + TabFidelidadeFinanceira bloqueada)",
+      "type": "frontend",
+      "estimatedHours": 5,
+      "owner": "frontend",
+      "dependsOn": ["S03-T02", "S03-T04", "S02-T07"],
+      "tdd": {
+        "testFirst": "ADMIN/PASTOR/FINANCEIRO veem 4 abas; SECRETARIO/DISCIPULADOR/LIDER_MINISTERIO veem 3 abas (sem Fidelidade). Bypass `?tab=fidelidade` para SECRETARIO → loader força tab=dados, aba Fidelidade não renderiza.",
+        "testPath": "app/routes/app/membros.$id.test.tsx (estender; teste do bypass Fidelidade é CRÍTICO)",
+        "acceptance": "Cobre os 6 perfis × 3 caminhos (UI, URL, service) — US-MEM-005"
+      },
+      "files": {
+        "create": [
+          "app/components/Can.tsx",
+          "app/components/TabsMembro.tsx",
+          "app/components/TabDadosPessoais.tsx",
+          "app/components/TabDiscipulado.tsx",
+          "app/components/TabMinisterios.tsx",
+          "app/components/TabFidelidadeFinanceira.tsx",
+          "app/components/AcoesMembro.tsx",
+          "app/components/ResumoMembro.tsx"
+        ],
+        "modify": ["app/routes/app/membros.$id.tsx"]
+      },
+      "acceptanceCriteria": [
+        "<Can>: helper client-side; se user.cargo in allow → children; senão fallback (default null)",
+        "<TabsMembro>: render condicional — Fidelidade só se canSeeFinancials",
+        "<TabDadosPessoais>: lista campos + botão 'Promover → CONGREGADO/MEMBRO_ATIVO' (só ADMIN/PASTOR)",
+        "<TabDiscipulado>: se discipulador, card + link Reatribuir; lista de discípulos com Desvincular",
+        "<TabMinisterios>: lista de ministérios com Desvincular; botão '+ Adicionar' (modal S04)",
+        "<TabFidelidadeFinanceira>: placeholder 'Módulo Financeiro ainda não disponível. Esta aba listará os dízimos...'; SÓ renderizado se canSeeFinancials",
+        "<AcoesMembro>: Editar (sempre) + Excluir (Can ADMIN/PASTOR); usa Dialog para confirmação de exclusão",
+        "Loader: aplica camada 2 RBAC — se !canSeeFinancials && tab===fidelidade, força tab=dados",
+        "Bypass via URL: SECRETARIO + ?tab=fidelidade → vê aba Dados ativa, Fidelidade ausente"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S03-T08",
+      "title": "Criar rota `app/routes/app/membros.$id.tipo.tsx` (PATCH promover tipo — RN-MEM-06)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S03-T02"],
+      "tdd": {
+        "testFirst": "PATCH com tipo=CONGREGADO → 302; tipo inválido → 422",
+        "testPath": "app/routes/app/membros.$id.tipo.test.tsx",
+        "acceptance": "Cobre fluxo de promoção"
+      },
+      "files": {
+        "create": ["app/routes/app/membros.$id.tipo.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Action: formData.tipo → promoverTipo(id, tipo, user); redirect /app/membros/:id",
+        "Endpoint dedicado (não confundir com editar geral) — RN-MEM-06",
+        "Pode ser chamado via TabDadosPessoais sem precisar ir para /editar"
+      ],
+      "rags": ["security-rbac-matrix"]
+    },
+    {
+      "id": "S03-T09",
+      "title": "Criar componentes de Ministérios: CardMinisterio, ModalCriarMinisterio, ModalVincularMembro, RadioGroup, InfoBox",
+      "type": "frontend",
+      "estimatedHours": 3,
+      "owner": "frontend",
+      "dependsOn": ["S02-T03", "S03-T05"],
+      "tdd": {
+        "testFirst": "CardMinisterio renderiza com 0 membros; ModalCriarMinisterio submit chama action; RadioGroup tem fieldset/legend",
+        "testPath": "app/components/{CardMinisterio,ModalCriarMinisterio,ModalVincularMembro,RadioGroup,InfoBox}.test.tsx",
+        "acceptance": "5 componentes testados"
+      },
+      "files": {
+        "create": [
+          "app/components/CardMinisterio.tsx",
+          "app/components/ModalCriarMinisterio.tsx",
+          "app/components/ModalVincularMembro.tsx",
+          "app/components/RadioGroup.tsx",
+          "app/components/InfoBox.tsx"
+        ],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "<CardMinisterio>: header (nome + badge N membros), lista até 5, + Adicionar, Editar/Excluir (se canEdit)",
+        "<ModalCriarMinisterio>: Form com nome + descricao; intent=create/update",
+        "<ModalVincularMembro>: select com membros não vinculados",
+        "<RadioGroup>: fieldset + legend + options com defaultChecked",
+        "<InfoBox>: tone info/warning; estrutura com ícone + título + children"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S03-T10",
+      "title": "Criar rota `app/routes/app/ministerios._index.tsx` (lista + modais + N:N)",
+      "type": "backend",
+      "estimatedHours": 3,
+      "owner": "backend",
+      "dependsOn": ["S03-T04", "S03-T09"],
+      "tdd": {
+        "testFirst": "Action dispatch por intent: create/update/delete/add-membro/remove-membro. SECRETARIO cria OK. DISCIPULADOR não vê botões.",
+        "testPath": "app/routes/app/ministerios._index.test.tsx",
+        "acceptance": "Cobre 5 intents + RBAC"
+      },
+      "files": {
+        "create": ["app/routes/app/ministerios._index.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Loader: listMinisterios(user); retorna canEdit",
+        "Action: dispatch por intent (5 casos); captura erros; redirect",
+        "Render: PageHeader + grid de CardMinisterio + modais controlados por useState",
+        "Empty state se 0 ministérios",
+        "DISCIPULADOR/LIDER_MINISTERIO veem cards read-only"
+      ],
+      "rags": ["security-rbac-matrix", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S03-T11",
+      "title": "Criar `app/lib/finance.server.ts` (placeholder getDizimosByMembro com assertCanSeeFinancials) — defesa camada 3",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": ["S00-T05"],
+      "tdd": {
+        "testFirst": "getDizimosByMembro lança ForbiddenError para SECRETARIO; retorna [] para ADMIN (placeholder)",
+        "testPath": "app/lib/finance.server.test.ts",
+        "acceptance": "Cobre os 6 perfis"
+      },
+      "files": {
+        "create": ["app/lib/finance.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "`getDizimosByMembro(membroId, user)` — assertCanSeeFinancials primeiro (camada 3); retorna [] (placeholder)",
+        "Comentário JSDoc: 'RN-MEM-03 — Camada 3. Em sprint 1+, este service lê Lancamento where membroId + categoria=DIZIMO'",
+        "Garante que se o loader esquecer, o service barra"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S03-T12",
+      "title": "Teste E2E (Playwright) — `e2e/discipulado.spec.ts` cobre boundary 12/13, auto-vínculo, loop, Fidelidade bypass",
+      "type": "test",
+      "estimatedHours": 5,
+      "owner": "tester",
+      "dependsOn": ["S03-T06", "S03-T07", "S03-T11"],
+      "tdd": {
+        "testFirst": "E2E completo das 4 US: 12 discípulos OK, 13º bloqueado, auto-vínculo bloqueado, loop bloqueado; SECRETARIO bypass Fidelidade retorna 403/aba oculta",
+        "testPath": "e2e/discipulado.spec.ts + e2e/fidelidade-bypass.spec.ts",
+        "acceptance": "3 chains críticas: chain 3 (trava 12), chain 2 (RBAC dízimos) do SPEC §11.5"
+      },
+      "files": {
+        "create": ["e2e/discipulado.spec.ts", "e2e/fidelidade-bypass.spec.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Chain 1 (trava 12): DISCIPULADOR vincula 12 discípulos OK; 13º → 422 com mensagem clara",
+        "Chain 2 (anti-loop): cria A→B, tenta B→A → 422 'Vínculo em loop detectado'",
+        "Chain 3 (auto-vínculo): tenta vincular self → 400 'Você não pode ser seu próprio discipulador'",
+        "Chain 4 (RBAC dízimos - UI): SECRETARIO acessa /app/membros/:id → vê 3 abas (Dados, Discipulado, Ministérios); NÃO vê Fidelidade",
+        "Chain 5 (RBAC dízimos - URL): SECRETARIO acessa /app/membros/:id?tab=fidelidade → vê aba Dados ativa, sem Fidelidade",
+        "Chain 6 (RBAC dízimos - service): chamada direta a getDizimosByMembro como SECRETARIO → ForbiddenError",
+        "Chain 7 (RN-MEM-06): criar visitante NÃO é promovido automaticamente (teste de presença)"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S03-T13",
+      "title": "Adicionar endpoint DELETE de discípulo em `app/routes/app/membros.$id.discipulador.tsx` (Rota dedicada para desvincular)",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": ["S03-T01"],
+      "tdd": {
+        "testFirst": "DELETE /app/membros/:id/discipulador remove vínculo; redirect",
+        "testPath": "app/routes/app/membros.$id.discipulador.test.tsx",
+        "acceptance": "Cobre sucesso e 404"
+      },
+      "files": {
+        "create": ["app/routes/app/membros.$id.discipulador.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Action DELETE: chama unassignDisciple; redirect /app/membros/:id",
+        "Endpoint: `app/routes/app/membros.$id.discipulador.tsx` (sem `.tsx` action é method=post com intent ou DELETE)",
+        "SPEC §10: `DELETE /app/membros/:id/discipulador`",
+        "Cobertura cross-referenciada com S03-T06 (que tem o POST)"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    }
+  ],
+  "definitionOfDone": [
+    "Todos os 13 testes da sprint passando (1 por task + E2E)",
+    "Coverage da sprint ≥ 90% (services de regra de negócio)",
+    "`pnpm typecheck` passa",
+    "E2E `e2e/discipulado.spec.ts` + `e2e/fidelidade-bypass.spec.ts` passam (7 chains)",
+    "Trava de 12 discípulos: 12 OK, 13 bloqueado com mensagem clara (gate qa-gate)",
+    "Anti-loop testado em 2 níveis (A→B e B→A)",
+    "Bypass de Fidelidade bloqueado em 3 camadas (UI esconde, loader 403, service ForbiddenError) — gate lgpd-officer",
+    "RN-MEM-06: nenhum cron/scanner no código que escreve em Membro.tipo (verificável via grep `setTimeout\\|setInterval\\|node-cron\\|bull` no app/)",
+    "JSDoc completo em todas as funções públicas"
+  ],
+  "coverageTarget": 90,
+  "notes": "Sprint mais crítica em termos de regra de negócio. Cobre RN-MEM-03, RN-MEM-04, RN-MEM-06. Habilita US-MEM-002 e US-MEM-005 completamente. US-MEM-001 só fica 100% completa após S04 (geração de alerta)."
+}

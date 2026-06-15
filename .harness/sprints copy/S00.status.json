@@ -1,0 +1,43 @@
+{
+  "id": "S00",
+  "name": "Setup & Infraestrutura",
+  "status": "completed",
+  "startedAt": "2026-06-12T18:50:00Z",
+  "completedAt": "2026-06-12T19:36:00Z",
+  "goal": "Estabelecer a fundação técnica do MVP: Prisma client singleton, model Session, helpers de auth, seed idempotente, limpeza de pendências e setup de testes — sem UI ainda.",
+  "metrics": {
+    "tasksPlanned": 15,
+    "tasksCompleted": 15,
+    "testsAdded": 107,
+    "testsPassing": 107,
+    "testsFailing": 0,
+    "lineCoverage": 94.08,
+    "branchCoverage": 84.02,
+    "functionCoverage": 77.77,
+    "coverageTarget": 75,
+    "coverageMet": true,
+    "typecheck": "pass"
+  },
+  "debtsResolved": ["DEBT-001", "DEBT-002", "DEBT-003"],
+  "deliverables": [
+    "app/db/prisma.server.ts (singleton Prisma client)",
+    "prisma/schema.prisma (adicionado model Session + migration)",
+    "app/lib/auth.server.ts (hashPassword, verifyPassword, getUserFromRequest)",
+    "app/lib/session.server.ts (createSession, getSession, deleteSession, sliding renewal)",
+    "app/lib/rbac.server.ts (matriz RBAC + assertCanSeeFinancials)",
+    "app/lib/errors.ts (ValidationError, ForbiddenError, NotFoundError, ConflictError)",
+    "app/lib/audit.server.ts (safeLog sem PII)",
+    "app/lib/rate-limit.server.ts (5 tentativas / 15min / IP)",
+    "app/lib/validators/{auth,common}.ts",
+    "app/lib/schemas/auth.ts (Zod)",
+    "prisma/seed.ts (ADMIN inicial idempotente)",
+    "tests/setup.ts + tests/helpers/* (infra de testes)",
+    "vitest.config.ts configurado"
+  ],
+  "unblocksSprints": ["S01", "S02", "S03", "S04", "S05"],
+  "nextSprint": "S01",
+  "qaArtifacts": {
+    "e2eChains": "qa/S00/e2e-chains.json",
+    "coverageReport": "coverage/index.html"
+  }
+}

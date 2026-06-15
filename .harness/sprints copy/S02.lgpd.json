@@ -1,0 +1,328 @@
+{
+  "_type": "harness-lgpd-audit-v6",
+  "agent": "lgpd-officer",
+  "sprint": "S02",
+  "name": "Membros: Listagem + CRUD básico",
+  "timestamp": "2026-06-13T12:30:00Z",
+  "auditType": "preventive",
+  "law": "Lei 13.709/2018 (LGPD)",
+  "parecer": "CONFORME COM RESSALVAS",
+  "lawReferences": [
+    "Art. 5º, II (definição de dado sensível — inclui religião)",
+    "Art. 6º, I (finalidade)",
+    "Art. 6º, II (adequação)",
+    "Art. 6º, III (necessidade)",
+    "Art. 6º, VI (transparência)",
+    "Art. 6º, VII (segurança)",
+    "Art. 6º, VIII (prevenção)",
+    "Art. 6º, X (responsabilização)",
+    "Art. 7º, V (execução de contrato — gestão eclesiástica)",
+    "Art. 7º, IX (interesse legítimo — RBAC fina discipulado)",
+    "Art. 11, II (dado sensível — convicção religiosa, borderline)",
+    "Art. 14, §4º (crianças/adolescentes — N/A)",
+    "Art. 18, I-IX, §1º (direitos do titular — fora do MVP)",
+    "Art. 33-36 (transferência internacional — N/A stack local)",
+    "Art. 37 (registro de operações — auditoria de leitura fora do MVP)",
+    "Art. 38 (RIPD — N/A, não é feature de alto risco)",
+    "Art. 41 (encarregado/DPO — fora do MVP)",
+    "Art. 46 (segurança — medidas técnicas adequadas)",
+    "Art. 48 (incidentes — fora do MVP)",
+    "Art. 49 (eliminação após cessada a finalidade)"
+  ],
+  "scope": {
+    "sprint": "S02",
+    "tasks": [
+      "S02-T01 (schemas Zod)",
+      "S02-T02 (members.server service)",
+      "S02-T03 (componentes base)",
+      "S02-T04 (rota membros._index)",
+      "S02-T05 (FormMembro + Section)",
+      "S02-T06 (rota membros.novo)",
+      "S02-T07 (rota membros.$id)",
+      "S02-T08 (rota membros.$id.editar)",
+      "S02-T09 (layout app + Sidebar + Topbar)",
+      "S02-T10 (placeholder dashboard)",
+      "S02-T11 (registro de rotas)",
+      "S02-T12 (E2E membros-crud)"
+    ],
+    "filesAuditedInCode": [
+      "prisma/schema.prisma (model Membro, Session, Ministerio, MinisterioMembro)",
+      "app/lib/validators/auth.ts (MembroCreateSchema provisório)",
+      "app/lib/schemas/membros.test.ts (TDD red phase — 272 linhas, 4 GATE-LGPD tests)",
+      "app/lib/audit.server.ts (safeLog + allowlist)",
+      "app/lib/rbac.server.ts (assertCanWriteMembers, assertCanSeeFinancials, assertIsAdmin)",
+      "app/lib/session.server.ts (getUserFromRequest, deleteSession, sliding renewal)",
+      "app/lib/auth.server.ts (verifyCredentials — subset seguro sem senhaHash)",
+      "prisma/migrations/20260612215816_add_session_model/migration.sql",
+      "prisma/seed.ts (apenas cargo + ADMIN seed — sem PII sensível)"
+    ],
+    "filesNotAuditedInCode_AwaitingImplementation": [
+      "app/lib/schemas/membros.ts (S02-T01 — não existe; TDD pronto)",
+      "app/lib/members.server.ts (S02-T02 — não existe)",
+      "app/lib/schemas/membros.test.ts (S02-T01 — JÁ EXISTE, 272 linhas, red phase)",
+      "app/routes/app/membros._index.tsx (S02-T04)",
+      "app/routes/app/membros.novo.tsx (S02-T06)",
+      "app/routes/app/membros.$id.tsx (S02-T07)",
+      "app/routes/app/membros.$id.editar.tsx (S02-T08)",
+      "app/routes/app.tsx + Sidebar + TopbarAutenticada (S02-T09)",
+      "app/routes/app/_index.tsx (S02-T10)",
+      "app/components/{PageHeader,Select,TabelaMembros,CardMembro,FiltrosMembros,Pagination,Breadcrumb,FormField,Section,FormMembro}.tsx (S02-T03, S02-T05)",
+      "app/routes.ts (S02-T11 — modificações)",
+      "e2e/membros-crud.spec.ts (S02-T12)"
+    ]
+  },
+  "personalDataInventory": {
+    "model": "Membro (prisma/schema.prisma:64-109)",
+    "collected": [
+      { "category": "identificacao", "fields": ["id", "nome", "tipo", "cargo"], "sensitive": false, "encrypted": false, "legalBasis": "Art. 7º, V (execução de contrato)" },
+      { "category": "contato", "fields": ["email", "telefone"], "sensitive": false, "encrypted": false, "legalBasis": "Art. 7º, V (execução de contrato)" },
+      { "category": "credencial", "fields": ["senhaHash"], "sensitive": false, "encrypted": "bcrypt cost 10", "legalBasis": "Art. 7º, V + Art. 46 (medida técnica adequada)" },
+      { "category": "dados-pessoais-opcionais", "fields": ["profissao", "estadoCivil"], "sensitive": false, "encrypted": false, "legalBasis": "Art. 7º, V (opcional, finalidade pastoral)" },
+      { "category": "dados-eclesiasticos", "fields": ["dataConversao", "dataBatismo"], "sensitive": "borderline (Art. 5º, II — convicção religiosa)", "encrypted": false, "legalBasis": "Art. 7º, V", "advisory": "LGPD-S02-FIND-001 — considerar restrição por perfil" },
+      { "category": "endereco-residencial", "fields": ["logradouro", "numero", "bairro", "cidade", "estado", "cep"], "sensitive": false, "encrypted": false, "legalBasis": "Art. 7º, V (opcional, finalidade pastoral/visitas)" }
+    ],
+    "totalFieldsProcessed": 17,
+    "sensitiveFieldsProcessed": 0,
+    "sensitiveBorderlineFields": ["dataConversao", "dataBatismo"],
+    "internationalTransfers": [],
+    "thirdPartySharing": [],
+    "cookies": "apenas essenciais (sessão httpOnly, sameSite=lax, secure em prod — herdado de S01)"
+  },
+  "lgpdCoverage": {
+    "principles": {
+      "finalidade_art6_I": { "compliant": true, "findings": [] },
+      "adequacao_art6_II": { "compliant": true, "findings": [] },
+      "necessidade_art6_III": { "compliant": true, "findings": ["LGPD-S02-FIND-002 (advisory: .strict() no schema)"] },
+      "transparencia_art6_VI": { "compliant": true, "findings": ["LGPD-S02-FIND-004 (low, herdado S01 — UX 'manter conectado' 30d vs TTL 7d)"] },
+      "seguranca_art6_VII": { "compliant": true, "findings": [] },
+      "prevencao_art6_VIII": { "compliant": true, "findings": [] },
+      "responsabilizacao_art6_X": { "compliant": "advisory-parcial", "findings": ["LGPD-S02-FIND-003 (advisory: safeLog em create/update/delete)"] }
+    },
+    "legalBasis": {
+      "art7_V_execucao_contrato": "pass",
+      "art7_IX_interesse_legitimo": "pass (RBAC fina: DISCIPULADOR vê só seus discípulos)"
+    },
+    "sensitiveData_art11": {
+      "explicit": "N/A (dízimos vêm em S03)",
+      "borderline": ["dataConversao", "dataBatismo"],
+      "findings": ["LGPD-S02-FIND-001 (advisory medium: avaliar restrição por perfil)"]
+    },
+    "rights18": {
+      "implementados": [],
+      "faltando": ["confirmacao", "acesso", "correcao", "anonimizacao", "portabilidade", "eliminacao", "info_compartilhamento", "info_nao_consentimento", "revogacao_consentimento", "oposicao"],
+      "status": "advisory-fora-mvp (PRD §4 explicito, DEBT-013)",
+      "findings": []
+    },
+    "dpo_art41": {
+      "designated": false,
+      "contactPublic": false,
+      "status": "advisory-fora-mvp",
+      "findings": []
+    },
+    "incidentResponse_art48": {
+      "planExists": false,
+      "prazoANPDConhecido": false,
+      "status": "advisory-fora-mvp",
+      "findings": []
+    },
+    "internationalTransfer_art33_36": {
+      "occurs": false,
+      "status": "N/A (stack 100% local)"
+    },
+    "cookies_Res4_2023": {
+      "bannerImplemented": "N/A (apenas cookie essencial)",
+      "granularConsent": "N/A (cookie essencial dispensado de consentimento — Art. 7º, §4º)",
+      "status": "pass"
+    },
+    "retention_art6_V_art15": {
+      "policyDefined": false,
+      "status": "advisory-fora-mvp (PRD §4)",
+      "findings": []
+    },
+    "ripd_art38": {
+      "exists": false,
+      "required": false,
+      "rationale": "S02 não é feature de alto risco (não há perfilamento, scoring, dado sensível em larga escala, ou criança)"
+    },
+    "sharing_art26_27": {
+      "occurs": false,
+      "status": "N/A (sem integração com terceiros em S02)"
+    }
+  },
+  "blockingFindings": {
+    "critical": 0,
+    "high": 0
+  },
+  "advisoryFindings": {
+    "medium": 2,
+    "low": 1
+  },
+  "findings": [
+    {
+      "id": "LGPD-S02-FIND-001",
+      "severity": "medium",
+      "category": "dado-sensivel-borderline / principio-necessidade",
+      "legalBasis": "Art. 5º, II (definição de dado sensível) + Art. 6º, III (necessidade) + Art. 11, II (consentimento específico)",
+      "title": "dataConversao e dataBatismo são PII borderline-sensível acessíveis a perfis não-pastorais",
+      "file": "prisma/schema.prisma:74-75",
+      "evidence": "dataConversao DateTime? // dataBatismo DateTime? // acessíveis via getMembroById a todos os perfis com assertCanWriteMembers (SECRETARIO, FINANCEIRO, DISCIPULADOR, LIDER_MINISTERIO, ADMIN, PASTOR)",
+      "impact": "Dado que pode revelar convicção religiosa (Art. 5º, II) está acessível a perfis sem função pastoral direta (SECRETARIO, FINANCEIRO). ANPD pode classificar como exposição excessiva — risco baixo (igrejas raramente fiscalizadas), mas é fragilidade formal.",
+      "proposedChange": "Curto prazo: restringir leitura de dataConversao/dataBatismo no MEMBRO_SAFE_SELECT para SECRETARIO/FINANCEIRO (eles só veem nome/tipo/contato/endereço). Médio prazo: avaliar se a finalidade exige dia exato ou se basta mês/ano (anonimização parcial).",
+      "effort": "low (curto prazo) / medium (médio prazo)",
+      "regulatoryRisk": "Baixo. Pode ser classificado como 'exposição excessiva de dado sensível' em fiscalização adversa — Art. 6º, III + Art. 11."
+    },
+    {
+      "id": "LGPD-S02-FIND-002",
+      "severity": "medium",
+      "category": "conformidade-formal / principio-necessidade",
+      "legalBasis": "Art. 6º, III (necessidade) + RAG lgpd-igreja-conect §2.1",
+      "title": "MembroCreateSchema/MembroUpdateSchema precisam de .strict() para gate LGPD técnico",
+      "file": "app/lib/schemas/membros.ts (a ser criado em S02-T01)",
+      "evidence": "app/lib/validators/auth.ts:17-26 define MembroCreateSchema como z.object({...}) SEM .strict(). TDD em app/lib/schemas/membros.test.ts:192-216 espera rejeição em runtime de campos cpf/rg/cnpj — sem .strict(), payload é silenciosamente ignorado.",
+      "impact": "Sem .strict(), os 4 GATE-LGPD tests em membros.test.ts (linhas 192-216, 246-259) falham. TS rejeita em compilação, mas runtime aceita payload com campo extra — dado não persiste, mas a validação de gate não dispara.",
+      "proposedChange": "Adicionar .strict() em ambos os schemas:\n  export const MembroCreateSchema = z.object({...}).strict();\n  export const MembroUpdateSchema = MembroCreateSchema.partial().strict();",
+      "effort": "trivial (1 linha cada)",
+      "regulatoryRisk": "Nenhum direto. Mas bloqueia o CI/teste — o red phase não passa para green."
+    },
+    {
+      "id": "LGPD-S02-FIND-003",
+      "severity": "medium",
+      "category": "responsabilizacao / Art. 6º, X",
+      "legalBasis": "Art. 6º, X (responsabilização e prestação de contas) + RAG lgpd-igreja-conect §2.5",
+      "title": "safeLog precisa ser invocado em createMembro/updateMembro/deleteMembro",
+      "file": "app/lib/members.server.ts (a ser criado em S02-T02)",
+      "evidence": "sprints/S02.json:51-58 lista as funções do service mas não menciona safeLog. RAG lgpd-igreja-conect §2.5 + app/lib/audit.server.ts:11-18 já têm helper pronto. S01 já usa em login/logout.",
+      "impact": "Sem log de criação/edição/exclusão, em caso de incidente ou reclamação do titular, não há como reconstruir quem cadastrou/alterou/excluiu quem. Fere Art. 6º, X.",
+      "proposedChange": "Em app/lib/members.server.ts:\n  import { safeLog } from './audit.server';\n  // createMembro: safeLog({ userId, action: 'create_membro', resource: `membro:${id}`, result: 'ok' })\n  // updateMembro: action 'update_membro'\n  // deleteMembro: action 'delete_membro'\n  NUNCA passar membro.nome/email/telefone — apenas IDs.",
+      "effort": "low (3 chamadas extras)",
+      "regulatoryRisk": "Recomendação formal em caso de auditoria. Pode ser agravado em incidente (ANPD pode citar 'ausência de rastreabilidade' como agravante)."
+    },
+    {
+      "id": "LGPD-S02-FIND-004",
+      "severity": "low",
+      "category": "transparencia-ux",
+      "legalBasis": "Art. 6º, VI (transparência)",
+      "title": "TTL do cookie 'manter conectado' diverge do label (herdado de S01)",
+      "file": "app/components/FormLogin.tsx:213 + app/lib/session.server.ts:27",
+      "evidence": "Label diz '30 dias' mas TTL do cookie é fixo em 7d.",
+      "impact": "Cosmético. Não viola LGPD, apenas UX divergente do informado.",
+      "proposedChange": "Sprint 2+ (YAGNI por ora): ajustar TTL para 30d quando manterConectado=true (com teto absoluto de 30d no absoluteExpiresAt), ou alterar label para 'Manter-me conectado (7 dias)'.",
+      "regulatoryRisk": "Nenhum. Apenas boa-prática de transparência.",
+      "note": "Herdado de LGPD-S01-FIND-001. S02 não muda este status."
+    }
+  ],
+  "stats": {
+    "critical": 0,
+    "high": 0,
+    "medium": 2,
+    "low": 1,
+    "informational": 0
+  },
+  "thresholds": {
+    "maxCritical": 0,
+    "maxHigh": 0,
+    "lgpdStatus": "warning"
+  },
+  "passed": true,
+  "blockers": [],
+  "pendingImplementationS02": [
+    "LGPD-S02-FIND-002: adicionar .strict() em MembroCreateSchema/MembroUpdateSchema (S02-T01)",
+    "LGPD-S02-FIND-003: invocar safeLog em createMembro/updateMembro/deleteMembro (S02-T02)",
+    "MEMBRO_SAFE_SELECT: exportar constante select sem senhaHash (S02-T02) — RN-MEM-02 + AC-16 cross-sprint"
+  ],
+  "foraDoMvP_herdados": [
+    "DEBT-011: SESSION_SECRET (S05)",
+    "DEBT-012: auditoria de leitura Art. 37 (sprint 2+)",
+    "DEBT-013: direitos do titular Art. 18 + DPO Art. 41 (sprint 2+)",
+    "DEBT-incidentes: plano Art. 48 (sprint 2+, sugestão S05)",
+    "DEBT-rate-limit-shared: rate limit in-memory (sprint 2+)"
+  ],
+  "rnMem02_gate": {
+    "description": "RN-MEM-02: schema não tem cpf/rg/cnpj/tituloEleitor/pis/cartaoSus",
+    "commandExecuted": "grep -nE '\\bcpf\\b|\\brg\\b|\\bcnpj\\b|\\btituloEleitor\\b|\\bpis\\b|\\bcartaoSus\\b' prisma/schema.prisma app/lib/schemas/membros.ts 2>/dev/null",
+    "rawGrepExecuted": "grep -E 'cpf|rg|cnpj|tituloEleitor|pis|cartaoSus' prisma/schema.prisma app/lib/schemas/membros.ts (4 matches em 'cargo' — falso-positivo do regex)",
+    "result": "PASS (0 matches reais com word-boundary; 1 hit em comentário '// Sem CPF, RG, dados fiscais (RN-MEM-02)' em validators/auth.ts:24 — prova de conformidade)",
+    "status": "PASS"
+  },
+  "senhaHashEmPayload": {
+    "description": "senhaHash nunca em payload de API /app/membros/:id",
+    "commandExecuted": "grep -rn 'senhaHash' app/lib/members.server.ts app/routes/app/membros.* 2>/dev/null",
+    "result": "N/A (arquivos ainda não implementados)",
+    "tddCoverage": "PASS (membros.test.ts:246-252 espera rejeição de senhaHash em MembroUpdateSchema)",
+    "status": "PASS (preventivo, depende da implementação de S02-T02)"
+  },
+  "safeLogInvocations": {
+    "description": "safeLog registra criação/edição/exclusão de membro",
+    "commandExecuted": "grep -n 'safeLog' app/lib/members.server.ts 2>/dev/null",
+    "result": "N/A (arquivo ainda não implementado)",
+    "expected": "≥ 3 matches (create, update, delete)",
+    "status": "PENDING — LGPD-S02-FIND-003 alerta"
+  },
+  "articles": {
+    "art6_I_finalidade": "pass",
+    "art6_II_adequacao": "pass",
+    "art6_III_necessidade": "pass-com-advisory (LGPD-S02-FIND-002)",
+    "art6_VI_transparencia": "pass-com-advisory (LGPD-S02-FIND-004 low, herdado)",
+    "art6_VII_seguranca": "pass",
+    "art6_VIII_prevencao": "pass",
+    "art6_X_responsabilizacao": "advisory-parcial (LGPD-S02-FIND-003 — safeLog pendente)",
+    "art7_V_execucao_contrato": "pass",
+    "art7_IX_interesse_legitimo": "pass",
+    "art11_dado_sensivel": "advisory-borderline (LGPD-S02-FIND-001)",
+    "art14_criancas": "N/A",
+    "art18_direitos_titular": "advisory-fora-mvp (PRD §4, DEBT-013)",
+    "art33_36_transferencia": "N/A",
+    "art37_auditoria_leitura": "advisory-fora-mvp (PRD §4, DEBT-012)",
+    "art38_ripd": "N/A",
+    "art41_dpo": "advisory-fora-mvp (PRD §4, DEBT-013)",
+    "art46_seguranca": "pass",
+    "art48_incidentes": "advisory-fora-mvp",
+    "art49_eliminacao": "pass"
+  },
+  "evidenceIndex": {
+    "rn_mem_02_prisma": "prisma/schema.prisma:64-109 (model Membro — sem cpf/rg/cnpj/tituloEleitor/pis/cartaoSus)",
+    "rn_mem_02_comentario": "app/lib/validators/auth.ts:24 (// Sem CPF, RG, dados fiscais (RN-MEM-02))",
+    "rn_mem_02_tdd_gate": "app/lib/schemas/membros.test.ts:192-216 (4 GATE-LGPD tests rejeitam cpf/rg/cnpj)",
+    "rn_mem_02_tdd_senhash": "app/lib/schemas/membros.test.ts:246-252 (GATE-LGPD rejeita senhaHash em update)",
+    "bcrypt_cost_10": "app/lib/auth.server.ts:9",
+    "cookie_httpOnly_samesite_secure": "app/lib/session.server.ts:22-29 (herdado S01)",
+    "safeLog_allowlist_6_campos": "app/lib/audit.server.ts:11-18",
+    "verifyCredentials_subset": "app/lib/auth.server.ts:96-103 (select: { id, nome, cargo, senhaHash } + return sem senhaHash)",
+    "rbac_assertCanWriteMembers": "app/lib/rbac.server.ts:58-62 (RN-MEM-01)",
+    "rbac_assertCanSeeFinancials": "app/lib/rbac.server.ts:45-49 (RN-MEM-03, prep para S03)",
+    "delete_com_discípulos_bloqueado": "S02.json:57 (RN-MEM-04 — BusinessRuleError 409)",
+    "onDelete_Restrict_discipulado": "prisma/schema.prisma:88 (Restrict impede exclusão acidental com discípulos)",
+    "cascade_session_membro": "prisma/schema.prisma:129 (Cascade garante logout ao excluir membro)",
+    "zero_CDN_externo": "S01 já auditou (font stack do sistema, zero dependência externa)",
+    "zero_pii_sensivel_no_schema": "grep -nE '\\bcpf\\b|\\brg\\b|\\bcnpj\\b|\\btituloEleitor\\b|\\bpis\\b|\\bcartaoSus\\b' prisma/schema.prisma → 0 matches reais"
+  },
+  "parecerPath": ".harness/lgpd/S02-parecer.md",
+  "summary": "S02 (Membros: Listagem + CRUD básico) — parecer PREVENTIVO. Conformidade LGPD verificada contra o schema Prisma (S00), TDD red phase (membros.test.ts, 272 linhas, 4 GATE-LGPD tests), e RAG lgpd-igreja-conect (S00). Blocking findings: 0. Advisory: 2 medium + 1 low. RN-MEM-02 PASS (gate bloqueante: schema sem CPF/RG/CNPJ/tituloEleitor/pis/cartaoSus, evidenciado por comentário '// Sem CPF, RG, dados fiscais (RN-MEM-02)' em validators/auth.ts:24 e TDD em membros.test.ts:192-216). senhaHash em payload: PASS preventivo (TDD em membros.test.ts:246-252 rejeita em update; MEMBRO_SAFE_SELECT a ser exportada em S02-T02). Conformidade por artigo: art. 6 (pass com 2 advisories), art. 11 (advisory-borderline em dataConversao/dataBatismo), art. 18 (advisory-fora-mvp), art. 37 (advisory-fora-mvp), art. 41 (advisory-fora-mvp), art. 46 (pass), art. 49 (pass). Pendências de implementação na própria S02: (1) adicionar .strict() em MembroCreateSchema/MembroUpdateSchema; (2) invocar safeLog em createMembro/updateMembro/deleteMembro; (3) exportar MEMBRO_SAFE_SELECT. S02 pode prosseguir. Top 3 recomendações endereçam essas 3 pendências. RAG candidate: pattern:lgpd-tdd-gate-membro-strict-2026.",
+  "nextSteps": [
+    "backend (S02-T01): ao criar app/lib/schemas/membros.ts, adicionar .strict() em ambos os schemas (esforço: 2 linhas) — LGPD-S02-FIND-002",
+    "backend (S02-T02): ao criar app/lib/members.server.ts, exportar MEMBRO_SAFE_SELECT (constante com prisma.membro.fields excluindo senhaHash) e usar em todas as queries que viram payload",
+    "backend (S02-T02): invocar safeLog({ userId, action, resource, result }) em createMembro/updateMembro/deleteMembro — LGPD-S02-FIND-003",
+    "backend (S02-T12): E2E chain 7 (membros-crud.spec.ts:327) já cobre grep em payload — manter",
+    "S03+: reavaliar LGPD-S02-FIND-001 (dataConversao/dataBatismo borderline-sensível) — considerar restrição por perfil ou anonimização parcial",
+    "S05: gerar SESSION_SECRET real (DEBT-011)",
+    "Sprint 2+: Art. 18 (endpoints /app/privacidade/**), Art. 37 (auditoria de leitura), Art. 41 (DPO), Art. 48 (plano de incidente)"
+  ],
+  "ragCandidate": {
+    "title": "pattern:lgpd-tdd-gate-membro-strict-2026",
+    "rationale": "Padrão de TDD-first + .strict() + GATE-LGPD tests que o Igreja Conect está validando para garantir RN-MEM-02 (e regras similares) em tempo de compilação + runtime. Reutilizável em qualquer CRUD de entidade com PII (ex: Paciente, Aluno, Cliente).",
+    "components": [
+      "Schema Zod criado com .strict() (rejeita campos extras em runtime)",
+      "TDD cobre happy path + gate tests que confirmam rejeição de campos sensíveis (cpf/rg/cnpj/senhaHash)",
+      "Comentário '// Sem CPF, RG, dados fiscais (RN-MEM-02)' no schema explicita a decisão",
+      "MEMBRO_SAFE_SELECT exportada do service (não usar prisma.membro.findMany() cru em rotas)",
+      "safeLog invocado em mutações (create/update/delete) com userId + action + resource + result (nunca PII)",
+      "RBAC fina com 404 (não 403) para evitar enumeração"
+    ],
+    "ownerSugerido": "rag-curator",
+    "sprintSugerida": "2+"
+  },
+  "advisory": [
+    "LGPD-S02-FIND-001, 002, 003 são correções importantes mas não bloqueiam S02. Devem ser endereçadas durante a implementação de S02-T01 e S02-T02.",
+    "S01 deixou 5 débitos documentados (DEBT-011, 012, 013, plano incidente, rate-limit compartilhado). S02 não os endereça — S05 e sprint 2+ devem."
+  ]
+}

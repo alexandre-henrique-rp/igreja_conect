@@ -1,0 +1,719 @@
+{
+  "$schema": "./E2E-CHAIN-TEMPLATE.json",
+  "sprint": "S02",
+  "name": "Membros: Listagem + CRUD básico + RBAC fina",
+  "generatedAt": "2026-06-13T12:10:00Z",
+  "generatedBy": "tester-agent",
+  "purpose": "Validar end-to-end o CRUD de membros (criar, listar, editar, excluir) e a RBAC fina (DISCIPULADOR só vê/editar seus discípulos) via Playwright. Cobertura das 7 chains declaradas em sprints/S02.json S02-T12 + cross-sprint.json flows CF-02/CF-06.",
+  "userStoriesCovered": ["US-MEM-001 (subset: criação)", "US-MEM-003"],
+  "specRef": "SPEC §6.0, §6.1, §6.5; PRD UC-02 (listar membros); PRD §11.2 #2 (RBAC fina)",
+  "prereqs": {
+    "seededAdmin": {
+      "email": "admin@igreja.local",
+      "senha": "admin123",
+      "note": "Criado por prisma/seed.ts (S00-T07). Idempotente."
+    },
+    "additionalSeedNeeded": {
+      "id": "SEED-S02",
+      "title": "Seed adicional: criar 1 DISCIPULADOR + 2 discípulos + 1 membro sem discipulador",
+      "dependsOn": "S02-T01..T11 (S02-T12 não pode ser executada antes do backend entregar os services)",
+      "note": "Sem este seed, Chain 4 (RBAC fina DISCIPULADOR vê apenas seus discípulos) e Chain 5 (DISCIPULADOR 404 em membro de outro) não podem ser validadas."
+    },
+    "devServer": "pnpm dev sobe automaticamente via playwright.config.ts → webServer (http://localhost:5173).",
+    "rateLimitStrategy": "Cada chain usa x-forwarded-for único (IP = 10.0.10.<chainId>) para isolar o bucket in-memory de login (não é o S02, mas /login passa pelo mesmo rate-limit)."
+  },
+  "chains": [
+    {
+      "id": "E2E-MEM-CHAIN-1",
+      "name": "CRUD básico: login admin → listar (vazio) → criar visitante → ver na lista",
+      "type": "happy-path",
+      "step": 1,
+      "tags": ["membros", "crud", "create", "happy-path"],
+      "specs": ["AC-13"],
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.10.1",
+      "dependsOn": "S02-T01..T11 (rotas /app/membros, /app/membros/novo, /app/membros/:id registradas + FormMembro implementado)",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login_admin",
+          "action": "submit",
+          "path": "/login",
+          "method": "POST",
+          "payload": { "email": "admin@igreja.local", "senha": "admin123" },
+          "headers": { "x-forwarded-for": "10.0.10.1" },
+          "expectedStatus": 302,
+          "expectedLocation": "/app",
+          "assertions": [
+            { "type": "status", "expected": 302 },
+            { "type": "cookie", "name": "__session", "httpOnly": true, "sameSite": "Lax" }
+          ],
+          "records": { "cookieValue": "response.cookies.__session" }
+        },
+        {
+          "step": 2,
+          "name": "listar_membros_vazio",
+          "action": "navigate",
+          "path": "/app/membros",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "status", "expected": 200 },
+            { "type": "visible", "selector": "[data-testid='link-novo-membro']" },
+            { "type": "text_contains", "value": "Nenhum membro" }
+          ]
+        },
+        {
+          "step": 3,
+          "name": "abrir_form_novo_membro",
+          "action": "navigate",
+          "path": "/app/membros/novo",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "status", "expected": 200 },
+            { "type": "visible", "selector": "form[data-testid='form-membro']" },
+            { "type": "visible", "selector": "input[name='nome']" },
+            { "type": "visible", "selector": "input[name='email']" },
+            { "type": "visible", "selector": "select[name='tipo']" }
+          ]
+        },
+        {
+          "step": 4,
+          "name": "submeter_form_membro_visitante",
+          "action": "submit",
+          "path": "/app/membros/novo",
+          "method": "POST",
+          "useCookie": true,
+          "payload": {
+            "nome": "Maria Visitante Teste",
+            "tipo": "VISITANTE",
+            "email": "maria.visitante+e2e@igreja.local",
+            "telefone": "(11) 98765-4321"
+          },
+          "expectedStatus": 302,
+          "expectedLocation": "/app/membros/:id",
+          "records": { "newMembroId": "response.location.id" },
+          "assertions": [
+            { "type": "status", "expected": 302 },
+            { "type": "location_matches", "pattern": "^/app/membros/[0-9a-f-]{36}$" }
+          ]
+        },
+        {
+          "step": 5,
+          "name": "verificar_pagina_detalhe",
+          "action": "navigate",
+          "path": "/app/membros/{context.CHAIN-1.newMembroId}",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "status", "expected": 200 },
+            { "type": "text_contains", "value": "Maria Visitante Teste" },
+            { "type": "text_contains", "value": "VISITANTE" }
+          ]
+        },
+        {
+          "step": 6,
+          "name": "voltar_lista_e_ver_membro",
+          "action": "navigate",
+          "path": "/app/membros",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "status", "expected": 200 },
+            { "type": "text_contains", "value": "Maria Visitante Teste" }
+          ]
+        }
+      ],
+      "cleanup": {
+        "always": true,
+        "steps": [
+          {
+            "step": "cleanup_excluir_membro",
+            "name": "excluir_membro_criado_pelo_teste",
+            "method": "POST",
+            "path": "/app/membros/{context.CHAIN-1.newMembroId}?intent=delete",
+            "useCookie": true,
+            "expectedStatus": 302,
+            "expectedLocation": "/app/membros",
+            "note": "Cleanup atômico: garante que o membro criado não vaza para chains seguintes. Idempotente — se o teste falhar antes, o registro fica no DB e pode ser limpo manualmente."
+          },
+          {
+            "step": "cleanup_logout",
+            "method": "POST",
+            "path": "/logout",
+            "useCookie": true,
+            "expectedStatus": 302
+          }
+        ]
+      }
+    },
+    {
+      "id": "E2E-MEM-CHAIN-2",
+      "name": "Editar membro: form pré-preenchido → altera nome → vê atualizado",
+      "type": "happy-path",
+      "step": 2,
+      "tags": ["membros", "crud", "update"],
+      "dependsOn": "S02-T01..T11 (rota /app/membros/:id/editar implementada com FormMembro isEdit=true)",
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.10.2",
+      "setup": "Criar membro via POST /app/membros/novo antes da chain (id salvo em context.CHAIN-2.membroId)",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login_admin",
+          "method": "POST",
+          "path": "/login",
+          "payload": { "email": "admin@igreja.local", "senha": "admin123" },
+          "headers": { "x-forwarded-for": "10.0.10.2" },
+          "expectedStatus": 302,
+          "records": { "cookieValue": "response.cookies.__session" }
+        },
+        {
+          "step": 2,
+          "name": "setup_criar_membro",
+          "method": "POST",
+          "path": "/app/membros/novo",
+          "useCookie": true,
+          "payload": {
+            "nome": "João Editar Original",
+            "tipo": "CONGREGADO",
+            "email": "joao.editar+e2e@igreja.local"
+          },
+          "expectedStatus": 302,
+          "records": { "membroId": "response.location.id" }
+        },
+        {
+          "step": 3,
+          "name": "abrir_form_editar",
+          "action": "navigate",
+          "path": "/app/membros/{context.CHAIN-2.membroId}/editar",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "status", "expected": 200 },
+            { "type": "input_value", "selector": "input[name='nome']", "expected": "João Editar Original" },
+            { "type": "input_value", "selector": "input[name='email']", "expected": "joao.editar+e2e@igreja.local" }
+          ]
+        },
+        {
+          "step": 4,
+          "name": "submeter_edicao",
+          "method": "POST",
+          "path": "/app/membros/{context.CHAIN-2.membroId}/editar",
+          "useCookie": true,
+          "payload": {
+            "nome": "João Editar ATUALIZADO",
+            "tipo": "MEMBRO_ATIVO",
+            "email": "joao.atualizado+e2e@igreja.local"
+          },
+          "expectedStatus": 302,
+          "expectedLocation": "/app/membros/{context.CHAIN-2.membroId}",
+          "assertions": [
+            { "type": "status", "expected": 302 }
+          ]
+        },
+        {
+          "step": 5,
+          "name": "verificar_atualizacao",
+          "action": "navigate",
+          "path": "/app/membros/{context.CHAIN-2.membroId}",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "status", "expected": 200 },
+            { "type": "text_contains", "value": "João Editar ATUALIZADO" },
+            { "type": "text_contains", "value": "MEMBRO_ATIVO" }
+          ]
+        }
+      ],
+      "cleanup": {
+        "always": true,
+        "steps": [
+          {
+            "step": "cleanup_excluir_membro",
+            "method": "POST",
+            "path": "/app/membros/{context.CHAIN-2.membroId}?intent=delete",
+            "useCookie": true,
+            "expectedStatus": 302
+          },
+          {
+            "step": "cleanup_logout",
+            "method": "POST",
+            "path": "/logout",
+            "useCookie": true,
+            "expectedStatus": 302
+          }
+        ]
+      }
+    },
+    {
+      "id": "E2E-MEM-CHAIN-3",
+      "name": "Excluir membro (sem discípulos): confirma → 302 → some da lista",
+      "type": "happy-path",
+      "step": 3,
+      "tags": ["membros", "crud", "delete"],
+      "dependsOn": "S02-T01..T11 (action intent=delete implementada em /app/membros/:id)",
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.10.3",
+      "setup": "Criar membro via POST /app/membros/novo antes da chain",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login_admin",
+          "method": "POST",
+          "path": "/login",
+          "payload": { "email": "admin@igreja.local", "senha": "admin123" },
+          "headers": { "x-forwarded-for": "10.0.10.3" },
+          "expectedStatus": 302,
+          "records": { "cookieValue": "response.cookies.__session" }
+        },
+        {
+          "step": 2,
+          "name": "setup_criar_membro_para_excluir",
+          "method": "POST",
+          "path": "/app/membros/novo",
+          "useCookie": true,
+          "payload": {
+            "nome": "Membro Para Excluir",
+            "tipo": "VISITANTE",
+            "email": "excluir+e2e@igreja.local"
+          },
+          "expectedStatus": 302,
+          "records": { "membroId": "response.location.id" }
+        },
+        {
+          "step": 3,
+          "name": "abrir_pagina_detalhe",
+          "action": "navigate",
+          "path": "/app/membros/{context.CHAIN-3.membroId}",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "visible", "selector": "[data-testid='btn-excluir']" }
+          ]
+        },
+        {
+          "step": 4,
+          "name": "submeter_delete",
+          "method": "POST",
+          "path": "/app/membros/{context.CHAIN-3.membroId}?intent=delete",
+          "useCookie": true,
+          "expectedStatus": 302,
+          "expectedLocation": "/app/membros",
+          "assertions": [
+            { "type": "status", "expected": 302 }
+          ]
+        },
+        {
+          "step": 5,
+          "name": "verificar_membro_nao_existe",
+          "action": "navigate",
+          "path": "/app/membros/{context.CHAIN-3.membroId}",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 404,
+          "assertions": [
+            { "type": "status", "expected": 404 }
+          ]
+        },
+        {
+          "step": 6,
+          "name": "verificar_lista_vazia",
+          "action": "navigate",
+          "path": "/app/membros",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "text_not_contains", "value": "Membro Para Excluir" }
+          ]
+        }
+      ],
+      "cleanup": {
+        "always": true,
+        "steps": [
+          {
+            "step": "cleanup_seguranca_delete_retry",
+            "note": "Idempotente: se step 4 já deletou, este delete retorna 404 (ou 409). Não falha o cleanup.",
+            "method": "POST",
+            "path": "/app/membros/{context.CHAIN-3.membroId}?intent=delete",
+            "useCookie": true,
+            "expectedStatusAny": [302, 404, 409]
+          },
+          {
+            "step": "cleanup_logout",
+            "method": "POST",
+            "path": "/logout",
+            "useCookie": true,
+            "expectedStatus": 302
+          }
+        ]
+      }
+    },
+    {
+      "id": "E2E-MEM-CHAIN-4",
+      "name": "RBAC fina: login DISCIPULADOR → /app/membros mostra APENAS seus discípulos",
+      "type": "rbac",
+      "step": 4,
+      "tags": ["membros", "rbac", "rbac-fina", "discipulador"],
+      "specs": ["AC-14"],
+      "dependsOn": "S02-T01..T11 + SEED-S02 (1 DISCIPULADOR + 2 discípulos + 1 membro sem discipulador)",
+      "dataSource": "seeded",
+      "isolatedIp": "10.0.10.4",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login_discipulador",
+          "method": "POST",
+          "path": "/login",
+          "payload": { "email": "discipulador+e2e@igreja.local", "senha": "disc12345" },
+          "headers": { "x-forwarded-for": "10.0.10.4" },
+          "expectedStatus": 302,
+          "records": { "cookieValue": "response.cookies.__session" }
+        },
+        {
+          "step": 2,
+          "name": "listar_membros_como_discipulador",
+          "action": "navigate",
+          "path": "/app/membros",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "assertions": [
+            { "type": "status", "expected": 200 },
+            { "type": "text_contains", "value": "Discípulo A do Disc" },
+            { "type": "text_contains", "value": "Discípulo B do Disc" },
+            { "type": "text_not_contains", "value": "Membro Sem Discipulador" },
+            { "type": "text_not_contains", "value": "Outro Discípulo Não Meu" }
+          ]
+        }
+      ],
+      "cleanup": {
+        "always": true,
+        "steps": [
+          {
+            "step": "cleanup_logout",
+            "method": "POST",
+            "path": "/logout",
+            "useCookie": true,
+            "expectedStatus": 302
+          }
+        ]
+      }
+    },
+    {
+      "id": "E2E-MEM-CHAIN-5",
+      "name": "RBAC 404: DISCIPULADOR tenta GET /app/membros/<outroId> direto → 404 (não 403)",
+      "type": "rbac",
+      "step": 5,
+      "tags": ["membros", "rbac", "rbac-fina", "404-nao-403"],
+      "specs": ["AC-14 (variante 404)"],
+      "dependsOn": "S02-T01..T11 + SEED-S02 (membro 'outro' existe no DB, não vinculado ao DISCIPULADOR)",
+      "dataSource": "seeded",
+      "isolatedIp": "10.0.10.5",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login_discipulador",
+          "method": "POST",
+          "path": "/login",
+          "payload": { "email": "discipulador+e2e@igreja.local", "senha": "disc12345" },
+          "headers": { "x-forwarded-for": "10.0.10.5" },
+          "expectedStatus": 302,
+          "records": { "cookieValue": "response.cookies.__session" }
+        },
+        {
+          "step": 2,
+          "name": "tentar_acessar_membro_de_outro",
+          "action": "navigate",
+          "path": "/app/membros/{context.SEED.membroForaDoEscopoId}",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 404,
+          "assertions": [
+            { "type": "status", "expected": 404, "note": "RN: 404 (não 403) para não vazar existência do registro." }
+          ]
+        }
+      ],
+      "cleanup": {
+        "always": true,
+        "steps": [
+          {
+            "step": "cleanup_logout",
+            "method": "POST",
+            "path": "/logout",
+            "useCookie": true,
+            "expectedStatus": 302
+          }
+        ]
+      }
+    },
+    {
+      "id": "E2E-MEM-CHAIN-6",
+      "name": "Validação: criar com email malformado → 422 com fieldError no campo",
+      "type": "validation",
+      "step": 6,
+      "tags": ["membros", "validation", "zod"],
+      "dependsOn": "S02-T01..T11 (MembroCreateSchema com z.string().email() implementado + action retorna 422 com fieldErrors)",
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.10.6",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login_admin",
+          "method": "POST",
+          "path": "/login",
+          "payload": { "email": "admin@igreja.local", "senha": "admin123" },
+          "headers": { "x-forwarded-for": "10.0.10.6" },
+          "expectedStatus": 302,
+          "records": { "cookieValue": "response.cookies.__session" }
+        },
+        {
+          "step": 2,
+          "name": "abrir_form_novo_membro",
+          "action": "navigate",
+          "path": "/app/membros/novo",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200
+        },
+        {
+          "step": 3,
+          "name": "submeter_email_malformado",
+          "method": "POST",
+          "path": "/app/membros/novo",
+          "useCookie": true,
+          "payload": {
+            "nome": "Teste Email Invalido",
+            "tipo": "VISITANTE",
+            "email": "isto-nao-e-um-email-valido"
+          },
+          "expectedStatus": 422,
+          "assertions": [
+            { "type": "status", "expected": 422 },
+            { "type": "body_contains", "value": "fieldErrors" },
+            { "type": "body_contains", "value": "email" }
+          ]
+        }
+      ],
+      "cleanup": {
+        "always": true,
+        "steps": [
+          {
+            "step": "cleanup_logout",
+            "method": "POST",
+            "path": "/logout",
+            "useCookie": true,
+            "expectedStatus": 302
+          }
+        ]
+      }
+    },
+    {
+      "id": "E2E-MEM-CHAIN-7",
+      "name": "LGPD: payload de /app/membros/:id NÃO contém 'senhaHash' (defense in depth)",
+      "type": "privacy",
+      "step": 7,
+      "tags": ["membros", "privacy", "lgpd", "mem-safe-select"],
+      "specs": ["AC-16"],
+      "dependsOn": "S02-T01..T11 (MEMBRO_SAFE_SELECT exportado e usado em getMembroById/listMembros)",
+      "dataSource": "fresh",
+      "isolatedIp": "10.0.10.7",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login_admin",
+          "method": "POST",
+          "path": "/login",
+          "payload": { "email": "admin@igreja.local", "senha": "admin123" },
+          "headers": { "x-forwarded-for": "10.0.10.7" },
+          "expectedStatus": 302,
+          "records": { "cookieValue": "response.cookies.__session" }
+        },
+        {
+          "step": 2,
+          "name": "setup_criar_membro_com_hash_distintivo",
+          "method": "POST",
+          "path": "/app/membros/novo",
+          "useCookie": true,
+          "payload": {
+            "nome": "LGPD Privacy Test",
+            "tipo": "VISITANTE",
+            "email": "lgpd+e2e@igreja.local"
+          },
+          "expectedStatus": 302,
+          "records": { "membroId": "response.location.id" }
+        },
+        {
+          "step": 3,
+          "name": "acessar_pagina_detalhe",
+          "action": "navigate",
+          "path": "/app/membros/{context.CHAIN-7.membroId}",
+          "method": "GET",
+          "useCookie": true,
+          "expectedStatus": 200,
+          "records": { "pageHtml": "body" },
+          "assertions": [
+            { "type": "status", "expected": 200 },
+            {
+              "type": "body_not_contains",
+              "value": "senhaHash",
+              "note": "O HTML renderizado não pode conter a string 'senhaHash' — MEMBRO_SAFE_SELECT deve excluir este campo."
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "name": "auditar_source_members_server_usa_safe_select",
+          "action": "grepSource",
+          "path": "app/lib/members.server.ts",
+          "assertions": [
+            {
+              "type": "source_contains",
+              "value": "MEMBRO_SAFE_SELECT",
+              "note": "Confirma que o service de fato usa o safe select (não select *)."
+            },
+            {
+              "type": "source_not_contains",
+              "value": "senhaHash: true",
+              "note": "Confirma que select não inclui explicitamente senhaHash."
+            }
+          ]
+        },
+        {
+          "step": 5,
+          "name": "auditar_payload_loader_serializado",
+          "note": "Captura o __remixContext (RR7) ou __staticRouterHydrationData para verificar o JSON serializado que o cliente recebe.",
+          "assertions": [
+            {
+              "type": "body_not_contains",
+              "value": "senhaHash",
+              "in": "__remixContext",
+              "note": "O loader data serializado em __remuxContext não pode conter senhaHash."
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "always": true,
+        "steps": [
+          {
+            "step": "cleanup_excluir_membro",
+            "method": "POST",
+            "path": "/app/membros/{context.CHAIN-7.membroId}?intent=delete",
+            "useCookie": true,
+            "expectedStatus": 302
+          },
+          {
+            "step": "cleanup_logout",
+            "method": "POST",
+            "path": "/logout",
+            "useCookie": true,
+            "expectedStatus": 302
+          }
+        ]
+      }
+    }
+  ],
+  "stats": {
+    "chainsPlanned": 7,
+    "chainsRun": 0,
+    "chainsPassing": 0,
+    "chainsFailing": 0,
+    "coverageRequired": 80,
+    "coverageCurrent": null,
+    "coverageByModule": null,
+    "vitestTestsRun": 199,
+    "vitestTestsPassing": 199,
+    "vitestTestsFailing": 0,
+    "vitestTestFiles": 27,
+    "typecheck": "pass",
+    "duration": null,
+    "blockedReason": "S02-T12 depends on S02-T01..T11 (backend services + frontend routes + components). Files expected: app/lib/schemas/membros.ts, app/lib/members.server.ts, app/components/{TabelaMembros,CardMembro,FormMembro,FiltrosMembros,Pagination,PageHeader,Select,FormField,Section,Breadcrumb,Sidebar,TopbarAutenticada}.tsx, app/routes/app/membros._index.tsx, app/routes/app/membros.novo.tsx, app/routes/app/membros.$id.tsx, app/routes/app/membros.$id.editar.tsx, app/routes/app/_index.tsx (atualizar), app/routes.ts (atualizar rotas).",
+    "blockedEvidence": {
+      "missingFiles": [
+        "app/lib/schemas/membros.ts (S02-T01)",
+        "app/lib/members.server.ts (S02-T02)",
+        "app/components/TabelaMembros.tsx (S02-T03)",
+        "app/components/CardMembro.tsx (S02-T03)",
+        "app/components/FormMembro.tsx (S02-T05)",
+        "app/components/FiltrosMembros.tsx (S02-T03)",
+        "app/components/Pagination.tsx (S02-T03)",
+        "app/components/PageHeader.tsx (S02-T03)",
+        "app/components/Select.tsx (S02-T03)",
+        "app/components/FormField.tsx (S02-T03)",
+        "app/components/Section.tsx (S02-T05)",
+        "app/components/Breadcrumb.tsx (S02-T03)",
+        "app/components/Sidebar.tsx (S02-T09)",
+        "app/components/TopbarAutenticada.tsx (S02-T09)",
+        "app/routes/app/membros._index.tsx (S02-T04)",
+        "app/routes/app/membros.novo.tsx (S02-T06)",
+        "app/routes/app/membros.$id.tsx (S02-T07)",
+        "app/routes/app/membros.$id.editar.tsx (S02-T08)",
+        "app/routes.ts (S02-T11 — adicionar rotas /app/membros/**)"
+      ],
+      "verificationMethod": "find /home/kingdev/Documentos/igreja_conect/app -type f -name '*.ts*' | grep -E '(membro|Membro|MEMBRO)' | grep -v 'migrations' | grep -v 'audit.server.test' — retornou apenas app/lib/schemas/auth.ts e arquivos não relacionados. Nenhum arquivo S02 existe no working tree."
+    }
+  },
+  "execution": {
+    "framework": "playwright",
+    "specFile": "e2e/membros-crud.spec.ts",
+    "config": "playwright.config.ts",
+    "browser": "chromium",
+    "baseURL": "http://127.0.0.1:5173",
+    "cleanupStrategy": "try/finally em cada test() — steps de DELETE/logout rodam mesmo em fail.",
+    "isolationStrategy": "Cada chain usa playwright.request.newContext({ baseURL, extraHTTPHeaders: { 'x-forwarded-for': '10.0.10.<chainId>' } }) para isolar buckets do rate-limit in-memory e cookies.",
+    "chainIpMap": {
+      "E2E-MEM-CHAIN-1": "10.0.10.1",
+      "E2E-MEM-CHAIN-2": "10.0.10.2",
+      "E2E-MEM-CHAIN-3": "10.0.10.3",
+      "E2E-MEM-CHAIN-4": "10.0.10.4",
+      "E2E-MEM-CHAIN-5": "10.0.10.5",
+      "E2E-MEM-CHAIN-6": "10.0.10.6",
+      "E2E-MEM-CHAIN-7": "10.0.10.7"
+    }
+  },
+  "knownLimitations": [
+    {
+      "id": "LIM-S02-001",
+      "title": "S02-T01..T11 não foram entregues antes de S02-T12 (sprint fan-out fora de ordem)",
+      "description": "O fan-out de S02 não entregou os deliverables do backend (members.server, schemas/membros) e frontend (rotas, componentes) antes do tester ser invocado. S02-T12 tem dependsOn=['S02-T11'] explícito no sprints/S02.json, e o estado atual do working tree mostra que nenhum arquivo da S02 foi criado (ver blockedEvidence).",
+      "severity": "blocker",
+      "fix": "Orchestrator deve disparar fan-out de S02 (backend + frontend + security + lgpd + code-reviewer) ANTES de invocar tester. Alternativa: se tester foi invocado prematuramente, abortar S02-T12 e re-agendar após fan-out."
+    },
+    {
+      "id": "LIM-S02-002",
+      "title": "playwright.config.ts não pôde ser editado",
+      "description": "A task permitia editar `playwright.config.ts`, mas o hook `path-boundary` do opencode bloqueou a edição em S01 (LIM-003 do S01). O mesmo problema persiste. Mantemos a config original (apontando para localhost:5173) e usamos `baseURL: 'http://127.0.0.1:5173'` em cada `newContext` do spec.",
+      "severity": "low",
+      "fix": "Orchestrator pode liberar a edição do config (adicionar `globalSetup`, `webServer` redirecionado para /tmp/dev-e2e.log, `use.baseURL` para 127.0.0.1)."
+    },
+    {
+      "id": "LIM-S02-003",
+      "title": "Seed de DISCIPULADOR + discípulos não existe",
+      "description": "Para Chains 4 e 5 (RBAC fina), precisamos de 1 DISCIPULADOR + 2 discípulos + 1 membro sem discipulador. O prisma/seed.ts (S00-T07) só cria o ADMIN. Será necessário estender o seed em SEED-S02.",
+      "severity": "blocker",
+      "fix": "Backend agent adiciona script prisma/seed-s02.ts (idempotente, não conflita com S00) que cria os 3 membros extras."
+    }
+  ],
+  "links": {
+    "sprintPlan": "sprints/S02.json",
+    "sprintTask": "S02-T12",
+    "specRef": "SPEC §6.0, §6.1, §6.5",
+    "membersServer": "app/lib/members.server.ts (NÃO EXISTE — S02-T02)",
+    "membrosSchema": "app/lib/schemas/membros.ts (NÃO EXISTE — S02-T01)",
+    "rotaLista": "app/routes/app/membros._index.tsx (NÃO EXISTE — S02-T04)",
+    "rotaNovo": "app/routes/app/membros.novo.tsx (NÃO EXISTE — S02-T06)",
+    "rotaDetalhe": "app/routes/app/membros.$id.tsx (NÃO EXISTE — S02-T07)",
+    "rotaEditar": "app/routes/app/membros.$id.editar.tsx (NÃO EXISTE — S02-T08)",
+    "s01Pattern": "e2e/auth.spec.ts (template de 902 linhas — base para o spec S02)"
+  }
+}

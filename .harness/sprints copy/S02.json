@@ -1,0 +1,345 @@
+{
+  "id": "S02",
+  "name": "Membros: Listagem + CRUD básico",
+  "goal": "Entregar CRUD completo de membros (listar com filtros, criar, detalhar, editar, excluir) com RBAC fina — habilitando US-MEM-003 e parte de US-MEM-001 (criação).",
+  "estimatedDays": 2,
+  "dependsOn": ["S01"],
+  "userStories": ["US-MEM-001", "US-MEM-003"],
+  "tasks": [
+    {
+      "id": "S02-T01",
+      "title": "Criar schemas Zod em `app/lib/schemas/membros.ts` (MembroCreateSchema, MembroUpdateSchema)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S00-T14"],
+      "tdd": {
+        "testFirst": "MembroCreateSchema aceita input válido; rejeita email malformado, CEP inválido, dataBatismo < dataConversao; rejeita campo cpf (TS error)",
+        "testPath": "app/lib/schemas/membros.test.ts",
+        "acceptance": "Cobertura de todos os campos + cross-field validation (refine dataBatismo >= dataConversao)"
+      },
+      "files": {
+        "create": ["app/lib/schemas/membros.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "MembroCreateSchema: nome (min 2, max 120), tipo (enum VISITANTE|CONGREGADO|MEMBRO_ATIVO, default VISITANTE), email (optional, email format), telefone (regex BR), dataConversao/dataBatismo (z.coerce.date, optional), logradouro/numero/bairro/cidade/estado/cep (todos optional, cep com regex)",
+        "Refine: `dataBatismo >= dataConversao` se ambos preenchidos, senão OK",
+        "MembroUpdateSchema: partial() de MembroCreateSchema, exceto senhaHash (não atualizável por aqui)",
+        "SEM campo cpf, rg, cnpj (RN-MEM-02) — verificável via grep",
+        "Mensagens em PT-BR (ex: 'E-mail inválido. Verifique o formato.', 'CEP inválido. Use o formato 00000-000.')",
+        "Exporta `MembroCreateInput` e `MembroUpdateInput` (z.infer)"
+      ],
+      "rags": ["lgpd-igreja-conect"]
+    },
+    {
+      "id": "S02-T02",
+      "title": "Criar `app/lib/members.server.ts` (service) — listMembros, getMembroById, createMembro, updateMembro, deleteMembro",
+      "type": "backend",
+      "estimatedHours": 6,
+      "owner": "backend",
+      "dependsOn": ["S02-T01", "S00-T01", "S00-T05", "S00-T10"],
+      "tdd": {
+        "testFirst": "listMembros com filtro tipo+texto retorna resultado correto; getMembroById respeita escopo; createMembro rejeita email duplicado via P2002",
+        "testPath": "app/lib/members.server.test.ts (integration)",
+        "acceptance": "Cobertura 100% dos branches de RBAC fina + criação atômica (visitante + alerta em S04 — S02 só testa o membro)"
+      },
+      "files": {
+        "create": ["app/lib/members.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Constante `MEMBRO_SAFE_SELECT` (sem senhaHash) — exportada",
+        "`listMembros(filter, user)` — RBAC fina: DISCIPULADOR força `discipuladorId = user.id`; normaliza `q` (trim+slice+normalize acentos); paginação 25/pág",
+        "`getMembroById(id, user)` — DISCIPULADOR lança 404 (não 403, não vaza existência); outros retornam ou 404",
+        "`createMembro(input, user)` — assertCanWriteMembers; captura P2002 → EmailDuplicadoError; **NÃO cria alerta nesta sprint (S04 cuida)**",
+        "`updateMembro(id, input, user)` — assertCanWriteMembers; getMembroById antes (escopo); update parcial",
+        "`deleteMembro(id, user)` — só ADMIN/PASTOR; se tem discípulos vinculados, lança BusinessRuleError 409 (RN-MEM-04)",
+        "Todas as funções com JSDoc completo (`@param`, `@returns`, `@throws`, `@example`)"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S02-T03",
+      "title": "Criar componentes base: PageHeader, Select, TabelaMembros, CardMembro, FiltrosMembros, Pagination, Breadcrumb, FormField",
+      "type": "frontend",
+      "estimatedHours": 4,
+      "owner": "frontend",
+      "dependsOn": ["S01-T06"],
+      "tdd": {
+        "testFirst": "Cada componente renderiza com 1 teste mínimo (PageHeader com title, Select com options, Tabela com 1 item, etc)",
+        "testPath": "app/components/{PageHeader,Select,TabelaMembros,CardMembro,FiltrosMembros,Pagination,Breadcrumb,FormField}.test.tsx",
+        "acceptance": "8 componentes, 1 teste cada"
+      },
+      "files": {
+        "create": [
+          "app/components/PageHeader.tsx",
+          "app/components/Select.tsx",
+          "app/components/TabelaMembros.tsx",
+          "app/components/CardMembro.tsx",
+          "app/components/FiltrosMembros.tsx",
+          "app/components/Pagination.tsx",
+          "app/components/Breadcrumb.tsx",
+          "app/components/FormField.tsx"
+        ],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "<PageHeader>: title + action (CTA) + breadcrumb slot",
+        "<Select>: label + options + placeholder + cn",
+        "<TabelaMembros>: tabela md+ com colunas Nome/Tipo/Discipulador/Ministérios/Ações; <CardMembro>: cards em <md (mobile-first); usa MEMBRO_SAFE_SELECT",
+        "<FiltrosMembros>: Form method=get com inputs q, tipo, ministerioId, discipuladorId; preserva state na URL",
+        "<Pagination>: aria-label, current/total, preserva query string (exceto page)",
+        "<Breadcrumb>: items com label+href; separador ›; item atual em font-medium",
+        "<FormField>: wrapper de Input com label, hint, error; usado em todos os forms daqui pra frente",
+        "Todos com JSDoc; componentes puros (sem I/O)"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S02-T04",
+      "title": "Criar rota `app/routes/app/membros._index.tsx` (lista com filtros + paginação)",
+      "type": "frontend",
+      "estimatedHours": 3,
+      "owner": "frontend",
+      "dependsOn": ["S02-T02", "S02-T03", "S00-T05"],
+      "tdd": {
+        "testFirst": "Loader com search params `?tipo=VISITANTE&q=maria&page=2` chama listMembros; renderiza TabelaMembros + Pagination",
+        "testPath": "app/routes/app/membros._index.test.tsx",
+        "acceptance": "Cobre filtro, paginação, empty state, mobile (cards)"
+      },
+      "files": {
+        "create": ["app/routes/app/membros._index.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Loader: lê search params (tipo, ministerioId, discipuladorId, q, page); valida com Zod (pageSize ≤ 100); chama listMembros",
+        "Carrega ministerios e discipuladores para popular filtros",
+        "Render: PageHeader + FiltrosMembros + TabelaMembros (md+) OU CardMembro (<md) + Pagination",
+        "Empty state contextual: 'Nenhum membro com esses filtros' com botão 'Limpar'",
+        "canEdit = cargo !== null (qualquer autenticado pode escrever — RN-MEM-01)",
+        "Breadcrumb no topo (Configurações > Membros, ou similar)"
+      ],
+      "rags": ["security-rbac-matrix", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S02-T05",
+      "title": "Criar componentes do form: FormMembro, Section, com máscaras client-side (telefone, CEP)",
+      "type": "frontend",
+      "estimatedHours": 4,
+      "owner": "frontend",
+      "dependsOn": ["S02-T03"],
+      "tdd": {
+        "testFirst": "FormMembro renderiza com defaultValues; máscara de telefone (11) 98765-4321; máscara de CEP 01000-000",
+        "testPath": "app/components/FormMembro.test.tsx",
+        "acceptance": "Cobre estado inicial, edição, validação inline"
+      },
+      "files": {
+        "create": ["app/components/FormMembro.tsx", "app/components/Section.tsx"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "<Section>: fieldset com legend e bg-white p-4 sm:p-6 border",
+        "<FormMembro>: Sections (Identificação, Contato, Eclesiástico, Endereço) com FormFields",
+        "Máscaras: telefone `(11) 98765-4321` (10/11 dígitos), CEP `01000-000` (8 dígitos)",
+        "Botões: Cancelar (volta sem salvar) + Salvar (primary, loading state)",
+        "Prop isEdit: muda label do submit + URL do Cancelar",
+        "Acessibilidade: labels associados, aria-describedby para hints, aria-invalid para erros"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S02-T06",
+      "title": "Criar rota `app/routes/app/membros.novo.tsx` (criar membro, action chama createMembro)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S02-T02", "S02-T05"],
+      "tdd": {
+        "testFirst": "Action POST com payload válido → 302 /app/membros/:id. Email duplicado → 422 com fieldError. Validação Zod falha → 422 com fieldErrors.",
+        "testPath": "app/routes/app/membros.novo.test.tsx (integration)",
+        "acceptance": "Cobre 3 cenários: sucesso, validação, email duplicado"
+      },
+      "files": {
+        "create": ["app/routes/app/membros.novo.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Loader: retorna null (sem dados para pré-carregar); assertCanWriteMembers via service",
+        "Action: formData → MembroCreateSchema.safeParse; falha → 422 com fieldErrors e defaultValues preservados",
+        "Sucesso: createMembro → redirect /app/membros/:id (toast success — setado em flash session se houver, ou no client)",
+        "EmailDuplicadoError → 422 com fieldError.email = 'Este e-mail já está cadastrado.'",
+        "Render: PageHeader 'Cadastrar novo membro' + Breadcrumb + FormMembro isEdit=false"
+      ],
+      "rags": ["lgpd-igreja-conect", "security-rbac-matrix"]
+    },
+    {
+      "id": "S02-T07",
+      "title": "Criar rota `app/routes/app/membros.$id.tsx` (detalhe — primeira versão, sem abas)",
+      "type": "frontend",
+      "estimatedHours": 3,
+      "owner": "frontend",
+      "dependsOn": ["S02-T02", "S02-T03", "S02-T05"],
+      "tdd": {
+        "testFirst": "Loader com id válido → retorna membro; com DISCIPULADOR acessando membro de outro → throw 404; action delete chama deleteMembro",
+        "testPath": "app/routes/app/membros.$id.test.tsx (integration)",
+        "acceptance": "Cobre render, 404, 403 (DISCIPULADOR fora de escopo), delete com discípulos bloqueado"
+      },
+      "files": {
+        "create": ["app/routes/app/membros.$id.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Loader: getMembroById(id, user); throw 404/403 conforme escopo",
+        "Render inicial (versão S02): ResumoMembro (nome, tipo, contato, endereço, dados eclesiásticos) + AcoesMembro (Editar + Excluir se ADMIN/PASTOR)",
+        "**Aba Fidelidade NÃO é renderizada nesta sprint** — S03 adiciona com RN-MEM-03",
+        "Action intent=delete: chama deleteMembro; redireciona /app/membros com toast",
+        "Delete com discípulos vinculados → 409 com mensagem 'Desvincule os discípulos antes de excluir.'",
+        "ErrorBoundary para 404/403: mensagem amigável"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S02-T08",
+      "title": "Criar rota `app/routes/app/membros.$id.editar.tsx` (editar membro)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S02-T02", "S02-T05", "S02-T07"],
+      "tdd": {
+        "testFirst": "Loader busca membro e pré-preenche form; action atualiza e redireciona; DISCIPULADOR fora de escopo → 403",
+        "testPath": "app/routes/app/membros.$id.editar.test.tsx",
+        "acceptance": "Cobre render, update, escopo"
+      },
+      "files": {
+        "create": ["app/routes/app/membros.$id.editar.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Loader: getMembroById; map para FormMembro defaultValues; assertCanWriteMembers",
+        "Action: MembroUpdateSchema.safeParse; updateMembro; redirect /app/membros/:id",
+        "Render: FormMembro isEdit=true com defaultValues (mapMembroToForm)",
+        "DISCIPULADOR tentando editar membro de outro → 403 via getMembroById"
+      ],
+      "rags": ["security-rbac-matrix"]
+    },
+    {
+      "id": "S02-T09",
+      "title": "Criar layout autenticado: `app/routes/app.tsx` + Sidebar + TopbarAutenticada (mínimo, sem KPIs ainda)",
+      "type": "frontend",
+      "estimatedHours": 4,
+      "owner": "frontend",
+      "dependsOn": ["S01-T06"],
+      "tdd": {
+        "testFirst": "Sidebar renderiza 5 itens (Dashboard, Membros, Ministérios, Alertas, Config); item ativo tem classe bg-cyan-50; logout submete form",
+        "testPath": "app/components/{Sidebar,TopbarAutenticada}.test.tsx",
+        "acceptance": "Cobre render, item ativo, navegação"
+      },
+      "files": {
+        "create": [
+          "app/routes/app.tsx",
+          "app/components/Sidebar.tsx",
+          "app/components/TopbarAutenticada.tsx"
+        ],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "`app/routes/app.tsx` é layout que envolve todas as rotas /app/**",
+        "Loader: getUserFromRequest; alertasNaoLidos = count(AlertaDestinatario where membroId=user.id and lido=false)",
+        "Render: TopbarAutenticada (logo + ícone alerta com badge + avatar) + Sidebar + Outlet",
+        "Sidebar itens: Dashboard /app, Membros /app/membros, Ministérios /app/ministerios, Alertas /app/alertas, Configurações /app/config/acolhimento; item ativo destacado com bg-cyan-50 text-cyan-900",
+        "Sidebar rodapé: botão 'Sair' que submete POST /logout",
+        "Responsivo: lg+ sidebar fixa 240px; <md hamburger (drawer — implementação S04)",
+        "Em S02, _index.tsx (Dashboard) ainda é placeholder simples (KPIs vêm em S04)"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S02-T10",
+      "title": "Criar placeholder `app/routes/app/_index.tsx` (apenas saudação + card 'Em construção')",
+      "type": "frontend",
+      "estimatedHours": 1,
+      "owner": "frontend",
+      "dependsOn": ["S02-T09"],
+      "tdd": {
+        "testFirst": "Renderiza saudação 'Olá, {nome}' e card 'Dashboard em construção'",
+        "testPath": "app/routes/app/_index.test.tsx",
+        "acceptance": "Verifica authGate (redireciona anônimo)"
+      },
+      "files": {
+        "create": ["app/routes/app/_index.tsx"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Loader: getUserFromRequest; throw redirect /login?next=/app se anônimo",
+        "Render: saudação 'Olá, {nome}.' + CardInfo 'Dashboard em construção' com lista do que virá em S04",
+        "Serve como destino do redirect pós-login",
+        "Sprint S04 substitui por dashboard com KPIs"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S02-T11",
+      "title": "Registrar todas as rotas novas em `app/routes.ts` (layout + páginas)",
+      "type": "infra",
+      "estimatedHours": 0.5,
+      "owner": "backend",
+      "dependsOn": ["S02-T04", "S02-T06", "S02-T07", "S02-T08", "S02-T09", "S02-T10"],
+      "tdd": {
+        "testFirst": "Build SSR não tem rotas faltando",
+        "testPath": "N/A (verificação via build)",
+        "acceptance": "`pnpm typecheck` + `pnpm dev` OK"
+      },
+      "files": {
+        "create": [],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Estrutura final de rotas: layout('routes/app.tsx', [index('routes/app/_index.tsx'), route('membros', ...), ...])",
+        "Cada nova rota registrada corretamente",
+        "`pnpm typecheck` passa"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S02-T12",
+      "title": "Teste E2E (Playwright) — `e2e/membros-crud.spec.ts` cobre listar, criar, editar, excluir, RBAC fina",
+      "type": "test",
+      "estimatedHours": 4,
+      "owner": "tester",
+      "dependsOn": ["S02-T11"],
+      "tdd": {
+        "testFirst": "E2E: login admin → /app/membros (vazio) → criar visitante → ver na lista → editar → excluir → lista vazia",
+        "testPath": "e2e/membros-crud.spec.ts",
+        "acceptance": "Cobre US-MEM-003 + criar/editar/excluir (subset de US-MEM-001)"
+      },
+      "files": {
+        "create": ["e2e/membros-crud.spec.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Chain 1: login admin seed → /app/membros (vazio) → '+ Novo membro' → form → submit → 302 /app/membros/:id → vê nome na lista",
+        "Chain 2: editar membro → form pré-preenchido → altera nome → submit → vê nome atualizado",
+        "Chain 3: excluir membro (sem discípulos) → confirma → 302 /app/membros → não vê mais na lista",
+        "Chain 4 (RBAC fina): login como DISCIPULADOR → /app/membros mostra apenas os discípulos vinculados",
+        "Chain 5 (RBAC fina): DISCIPULADOR tenta GET /app/membros/<outroId> direto → 404",
+        "Chain 6 (validação): criar com email malformado → 422 com erro no campo",
+        "Chain 7 (LGPD): grep em payload /app/membros/:id não contém 'senhaHash'"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    }
+  ],
+  "definitionOfDone": [
+    "Todos os 12 testes da sprint passando (1 por task + E2E)",
+    "Coverage da sprint ≥ 80% (members.server, schemas, routes)",
+    "`pnpm typecheck` passa",
+    "E2E `e2e/membros-crud.spec.ts` passa (7 chains)",
+    "RBAC fina funciona: DISCIPULADOR só vê seus discípulos (verificável em E2E + teste unit)",
+    "senhaHash nunca em payload (grep + spy)",
+    "SEM campos cpf/rg/cnpj no schema ou no form (RN-MEM-02, gate lgpd-officer)",
+    "Delete com discípulos vinculados bloqueado com mensagem clara (RN-MEM-04)",
+    "JSDoc completo em todas as funções públicas"
+  ],
+  "coverageTarget": 80,
+  "notes": "Habilita US-MEM-003 (listagem com filtros) e o lado de CRIAÇÃO de US-MEM-001 (geração de alerta para VISITANTE fica para S04, quando Config Acolhimento estiver pronto)."
+}

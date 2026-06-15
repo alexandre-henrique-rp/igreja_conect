@@ -1,0 +1,45 @@
+{
+  "sprintId": "S03",
+  "name": "Membros — Tipos, Discipulado, Ministérios, Fidelidade",
+  "status": "completed",
+  "completedAt": "2026-06-13T17:08:00Z",
+  "metrics": {
+    "tasksCompleted": 13,
+    "testsTotalInProject": 705,
+    "testsPassing": 705,
+    "coverage": 86.86,
+    "typecheck": "pass",
+    "buildSsr": "pass"
+  },
+  "gate": "all-of passed",
+  "artifacts": {
+    "code-review": "code-review.md",
+    "security-audit": "security-audit.md (preventiva) + security-audit-real.json (pós-impl)",
+    "lgpd-parecer": "lgpd-parecer.md (preventiva) + lgpd-parecer-real.json (pós-impl)"
+  },
+  "workers": {
+    "tester": {
+      "chainsRun": 7,
+      "coverage": 86.86,
+      "passed": true
+    },
+    "security": {
+      "critical": 0,
+      "high": 0,
+      "medium": 4,
+      "low": 3,
+      "passed": true
+    },
+    "lgpdOfficer": {
+      "status": "compliant-with-advisory",
+      "critical": 0,
+      "high": 0,
+      "passed": true
+    },
+    "codeReviewer": {
+      "score": 90,
+      "passed": true
+    }
+  },
+  "notes": "Trava 12 discípulos (RN-MEM-04), anti-loop A↔B, ministérios N:N, fidelidade 3 camadas (RN-MEM-03)."
+}

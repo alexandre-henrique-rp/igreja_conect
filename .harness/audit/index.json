@@ -1,0 +1,50 @@
+{
+  "_type": "harness-audit-index-v6",
+  "generatedAt": "2026-06-13T22:50:00Z",
+  "generatedBy": "orchestrator",
+  "policy": {
+    "activeRetentionDays": 7,
+    "archiveFormat": "gzip",
+    "archiveLocation": "audit/archive/",
+    "activeLocation": "audit/"
+  },
+  "sessions": [
+    {
+      "id": "ts-1781292659561",
+      "filename": "2026-06-12_session-ts-1781292659561.jsonl.gz",
+      "location": "archive",
+      "sizeBytes": 49444,
+      "startedAt": "2026-06-12T22:50:59.561Z",
+      "endedAt": "2026-06-12T22:54:00Z",
+      "status": "archived",
+      "description": "Sessão inicial — Phase 0-1 (briefing, documentação, RAG creation)"
+    },
+    {
+      "id": "ts-1781358461410",
+      "filename": "2026-06-13_session-ts-1781358461410.jsonl.gz",
+      "location": "archive",
+      "sizeBytes": 196100,
+      "startedAt": "2026-06-13T18:27:41.410Z",
+      "endedAt": "2026-06-13T18:42:00Z",
+      "status": "archived",
+      "description": "Sessão S04 build + rework + smoke test"
+    },
+    {
+      "id": "ts-1781396791348",
+      "filename": "session-ts-1781396791348.jsonl",
+      "location": "active",
+      "sizeBytes": 15170,
+      "startedAt": "2026-06-13T21:26:31.348Z",
+      "endedAt": "2026-06-13T22:50:00Z",
+      "status": "active",
+      "description": "Sessão de reorganização do harness (RAG lesson, audit archive, state reconcile)"
+    }
+  ],
+  "stats": {
+    "totalSessions": 3,
+    "archivedSessions": 2,
+    "activeSessions": 1,
+    "totalSizeBytes": 260714,
+    "compressionRatio": "92% (3.0 MB → 255 KB)"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "_type": "harness-code-review-v6",
+  "agent": "code-reviewer",
+  "sprint": "S03",
+  "timestamp": "2026-06-13T16:01:19Z",
+  "score": null,
+  "passThreshold": 70,
+  "passed": false,
+  "status": "HALT",
+  "haltReason": "fan-out S03 não produziu artefatos; snapshot stale evitado",
+  "stats": {
+    "filesChecked": 0,
+    "filesExpected": 42,
+    "filesDelivered": 0,
+    "tddRatio": "N/A (0 testes novos)",
+    "documentedRatio": "N/A (0 funções públicas novas)",
+    "simplicityScore": 0
+  },
+  "principles": {
+    "tdd": {
+      "score": 0,
+      "max": 40,
+      "status": "HALT",
+      "issues": [
+        "0 dos 13 arquivos de feature criados",
+        "0 testes novos (S03-T01/02/04/06/08/10/11/13 não entregues)",
+        "S03-T12 e2e (discipulado.spec.ts + fidelidade-bypass.spec.ts) — ausentes"
+      ]
+    },
+    "jsdoc": {
+      "score": 0,
+      "max": 30,
+      "status": "HALT",
+      "issues": [
+        "0 funções públicas novas para auditar (4 services + 8 componentes + 4 rotas ausentes)"
+      ]
+    },
+    "simplicity": {
+      "score": 0,
+      "max": 30,
+      "status": "HALT",
+      "issues": [
+        "0 código novo a simplificar",
+        "Anti-patterns não detectáveis: isDescendantOf (recursão sem limite), assignDisciple (4 etapas), useFocusTrap (Dialog) — todos pendentes de implementação"
+      ]
+    }
+  },
+  "findings": [
+    {
+      "id": "HALT-S03-001",
+      "severity": "critical",
+      "issue": "sprint.started S03 disparado às 2026-06-13T13:00:00Z, mas 0 artefatos produzidos em 3h01min"
+    },
+    {
+      "id": "HALT-S03-002",
+      "severity": "critical",
+      "issue": "app/lib/discipleship.server.ts (coração da RN-MEM-04) não existe; risco de gate qa falhar com traverse de boundary 12/13 não testado"
+    },
+    {
+      "id": "HALT-S03-003",
+      "severity": "critical",
+      "issue": "app/lib/finance.server.ts (camada 3 da RN-MEM-03) não existe; risco de gate lgpd-officer falhar com bypass de Fidelidade sem defesa service-side"
+    },
+    {
+      "id": "HALT-S03-004",
+      "severity": "high",
+      "issue": "app/components/Can.tsx (fundação de toda RBAC UI) não existe; TabsMembro e TabFidelidadeFinanceira dependem dele"
+    },
+    {
+      "id": "HALT-S03-005",
+      "severity": "high",
+      "issue": "app/components/Dialog.tsx (com useFocusTrap, aria-modal, Esc handler) não existe; 4 modais da sprint dependem dele"
+    },
+    {
+      "id": "HALT-S03-006",
+      "severity": "high",
+      "issue": "app/routes/app/membros.$id.discipulado.tsx (S03-T06) não existe; rota crítica de vínculo"
+    },
+    {
+      "id": "HALT-S03-007",
+      "severity": "high",
+      "issue": "e2e/discipulado.spec.ts e e2e/fidelidade-bypass.spec.ts não existem; 7 chains críticas sem cobertura E2E"
+    },
+    {
+      "id": "HALT-S03-008",
+      "severity": "medium",
+      "issue": "Nenhum status file paralelo (S03.status.json, S03.lgpd.json, S03.security.json) — não há como auditar progresso por worker"
+    }
+  ],
+  "evidence": {
+    "sprintStartTime": "2026-06-13T13:00:00Z",
+    "auditTime": "2026-06-13T16:01:19Z",
+    "elapsedHours": 3.02,
+    "lastFileModificationInApp": "2026-06-13T12:32:02Z (S02, 28 min ANTES do start S03)",
+    "filesystemCheck": "0 of 42 expected S03 artifacts present"
+  },
+  "recommendation": "rework",
+  "loopbackTo": "phase.5.build",
+  "actionRequired": "Orchestrator: despachar/verificar fan-out S03 (backend, frontend, tester, security, lgpd-officer) e aguardar artefatos antes de re-invocar code-reviewer",
+  "unblockCondition": "presença de app/lib/discipleship.server.ts (ou qualquer outro artefato de S03) no filesystem",
+  "ragCandidate": {
+    "path": ".harness/RAG/lesson/code-reviewer-halt-on-empty-fanout.md",
+    "category": "lesson",
+    "title": "code-reviewer deve halt-explícito quando fan-out ainda não produziu artefatos",
+    "rationale": "S01 e S02 ensinaram que score arbitrário é pior que HALT explícito. O gate precisa de sinal claro: ou passa, ou rework. Aprovar sem ver é o pior dos 3 outcomes."
+  }
+}

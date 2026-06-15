@@ -1,0 +1,168 @@
+{
+  "_type": "harness-sprints-index-v6",
+  "generatedAt": "2026-06-14T12:30:00Z",
+  "generatedBy": "harness-sprint-tasker (cycle 2)",
+  "phase": "phase.4.planejamento",
+  "cycle": 2,
+  "scope": "financeiro",
+  "totalSprints": 3,
+  "totalEstimatedHours": 120,
+  "totalEstimatedDays": 15,
+  "sprints": [
+    {
+      "id": "S06",
+      "name": "Foundation Financeiro — Caixas + Lançamentos + Dashboard",
+      "status": "pending",
+      "estimatedHours": 64,
+      "estimatedDays": 8,
+      "dependsOn": ["S05"],
+      "totalTasks": 15,
+      "owner": "sprint-tasker",
+      "scope": "Caixas + Lançamentos + Dashboard + RBAC 3 camadas",
+      "specCoverage": {
+        "endpoints_specced_d4": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "testes_borda_cobertos": [3, 4, 5, 9, 11, 12],
+        "rns_implemented": ["RN-FIN-01", "RN-FIN-04", "RN-FIN-05"]
+      },
+      "userStories": ["US-FIN-001", "US-FIN-002", "US-FIN-003", "US-FIN-005", "US-FIN-007", "US-FIN-008"],
+      "artifacts": [],
+      "milestone": "M1 — Foundation (Caixas + Lançamentos + Dashboard)",
+      "promptRef": "sprints/S06.json"
+    },
+    {
+      "id": "S07",
+      "name": "Transferências entre Caixas (RN-FIN-02 atômico)",
+      "status": "pending",
+      "estimatedHours": 32,
+      "estimatedDays": 4,
+      "dependsOn": ["S06"],
+      "totalTasks": 7,
+      "owner": "sprint-tasker",
+      "scope": "Transferência atômica 1+2+2 em $transaction",
+      "specCoverage": {
+        "endpoints_specced_d4": [10, 11, 12],
+        "testes_borda_cobertos": [2, 6, 7, 8],
+        "rns_implemented": ["RN-FIN-02", "RN-FIN-03", "RN-FIN-04 (em transferência)"]
+      },
+      "userStories": ["US-FIN-004", "US-FIN-005", "US-FIN-008"],
+      "artifacts": [],
+      "milestone": "M2 — Transferências",
+      "promptRef": "sprints/S07.json"
+    },
+    {
+      "id": "S08",
+      "name": "Fidelidade Financeira — Integração com aba de Membro (RN-MEM-03)",
+      "status": "pending",
+      "estimatedHours": 24,
+      "estimatedDays": 3,
+      "dependsOn": ["S07"],
+      "totalTasks": 7,
+      "owner": "sprint-tasker",
+      "scope": "Substituir placeholder do TabFidelidadeFinanceira; 3 camadas RBAC; métrica macro PARTE 2",
+      "specCoverage": {
+        "endpoints_specced_d4": [],
+        "endpoints_reused": "Aba Fidelidade reusa rota existente /app/membros/:id (ciclo 1)",
+        "testes_borda_cobertos": [10],
+        "rns_implemented": ["RN-MEM-03 (3 camadas)", "RN-FIN-05 (filtro DIZIMO)"]
+      },
+      "userStories": ["US-FIN-006", "US-FIN-008", "US-MEM-005"],
+      "artifacts": [],
+      "milestone": "M3 — Fidelidade Financeira (métrica macro fechada)",
+      "promptRef": "sprints/S08.json"
+    }
+  ],
+  "summary": {
+    "totalSprintsCycle2": 3,
+    "totalTasksCycle2": 29,
+    "totalEstimatedHoursCycle2": 120,
+    "totalEstimatedDaysCycle2": 15,
+    "milestones": {
+      "M1 (Foundation — Caixas + Lançamentos)": {
+        "sprint": "S06",
+        "delivers": "Caixas + Lançamentos + Dashboard + RBAC 3 camadas (9/12 endpoints, 6/12 testes de borda)",
+        "metric_macro_parte_1": true
+      },
+      "M2 (Transferências)": {
+        "sprint": "S07",
+        "delivers": "RN-FIN-02 atômico (5 mutações em 1 $transaction); 3 testes de borda; SECRETARIO pode transferir com saldo (RN-FIN-03)"
+      },
+      "M3 (Fidelidade)": {
+        "sprint": "S08",
+        "delivers": "Substituir placeholder; 3 camadas RN-MEM-03; métrica macro PARTE 2 (PASTOR vê dízimo em < 2 min)"
+      }
+    },
+    "specCoverage": {
+      "total_endpoints_specced_d4": 12,
+      "covered_in_sprint_json": 12,
+      "coveragePercent": 100,
+      "endpoints_by_sprint": {
+        "S06": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "S07": [10, 11, 12],
+        "S08": []
+      }
+    },
+    "prdCoverage": {
+      "total_features_d3": 8,
+      "covered_in_sprint_json": 8,
+      "coveragePercent": 100,
+      "features_by_sprint": {
+        "F1 (CRUD Caixas)": "S06",
+        "F2 (CRUD Lançamentos)": "S06",
+        "F3 (Dízimos vinculados a Membro)": "S06",
+        "F4 (Transferências entre Caixas)": "S07",
+        "F5 (Trava de Saldo no service)": "S06 + S07",
+        "F6 (Aba Fidelidade Financeira)": "S08",
+        "F7 (Dashboard de saldos)": "S06",
+        "F8 (RBAC fina 3 camadas)": "S06 + S07 + S08"
+      }
+    },
+    "testesBordaBrief7_3": {
+      "total": 12,
+      "covered_in_sprint_json": 12,
+      "coveragePercent": 100,
+      "by_sprint": {
+        "S06": [3, 4, 5, 9, 11, 12],
+        "S07": [2, 6, 7, 8],
+        "S08": [10]
+      },
+      "by_origin": {
+        "regressao_ciclo_1": [1, 2],
+        "novo_ciclo_2_servicos": [3, 4, 5, 6, 7, 8, 12],
+        "novo_ciclo_2_rbac_e2e": [9, 10, 11]
+      }
+    },
+    "ragsCoverage": {
+      "total_rags_ciclo_2": 4,
+      "rags_referenced_in_sprints": [
+        "pattern-trava-saldo-service (S06, S07)",
+        "pattern-transferencia-caixas (S07)",
+        "decision-caixa-soft-delete (S06, S07)",
+        "architecture-financeiro (S06, S07, S08)"
+      ],
+      "rags_ciclo_1_referenced": [
+        "security-rbac-matrix (S06, S07, S08)",
+        "convention-monetary-values (S06, S07, S08)",
+        "pattern-3-layer-rbac (S06, S07, S08)",
+        "lgpd-igreja-conect (S06, S07, S08)",
+        "convention-prisma-sqlite (S06, S07)",
+        "lesson-route-service-bypass (S06, S07, S08)",
+        "lesson-prisma-7-commit-settle-e2e (S06, S07, S08)"
+      ]
+    },
+    "milestone": "Módulo Financeiro (Caixas + Lançamentos + Transferências + Fidelidade) — 3 sprints prontos para Phase 5 (Build + Quality)",
+    "next": "phase.5.build (5 workers em paralelo: backend + frontend + tester + security + lgpd-officer)"
+  },
+  "definitionOfDone": [
+    "100% SPEC D.4 coverage (12/12 endpoints do SPEC mapeados para tasks)",
+    "100% PRD D.3 coverage (8/8 features do PRD mapeados para tasks)",
+    "12/12 testes de borda do brief §7.3 cobertos (distribuídos pelos 3 sprints)",
+    "RBAC 3 camadas (UI + loader + service) verificada em todas as rotas /app/financeiro/** e /app/membros/:id?tab=fidelidade",
+    "Trava de saldo no service (assertSaldoSuficiente + re-leitura anti-TOCTOU)",
+    "Atomicidade de transferência (5 mutações em 1 $transaction)",
+    "Métrica macro do brief §7.1 fechada (FINANCEIRO lança dízimo + PASTOR vê na aba Fidelidade em < 2 min)",
+    "Cobertura ≥ 85% global, 100% em services (caixas, lancamentos, transferencias, finance, rbac)",
+    "0 vuln critical/high (security audit por sprint)",
+    "LGPD compliant (3 decisões verificadas: sem CPF, dízimos restritos, logs sem PII)",
+    "Planning-reviewer score ≥ 70 (revisão de S06, S07, S08)"
+  ]
+}

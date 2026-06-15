@@ -1,0 +1,213 @@
+{
+  "sprint": "S01",
+  "auditedAt": "2026-06-13T13:58:39Z",
+  "auditor": "security-agent",
+  "scope": [
+    "app/lib/auth.server.ts",
+    "app/lib/session.server.ts",
+    "app/lib/rate-limit.server.ts",
+    "app/lib/audit.server.ts",
+    "app/lib/rbac.server.ts",
+    "app/lib/schemas/auth.ts",
+    "app/lib/validators/auth.ts",
+    "app/routes/public/login.tsx",
+    "app/routes/logout.tsx",
+    "app/routes/app/_middleware.tsx",
+    "app/routes/app/_index.tsx",
+    "app/api/auth/login.ts",
+    "app/api/auth/logout.ts",
+    "prisma/schema.prisma",
+    ".env",
+    "package.json"
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 4,
+    "low": 4,
+    "info": 1,
+    "total": 9
+  },
+  "owasp": {
+    "A01": {
+      "status": "pass",
+      "notes": "Middleware em app/routes/app/_middleware.tsx redireciona anônimos. RBAC defense-in-depth (3 camadas) implementado em rbac.server.ts com assertCan* lançando Response(403)."
+    },
+    "A02": {
+      "status": "pass-with-finding",
+      "finding": "M1",
+      "notes": "Cookie httpOnly + sameSite=lax + secure em prod. Bcrypt cost 10. Risco: SESSION_SECRET com fallback inseguro em session.server.ts:28."
+    },
+    "A03": {
+      "status": "pass",
+      "notes": "Zero SQL/XSS/Command injection. Prisma tipado parametriza todas as queries. Sem dangerouslySetInnerHTML, eval, new Function."
+    },
+    "A04": {
+      "status": "pass-with-finding",
+      "finding": "M2,L2,L3",
+      "notes": "Rate limit antes de verifyCredentials. Mensagem unificada anti-enumeração. Anti-open-redirect. Riscos: x-forwarded-for falsificável (M2), sliding window imperfeito (L2), senha até 200 chars (L3)."
+    },
+    "A05": {
+      "status": "pass-with-finding",
+      "finding": "M1,M3",
+      "notes": "Sem CORS permissivo, sem debug em prod, nome do cookie correto. Riscos: SESSION_SECRET fallback (M1), ausência de CSP/X-Frame-Options/etc (M3)."
+    },
+    "A06": {
+      "status": "pass",
+      "notes": "Deps pinadas (bcryptjs 3.0.3, zod 4.4.3, react-router 7.16.0). Sem deps suspeitas."
+    },
+    "A07": {
+      "status": "pass-with-finding",
+      "finding": "M4,L1,I1",
+      "notes": "Session fixation prevenido (novo sid a cada login). Logout invalida DB. Senha hasheada. Riscos: policy divergente API/form (M4), logout via GET (L1), userId='self' no log API logout (I1)."
+    },
+    "A08": {
+      "status": "pass",
+      "notes": "Cookie assinado via secrets. CSRF mitigado por sameSite=lax."
+    },
+    "A09": {
+      "status": "pass",
+      "notes": "safeLog com allowlist (userId, action, resource, result, timestamp, ip). Email/senha/telefone/valorCentavos filtrados. Testado em audit.server.test.ts."
+    },
+    "A10": {
+      "status": "n/a",
+      "notes": "S01 não faz fetch para URLs user-controlled."
+    }
+  },
+  "lgpd": {
+    "art46": {
+      "status": "pass",
+      "notes": "Senha bcrypt cost 10. Cookie httpOnly + secure(prod). Sliding renewal. Teto absoluto 30d."
+    },
+    "art49": {
+      "status": "pass",
+      "notes": "Sessão expirada remove row (getUserFromRequest limpa). Logout deleta (deleteSession)."
+    },
+    "art6_II_adequacao": { "status": "pass", "notes": "Sem CPF/RG/CNPJ no schema. Coleta mínima para auth." },
+    "art6_III_necessidade": { "status": "pass", "notes": "Email + senhaHash apenas." },
+    "art6_VII_seguranca": { "status": "pass", "notes": "Bcrypt + cookie seguro + rate limit + middleware." },
+    "art6_VIII_prevencao": { "status": "pass", "notes": "Anti-brute-force, anti-acesso anônimo, anti-fixation." },
+    "art9_informacao_ao_titular": {
+      "status": "pass-with-finding",
+      "finding": "L4",
+      "notes": "Checkbox 'Manter-me conectado (30 dias)' promete TTL 30d que não é aplicado. Implementar ou remover."
+    },
+    "art18_direitos_do_titular": {
+      "status": "n/a",
+      "notes": "Fora do MVP por decisão consciente (RAG lgpd-igreja-conect §7)."
+    },
+    "art37_registro_operacoes": {
+      "status": "partial",
+      "notes": "Auth events logados (login_attempt, login, logout). Leitura de PII fora do MVP."
+    }
+  },
+  "adrCompliance": {
+    "ADR-001": {
+      "status": "pass-with-finding",
+      "finding": "M1",
+      "notes": "Cookie httpOnly + sameSite=lax + secure(prod) + nome __session + sqlite session store + sliding renewal + logout invalida DB. Risco: SESSION_SECRET fallback pode quebrar a assinatura."
+    }
+  },
+  "findings": [
+    {
+      "id": "M1",
+      "severity": "medium",
+      "category": "A02/A05",
+      "file": "app/lib/session.server.ts",
+      "line": 28,
+      "evidence": "secrets: [process.env.SESSION_SECRET ?? \"dev-only-not-secret\"]",
+      "remediation": "Fail-fast em prod: throw if NODE_ENV==='production' && !SESSION_SECRET. Atualizar .env.example.",
+      "blocks": false
+    },
+    {
+      "id": "M2",
+      "severity": "medium",
+      "category": "A04/A01",
+      "file": "app/routes/public/login.tsx",
+      "line": 56,
+      "evidence": "request.headers.get(\"x-forwarded-for\")?.split(\",\")[0]?.trim() ?? request.headers.get(\"x-real-ip\") ?? \"unknown\"",
+      "remediation": "Documentar requisito de proxy reverso controlado. Usar x-real-ip quando configurado.",
+      "blocks": false
+    },
+    {
+      "id": "M3",
+      "severity": "medium",
+      "category": "A05",
+      "file": "app/root.tsx (ausente)",
+      "line": null,
+      "evidence": "Zero security headers HTTP configurados (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS)",
+      "remediation": "Criar app/lib/security-headers.server.ts e aplicar via middleware raiz ou root.tsx.",
+      "blocks": false
+    },
+    {
+      "id": "M4",
+      "severity": "medium",
+      "category": "A07/LGPD",
+      "file": "app/lib/validators/auth.ts:11 vs app/lib/schemas/auth.ts:27",
+      "line": null,
+      "evidence": "LoginInputSchema exige min 8 chars; LoginSchema exige min 1 char. Divergência entre API e form.",
+      "remediation": "Unificar em um único schema com min 8 chars reutilizado em ambos pontos.",
+      "blocks": false
+    },
+    {
+      "id": "L1",
+      "severity": "low",
+      "category": "A07",
+      "file": "app/routes/logout.tsx",
+      "line": 53,
+      "evidence": "export async function loader({ request }: Route.LoaderArgs) { return action(...) } — logout funciona via GET",
+      "remediation": "Limitar logout a POST; exigir Origin check ou CSRF token se mantiver GET para UX.",
+      "blocks": false
+    },
+    {
+      "id": "L2",
+      "severity": "low",
+      "category": "A04",
+      "file": "app/lib/rate-limit.server.ts",
+      "line": 40,
+      "evidence": "if (existing && now - existing.firstAt > WINDOW_MS) { buckets.delete(key); } — após janela, libera sem recriar bucket",
+      "remediation": "Implementar sliding window real (contar falhas em janela móvel) ou recriar bucket { count: 0, firstAt: now } após expirar.",
+      "blocks": false
+    },
+    {
+      "id": "L3",
+      "severity": "low",
+      "category": "A04/DoS",
+      "file": "app/lib/schemas/auth.ts",
+      "line": 30,
+      "evidence": "senha: z.string().min(1).max(200)",
+      "remediation": "Reduzir max para 128 chars (alinhado com LoginInputSchema).",
+      "blocks": false
+    },
+    {
+      "id": "L4",
+      "severity": "low",
+      "category": "A09/LGPD art.9",
+      "file": "app/components/FormLogin.tsx:212 + app/routes/public/login.tsx:126",
+      "line": null,
+      "evidence": "Checkbox 'Manter-me conectado (30 dias)' sem efeito (TTL sempre 7d, comment: 'não muda TTL')",
+      "remediation": "Implementar TTL 30d para o flag, ou remover checkbox.",
+      "blocks": false
+    },
+    {
+      "id": "I1",
+      "severity": "info",
+      "category": "A07",
+      "file": "app/api/auth/logout.ts",
+      "line": 24,
+      "evidence": "safeLog({ userId: \"self\", ... }) — literal em vez do ID real do membro",
+      "remediation": "Extrair userId do cookie (getUserFromRequest) antes de deleteSession; passar ID real no log.",
+      "blocks": false
+    }
+  ],
+  "blockingFindings": 0,
+  "passed": true,
+  "gateVerdict": {
+    "maxCritical": 0,
+    "maxHigh": 0,
+    "currentCritical": 0,
+    "currentHigh": 0,
+    "passes": true
+  },
+  "reportPath": ".harness/security/S01-audit.md"
+}

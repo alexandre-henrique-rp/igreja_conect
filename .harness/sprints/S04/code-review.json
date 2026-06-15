@@ -1,0 +1,49 @@
+{
+  "_type": "harness-code-review-v6",
+  "agent": "code-reviewer",
+  "sprint": "S03",
+  "timestamp": "2026-06-13T22:00:00.000Z",
+  "score": 90,
+  "passThreshold": 70,
+  "passed": true,
+  "stats": {
+    "filesChecked": 23,
+    "tddRatio": "23:23 (100%)",
+    "documentedRatio": "100%",
+    "simplicityScore": 20
+  },
+  "breakdown": {
+    "tdd": 30,
+    "docstrings": 25,
+    "simplicidade": 20,
+    "security_lgpd": 15
+  },
+  "positive_findings": [
+    "TDD ratio 1:1 perfeito — todos os 23 arquivos S03 têm teste correspondente (backend, schemas, componentes, rotas)",
+    "Testes cobrem boundary crítico RN-MEM-04: 12 discípulos OK / 13º bloqueado com 409",
+    "Testes de loop A→B→A e loop profundo A→B→C→A com mensagens em PT-BR",
+    "Testes de re-atribuição: boundary não conta o próprio discípulo no destino",
+    "Testes de RBAC por perfil: ADMIN, PASTOR, SECRETARIO, DISCIPULADOR, FINANCEIRO, LIDER_MINISTERIO, null (sem cargo)",
+    "Testes de camada 3 (finance.server): spy garante que DB não é tocado antes do RBAC",
+    "Testes de render com createRoutesStub + renderToString para todos os componentes",
+    "Testes de rota: 401 sem auth, 404 membro inexistente, 422 validação, 400 intent inválido",
+    "Documentação exemplar — 100% das funções públicas têm JSDoc completo em português com @param, @returns, @throws, @example",
+    "Componentes React com docstring detalhada incluindo props, states, acessibilidade (WCAG), LGPD notes",
+    "Código direto sem abstração prematura — YAGNI/KISS rigorosamente seguido",
+    "LGPD: MEMBRO_SAFE_SELECT exclui senhaHash, logs sem PII, anti-enumeração com 404 não 403",
+    "Defesa em profundidade documentada: 3 camadas (UI → Loader → Service) implementadas e testadas",
+    "Finance.getDizimosByMembro implementa camada 3 com assertCanSeeFinancials antes de tocar o DB",
+    "TabsMembro: canSeeFinancials=false remove a tab Fidelidade do DOM (camada 1 LGPD)",
+    "Dialog.tsx: focus trap próprio (~30 linhas, sem lib externa) — YAGNI no melhor estilo",
+    "ContadorDiscipulos: acessibilidade WCAG com aria-live, aria-label, badge de atenção/limite"
+  ],
+  "negative_findings": [
+    "assignDisciple (discipleship.server.ts:120-179) tem 60 linhas — dobra o limite de 30. Embora coesa, as 4 regras de RN poderiam ser extraídas para funções helper nomeadas (ex: checkAutoVinculo, checkLimite, checkLoop).",
+    "getDiscipuladoData (discipleship.server.ts:247-315) tem 64 linhas — ultrapassa o limite de 30. As seções (cadeia, discipuladorAtual, discipulosDoDiscipulador, pool) são blocos lógicos que poderiam ser funções separadas.",
+    "listMembros (members.server.ts:120-156) tem 37 linhas — acima do limite de 30. A construção do where poderia ser extraída.",
+    "ministerios._index.tsx (316 linhas) excede o limite de 300 linhas. A action com 6 intents poderia ser quebrada em handlers separados.",
+    "ModalVincularMembro.tsx recebe membrosDisponiveis como array vazio [] na rota (linha 307) — placeholder não conectado; S04 precisa implementar a query real.",
+    "onRemoveMembro e onDelete em CardMinisterio são callbacks vazios na rota (ministerios._index.tsx:276-286) — a ação real usa Form inline, mas os callbacks não utilizados violam levemente YAGNI."
+  ],
+  "recommendation": "pass"
+}

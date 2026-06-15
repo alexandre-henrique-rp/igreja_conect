@@ -85,3 +85,22 @@ export function assertCanManageConfiguracaoGeral(user: SessionUser): void {
     throw new Response("Apenas ADMIN gerencia configurações gerais.", { status: 403 });
   }
 }
+
+/** Cargos que podem gerenciar caixas (criar, arquivar, reabrir). */
+export const MANAGE_CAIXA_CARGOS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const;
+
+/**
+ * Lança Response(403) se o usuário não pode criar, arquivar ou reabrir caixas.
+ *
+ * @description Permissão para gerenciar caixas (S06-T03).
+ * @param {SessionUser} user - Usuário autenticado.
+ * @throws {Response} 403 se cargo não está em MANAGE_CAIXA_CARGOS.
+ * @example
+ *   assertCanManageCaixa(user);
+ *   await criarCaixa(input); // só chega aqui se passou
+ */
+export function assertCanManageCaixa(user: SessionUser): void {
+  if (!user.cargo || !(MANAGE_CAIXA_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Você não tem permissão para criar ou arquivar caixas.", { status: 403 });
+  }
+}

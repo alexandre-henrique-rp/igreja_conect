@@ -1,0 +1,334 @@
+{
+  "id": "S04",
+  "name": "Config Acolhimento + Central de Alertas + Dashboard com KPIs",
+  "goal": "Fechar US-MEM-001 (geração atômica de alerta ao cadastrar visitante), entregar US-MEM-004 (config de acolhimento Admin-only), a Central de Alertas e o dashboard com KPIs.",
+  "estimatedDays": 2,
+  "dependsOn": ["S03"],
+  "userStories": ["US-MEM-001", "US-MEM-004"],
+  "tasks": [
+    {
+      "id": "S04-T01",
+      "title": "Criar schemas Zod em `app/lib/schemas/config.ts` e `app/lib/schemas/alertas.ts`",
+      "type": "backend",
+      "estimatedHours": 1,
+      "owner": "backend",
+      "dependsOn": ["S00-T14"],
+      "tdd": {
+        "testFirst": "ConfigAcolhimentoSchema aceita tipo MEMBRO|MINISTERIO + responsavelId uuid; MarcarLidoSchema aceita alertaId uuid",
+        "testPath": "app/lib/schemas/{config,alertas}.test.ts",
+        "acceptance": "Cobre ambos os tipos + edge case de UUID inválido"
+      },
+      "files": {
+        "create": ["app/lib/schemas/config.ts", "app/lib/schemas/alertas.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "ConfigAcolhimentoSchema: `responsavelVisitanteTipo: enum(['MEMBRO', 'MINISTERIO'])`, `responsavelId: z.string().uuid()`",
+        "MarcarLidoSchema: `alertaId: z.string().uuid()`",
+        "MarcarResolvidoSchema: idem",
+        "Mensagens PT-BR",
+        "Exporta Input types via z.infer"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S04-T02",
+      "title": "Criar `app/lib/config.server.ts` (getConfigAcolhimento, updateConfigAcolhimento — singleton via id fixo)",
+      "type": "backend",
+      "estimatedHours": 3,
+      "owner": "backend",
+      "dependsOn": ["S04-T01", "S00-T05"],
+      "tdd": {
+        "testFirst": "Sem config no DB retorna null; ADMIN salva com Membro → persiste; SECRETARIO tenta → throw 403; upsert garante singleton",
+        "testPath": "app/lib/config.server.test.ts (integration)",
+        "acceptance": "Cobre 4 cenários + exclusividade (tipo=MINISTERIO zera responsavelMembroId)"
+      },
+      "files": {
+        "create": ["app/lib/config.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "`getConfigAcolhimento()` — findFirst; retorna null se não existe",
+        "`updateConfigAcolhimento(input, user)` — assertIsAdmin; valida Zod; valida que responsavelId existe (membro ou ministerio); upsert com `id: 'singleton'` (hardcoded, garante 1 linha)",
+        "Exclusividade: se tipo=MEMBRO, seta responsavelMembroId e zera responsavelMinisterioId. Vice-versa.",
+        "safeLog: `{ userId, action: 'update_config', result: 'ok'|'fail' }` (NÃO loga ids)",
+        "JSDoc completo",
+        "Helper `FINANCIAL_CARGOS` exportado (reuso em outros lugares se necessário)"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S04-T03",
+      "title": "Criar `app/lib/alerts.server.ts` (listAlertas, marcarLido, marcarResolvido + helper de criar alerta)",
+      "type": "backend",
+      "estimatedHours": 3,
+      "owner": "backend",
+      "dependsOn": ["S04-T01", "S00-T10"],
+      "tdd": {
+        "testFirst": "listAlertas filtra por destinatario.membroId=user.id (escopo); marcarLido com user errado lança erro; resolver seta lido+resolvido",
+        "testPath": "app/lib/alerts.server.test.ts (integration)",
+        "acceptance": "Cobre 6 perfis + idempotência (marcar 2x lido = no-op)"
+      },
+      "files": {
+        "create": ["app/lib/alerts.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "`listAlertas(user, filter)` — `where: { destinatarios: { some: { membroId: user.id } } }`; filtro adicional por lido/resolvido; counts em paralelo",
+        "`marcarLido(alertaId, user)` — updateMany com `where: { id, destinatario: { membroId: user.id } }`; se 0 rows → 404",
+        "`marcarResolvido(alertaId, user)` — idem com `data: { resolvido: true, lido: true }` (resolver implica ler)",
+        "`criarAlertaVisitante(tx, membro, config)` — helper transacional: cria Alerta + AlertaDestinatario(s) baseado em config; retorna alertaId",
+        "Idempotência: marcar 2x = no-op (UPDATE WHERE)",
+        "Privacidade: safeLog nunca loga mensagem do alerta (pode ter nome+telefone)",
+        "JSDoc completo"
+      ],
+      "rags": ["lgpd-igreja-conect", "security-rbac-matrix"]
+    },
+    {
+      "id": "S04-T04",
+      "title": "Estender `app/lib/members.server.ts` — `createMembro` cria alerta atômico em transação quando tipo=VISITANTE",
+      "type": "backend",
+      "estimatedHours": 3,
+      "owner": "backend",
+      "dependsOn": ["S04-T02", "S04-T03", "S02-T02"],
+      "tdd": {
+        "testFirst": "createMembro com tipo=VISITANTE cria membro + alerta atômico; se alerta falha, visitante não é criado (rollback)",
+        "testPath": "app/lib/members.server.test.ts (estender)",
+        "acceptance": "Cobre atomicidade: erro no alerta → membro não persiste"
+      },
+      "files": {
+        "create": [],
+        "modify": ["app/lib/members.server.ts"]
+      },
+      "acceptanceCriteria": [
+        "Detecta `tipo === 'VISITANTE'` no createMembro",
+        "Se config=null OU sem responsável: loga warning mas cria o membro (não bloqueia cadastro)",
+        "Se config.responsavelMembroId: cria Alerta + 1 AlertaDestinatario",
+        "Se config.responsavelMinisterioId: busca membros do ministerio, cria Alerta + N AlertaDestinatarios",
+        "Tudo dentro de `prisma.$transaction([...])` — atomicidade RN-MEM-05",
+        "Conteúdo do alerta: titulo='Novo visitante cadastrado', mensagem com nome+telefone (NÃO email, NÃO endereço — LGPD §2.5)",
+        "Teste prova atomicidade: injetar falha no segundo passo da transação → membro não existe no DB"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S04-T05",
+      "title": "Criar componentes de Config Acolhimento: ConfigAcolhimentoCard, FormConfigAcolhimento",
+      "type": "frontend",
+      "estimatedHours": 2,
+      "owner": "frontend",
+      "dependsOn": ["S03-T09"],
+      "tdd": {
+        "testFirst": "ConfigAcolhimentoCard mostra nome do responsável; FormConfigAcolhimento com tipo=MEMBRO mostra select de membros",
+        "testPath": "app/components/{ConfigAcolhimentoCard,FormConfigAcolhimento}.test.tsx",
+        "acceptance": "Cobre 2 estados (MEMBRO, MINISTERIO) e readonly para não-ADMIN"
+      },
+      "files": {
+        "create": ["app/components/ConfigAcolhimentoCard.tsx", "app/components/FormConfigAcolhimento.tsx"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "<ConfigAcolhimentoCard>: mostra responsável atual; se !config, InfoBox warning",
+        "<FormConfigAcolhimento>: RadioGroup (MEMBRO/MINISTERIO) controla qual Select renderiza; Form method=post",
+        "Para não-ADMIN, mostra InfoBox 'Apenas o Admin pode alterar' em vez do form",
+        "InfoBox explicando o que acontece ao cadastrar visitante"
+      ],
+      "rags": ["security-rbac-matrix"]
+    },
+    {
+      "id": "S04-T06",
+      "title": "Criar rota `app/routes/app/config.acolhimento.tsx` (RN-MEM-05)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S04-T02", "S04-T05"],
+      "tdd": {
+        "testFirst": "Loader: getConfigAcolhimento + lista membros com cargo + ministerios. Action: ADMIN salva; SECRETARIO tenta → 403.",
+        "testPath": "app/routes/app/config.acolhimento.test.tsx",
+        "acceptance": "Cobre escrita ADMIN, leitura qualquer, POST bypass 403"
+      },
+      "files": {
+        "create": ["app/routes/app/config.acolhimento.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Loader: getConfigAcolhimento + lista membros (apenas com cargo) + ministerios; calcula canEdit = user.cargo === 'ADMIN'",
+        "Action: assertIsAdmin; ConfigAcolhimentoSchema.safeParse; updateConfigAcolhimento; redirect (com toast)",
+        "Render: PageHeader + Breadcrumb + ConfigAcolhimentoCard + FormConfigAcolhimento (se canEdit) ou InfoBox",
+        "Bypass via URL POST como SECRETARIO → 403"
+      ],
+      "rags": ["security-rbac-matrix", "architecture-monolith-modular"]
+    },
+    {
+      "id": "S04-T07",
+      "title": "Criar componentes de Alertas: TabsFiltroAlertas, CardAlerta, RelativeTime",
+      "type": "frontend",
+      "estimatedHours": 2,
+      "owner": "frontend",
+      "dependsOn": ["S02-T03"],
+      "tdd": {
+        "testFirst": "CardAlerta com lido=false tem border-l-cyan-600; RelativeTime formatRelative retorna 'há X minutos'",
+        "testPath": "app/components/{TabsFiltroAlertas,CardAlerta,RelativeTime}.test.tsx",
+        "acceptance": "3 componentes testados"
+      },
+      "files": {
+        "create": ["app/components/TabsFiltroAlertas.tsx", "app/components/CardAlerta.tsx", "app/components/RelativeTime.tsx"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "<TabsFiltroAlertas>: tabs (Todos, Não lidos, Resolvidos) com counts; usa ?filter=",
+        "<CardAlerta>: borda esquerda cyan-600 se não lido; opacity 75% se resolvido; Form method=post para actions; link 'Ver membro' se houver membroId",
+        "<RelativeTime>: <time dateTime=ISO>formatado PT-BR; helper pure (recebe Date, não chama Date.now em render)"
+      ],
+      "rags": []
+    },
+    {
+      "id": "S04-T08",
+      "title": "Criar rota `app/routes/app/alertas._index.tsx` (Central de Alertas)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S04-T03", "S04-T07"],
+      "tdd": {
+        "testFirst": "Loader: listAlertas(user, filter); Action: intent=lido/resolver; user A não vê alertas de user B",
+        "testPath": "app/routes/app/alertas._index.test.tsx",
+        "acceptance": "Cobre isolamento por destinatário"
+      },
+      "files": {
+        "create": ["app/routes/app/alertas._index.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Loader: lê ?filter= (default 'todos'); chama listAlertas(user, filter); retorna items + counts + activeFilter",
+        "Action: dispatch por intent (lido/resolver); safeLog (NÃO loga mensagem)",
+        "Render: PageHeader + TabsFiltroAlertas + lista de CardAlerta; empty state contextual por filtro",
+        "RR7 revalidação: action retorna null, loader re-roda automaticamente"
+      ],
+      "rags": ["lgpd-igreja-conect", "security-rbac-matrix"]
+    },
+    {
+      "id": "S04-T09",
+      "title": "Criar `app/lib/dashboard.server.ts` (getDashboardData com 3 KPIs + últimos visitantes)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S02-T02"],
+      "tdd": {
+        "testFirst": "getDashboardData retorna 3 KPIs corretos; RBAC fina para DISCIPULADOR",
+        "testPath": "app/lib/dashboard.server.test.ts (integration)",
+        "acceptance": "Cria dados, chama service, valida contagens e escopo"
+      },
+      "files": {
+        "create": ["app/lib/dashboard.server.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "3 counts em paralelo via Promise.all: membrosAtivos, visitantesMes, alertasNaoLidos",
+        "findMany para últimos 5 visitantes: orderBy createdAt desc, take 5",
+        "RBAC fina: DISCIPULADOR filtra por discipuladorId=user.id (exceto alertasNaoLidos que é por destinatário)",
+        "JSDoc completo"
+      ],
+      "rags": ["security-rbac-matrix"]
+    },
+    {
+      "id": "S04-T10",
+      "title": "Substituir placeholder do Dashboard por versão real: Saudacao, CardKpi, Atalho, ListaRecente, EmptyState, Skeleton",
+      "type": "frontend",
+      "estimatedHours": 3,
+      "owner": "frontend",
+      "dependsOn": ["S04-T09"],
+      "tdd": {
+        "testFirst": "Saudacao retorna 'Bom dia' se hora<12; CardKpi renderiza value; ListaRecente empty mostra mensagem",
+        "testPath": "app/components/{Saudacao,CardKpi,Atalho,ListaRecente,EmptyState,Skeleton}.test.tsx + app/lib/format-date.test.ts",
+        "acceptance": "6 componentes + 1 helper"
+      },
+      "files": {
+        "create": [
+          "app/components/Saudacao.tsx",
+          "app/components/CardKpi.tsx",
+          "app/components/Atalho.tsx",
+          "app/components/ListaRecente.tsx",
+          "app/components/EmptyState.tsx",
+          "app/components/Skeleton.tsx",
+          "app/lib/format-date.ts"
+        ],
+        "modify": ["app/routes/app/_index.tsx"]
+      },
+      "acceptanceCriteria": [
+        "<Saudacao>: 'Bom dia' < 12h, 'Boa tarde' < 18h, 'Boa noite' senão",
+        "<CardKpi>: label + value + hint; href opcional (renderiza Link); tone 'attention' muda cor",
+        "<Atalho>: link com ícone + label; variant primary/secondary",
+        "<ListaRecente>: ul com items (nome + badge + timestamp); empty state contextual",
+        "<EmptyState>: título + descrição + action opcional",
+        "<Skeleton>: rows=3 default; animação pulse",
+        "`formatRelative(date)` puro (helper de data), testável sem Date.now",
+        "Dashboard renderiza: Saudacao + 3 CardKpi (grid 2 col mobile / 3 lg) + 3 Atalho + ListaRecente"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    },
+    {
+      "id": "S04-T11",
+      "title": "Teste E2E (Playwright) — `e2e/alertas.spec.ts` + `e2e/config-acolhimento.spec.ts` + chain 1 cross-module (visitante→alerta)",
+      "type": "test",
+      "estimatedHours": 4,
+      "owner": "tester",
+      "dependsOn": ["S04-T04", "S04-T06", "S04-T08", "S04-T10"],
+      "tdd": {
+        "testFirst": "Chain 1 cross-module (CRÍTICO): cadastrar visitante → responsável vê alerta em /app/alertas. Chain config: ADMIN salva, SECRETARIO 403.",
+        "testPath": "e2e/alertas.spec.ts + e2e/config-acolhimento.spec.ts + e2e/visitante-alerta-cross.spec.ts",
+        "acceptance": "Cobre as 3 e2eChains restantes do SPEC §11.5 (chain 1: visitante→alerta)"
+      },
+      "files": {
+        "create": ["e2e/alertas.spec.ts", "e2e/config-acolhimento.spec.ts", "e2e/visitante-alerta-cross.spec.ts"],
+        "modify": []
+      },
+      "acceptanceCriteria": [
+        "Chain 1 (visitante→alerta): ADMIN configura acolhimento para Membro X; Secretário logado cadastra visitante; Membro X logado em /app/alertas vê o alerta com nome+telefone do visitante",
+        "Chain 2 (atomicidade): simular falha no alerta via mock → visitante não é criado (rollback)",
+        "Chain 3 (alertas): marcar como lido → badge muda; marcar como resolvido → card some do filtro 'Não lidos'",
+        "Chain 4 (config): ADMIN salva com Membro → toast; trocar para Ministério → ambos limpos/setados",
+        "Chain 5 (config bypass): SECRETARIO GET /app/config/acolhimento → vê form desabilitado; POST direto → 403",
+        "Chain 6 (privacidade LGPD): grep no payload de /app/alertas: 'email' ou 'senhaHash' → 0 resultados",
+        "Chain 7 (dashboard): login admin → /app → vê 3 KPIs + 3 atalhos + últimos visitantes"
+      ],
+      "rags": ["security-rbac-matrix", "lgpd-igreja-conect"]
+    },
+    {
+      "id": "S04-T12",
+      "title": "Adicionar endpoints de vínculo de Ministério em `app/routes/app/membros.$id.ministerios.tsx` (POST + DELETE)",
+      "type": "backend",
+      "estimatedHours": 2,
+      "owner": "backend",
+      "dependsOn": ["S03-T04"],
+      "tdd": {
+        "testFirst": "POST /app/membros/:id/ministerios cria vínculo; DELETE /app/membros/:id/ministerios/:ministerioId remove",
+        "testPath": "app/routes/app/membros.$id.ministerios.test.tsx",
+        "acceptance": "Cobre os 2 endpoints do SPEC §10"
+      },
+      "files": {
+        "create": ["app/routes/app/membros.$id.ministerios.tsx"],
+        "modify": ["app/routes.ts"]
+      },
+      "acceptanceCriteria": [
+        "Action POST: chama addMembroToMinisterio; redirect /app/membros/:id",
+        "Action DELETE: chama removeMembroFromMinisterio; redirect /app/membros/:id",
+        "Endpoint do SPEC §10: `POST /app/membros/:id/ministerios` e `DELETE /app/membros/:id/ministerios/:ministerioId`",
+        "Cobertura: cross-ref com TabMinisterios de S03"
+      ],
+      "rags": ["architecture-monolith-modular"]
+    }
+  ],
+  "definitionOfDone": [
+    "Todos os 12 testes da sprint passando (1 por task + E2E)",
+    "Coverage da sprint ≥ 85%",
+    "`pnpm typecheck` passa",
+    "E2E cross-module (visitante→alerta) passa — gate qa-gate",
+    "Atomicidade RN-MEM-05: falha no alerta → membro não persistido (testável)",
+    "Dashboard com 3 KPIs funciona (RBAC fina aplicada)",
+    "Central de Alertas filtra por destinatário (escopo)",
+    "Config Acolhimento: ADMIN escreve, outros 403",
+    "JSDoc completo em todas as funções públicas"
+  ],
+  "coverageTarget": 85,
+  "notes": "Sprint fecha US-MEM-001 (geração de alerta na criação de visitante) e entrega US-MEM-004 completamente. Cross-module e2e (visitante→alerta) é o teste mais importante do projeto após Fidelidade bypass."
+}

@@ -1,0 +1,9 @@
+{
+  "id": "E2E-S05-SMOKE-2",
+  "status": "passed",
+  "failedAtStep": null,
+  "cleanup": "executed (config reset + membros deletados)",
+  "responsavelId": "084764de-edc0-464f-a1ae-b1d1c8c772f8",
+  "visitanteId": "7ceb1c73-5371-4c0f-8c83-b772824f410d",
+  "alertaId": "3e6ee533-11d8-4f99-8094-52e3bf70cdba"
+}

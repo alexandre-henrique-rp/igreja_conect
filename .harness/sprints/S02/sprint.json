@@ -1,0 +1,27 @@
+{
+  "sprintId": "S02",
+  "name": "Membros — Listagem + CRUD Básico",
+  "status": "completed",
+  "completedAt": "2026-06-13T12:55:00Z",
+  "metrics": {
+    "tasksCompleted": 12,
+    "testsTotalInProject": 417,
+    "testsPassing": 417,
+    "coverage": 86.69,
+    "typecheck": "pass",
+    "buildSsr": "pass"
+  },
+  "gate": "all-of passed (after rework 1/2)",
+  "rework": {
+    "applied": true,
+    "attempt": 1,
+    "reason": "coverage 72% < 85% (rotas membros._index e membros.$id sem testes integration)",
+    "result": "72%→86.69%"
+  },
+  "artifacts": {
+    "code-review": "code-review.md",
+    "security-audit": "security-audit.md",
+    "lgpd-parecer": "lgpd-parecer.md"
+  },
+  "notes": "CRUD membros + RBAC fina + 2 rework loops até atingir 85% coverage."
+}

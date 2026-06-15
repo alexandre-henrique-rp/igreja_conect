@@ -1,0 +1,91 @@
+{
+  "phase": "phase.5.build",
+  "agent": "tester",
+  "sprint": "S03",
+  "generatedAt": "2026-06-13T14:05:00Z",
+  "qaDir": "qa/S03/",
+  "chainsFile": "qa/S03/e2e-chains.json",
+  "resultsFile": "qa/S03/results.json",
+  "chainsTotal": 7,
+  "chainsPassed": 7,
+  "chainsFailed": 0,
+  "coverage": {
+    "current": 86.86,
+    "required": 85,
+    "passed": true,
+    "byModule": {
+      "app/api/auth": {"lines": 91.42, "branches": 90.47, "functions": 60},
+      "app/db": {"lines": 87.5, "branches": 50, "functions": 66.66},
+      "app/lib": {"lines": 96.32, "branches": 87.55, "functions": 94.91},
+      "app/lib/schemas": {"lines": 100, "branches": 96.42, "functions": 100},
+      "app/routes": {"lines": 38.46, "branches": 66.66, "functions": 25},
+      "app/routes/app": {"lines": 79.36, "branches": 71.04, "functions": 60},
+      "app/routes/public": {"lines": 78.43, "branches": 72.72, "functions": 71.42},
+      "prisma": {"lines": 83.33, "branches": 62.5, "functions": 50}
+    }
+  },
+  "failedChains": [],
+  "cleanup": "all 7 chains cleaned up successfully",
+  "readyForQAGate": true,
+  "chains": [
+    {
+      "id": "E2E-MEM-DISC-1",
+      "name": "TRAVA 12",
+      "result": "passed",
+      "steps": 5,
+      "testFile": "e2e/discipulado.spec.ts"
+    },
+    {
+      "id": "E2E-MEM-DISC-2",
+      "name": "ANTI-LOOP",
+      "result": "passed",
+      "steps": 5,
+      "testFile": "e2e/discipulado.spec.ts"
+    },
+    {
+      "id": "E2E-MEM-DISC-3",
+      "name": "AUTO-VÍNCULO",
+      "result": "passed",
+      "steps": 3,
+      "testFile": "e2e/discipulado.spec.ts"
+    },
+    {
+      "id": "E2E-MEM-FID-4",
+      "name": "FIDELIDADE CAMADA 1 UI",
+      "result": "passed",
+      "steps": 2,
+      "testFile": "e2e/fidelidade-bypass.spec.ts"
+    },
+    {
+      "id": "E2E-MEM-FID-5",
+      "name": "FIDELIDADE CAMADA 2 URL",
+      "result": "passed",
+      "steps": 2,
+      "testFile": "e2e/fidelidade-bypass.spec.ts"
+    },
+    {
+      "id": "E2E-MEM-FID-6",
+      "name": "FIDELIDADE CAMADA 3 SERVICE",
+      "result": "passed",
+      "steps": 6,
+      "testFile": "e2e/fidelidade-bypass.spec.ts"
+    },
+    {
+      "id": "E2E-MEM-RN06-7",
+      "name": "RN-MEM-06 VISITANTE SEM AUTO-PROMOÇÃO",
+      "result": "passed",
+      "steps": 3,
+      "testFile": "e2e/discipulado.spec.ts"
+    }
+  ],
+  "bugsFound": [
+    {
+      "id": "BUG-S03-001",
+      "severity": "low",
+      "title": "membros.novo.tsx Location header aponta para /app/membros/:id (rota não existe)",
+      "file": "app/routes/app/membros.novo.tsx:88",
+      "description": "Action redirects to `/app/membros/${created.id}` but routes are at root level (e.g., `/membros/:id`). Tests work around this by regex extraction.",
+      "recommendedFix": "Change line 88: `Location: /membros/${created.id}`"
+    }
+  ]
+}

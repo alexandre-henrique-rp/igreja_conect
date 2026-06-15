@@ -1,0 +1,36 @@
+{
+  "id": "E2E-MEM-FID-6",
+  "status": "executed",
+  "checks": [
+    {
+      "name": "finance.server.ts chama assertCanSeeFinancials primeiro",
+      "passed": true,
+      "detail": "OK"
+    },
+    {
+      "name": "finance.server.ts existe com getDizimosByMembro",
+      "passed": true,
+      "detail": "OK"
+    },
+    {
+      "name": "rbac.server.ts tem FINANCIAL_CARGOS",
+      "passed": true,
+      "detail": "OK"
+    },
+    {
+      "name": "SECRETARIO NÃO está em FINANCIAL_CARGOS",
+      "passed": true,
+      "detail": "OK"
+    },
+    {
+      "name": "assertCanSeeFinancials definido em rbac.server.ts",
+      "passed": true,
+      "detail": "OK"
+    },
+    {
+      "name": "finance.server.ts retorna 403",
+      "passed": true,
+      "detail": "OK"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "id": "E2E-AUTH-CHAIN-4",
+  "status": "executed",
+  "note": "rate-limit bucket permanece cheio até janela de 15min expirar OU restart do dev server."
+}

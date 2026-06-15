@@ -1,0 +1,514 @@
+{
+  "_type": "harness-cross-sprint-v6",
+  "project": "igreja-conect",
+  "phase": "phase.4.planejamento",
+  "cycle": 2,
+  "scope": "financeiro",
+  "generatedAt": "2026-06-14T12:30:00Z",
+  "generatedBy": "harness-sprint-tasker (cycle 2)",
+  "version": "1.0",
+  "purpose": "DAG de dependências entre sprints do ciclo 2 (Módulo Financeiro), pré-requisitos, cross-module data flows, user story coverage matrix e spec acceptance criteria mapping. Estende o cross-sprint.json do ciclo 1 (que está em .harness/sprints/cross-sprint.json) sem sobrescrevê-lo.",
+
+  "sprintDependencyGraph": {
+    "description": "Grafo dirigido onde aresta A → B significa 'B depende de A estar completa'. Ciclo 2 depende de S05 (último sprint do ciclo 1).",
+    "nodes": ["S05 (cycle 1)", "S06", "S07", "S08"],
+    "edges": [
+      { "from": "S05", "to": "S06", "reason": "S06 (Financeiro) depende da infra do ciclo 1: rbac.server.ts (assertCanSeeFinancials já existe), errors.ts, prisma singleton, money.server.ts (formatBRLFromCents/parseBRLToCents), TabFidelidadeFinanceira placeholder (ciclo 1, S03-T07)" },
+      { "from": "S06", "to": "S07", "reason": "S07 (Transferência) depende de assertSaldoSuficiente (S06-T05) + Zod LancamentoCreateSchema (S06-T06) + Zod de transferência (próprio S07) + getCaixaDetalhe (S06-T08) para listar extrato após transferência" },
+      { "from": "S07", "to": "S08", "reason": "S08 (Fidelidade) depende de getDizimosByMembro service (S08-T01 substitui placeholder) + rbac.server.ts (S08-T02 adiciona canSeeFinancials) + S06-Dashboard que é o entry-point do Módulo Financeiro" },
+      { "from": "S06", "to": "S08", "reason": "S08 também depende de S06 para a rota /app/financeiro/lancamentos/novo que é linkada do botão '+ Lançar dízimo' da TabFidelidadeFinanceira" }
+    ],
+    "criticalPath": ["S05 (cycle 1)", "S06", "S07", "S08"],
+    "criticalPathHours": 120,
+    "criticalPathDays": 15,
+    "parallelizable": [
+      {
+        "note": "S08 pode começar em paralelo com S07-T05/S07-T06 (auditoria) já que getDizimosByMembro e getDizimosByMembro não dependem de transferência",
+        "tasks": ["S08-T01", "S08-T02", "S07-T07"]
+      },
+      {
+        "note": "S06-T01 (migration) pode rodar em paralelo com S06-T05 (assertSaldoSuficiente) e S06-T06 (Zod LancamentoCreateSchema)",
+        "tasks": ["S06-T01", "S06-T05", "S06-T06"]
+      },
+      {
+        "note": "S06-T09 (componentes) pode rodar em paralelo com S06-T11 (rotas /caixas) já que componentes são reutilizáveis",
+        "tasks": ["S06-T09", "S06-T11"]
+      }
+    ]
+  },
+
+  "environmentPrerequisites": {
+    "description": "O que o ambiente precisa ter ANTES de S06 começar (herdado do ciclo 1 + nada novo).",
+    "node": ">= 22 LTS",
+    "packageManager": "pnpm 11.6.0",
+    "dependenciesToAddInS06": [],
+    "dependenciesToAddInS07": [],
+    "dependenciesToAddInS08": [],
+    "rationale_no_new_deps": "Brief §6.4 — sem dependências externas novas. Tudo roda no mesmo processo Node. Zod 4.4.3 (já instalado no ciclo 1) cobre TransferenciaCreateSchema e LancamentoCreateSchema. Sem gateway, sem S3, sem Redis. YAGNI antecipar Decimal/bigint.",
+    "envVariables": {
+      "DATABASE_URL": "file:./dev.db (default — configurável em .env)",
+      "SESSION_SECRET": "Já em .env.development (≥16 chars; fail-fast em app/lib/session.server.ts:30-38)",
+      "NODE_ENV": "development (default) | production (em prod)"
+    },
+    "databaseState": {
+      "currentSchema_pre_s06": "16 models + 6 enums (ciclo 1) — Caixa, TransferenciaCaixa, Lancamento já existem SEM campo `ativo`",
+      "firstMigration_s06": "S06-T01 — add_ativo_to_caixa (Caixa.ativo: Boolean @default(true) + @@index([ativo]))",
+      "secondMigration_s07_s08": "(nenhuma — sem mudança de schema além do S06-T01)"
+    },
+    "criticalGotcha": "⚠️ `pnpm dev` está QUEBRADO (Prisma 7.8 + Vite 8 SSR fecha ModuleRunner — ver RAG `lesson-prisma-7-vite-8-ssr-incompat.md`). Para validar E2E: `pnpm build && pnpm start` em porta 3000. Vitest e Playwright funcionam normalmente (instanciam Prisma sob demanda)."
+  },
+
+  "crossModuleDataFlows": {
+    "description": "Fluxos de dados que cruzam múltiplos sprints do ciclo 2 + ciclo 1. Críticos para testes E2E cross-module.",
+    "flows": [
+      {
+        "id": "CF-FIN-01",
+        "name": "Criar Dízimo → Saldo reflete → PASTOR vê na Fidelidade (MÉTRICA MACRO BRIEF §7.1)",
+        "sequence": [
+          "POST /login (FINANCEIRO)",
+          "POST /app/financeiro/lancamentos (DIZIMO com membroId)",
+          "GET /app/financeiro/caixas/<id> (extrato do Caixa Geral mostra 1 lançamento +R$ 50,00)",
+          "POST /logout (FINANCEIRO)",
+          "POST /login (PASTOR)",
+          "GET /app/membros/<mariaId>?tab=fidelidade (vê dízimo recém-criado + cards de resumo)"
+        ],
+        "dataFlow": "FINANCEIRO submete LancamentoCreateSchema { tipo: ENTRADA, categoria: DIZIMO, valorCentavos: 5000, membroId, caixaId, descricao } → service `criarLancamento` (S06-T07) assertCanSeeFinancials (Camada 3) → assertSaldoSuficiente (não aplicado — ENTRADA) → $transaction { tx.lancamento.create + tx.caixa.update.increment } → safeLog → 302 /caixas/<id> → PASTOR em outra sessão → loader redirect se !canSeeFinancials (Camada 2) → se OK, getDizimosByMembro (S08-T01) com where: { membroId, categoria: 'DIZIMO' } retorna items[1] + resumo",
+        "sprints": ["S06", "S08"],
+        "sprintsDependency": "S06 entrega criarLancamento + UI; S08 entrega getDizimosByMembro completo",
+        "e2eChains": [
+          "S06-T14 Chain 1 (FINANCEIRO lança dízimo, vê no extrato)",
+          "S08-T06 Chain 7+8 (PASTOR vê dízimo recém-criado na Fidelidade)"
+        ],
+        "specRef": "brief §7.1 (métrica macro), PRD D.3 F2+F3+F6",
+        "metricamacro_target": "Tudo em < 2 minutos (brief §7.1)",
+        "criticality": "GATE — gate aggregated Phase 5 valida"
+      },
+      {
+        "id": "CF-FIN-02",
+        "name": "Transferência entre Caixas — atomicidade 5 mutações (RN-FIN-02 + RN-FIN-04)",
+        "sequence": [
+          "POST /login (SECRETARIO — RN-FIN-03 autonomia por saldo)",
+          "POST /app/financeiro/transferencias (origem=Caixa Geral saldo 100,00, destino=Caixa Cantina 0,00, valor=100,00)",
+          "GET /app/financeiro (dashboard mostra Geral R$ 0,00 + Cantina R$ 100,00)",
+          "GET /app/financeiro/caixas/<origemId> (extrato mostra SAIDA -R$ 100,00 TRANSFERENCIA)",
+          "GET /app/financeiro/caixas/<destinoId> (extrato mostra ENTRADA +R$ 100,00 TRANSFERENCIA)"
+        ],
+        "dataFlow": "SECRETARIO submete TransferenciaCreateSchema { caixaOrigemId, caixaDestinoId, valorCentavos: 10000, dataHora, descricao? } → service `transferirEntreCaixas` (S07-T02) assertCanSeeFinancials (Camada 3) → assertSaldoSuficiente (origem, 10000) → $transaction { tx.transferenciaCaixa.create (executadoPorId: user.id) + tx.lancamento.create SAIDA TRANSFERENCIA origem + tx.lancamento.create ENTRADA TRANSFERENCIA destino + tx.caixa.update decrement origem + tx.caixa.update increment destino } → safeLog → 302 /transferencias",
+        "sprints": ["S07"],
+        "sprintsDependency": "S07 standalone (depende de S06-T05 assertSaldoSuficiente + S07-T01 Zod)",
+        "e2eChains": [
+          "S07-T05 Chain 1 (SECRETARIO transfere, vê toasts)",
+          "S07-T05 Chain 2 (extrato de ambos reflete)",
+          "S07-T05 Chain 6 (atomicidade — smoke)"
+        ],
+        "specRef": "PRD D.3 F4, brief §7.3 testes #6 #7 #8",
+        "atomicityRequirement": "5 mutações em 1 $transaction; se 1 falhar, todas revertem (R-FIN-02 — transferência parcial é INACEITÁVEL)",
+        "criticality": "GATE — testado com mock que injeta erro"
+      },
+      {
+        "id": "CF-FIN-03",
+        "name": "RBAC 3 Camadas — Fidelidade Financeira (RN-MEM-03 — REGRESSÃO DO CICLO 1 + EXTENSÃO S08)",
+        "sequence": [
+          "Camada 1 (UI): SECRETARIO loga → /app/membros/<id> → aba Fidelidade NÃO renderiza (TabsMembro usa <Can allow={['ADMIN','PASTOR','FINANCEIRO']}>)",
+          "Camada 2 (Loader): SECRETARIO via cookie sid → fetch /app/membros/<id>?tab=fidelidade → loader detecta tab=fidelidade + !canSeeFinancials → throw redirect /app/membros/<id>?tab=dados",
+          "Camada 3 (Service): Bypass programático (curl) → chama getDizimosByMembro diretamente → assertCanSeeFinancials(user) → Response(403)"
+        ],
+        "dataFlow": "user.cargo é o pivot. TabsMembro filtra na render (Camada 1, ciclo 1 S03-T07). Loader S08-T05 checa canSeeFinancials (novo helper S08-T02) e redireciona (Camada 2 — UX, não 403). Service S08-T01 chama assertCanSeeFinancials PRIMEIRO (Camada 3 — segurança real).",
+        "sprints": ["S08"],
+        "sprintsDependency": "S08 standalone (substitui placeholder do TabFidelidadeFinanceira de S03)",
+        "e2eChains": [
+          "S08-T06 Chain 4 (UI ausente)",
+          "S08-T06 Chain 5 (URL redirect)",
+          "S08-T06 Chain 6 (service 403 — bypass programático)"
+        ],
+        "specRef": "PRD D.3 F6, brief §7.3 teste #10, SPEC D.5",
+        "criticality": "GATE — lgpd-officer valida 3 camadas"
+      },
+      {
+        "id": "CF-FIN-04",
+        "name": "Caixa Arquivado rejeita movimentação (RN-FIN-01 + decisão Caixa.ativo — cross-sprint S06/S07)",
+        "sequence": [
+          "Admin arquiva Caixa Cantina (S06-T04 + S06-T11 UI)",
+          "Tentar criarLancamento com caixaId = Cantina (S06-T07) → 409 'Caixa arquivado. Movimentações bloqueadas.'",
+          "Tentar transferirEntreCaixas com caixaOrigemId = Cantina OU caixaDestinoId = Cantina (S07-T02) → 409 'Caixa de origem/destino está arquivado.'"
+        ],
+        "dataFlow": "Caixa.ativo = false (soft-delete, decisão PRD D.9 + RAG decision-caixa-soft-delete). assertSaldoSuficiente (S06-T05) checa caixa.ativo ANTES de validar saldo → 409. transferirEntreCaixas (S07-T02) checa ativo de AMBOS os caixas dentro do $transaction → 409. Reabrir (S06-T04 reabrirCaixa) restaura acesso.",
+        "sprints": ["S06", "S07"],
+        "sprintsDependency": "S06-T04 arquivarCaixa/reabrirCaixa; S06-T07 criarLancamento consome assertSaldoSuficiente; S07-T02 transferirEntreCaixas checa dentro de $transaction",
+        "e2eChains": [
+          "S06-T14 Chain 7 (caixa arquivado rejeita criarLancamento no form)",
+          "S07-T06 (4 cenários de teste #2 do brief — origem/destino arquivados)"
+        ],
+        "specRef": "PRD D.7.3 teste #2, PRD D.9 (4 testes de borda)",
+        "criticality": "GATE — testado em S06-T04 + S07-T06"
+      },
+      {
+        "id": "CF-FIN-05",
+        "name": "Trava de Saldo no service (RN-FIN-04 — REGRESSÃO CONTÍNUA)",
+        "sequence": [
+          "FINANCEIRO tenta criarLancamento com tipo=SAIDA, valorCentavos=1, caixaId=caixa com saldo=0",
+          "criarLancamento chama assertSaldoSuficiente(caixaId, 1, 'ctx') (S06-T05) → throws Response(409, 'Saldo insuficiente...')"
+        ],
+        "dataFlow": "Helper canônico assertSaldoSuficiente (S06-T05) em app/lib/finance.server.ts. É a única porta de entrada para validação de saldo (Camada 3 — service). UI pode desabilitar submit (UX), mas Camada 3 é a real.",
+        "sprints": ["S06"],
+        "sprintsDependency": "S06-T05 (helper) + S06-T07 (criarLancamento usa helper) + S07-T02 (transferirEntreCaixas usa helper)",
+        "e2eChains": [
+          "S06-T14 (smoke — implicitamente via criarLancamento test)",
+          "S07-T02 (5 testes de borda: #3 saldo insuficiente, #5 borda exata)"
+        ],
+        "specRef": "brief §7.3 teste #3 (BLOQUEADOR — saldo=0 + SAIDA 1 centavo → 409)",
+        "criticality": "GATE BLOQUEADOR — sem este teste verde, sprint não fecha"
+      }
+    ]
+  },
+
+  "debtRegistry": {
+    "description": "Débitos técnicos e pendências identificados durante o planejamento do ciclo 2. Severidade define ação.",
+    "items": [
+      {
+        "id": "DEBT-016",
+        "severity": "blocker",
+        "title": "Campo Caixa.ativo não existe no schema (S06-T01 resolve)",
+        "origin": "PRD D.9 (decisão aprovada), SPEC D.2.1 (migration proposta)",
+        "resolution": "S06-T01: migration `add_ativo_to_caixa` adiciona Boolean @default(true) + @@index([ativo])",
+        "blocksSprints": ["S06", "S07"],
+        "note": "Decisão Caixa.ativo APROVADA pelo prd-reviewer (2026-06-14) com score 90"
+      },
+      {
+        "id": "DEBT-017",
+        "severity": "major",
+        "title": "Placeholder TabFidelidadeFinanceira ainda ativo (S08-T04 resolve)",
+        "origin": "Ciclo 1, S03-T07 (placeholder aguardando dados reais)",
+        "resolution": "S08-T04: substituir placeholder por implementação real (dados via getDizimosByMembro)",
+        "blocksSprints": ["S08"]
+      },
+      {
+        "id": "DEBT-018",
+        "severity": "major",
+        "title": "Service getDizimosByMembro é stub (retorna vazio)",
+        "origin": "Ciclo 1, S03-T11 (Camada 3 RBAC pronta, mas corpo é stub)",
+        "resolution": "S08-T01: substituir stub por implementação completa (paginação + resumo mês/ano via Promise.all)",
+        "blocksSprints": ["S08"]
+      },
+      {
+        "id": "DEBT-019",
+        "severity": "major",
+        "title": "Helper canSeeFinancials (Camada 2) não existe (S08-T02 resolve)",
+        "origin": "RAG pattern-3-layer-rbac §2.1 (helper UX, não throw)",
+        "resolution": "S08-T02: adicionar `canSeeFinancials(user): boolean` em rbac.server.ts; coexiste com assertCanSeeFinancials",
+        "blocksSprints": ["S08"]
+      },
+      {
+        "id": "DEBT-020",
+        "severity": "minor",
+        "title": "audit log de leitura (LGPD art. 37) — fora do escopo do ciclo 2",
+        "origin": "PRD D.5 não-objetivos #11, brief §8",
+        "resolution": "Fora do ciclo 2. Backlog S09+ (criação de AuditLog table + hook em getDizimosByMembro)",
+        "blocksSprints": []
+      },
+      {
+        "id": "DEBT-021",
+        "severity": "minor",
+        "title": "Listagem de transferências `/app/financeiro/transferencias` é backlog",
+        "origin": "SPEC D.3.2 menciona a rota mas não é bloqueador; S07-T04 redireciona para /app/financeiro após submit",
+        "resolution": "Backlog S09+. Listagem read-only com filtros por período, caixa origem, caixa destino, operador.",
+        "blocksSprints": []
+      },
+      {
+        "id": "DEBT-022",
+        "severity": "minor",
+        "title": "Auditoria semanal de reconciliação (R-FIN-08) é backlog",
+        "origin": "PRD D.6 R-FIN-08, brief §8",
+        "resolution": "Fora do ciclo 2. Backlog S09+ (script `pnpm audit:saldo` que reconcilia SUM(Lancamento) vs Caixa.saldoCentavos)",
+        "blocksSprints": []
+      },
+      {
+        "id": "DEBT-023",
+        "severity": "minor",
+        "title": "Migrar de Float para Decimal — já somos Int em centavos, sem necessidade",
+        "origin": "Brief §6.2 confirmou `Int` em centavos como padrão imutável",
+        "resolution": "N/A — já correto. RAG `convention-monetary-values` §3 documenta.",
+        "blocksSprints": []
+      }
+    ],
+    "statsBySeverity": {
+      "blocker": 1,
+      "major": 3,
+      "minor": 4,
+      "total": 8
+    }
+  },
+
+  "taskDependencyGraph": {
+    "description": "DAG de tasks dentro e entre sprints do ciclo 2. Cada task lista dependsOn = IDs de tasks (no mesmo sprint ou sprint anterior).",
+    "crossSprintDependencies": [
+      {
+        "from": { "sprint": "S06", "task": "S06-T02 (listarCaixas)" },
+        "to": { "sprint": "S06", "task": "S06-T01 (migration)" },
+        "reason": "listarCaixas precisa do campo Caixa.ativo (default true) — depende da migration"
+      },
+      {
+        "from": { "sprint": "S06", "task": "S06-T05 (assertSaldoSuficiente)" },
+        "to": { "sprint": "S06", "task": "S06-T01 (migration)" },
+        "reason": "helper checa caixa.ativo === false — depende do campo"
+      },
+      {
+        "from": { "sprint": "S06", "task": "S06-T07 (criarLancamento)" },
+        "to": { "sprint": "S06", "task": "S06-T05 (assertSaldoSuficiente) + S06-T06 (LancamentoCreateSchema)" },
+        "reason": "service usa helper + valida input via Zod"
+      },
+      {
+        "from": { "sprint": "S07", "task": "S07-T02 (transferirEntreCaixas)" },
+        "to": { "sprint": "S06", "task": "S06-T05 (assertSaldoSuficiente) + S07-T01 (TransferenciaCreateSchema)" },
+        "reason": "service chama assertSaldoSuficiente na origem + parse Zod"
+      },
+      {
+        "from": { "sprint": "S07", "task": "S07-T04 (rota /transferencias/nova)" },
+        "to": { "sprint": "S07", "task": "S07-T02 (service) + S06-T13 (listarCaixasParaSelect reusado)" },
+        "reason": "rota chama service + reusa helper do S06 para popular selects"
+      },
+      {
+        "from": { "sprint": "S08", "task": "S08-T04 (TabFidelidadeFinanceira)" },
+        "to": { "sprint": "S08", "task": "S08-T01 (getDizimosByMembro)" },
+        "reason": "componente consome dados do service"
+      },
+      {
+        "from": { "sprint": "S08", "task": "S08-T05 (loader membros.$id)" },
+        "to": { "sprint": "S08", "task": "S08-T01 (service) + S08-T02 (canSeeFinancials)" },
+        "reason": "loader chama service + novo helper"
+      }
+    ],
+    "orphanCheck": {
+      "method": "Validado: cada dependsOn[] em task aponta para task ID que existe (no mesmo sprint ou em sprint anterior). crossSprint deps resolvidas pelo grafo S05→S06→S07→S08.",
+      "result": "0 órfãos detectados",
+      "verification": "Auditoria manual das 29 tasks — todas as dependências têm destino válido"
+    }
+  },
+
+  "userStoryCoverageMatrix": {
+    "description": "Cada user story do SPEC/PRD ciclo 2 mapeada para tasks específicas que a implementam.",
+    "matrix": [
+      {
+        "userStory": "US-FIN-001",
+        "title": "CRUD de Caixas (F1 — RN-FIN-01)",
+        "specSection": "PRD D.3 F1, SPEC D.4",
+        "primaryTasks": [
+          "S06-T01 (migration add_ativo_to_caixa)",
+          "S06-T02 (listarCaixas service)",
+          "S06-T03 (criarCaixa + assertCanManageCaixa)",
+          "S06-T04 (arquivarCaixa + reabrirCaixa)",
+          "S06-T11 (rotas /caixas lista + /caixas/novo)",
+          "S06-T12 (rota /caixas/:id detalhe + extrato)"
+        ],
+        "coverage": "100%",
+        "e2eCoverage": "S06-T14 Chain 3 (SECRETARIO 403 em /novo)"
+      },
+      {
+        "userStory": "US-FIN-002",
+        "title": "CRUD de Lançamentos (F2 — RN-FIN-01, 04, 05)",
+        "specSection": "PRD D.3 F2, SPEC D.4",
+        "primaryTasks": [
+          "S06-T05 (assertSaldoSuficiente helper)",
+          "S06-T06 (LancamentoCreateSchema Zod + superRefine RN-FIN-05)",
+          "S06-T07 (criarLancamento — $transaction + trava)",
+          "S06-T08 (listarPorCaixa + getCaixaDetalhe)",
+          "S06-T13 (rota /lancamentos/novo + form)"
+        ],
+        "coverage": "100%",
+        "e2eCoverage": "S06-T14 Chain 1 (métrica macro PARTE 1)"
+      },
+      {
+        "userStory": "US-FIN-003",
+        "title": "Dízimos vinculados a Membro (F3 — RN-FIN-05)",
+        "specSection": "PRD D.3 F3, SPEC D.4",
+        "primaryTasks": [
+          "S06-T06 (LancamentoCreateSchema superRefine — DIZIMO exige membro, OFERTA aceita, DESPESA rejeita)",
+          "S06-T07 (criarLancamento — RN-FIN-05 enforcement)",
+          "S06-T13 (FormLancamento — campo Membro condicional à categoria)"
+        ],
+        "coverage": "100%",
+        "e2eCoverage": "S06-T14 (teste borda #4 DIZIMO sem membro fail)"
+      },
+      {
+        "userStory": "US-FIN-004",
+        "title": "Transferências entre Caixas (F4 — RN-FIN-02)",
+        "specSection": "PRD D.3 F4, SPEC D.4",
+        "primaryTasks": [
+          "S07-T01 (TransferenciaCreateSchema — superRefine origem≠destino + valor > 0)",
+          "S07-T02 (transferirEntreCaixas — 5 mutações em 1 $transaction)",
+          "S07-T03 (FormTransferencia + ModalConfirmarTransferencia)",
+          "S07-T04 (rota /transferencias/nova)",
+          "S07-T05 (E2E atomicidade + 3 testes de borda)"
+        ],
+        "coverage": "100%",
+        "e2eCoverage": "S07-T05 Chains 1, 2, 6 (SECRETARIO transfere, ambos extratos, atomicidade)"
+      },
+      {
+        "userStory": "US-FIN-005",
+        "title": "Trava de Saldo no service (F5 — RN-FIN-04)",
+        "specSection": "PRD D.3 F5, SPEC D.4",
+        "primaryTasks": [
+          "S06-T05 (assertSaldoSuficiente helper canônico)",
+          "S06-T07 (criarLancamento usa helper + re-leitura anti-TOCTOU)",
+          "S07-T02 (transferirEntreCaixas usa helper + re-leitura dentro de $transaction)"
+        ],
+        "coverage": "100%",
+        "e2eCoverage": "S06-T07 teste #3 (BLOQUEADOR — saldo=0 + 1 centavo → 409)"
+      },
+      {
+        "userStory": "US-FIN-006",
+        "title": "Aba Fidelidade Financeira integrada (F6 — RN-MEM-03)",
+        "specSection": "PRD D.3 F6, SPEC D.4",
+        "primaryTasks": [
+          "S08-T01 (getDizimosByMembro — substitui stub, paginação + resumo)",
+          "S08-T03 (ResumoFinanceiro + TabelaDizimos + CardDizimo)",
+          "S08-T04 (TabFidelidadeFinanceira — substituir placeholder)",
+          "S08-T05 (loader membros.$id — Camada 2 redirect)"
+        ],
+        "coverage": "100%",
+        "e2eCoverage": "S08-T06 Chain 7+8 (métrica macro PARTE 2)"
+      },
+      {
+        "userStory": "US-FIN-007",
+        "title": "Dashboard de saldos (F7)",
+        "specSection": "PRD D.3 F7, SPEC D.4",
+        "primaryTasks": [
+          "S06-T09 (KpiSaldoTotal + CardSaldoCaixa + UltimasMovimentacoes)",
+          "S06-T10 (rota /app/financeiro + service getDashboardFinanceiro)"
+        ],
+        "coverage": "100%",
+        "e2eCoverage": "S06-T14 (login FINANCEIRO → dashboard)"
+      },
+      {
+        "userStory": "US-FIN-008",
+        "title": "RBAC fina (F8 — 3 camadas)",
+        "specSection": "PRD D.3 F8, SPEC D.5",
+        "primaryTasks": [
+          "S06-T03 (assertCanManageCaixa — novo helper)",
+          "S06-T10 (assertCanSeeFinancials no loader + service)",
+          "S06-T11 (rota /caixas — loader assertCanSeeFinancials, action 403 SECRETARIO)",
+          "S06-T12 (rota /caixas/:id — idem)",
+          "S06-T13 (rota /lancamentos/novo — idem)",
+          "S07-T04 (rota /transferencias/nova — idem)",
+          "S08-T05 (loader membros.$id — Camada 2 redirect)"
+        ],
+        "coverage": "100%",
+        "e2eCoverage": "S06-T14, S07-T05, S08-T06 — 100% da matriz §D.5"
+      },
+      {
+        "userStory": "US-MEM-005 (re-uso)",
+        "title": "Aba Fidelidade Financeira bloqueada (ciclo 1 — métrica macro PARTE 2)",
+        "specSection": "SPEC §6.0, §6.9, §7.3",
+        "primaryTasks": [
+          "S08-T01 (getDizimosByMembro — Camada 3 assertCanSeeFinancials)",
+          "S08-T04 (TabFidelidadeFinanceira — Camada 1 UI)",
+          "S08-T05 (loader — Camada 2 redirect)"
+        ],
+        "coverage": "100% (3 camadas verificadas)",
+        "e2eCoverage": "S08-T06 Chain 4+5+6 (3 vetores de bypass)",
+        "criticality": "GATE — lgpd-officer valida 3 camadas"
+      }
+    ],
+    "summary": {
+      "totalUserStoriesCycle2": 8,
+      "coveredUserStories": 8,
+      "userStoriesReusedCycle1": 1,
+      "coveragePercent": 100,
+      "allAcceptanceCriteriaMet": true
+    }
+  },
+
+  "specAcceptanceCriteriaMapping": {
+    "description": "Cada critério de aceitação do SPEC/PRD ciclo 2 (Apêndice D.4 endpoints + D.7 métricas + D.7.3 testes de borda) mapeado para tasks/testes que o provam.",
+    "endpoints_coverage": {
+      "total_specced_d4": 12,
+      "covered_in_sprints": 12,
+      "by_sprint": {
+        "S06": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "S07": [10, 11, 12],
+        "S08": []
+      },
+      "by_endpoint": [
+        { "endpoint": "GET /app/financeiro", "covered_in": "S06-T10" },
+        { "endpoint": "GET /app/financeiro/caixas", "covered_in": "S06-T11" },
+        { "endpoint": "GET /app/financeiro/caixas/nova", "covered_in": "S06-T11" },
+        { "endpoint": "POST /app/financeiro/caixas", "covered_in": "S06-T03 + S06-T11" },
+        { "endpoint": "GET /app/financeiro/caixas/:id", "covered_in": "S06-T12" },
+        { "endpoint": "PATCH /app/financeiro/caixas/:id/arquivar", "covered_in": "S06-T04 + S06-T11/12" },
+        { "endpoint": "PATCH /app/financeiro/caixas/:id/reabrir", "covered_in": "S06-T04 + S06-T11/12" },
+        { "endpoint": "GET /app/financeiro/lancamentos/novo", "covered_in": "S06-T13" },
+        { "endpoint": "POST /app/financeiro/lancamentos", "covered_in": "S06-T07 + S06-T13" },
+        { "endpoint": "GET /app/financeiro/transferencias", "covered_in": "S07-T04 (action redirect — listagem é backlog S09+)" },
+        { "endpoint": "GET /app/financeiro/transferencias/nova", "covered_in": "S07-T04" },
+        { "endpoint": "POST /app/financeiro/transferencias", "covered_in": "S07-T02 + S07-T04" }
+      ]
+    },
+    "testes_borda_coverage": {
+      "total_brief_7_3": 12,
+      "covered_in_sprints": 12,
+      "by_sprint": {
+        "S06": [3, 4, 5, 9, 11, 12],
+        "S07": [2, 6, 7, 8],
+        "S08": [10]
+      },
+      "by_test": [
+        { "id": 1, "name": "12 discípulos: passa (regressão ciclo 1)", "covered_in": "ciclo 1 S03 (regressão)" },
+        { "id": 2, "name": "13º discípulo: bloqueia com mensagem clara", "covered_in": "ciclo 1 S03 (regressão)" },
+        { "id": 3, "name": "Saldo=0 + SAIDA R$0,01 → 409 (BLOQUEADOR)", "covered_in": "S06-T05 + S06-T07" },
+        { "id": 4, "name": "DIZIMO sem membro → 400", "covered_in": "S06-T06 + S06-T07" },
+        { "id": 5, "name": "OFERTA sem membro → OK anônimo", "covered_in": "S06-T06 + S06-T07" },
+        { "id": 6, "name": "Transferência origem = destino → 400", "covered_in": "S07-T01 + S07-T02" },
+        { "id": 7, "name": "Transferência valor = 0 → 400", "covered_in": "S07-T01 + S07-T02" },
+        { "id": 8, "name": "Transferência valor negativo → 400", "covered_in": "S07-T01 + S07-T02" },
+        { "id": 9, "name": "SECRETARIO /app/financeiro 403", "covered_in": "S06-T14 Chain 4" },
+        { "id": 10, "name": "SECRETARIO aba Fidelidade (UI+URL+service 403)", "covered_in": "S08-T01 + S08-T05 + S08-T06" },
+        { "id": 11, "name": "DISCIPULADOR /app/financeiro/** 403", "covered_in": "S06-T14 Chain 5" },
+        { "id": 12, "name": "Caixa arquivado rejeita movimentação", "covered_in": "S06-T04 + S06-T07 + S07-T06" }
+      ]
+    },
+    "summary": {
+      "totalEndpoints": 12,
+      "endpointsWithProvenImplementation": 12,
+      "totalTestesBorda": 12,
+      "testesBordaWithProvenImplementation": 12,
+      "endpointsCoveragePercent": 100,
+      "testesBordaCoveragePercent": 100
+    }
+  },
+
+  "stats": {
+    "totalSprints": 3,
+    "totalTasks": 29,
+    "totalEstimatedHours": 120,
+    "totalEstimatedDays": 15,
+    "criticalPathHours": 120,
+    "totalRAGsReferenced": 11,
+    "ragsCiclo2Referenced": 4,
+    "ragsCiclo1Referenced": 7,
+    "totalCrossSprintFlows": 5,
+    "totalUserStories": 8,
+    "userStoriesReusedFromCycle1": 1,
+    "userStoryCoveragePercent": 100,
+    "totalSpecEndpoints": 12,
+    "endpointCoveragePercent": 100,
+    "totalTestesBorda": 12,
+    "testesBordaCoveragePercent": 100,
+    "totalDebts": 8,
+    "blockerDebts": 1,
+    "majorDebts": 3,
+    "minorDebts": 4
+  },
+
+  "validationChecklist": {
+    "indexExists": true,
+    "allSprintsHaveFiles": true,
+    "allTasksHaveRequiredFields": true,
+    "noOrphanTasks": true,
+    "specCoverage100Percent": true,
+    "prdCoverage100Percent": true,
+    "testesBordaCoverage100Percent": true,
+    "ragsReferencesValid": true,
+    "dependenciesValid": true,
+    "readyForCoverageCheck": true
+  }
+}

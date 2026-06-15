@@ -1,0 +1,7 @@
+{
+  "id": "E2E-S05-SMOKE-1",
+  "status": "failed",
+  "failedAtStep": 1,
+  "cleanup": "executed",
+  "visitanteId": null
+}

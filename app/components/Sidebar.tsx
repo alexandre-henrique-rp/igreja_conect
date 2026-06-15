@@ -1,16 +1,20 @@
 /**
- * Componente <Sidebar /> — menu lateral do shell autenticado (S02-T09).
+ * Componente <Sidebar /> — menu lateral do shell autenticado (S02-T09 / S06-T09).
  *
- * Renderiza a navegação lateral com 5 itens fixos:
+ * Renderiza a navegação lateral com 6 itens fixos:
  * 1. **Dashboard** (`/app`) — destino do redirect pós-login.
  * 2. **Membros** (`/app/membros`) — listagem (única área funcional em S02).
- * 3. **Ministérios** (`/app/ministerios`) — placeholder (sprint futura).
- * 4. **Alertas** (`/app/alertas`) — placeholder (sprint futura).
- * 5. **Configurações** (`/app/config/acolhimento`) — placeholder ADMIN only.
+ * 3. **Financeiro** (`/app/financeiro`) — dashboard financeiro (S06, apenas ADMIN/PASTOR/FINANCEIRO/SECRETARIO).
+ * 4. **Ministérios** (`/app/ministerios`) — placeholder (sprint futura).
+ * 5. **Alertas** (`/app/alertas`) — placeholder (sprint futura).
+ * 6. **Configurações** (`/app/config/acolhimento`) — placeholder ADMIN only.
  *
  * **Item ativo:** destacado com `bg-cyan-50 text-cyan-900 font-medium` e
  * `aria-current="page"`. Match é exato (`/app` ativa Dashboard) ou por
  * prefixo (`/app/membros/abc` também ativa Membros).
+ *
+ * **RBAC Financeiro:** o link de Financeiro só renderiza para cargos
+ * `['ADMIN', 'PASTOR', 'FINANCEIRO', 'SECRETARIO']` (ver Can.tsx).
  *
  * **Botão Sair:** form que submete `POST /logout` (action do backend).
  * O backend invalida a sessão e redireciona para `/login`.
@@ -32,6 +36,7 @@
  */
 import { Form, NavLink, useLocation } from "react-router";
 import type { SessionUser } from "~/lib/session.types";
+import { Can } from "./Can";
 
 /**
  * Props aceitas pelo `<Sidebar>`.
@@ -50,6 +55,8 @@ type MenuItem = {
   /** Se `true`, match exato (sem prefixo). Para Dashboard. */
   exact?: boolean;
   icon: React.ReactNode;
+  /** Cargos com permissão de ver este item (opcional, default = todos). */
+  roles?: string[];
 };
 
 const ICON_DASHBOARD = (
@@ -85,6 +92,23 @@ const ICON_MEMBERS = (
     <circle cx="9" cy="7" r="4" />
     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const ICON_FINANCEIRO = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="12" y1="1" x2="12" y2="23" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
   </svg>
 );
 
@@ -141,6 +165,12 @@ const ICON_CONFIG = (
 const MENU_ITEMS: MenuItem[] = [
   { label: "Dashboard", to: "/app", exact: true, icon: ICON_DASHBOARD },
   { label: "Membros", to: "/app/membros", icon: ICON_MEMBERS },
+  {
+    label: "Financeiro",
+    to: "/app/financeiro",
+    icon: ICON_FINANCEIRO,
+    roles: ["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"],
+  },
   { label: "Ministérios", to: "/app/ministerios", icon: ICON_MINISTERIOS },
   { label: "Alertas", to: "/app/alertas", icon: ICON_ALERTAS },
   {
@@ -167,7 +197,7 @@ function isItemActive(item: MenuItem, currentPath: string): boolean {
 }
 
 /**
- * @description Sidebar de navegação autenticada com 5 itens + botão Sair.
+ * @description Sidebar de navegação autenticada com 6 itens + botão Sair.
  * @param {SidebarProps} props - currentPath e user.
  * @returns {JSX.Element} Elemento da sidebar.
  */
@@ -187,7 +217,9 @@ export function Sidebar({ currentPath: currentPathProp, user }: SidebarProps) {
         <ul className="flex-1 py-4 px-2 space-y-1">
           {MENU_ITEMS.map((item) => {
             const active = isItemActive(item, currentPath);
-            return (
+
+            // Se o item tem restrição de cargo, usa <Can> para RBAC
+            const linkElement = (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -204,6 +236,16 @@ export function Sidebar({ currentPath: currentPathProp, user }: SidebarProps) {
                 </NavLink>
               </li>
             );
+
+            if (item.roles) {
+              return (
+                <Can key={item.to} user={user} allow={item.roles}>
+                  {linkElement}
+                </Can>
+              );
+            }
+
+            return linkElement;
           })}
         </ul>
 

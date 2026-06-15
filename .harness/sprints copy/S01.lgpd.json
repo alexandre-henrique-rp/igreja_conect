@@ -1,0 +1,152 @@
+{
+  "sprint": "S01",
+  "name": "Auth Backend + Login UI",
+  "auditedAt": "2026-06-13T11:00:00Z",
+  "auditedBy": "lgpd-officer",
+  "law": "Lei 13.709/2018 (LGPD)",
+  "parecer": "CONFORME COM RESSALVAS",
+  "lawReferences": [
+    "Art. 6º, I (finalidade)",
+    "Art. 6º, II (adequação)",
+    "Art. 6º, III (necessidade)",
+    "Art. 6º, VII (segurança)",
+    "Art. 6º, VIII (prevenção)",
+    "Art. 6º, X (responsabilização)",
+    "Art. 7º, V (execução de contrato — login)",
+    "Art. 7º, IX (interesse legítimo — segurança)",
+    "Art. 18, I-IX, §1º (direitos do titular)",
+    "Art. 37 (registro de operações)",
+    "Art. 41 (encarregado/DPO)",
+    "Art. 46 (segurança — medidas técnicas adequadas)",
+    "Art. 48 (incidentes)",
+    "Art. 49 (eliminação após cessada a finalidade)"
+  ],
+  "scope": {
+    "files": [
+      "app/lib/auth.server.ts",
+      "app/lib/session.server.ts",
+      "app/lib/audit.server.ts",
+      "app/lib/rate-limit.server.ts",
+      "app/lib/schemas/auth.ts",
+      "app/routes/public/login.tsx",
+      "app/routes/logout.tsx",
+      "app/routes/app/_middleware.tsx",
+      "app/components/FormLogin.tsx",
+      "app/app.css",
+      "prisma/schema.prisma (model Session)"
+    ],
+    "tasks": ["S01-T01", "S01-T02", "S01-T03", "S01-T04", "S01-T05", "S01-T06", "S01-T07", "S01-T08", "S01-T09", "S01-T11"],
+    "tasksNotAuditedInCode": ["S01-T10 (E2E e2e/auth.spec.ts ainda não criado — auditoria LGPD não exige E2E)"]
+  },
+  "blockingFindings": {
+    "critical": 0,
+    "high": 0
+  },
+  "advisoryFindings": {
+    "medium": 0,
+    "low": 1
+  },
+  "lowFindings": [
+    {
+      "id": "LGPD-S01-FIND-001",
+      "severity": "low",
+      "category": "transparencia-ux",
+      "title": "Checkbox 'Manter-me conectado (30 dias)' não muda TTL efetivo do cookie",
+      "file": "app/components/FormLogin.tsx:213",
+      "evidence": "Label diz '30 dias' mas TTL do cookie é fixo em 7d (session.server.ts:27).",
+      "impact": "Cosmético. Não viola LGPD (consentimento e finalidade estão corretos), apenas UX divergente do informado.",
+      "proposedChange": "Em sprint 2+ (YAGNI por ora): ajustar TTL para 30d quando manterConectado=true, ou alterar label para 'Manter-me conectado (7 dias)'.",
+      "regulatoryRisk": "Nenhum. Apenas boa-prática de transparência (Art. 6º, VI)."
+    }
+  ],
+  "foraDoMvP": [
+    {
+      "id": "DEBT-011",
+      "artigo": "Art. 46 (segurança)",
+      "titulo": "SESSION_SECRET não gerado/configurado",
+      "resolucaoEm": "S05",
+      "impactoAtual": "Em dev, OK (default). Em prod, cookie fica assinado com string pública se env var não for setada — risco de forjabilidade."
+    },
+    {
+      "id": "DEBT-012",
+      "artigo": "Art. 37 (auditoria de leitura)",
+      "titulo": "Auditoria de leitura ('quem viu o quê') não implementada",
+      "resolucaoEm": "Sprint 2+",
+      "impactoAtual": "S01 registra tentativas de login/logout (Art. 6º, X), mas não leituras de dados. Aceito para MVP."
+    },
+    {
+      "id": "DEBT-013",
+      "artigo": "Art. 18 (direitos do titular) + Art. 41 (DPO)",
+      "titulo": "Endpoints /app/privacidade/** e designação de DPO",
+      "resolucaoEm": "Sprint 2+",
+      "impactoAtual": "Titular depende de atendimento manual pelo ADMIN. Política de privacidade ainda não publicada. Aceito para MVP (brief §4 + PRD §4)."
+    },
+    {
+      "id": "DEBT-incidentes",
+      "artigo": "Art. 48 (incidentes)",
+      "titulo": "Plano de resposta a incidente não documentado",
+      "resolucaoEm": "Sprint 2+ (sugestão: S05)",
+      "impactoAtual": "Time não saberá reagir dentro do prazo de 2 dias úteis para ANPD. Não-bloqueante para S01."
+    },
+    {
+      "id": "DEBT-rate-limit-shared",
+      "artigo": "Art. 6º, VII (segurança)",
+      "titulo": "Rate limit in-memory não escala para multi-instância",
+      "resolucaoEm": "Sprint 2+ (antes de multi-instância)",
+      "impactoAtual": "Em prod multi-instância, attacker pode fazer 5*N tentativas distribuídas. Aceito para MVP (1 processo Node)."
+    }
+  ],
+  "articles": {
+    "art6_necessidade": "pass",
+    "art6_adequacao": "pass",
+    "art6_finalidade": "pass",
+    "art6_seguranca": "pass",
+    "art6_prevencao": "pass",
+    "art6_responsabilizacao": "advisory-parcial (registro de tentativas sim; auditoria de leitura nao)",
+    "art7_contrato": "pass (login = execucao de contrato)",
+    "art9_interesse_legitimo": "pass (rate limit + log = seguranca; sem crianca/adolescente)",
+    "art18_direitos_titular": "advisory-fora-mvp (PRD §4 explicito)",
+    "art37_auditoria_leitura": "advisory-fora-mvp (PRD §4 explicito)",
+    "art41_dpo": "advisory-fora-mvp (PRD §4 explicito)",
+    "art46_seguranca": "pass",
+    "art48_incidentes": "advisory-fora-mvp (plano nao documentado)",
+    "art49_eliminacao": "pass (deleteSession + sliding expiry + cascade)"
+  },
+  "evidenceIndex": {
+    "bcrypt_cost_10": "app/lib/auth.server.ts:9",
+    "cookie_httpOnly": "app/lib/session.server.ts:23",
+    "cookie_sameSite_lax": "app/lib/session.server.ts:24",
+    "cookie_secure_em_prod": "app/lib/session.server.ts:25",
+    "cookie_path_root": "app/lib/session.server.ts:26",
+    "cookie_maxAge_7d": "app/lib/session.server.ts:27",
+    "anti_enumeracao_3_cenarios": "app/lib/auth.server.ts:99-103",
+    "mensagem_unificada_401": "app/routes/public/login.tsx:110",
+    "rate_limit_5_em_15min": "app/lib/rate-limit.server.ts:11-12",
+    "rate_limit_reset_em_sucesso": "app/lib/rate-limit.server.ts:33-35",
+    "sliding_renewal_7d_teto_30d": "app/lib/session.server.ts:5-8 + 90-100",
+    "deleteSession_logout": "app/lib/session.server.ts:124-127 + app/routes/logout.tsx:33",
+    "sessao_expirada_deletada": "app/lib/session.server.ts:91",
+    "cascade_membro_deletado": "prisma/schema.prisma:129",
+    "safeLog_allowlist_6_campos": "app/lib/audit.server.ts:11-18",
+    "safeLog_filtra_senhaHash": "app/lib/audit.server.test.ts:24-30",
+    "verifyCredentials_nao_vaza_senhaHash": "app/lib/auth.server.test.ts:120-122",
+    "middleware_/app_protegido": "app/routes/app/_middleware.tsx:55-69",
+    "font_stack_sistema_sem_google": "app/app.css:60-64",
+    "zero_CDN_externo": "grep googleapis|fonts.gstatic|googletagmanager|google-analytics → 0 matches",
+    "zero_hash_fraco": "grep md5|sha1 → 0 matches",
+    "zero_pii_sensivel_no_schema": "grep cpf|rg|cnpj|tituloEleitor|pis|cartaoSus prisma/schema.prisma → 0 matches"
+  },
+  "parecerPath": ".harness/lgpd/S01-parecer.md",
+  "summary": "S01 (Auth Backend + Login UI) implementada com excelência em privacidade: bcrypt cost 10, cookie httpOnly+sameSite=lax+secure em prod, sliding renewal + teto absoluto, rate limit com reset em sucesso, anti-enumeração em 3 cenários, safeLog com allowlist, session cascade no Membro. Nenhuma falha em Art. 46 ou Art. 49 (gate-bloqueantes). Nenhuma coleta de PII sensível. Zero dependência externa (sem Google Fonts, sem analytics). Pendências Art. 18, 37, 41 e 48 estão explicitamente fora do MVP (PRD §4) e registradas como advisory. Gate: PASSED. S01 pode avançar para fase de QA/E2E.",
+  "nextSteps": [
+    "S01-T10 (E2E) — não é bloqueante para LGPD, mas é bloqueante para Definition of Done (cross-sprint.json CF-07).",
+    "S05 — gerar SESSION_SECRET real (DEBT-011) antes de qualquer exposição pública.",
+    "Sprint 2+ — implementar Art. 18 + Art. 37 + Art. 41 antes do go-live público."
+  ],
+  "ragCandidate": {
+    "title": "pattern:auth-cookie-lgpd-compliant-rr7-prisma-sqlite",
+    "rationale": "Padrao validado de sessao LGPD-compliant para stack RR7+Prisma+SQLite. Reutilizavel em outros 2+ projetos do mesmo dev solo.",
+    "ownerSugerido": "rag-curator",
+    "sprintSugerida": "2+"
+  }
+}

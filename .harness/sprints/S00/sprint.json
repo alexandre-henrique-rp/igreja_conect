@@ -1,0 +1,20 @@
+{
+  "sprintId": "S00",
+  "name": "Setup Inicial",
+  "status": "completed",
+  "completedAt": "2026-06-12T19:36:00Z",
+  "metrics": {
+    "tasksCompleted": 15,
+    "testsTotalInProject": 107,
+    "testsPassing": 107,
+    "coverage": 94.08,
+    "typecheck": "pass"
+  },
+  "gate": "all-of passed",
+  "artifacts": {
+    "code-review": null,
+    "security-audit": null,
+    "lgpd-parecer": null
+  },
+  "notes": "Sprint de setup/infra (sem features user-facing). Sem review/security/lgpd por design."
+}

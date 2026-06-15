@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "headers": {
+    "vary": "Origin",
+    "content-type": "text/html",
+    "date": "Sun, 14 Jun 2026 02:28:25 GMT",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": "<!DOCTYPE html><html lang=\"pt-BR\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"modulepreload\" href=\"/node_modules/.pnpm/@react-router+dev@7.17.0_@react-router+serve@7.17.0_react-router@7.17.0_react-dom@19.2._c2175259156071906b52404c14226f7a/node_modules/@react-router/dev/dist/config/defaults/entry.client.tsx\"/><link rel=\"modulepreload\" href=\"/app/root.tsx\"/><link rel=\"modulepreload\" href=\"/app/routes/public/login.tsx\"/><link data-react-router-critical-css=\"\" rel=\"stylesheet\" href=\"/@react-router/critical.css?pathname=/login\"/></head><body><a href=\"#main-content\" class=\"\n          sr-only focus:not-sr-only\n          focus:fixed focus:top-2 focus:left-2 focus:z-50\n          focus:px-3 focus:py-2 focus:rounded-md\n          focus:bg-cyan-700 focus:text-white focus:text-sm focus:font-medium\n          focus:shadow-lg\n        \">Pular para o conteúdo</a><header class=\"sticky top-0 z-10 bg-white border-b border-slate-200\"><div class=\"max-w-6xl mx-auto px-4 h-14 flex items-center justify-between\"><a aria-label=\"Ir para a página inicial\" class=\"font-semibold text-slate-900 hover:text-cyan-700 transition-colors\" href=\"/\" data-discover=\"true\">Igreja Conect</a></div></header><main id=\"main-content\" class=\"min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-4 py-12\"><div class=\"w-full max-w-md\"><header class=\"mb-6\"><h1 class=\"text-2xl font-bold text-slate-900\">Entrar</h1><p class=\"text-sm text-slate-600 mt-1\">Acesse o painel administrativo.</p></header><form class=\"space-y-4\" noValidate=\"\" data-discover=\"true\" action=\"/login\" method=\"post\"><div class=\"space-y-1\"><label for=\"email\" class=\"block text-sm font-medium text-slate-700\">E-mail<span aria-hidden=\"true\" class=\"text-red-700 ml-1\">*</span></label><div class=\"relative\"><input id=\"email\" type=\"email\" required=\"\" aria-required=\"true\" class=\"w-full h-11 px-3 rounded-md border bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focu"
+}

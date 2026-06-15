@@ -1,0 +1,6 @@
+{
+  "id": "E2E-S05-SMOKE-4",
+  "status": "passed",
+  "failedAtStep": null,
+  "cleanup": "executed (logout, sem novos membros criados)"
+}

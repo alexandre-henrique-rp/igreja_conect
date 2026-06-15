@@ -1,0 +1,21 @@
+{
+  "sprintId": "S01",
+  "name": "Auth — Login + Logout + Middleware /app",
+  "status": "completed",
+  "completedAt": "2026-06-13T12:02:00Z",
+  "metrics": {
+    "tasksCompleted": 11,
+    "testsTotalInProject": 199,
+    "testsPassing": 199,
+    "coverage": 89.31,
+    "typecheck": "pass",
+    "buildSsr": "pass"
+  },
+  "gate": "all-of passed",
+  "artifacts": {
+    "code-review": "code-review.md",
+    "security-audit": "security-audit.md",
+    "lgpd-parecer": "lgpd-parecer.md"
+  },
+  "notes": "Auth completo: login email+senha, logout server-side, middleware /app/**, landing. Desbloqueou US-AUTH-001/002."
+}

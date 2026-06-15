@@ -1,0 +1,29 @@
+- generic [active] [ref=e1]:
+  - link "Pular para o conteúdo" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e3]:
+    - link "Ir para a página inicial" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - text: Igreja Conect
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - heading "Entrar" [level=1] [ref=e9]
+        - paragraph [ref=e10]: Acesse o painel administrativo.
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: E-mail*
+          - textbox "E-mail" [ref=e15]
+        - generic [ref=e16]:
+          - generic [ref=e17]: Senha*
+          - generic [ref=e18]:
+            - textbox "Senha" [ref=e19]
+            - button "Mostrar senha" [ref=e21]:
+              - img [ref=e22]
+        - generic [ref=e25] [cursor=pointer]:
+          - checkbox "Manter-me conectado (30 dias)" [ref=e26]
+          - generic [ref=e27]: Manter-me conectado (30 dias)
+        - button "Entrar" [ref=e28]:
+          - generic [ref=e29]: Entrar
+        - paragraph [ref=e30]: Esqueceu a senha? Procure o Admin da sua igreja.
+  - contentinfo [ref=e31]: © Igreja Conect 2026

@@ -1,0 +1,445 @@
+{
+  "_type": "harness-security-audit-v6",
+  "agent": "security",
+  "timestamp": "2026-06-13T13:00:00Z",
+  "sprint": "S03",
+  "sprintName": "Membros: Tipos, Discipulado, Ministérios, Fidelidade Financeira bloqueada",
+  "auditType": "preventive",
+  "auditTypeRationale": "Código de feature S03 (app/lib/discipleship.server.ts, app/lib/ministries.server.ts, app/lib/finance.server.ts, app/lib/schemas/{discipulado,ministerios}.ts, 20+ componentes, 4 rotas) NÃO EXISTE no repositório. Auditoria valida CONTRATOS (sprints/S03.json), RAGs (security-rbac-matrix, lgpd-igreja-conect), base herdada S00-S02, schema Prisma, e débitos herdados. Recomenda-se re-rodar em modo 'real' após implementação de S03-T01..T13.",
+  "scope": {
+    "read": [
+      "prisma/schema.prisma",
+      "app/lib/rbac.server.ts",
+      "app/lib/members.server.ts",
+      "app/lib/session.server.ts",
+      "app/lib/audit.server.ts",
+      "app/lib/errors.ts",
+      "app/lib/schemas/membros.ts",
+      "app/routes/app/_middleware.tsx",
+      "app/routes/app/membros.$id.tsx",
+      "app/routes.ts",
+      "sprints/S03.json",
+      "sprints/cross-sprint.json",
+      "sprints/S02.security.json",
+      ".harness/RAG/security-rbac-matrix.md",
+      ".harness/RAG/lgpd-igreja-conect.md",
+      ".harness/security/S02-audit.md",
+      "package.json",
+      ".env"
+    ],
+    "write": [
+      ".harness/security/S03-audit.md",
+      "sprints/S03.security.json"
+    ]
+  },
+  "owaspCoverage": {
+    "A01": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "M1",
+          "severity": "medium",
+          "title": "canManageMinisterios não existe em rbac.server.ts",
+          "evidence": "app/lib/rbac.server.ts:45-87 tem apenas assertCanSeeFinancials, assertCanWriteMembers, assertIsAdmin, assertCanManageConfiguracaoGeral. S03-T04 §104-109 exige canManageMinisterios(user) com trio ADMIN/PASTOR/SECRETARIO.",
+          "remediation": "Criar export function assertCanManageMinisterios(user: SessionUser): void com allowed = ['ADMIN', 'PASTOR', 'SECRETARIO']. Adicionar teste em rbac.server.test.ts com it.each para os 6 perfis."
+        },
+        {
+          "id": "M2",
+          "severity": "medium",
+          "title": "assignDisciple precisa aplicar 5 etapas em ordem (TOCTOU-safe)",
+          "evidence": "S03-T01 §27: assertCanWriteMembers → auto-vínculo (400) → count >= 12 (409) → isDescendantOf (422) → update. Risco: ordem incorreta gera TOCTOU ou bypass.",
+          "remediation": "Implementar assignDisciple com sequência exata. count() dentro de $transaction (SERIALIZABLE) ou com locking otimista. Testes: boundary 12/13, auto-vínculo, loop A→B→A, counter escopo MEMBRO_ATIVO."
+        },
+        {
+          "id": "M3",
+          "severity": "medium",
+          "title": "isDescendantOf recursivo precisa de limite de profundidade 10 (anti-DoS)",
+          "evidence": "S03-T01 §29: 'recursivo, profundidade máx 10, fail-safe: >10 considera descendente'. Sem limite, cadeia artificialmente profunda causa stack-overflow → DoS de banco.",
+          "remediation": "Implementar isDescendantOf(candidateId, ancestorId, depth = 0) com guard if (depth > 10) return true no início. JSDoc explicita motivo (proteção DoS) e fail-safe. Testes: chain 1/10/11+ e candidato === ancestor."
+        },
+        {
+          "id": "L1",
+          "severity": "low",
+          "title": "<Can> component é UX-only, NÃO é fonte de verdade (Camada 1)",
+          "evidence": "S03-T07 §199: 'helper client-side; se user.cargo in allow → children'. Bypass trivial via DevTools.",
+          "remediation": "Documentar JSDoc do <Can>: 'Helper client-side de UX. NÃO é defesa. Fonte de verdade: loader (Camada 2) e service (Camada 3). Ver RAG security-rbac-matrix §1.'"
+        },
+        {
+          "id": "L2",
+          "severity": "low",
+          "title": "Loader membros.$id.discipulado precisa reusar getMembroById (404 anti-enumeração)",
+          "evidence": "S03-T06 §169: 'DISCIPULADOR acessando membro de outro → 404 (escopo)'. getMembroById em members.server.ts:182-184 já implementa o 404. Risco: loader acessar Prisma direto perde o 404.",
+          "remediation": "Loader deve chamar getMembroById(params.id, user) e não prisma.membro.findUnique direto. JSDoc referenciar RAG §3.3. Adicionar teste: DISCIPULADOR acessando discípulo de outro → 404."
+        }
+      ],
+      "passes": {
+        "baseHerada": "rbac.server.ts:45-87 tem 4 helpers prontos. members.server.ts:166-187 (getMembroById) aplica escopo DISCIPULADOR via 404. members.server.ts:43-64 (MEMBRO_SAFE_SELECT) é o único select seguro.",
+        "discMaiorEscopo": "DISCIPULADOR listMembros força discipuladorId = user.id (members.server.ts:124-128) — anti-bypass via query string."
+      }
+    },
+    "A02": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "L4",
+          "severity": "low",
+          "title": "SESSION_SECRET fallback inseguro (3ª re-rogada: S01 M1 → S02 L3 → S03 L4)",
+          "evidence": "app/lib/session.server.ts:34 — secrets: [process.env.SESSION_SECRET ?? 'dev-only-not-secret']",
+          "remediation": "Fail-fast no boot se NODE_ENV === 'production' e SESSION_SECRET ausente. (Já reportado em S01 e S02 — re-emerge porque S03 amplia o raio de explosão.)"
+        }
+      ],
+      "passes": {
+        "bcrypt": "bcryptjs cost 10 (S01)",
+        "cookie": "httpOnly=true, sameSite=lax, secure=prod (S01)"
+      }
+    },
+    "A03": {
+      "checked": true,
+      "status": "pass",
+      "findings": [],
+      "passes": {
+        "sqlInjection": "0 uso de $queryRaw/$executeRaw em código de feature (verificado)",
+        "xss": "0 uso de dangerouslySetInnerHTML/innerHTML/eval/new Function em app/ (verificado)",
+        "rnMEM06": "RN-MEM-06 (sem cron): grep -rE 'setTimeout|setInterval|node-cron|bull' app/ → 0 matches reais (apenas falso positivo em 'bullets' do CardInfo.tsx que é estilização CSS). GATE BLOQUEANTE PASS."
+      }
+    },
+    "A04": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "M3-a04",
+          "severity": "medium",
+          "title": "isDescendantOf sem limite de profundidade (DoS) — mesmo finding de A01.M3",
+          "evidence": "S03-T01 §29 — sem profundidadeMax, cadeia patológica causa stack-overflow",
+          "remediation": "Ver A01.M3 — limite 10 com fail-safe"
+        }
+      ],
+      "passes": {
+        "antiEnumeration": "getMembroById lança 404 (não 403) para DISCIPULADOR fora de escopo (S02 — validado)",
+        "antiDoSPagination": "pageSize clamp ≤ 100 (S02 — herdado)",
+        "boundary12_13": "MAX_DISCIPULOS = 12 com boundary test 12 OK, 13 falha 409 (S03-T01, T12 chain 1)",
+        "autoVinculo": "disc === discipulador → 400 (S03-T01, T12 chain 3)",
+        "antiLoop": "isDescendantOf → 422 (S03-T01, T12 chain 2)",
+        "fidelidadeBypass": "Loader força tab=dados se !canSeeFinancials && tab===fidelidade (S03-T07 — Camada 2)"
+      }
+    },
+    "A05": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "L4-reemerge",
+          "severity": "low",
+          "title": "SESSION_SECRET (ver A02.L4)"
+        }
+      ],
+      "passes": {
+        "corsOpen": "0 Access-Control-Allow-Origin em app/ (verificado)",
+        "httpInseguro": "0 http:// em código de feature (excluindo xmlns/localhost/127.0.0.1, verificado)",
+        "membroSafeSelect": "MEMBRO_SAFE_SELECT exportada e usada em 100% dos endpoints S02 (validado por testes em members.server.test.ts:107-118)"
+      }
+    },
+    "A06": {
+      "checked": true,
+      "status": "pass",
+      "findings": [],
+      "notes": "S03 não adiciona deps novas; zod já em S00; sem risco de supply chain."
+    },
+    "A07": {
+      "checked": true,
+      "status": "pass",
+      "findings": [],
+      "notes": "S03 não mexe em auth; reusa S01 (aprovado). Rate limit, bcrypt, sliding renewal já validados."
+    },
+    "A08": {
+      "checked": true,
+      "status": "pass",
+      "findings": [],
+      "notes": "S03 não introduz mutação cross-origin; forms RR7 method=post; cookie sameSite=lax (S01). Schemas Zod em app/lib/schemas/{discipulado,ministerios}.ts validam payloads (S03-T03)."
+    },
+    "A09": {
+      "checked": true,
+      "status": "pass-with-finding",
+      "findings": [
+        {
+          "id": "M6",
+          "severity": "medium",
+          "title": "8 mutações S03 sem safeLog (LGPD art. 37)",
+          "evidence": "S03-T01, T02, T04 mencionam assignDisciple, unassignDisciple, promoverTipo, createMinisterio, updateMinisterio, deleteMinisterio, addMembroToMinisterio, removeMembroFromMinisterio mas NÃO mencionam safeLog. Re-rogada de S02-M4 com superfície ampliada.",
+          "remediation": "Adicionar safeLog({ userId, action, resource, resourceId, result }) em cada uma das 8 mutações. Action strings: assign_disciple, unassign_disciple, promover_tipo, create_ministerio, update_ministerio, delete_ministerio, add_membro_to_ministerio, remove_membro_from_ministerio. Adicionar testes com spy em audit.server.ts."
+        }
+      ],
+      "passes": {
+        "safeLogAllowlist": "app/lib/audit.server.ts:11-32 já filtra email/senhaHash/password/valorCentavos (verificado em S01)"
+      }
+    },
+    "A10": {
+      "checked": true,
+      "status": "n/a",
+      "findings": [],
+      "notes": "S03 não faz fetch user-controlled; opera só no DB local."
+    }
+  },
+  "lgpdCoverage": {
+    "applies": true,
+    "findings": [
+      {
+        "id": "M5",
+        "severity": "medium",
+        "title": "dataBatismo/dataConversao são dado sensível (art. 5°, II — convicção religiosa) sem decisão documentada de escopo",
+        "evidence": "prisma/schema.prisma:74-75 + members.server.ts:51-52 (MEMBRO_SAFE_SELECT expõe dataBatismo e dataConversao para todos os perfis com escopo RBAC). LGPD art. 5°, II inclui 'convicção religiosa' como categoria sensível.",
+        "remediation": "(a) Aceitar para MVP com escopo RBAC aplicado (DISCIPULADOR via 404 do getMembroById). (b) Documentar em lgpd-igreja-conect.md §2.6 que dataBatismo/dataConversao são dado sensível. (c) Considerar S2+: select adicional (não padrão) para perfis restritos."
+      },
+      {
+        "id": "M6-lgpd",
+        "severity": "medium",
+        "title": "8 mutações S03 sem audit log (LGPD art. 37)",
+        "evidence": "S03-T01, T02, T04 não mencionam safeLog",
+        "remediation": "Ver A09.M6"
+      }
+    ],
+    "rnMEM02": {
+      "applies": true,
+      "status": "pass",
+      "evidence": "grep -iE 'cpf|rg|cnpj|pis' prisma/schema.prisma app/lib/schemas/ → 0 matches em código de produção. MembroCreateSchema em app/lib/schemas/membros.ts:90 tem .strict() que rejeita campos não declarados (gate testado em membros.test.ts)."
+    },
+    "rnMEM03": {
+      "applies": true,
+      "status": "pass-with-finding",
+      "evidence": "assertCanSeeFinancials em rbac.server.ts:45-49 (FINANCIAL_CARGOS = ['ADMIN', 'PASTOR', 'FINANCEIRO']) é o gate canônico. S03 deve implementar 3 camadas: (1) UI via <Can allow={FINANCIAL_CARGOS}>, (2) Loader força tab=dados se bypass, (3) getDizimosByMembro chama assertCanSeeFinancials PRIMEIRO.",
+      "fidelidade3Camadas": {
+        "camada1_ui": "Contrato S03-T07 §204 — TabFidelidadeFinanceira SÓ renderiza se canSeeFinancials. Implementação pendente (S03-T07).",
+        "camada2_loader": "Contrato S03-T07 §206 — loader de membros.$id.tsx força tab='dados' se !canSeeFinancials && tab==='fidelidade'. Implementação pendente (S03-T07).",
+        "camada3_service": "Contrato S03-T11 §307 — getDizimosByMembro chama assertCanSeeFinancials PRIMEIRO. Helper JÁ EXISTE em rbac.server.ts:45-49. Service a ser criado (S03-T11).",
+        "bypassE2E": "S03-T12 chains 4, 5, 6 (UI, URL, service) — testes E2E pendentes."
+      },
+      "finding": {
+        "id": "M4",
+        "severity": "medium",
+        "title": "getDizimosByMembro precisa chamar assertCanSeeFinancials como PRIMEIRA linha",
+        "evidence": "S03-T11 §307. Helper existe em rbac.server.ts:45-49. Risco: se loader esquecer (Camada 2 falha), service ainda barra (Camada 3) — defense in depth real.",
+        "remediation": "Implementar getDizimosByMembro com assertCanSeeFinancials(user) como PRIMEIRA linha. JSDoc: 'RN-MEM-03 — Camada 3. Se loader esquecer, service barra.' Retornar [] placeholder. Testes: 6 perfis."
+      }
+    },
+    "rnMEM04": {
+      "applies": true,
+      "status": "pass-with-finding",
+      "evidence": "MAX_DISCIPULOS = 12 (RAG security-rbac-matrix.md §2). isDescendantOf profundidade 10 com fail-safe (anti-DoS). Boundary test 12 OK, 13 falha 409. Anti-loop 422. Auto-vínculo 400.",
+      "findings": [
+        {
+          "id": "M2",
+          "severity": "medium",
+          "title": "assignDisciple precisa 5 etapas em ordem (ver A01.M2)"
+        },
+        {
+          "id": "M3",
+          "severity": "medium",
+          "title": "isDescendantOf precisa limite de profundidade 10 (ver A01.M3)"
+        }
+      ]
+    },
+    "rnMEM06": {
+      "applies": true,
+      "status": "pass",
+      "evidence": "grep -rE 'setTimeout|setInterval|node-cron|bull' app/ --include='*.ts' --include='*.tsx' | grep -vE 'bullet|test\\.' → 0 matches reais. GATE BLOQUEANTE DO SPEC §10 PASS. Único match falso positivo em 'bullets' do CardInfo.tsx (estilização CSS, não job queue)."
+    },
+    "senhaHash": {
+      "applies": true,
+      "status": "pass",
+      "evidence": "grep -rEn 'senhaHash' app/routes/ → 0 matches em código de produção (4 matches em .test.tsx, fixtures OK). MEMBRO_SAFE_SELECT contrato herdado de S02 e validado por tests em members.server.test.ts:107-118."
+    },
+    "rbac": {
+      "applies": true,
+      "status": "pass-with-finding",
+      "evidence": "app/lib/rbac.server.ts tem 4 helpers (assertCanSeeFinancials, assertCanWriteMembers, assertIsAdmin, assertCanManageConfiguracaoGeral). Falta canManageMinisterios (M1). getMembroById em members.server.ts:166-187 aplica escopo DISCIPULADOR via 404.",
+      "finding": {
+        "id": "M1",
+        "severity": "medium",
+        "title": "canManageMinisterios ausente em rbac.server.ts",
+        "remediation": "Ver A01.M1"
+      }
+    },
+    "cookie": {
+      "applies": true,
+      "status": "pass",
+      "evidence": "S01 cookie __session com httpOnly=true, sameSite=lax, secure=prod (validado S01-audit)"
+    },
+    "dadoSensivel": {
+      "applies": true,
+      "status": "pass-with-finding",
+      "evidence": "dataBatismo e dataConversao em Membro são dado pessoal sensível sob LGPD art. 5°, II (convicção religiosa). Atualmente em MEMBRO_SAFE_SELECT. Escopo RBAC aplicado via getMembroById 404 (DISCIPULADOR) e via visão restrita do SECRETARIO/LIDER_MINISTERIO (decisão consciente MVP).",
+      "finding": {
+        "id": "M5",
+        "severity": "medium",
+        "title": "dataBatismo/dataConversao sem decisão documentada de escopo em LGPD-RAG",
+        "remediation": "Ver M5 principal"
+      }
+    }
+  },
+  "findings": [
+    {
+      "id": "M1",
+      "severity": "medium",
+      "category": "A01",
+      "title": "canManageMinisterios ausente em rbac.server.ts",
+      "file": "app/lib/rbac.server.ts (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S03-T04 §104-109: 'createMinisterio / updateMinisterio / deleteMinisterio — assertCanManageMinisterios (ADMIN, PASTOR, SECRETARIO); Helper canManageMinisterios(user)'. rbac.server.ts:45-87 tem apenas assertCanSeeFinancials, assertCanWriteMembers, assertIsAdmin, assertCanManageConfiguracaoGeral.",
+      "remediation": "Criar export function assertCanManageMinisterios(user: SessionUser): void com allowed = ['ADMIN', 'PASTOR', 'SECRETARIO']. Adicionar teste em rbac.server.test.ts com it.each para os 6 perfis.",
+      "effort": "xs"
+    },
+    {
+      "id": "M2",
+      "severity": "medium",
+      "category": "A01",
+      "title": "assignDisciple precisa aplicar 5 etapas em ordem (TOCTOU-safe)",
+      "file": "app/lib/discipleship.server.ts (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S03-T01 §27: (1) assertCanWriteMembers; (2) auto-vínculo → 400; (3) count >= 12 → 409; (4) isDescendantOf → 422; (5) update discipuladorId. Risco: ordem incorreta gera TOCTOU ou bypass de regra.",
+      "remediation": "Implementar assignDisciple com a sequência exata de 5 etapas. count() dentro de $transaction (SERIALIZABLE) ou com locking otimista. Testes: (a) boundary 12 OK, 13 falha, (b) auto-vínculo, (c) loop A→B→A, (d) counter em escopo correto (MEMBRO_ATIVO apenas).",
+      "effort": "s"
+    },
+    {
+      "id": "M3",
+      "severity": "medium",
+      "category": "A01",
+      "title": "isDescendantOf recursivo precisa de limite de profundidade 10 (anti-DoS)",
+      "file": "app/lib/discipleship.server.ts (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S03-T01 §29: 'recursivo, profundidade máx 10, fail-safe: >10 considera descendente'. Sem limite, cadeia artificialmente profunda causa stack-overflow → DoS de banco.",
+      "remediation": "Implementar isDescendantOf(candidateId, ancestorId, depth = 0) com guard 'if (depth > 10) return true' no início. JSDoc explicita motivo (proteção DoS) e fail-safe. Testes: chain 1/10/11+ e candidato === ancestor.",
+      "effort": "xs"
+    },
+    {
+      "id": "M4",
+      "severity": "medium",
+      "category": "A01",
+      "title": "getDizimosByMembro precisa chamar assertCanSeeFinancials como PRIMEIRA linha (Camada 3 RN-MEM-03)",
+      "file": "app/lib/finance.server.ts (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S03-T11 §307: 'getDizimosByMembro(membroId, user) — assertCanSeeFinancials primeiro (camada 3); retorna [] (placeholder)'. Helper assertCanSeeFinancials JÁ EXISTE em rbac.server.ts:45-49 (base sólida).",
+      "remediation": "Implementar getDizimosByMembro com assertCanSeeFinancials(user) como PRIMEIRA linha. JSDoc: 'RN-MEM-03 — Camada 3. Se loader esquecer, service barra (defense in depth). Sprint 1+ lê Lancamento where membroId + categoria=DIZIMO.' Retornar [] placeholder. Testes: 6 perfis (3 OK, 3 ForbiddenError/Response 403).",
+      "effort": "xs"
+    },
+    {
+      "id": "M5",
+      "severity": "medium",
+      "category": "LGPD-art-5-II",
+      "title": "dataBatismo/dataConversao são dado sensível (art. 5°, II — convicção religiosa) sem decisão documentada de escopo em LGPD-RAG",
+      "file": "prisma/schema.prisma:74-75 + app/lib/members.server.ts:51-52",
+      "line": 74,
+      "evidence": "MEMBRO_SAFE_SELECT expõe dataBatismo e dataConversao para todos os perfis com escopo RBAC. LGPD art. 5°, II inclui 'convicção religiosa' como categoria sensível. Decisão consciente MVP: aceitar com escopo aplicado (DISCIPULADOR via 404 do getMembroById).",
+      "remediation": "(a) Aceitar para MVP: DISCIPULADOR vê dataBatismo de seus próprios discípulos (escopo garantido por 404). SECRETARIO/LIDER_MINISTERIO veem (escopo relaxado aceito no MVP). (b) Documentar em lgpd-igreja-conect.md §2.6 que dataBatismo/dataConversao SÃO dado sensível (art. 5°, II) mas com escopo RBAC aplicado. (c) Considerar S2+: dataBatismo/dataConversao ficarem em select adicional (não padrão) para perfis restritos, com opt-in explícito no loader.",
+      "effort": "xs"
+    },
+    {
+      "id": "M6",
+      "severity": "medium",
+      "category": "A09",
+      "title": "8 mutações S03 sem safeLog (LGPD art. 37)",
+      "file": "app/lib/{discipleship,ministries}.server.ts (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S03-T01, T02, T04 mencionam assignDisciple, unassignDisciple, promoverTipo, createMinisterio, updateMinisterio, deleteMinisterio, addMembroToMinisterio, removeMembroFromMinisterio mas NÃO mencionam safeLog. Re-rogada de S02-M4 com superfície ampliada.",
+      "remediation": "Adicionar safeLog({ userId: user.id, action, resource, resourceId, result }) em cada uma das 8 mutações. Action strings: assign_disciple, unassign_disciple, promover_tipo, create_ministerio, update_ministerio, delete_ministerio, add_membro_to_ministerio, remove_membro_from_ministerio. Adicionar testes com spy em audit.server.ts.",
+      "effort": "s"
+    },
+    {
+      "id": "L1",
+      "severity": "low",
+      "category": "A01",
+      "title": "<Can> component é UX-only, NÃO é fonte de verdade (Camada 1)",
+      "file": "app/components/Can.tsx (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S03-T07 §199: '<Can> helper client-side; se user.cargo in allow → children'. Bypass trivial via DevTools.",
+      "remediation": "Documentar JSDoc do <Can>: 'Helper client-side de UX. NÃO é defesa — bypass trivial via DevTools. Fonte de verdade: loader (Camada 2) e service (Camada 3). Ver RAG security-rbac-matrix §1.' Manter implementação simples: if (user.cargo in allow) return children; return fallback ?? null.",
+      "effort": "xs"
+    },
+    {
+      "id": "L2",
+      "severity": "low",
+      "category": "A04",
+      "title": "Loader membros.$id.discipulado precisa reusar getMembroById (404 anti-enumeração)",
+      "file": "app/routes/app/membros.$id.discipulado.tsx (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S03-T06 §169: 'DISCIPULADOR acessando membro de outro → 404 (escopo)'. getMembroById em members.server.ts:182-184 já implementa o 404. Risco: loader acessar Prisma direto perde o 404.",
+      "remediation": "Loader de membros.$id.discipulado.tsx deve chamar getMembroById(params.id, user) (não acesso direto ao Prisma). JSDoc referenciar RAG §3.3 (anti-enumeração). Adicionar teste: DISCIPULADOR acessando discípulo de outro → 404 (mesmo status que 'não existe').",
+      "effort": "xs"
+    },
+    {
+      "id": "L3",
+      "severity": "low",
+      "category": "A01",
+      "title": "Padrão de erro: Response(403) vs ForbiddenError em getDizimosByMembro",
+      "file": "app/lib/finance.server.ts (ausente — esperado criar)",
+      "line": null,
+      "evidence": "S02 usa Response(403) direto em assertCan* (padrão RR7) e domain errors em errors.ts (BusinessRuleError, NotFoundError, ForbiddenError). S03 pode misturar.",
+      "remediation": "Manter padrão S02: assertCanSeeFinancials lança Response(403) (canônico em rbac.server.ts:45-49). getDizimosByMembro NÃO converte — deixa o Response propagar. Loader pode capturar e devolver dizimos: [] (UX), ou deixar ErrorBoundary renderizar 403. JSDoc explicitar: 'Lança Response(403) — caller decide entre capturar (UX) ou propagar (boundary).'",
+      "effort": "xs"
+    },
+    {
+      "id": "L4",
+      "severity": "low",
+      "category": "A02",
+      "title": "SESSION_SECRET fallback inseguro (3ª re-rogada: S01 M1 → S02 L3 → S03 L4)",
+      "file": "app/lib/session.server.ts",
+      "line": 34,
+      "evidence": "secrets: [process.env.SESSION_SECRET ?? 'dev-only-not-secret']",
+      "remediation": "Fail-fast no boot se NODE_ENV === 'production' e SESSION_SECRET ausente. (Já reportado em S01-audit M1 e S02-audit L3 — re-emerge porque S03 amplia o raio de explosão.)",
+      "effort": "xs"
+    }
+  ],
+  "contractAlignment": {
+    "totalContractItems": 20,
+    "alignedItems": 17,
+    "gapsPreventivos": 3,
+    "gaps": ["M1", "M2", "M3"],
+    "additionalDebitos": ["M4", "M5", "M6", "L1", "L2", "L3", "L4"],
+    "note": "17/20 itens do contrato S03.json + design docs já especificam corretamente o comportamento de segurança esperado. 3/20 têm gaps preventivos que devem ser fechados na implementação (M1, M2, M3). 7 débitos adicionais (M4-M6, L1-L4) são endereçáveis em S03-T01..T11 sem urgência de re-trabalho estrutural."
+  },
+  "rnMEM06Gate": {
+    "applies": true,
+    "status": "pass",
+    "evidence": "grep -rE 'setTimeout|setInterval|node-cron|bull' app/ --include='*.ts' --include='*.tsx' | grep -vE 'bullet|test\\.' → 0 matches reais. Único falso positivo em 'bullets' do CardInfo.tsx (estilização CSS). Gate bloqueante do SPEC §10 PASS."
+  },
+  "trava12Verificada": {
+    "status": "preventive-pass",
+    "evidence": "MAX_DISCIPULOS = 12 está literalmente em RAG security-rbac-matrix.md §2 como export const. S03-T01 §26 exige criação em app/lib/discipleship.server.ts. Não posso validar boundary test 12/13 contra código (não existe). Contrato bem definido; implementação deve seguir.",
+    "boundaryTest": "12 OK, 13 falha com 409 + mensagem clara (esperado em S03-T12 chain 1)"
+  },
+  "fidelidade3Camadas": {
+    "camada1_ui": {
+      "status": "preventive-pass",
+      "evidence": "S03-T07 §204: 'TabFidelidadeFinanceira SÓ renderizado se canSeeFinancials'. <Can> component a ser criado em S03-T07 §199. L1 alerta: documentar como UX-only."
+    },
+    "camada2_loader": {
+      "status": "preventive-pass",
+      "evidence": "S03-T07 §206: 'Loader: aplica camada 2 RBAC — se !canSeeFinancials && tab===fidelidade, força tab=dados'. membros.$id.tsx versão S03 a ser implementada. Teste E2E bypass via URL em S03-T12 chain 5."
+    },
+    "camada3_service": {
+      "status": "preventive-pass-with-finding",
+      "evidence": "S03-T11 §307: 'getDizimosByMembro chama assertCanSeeFinancials primeiro'. Helper JÁ EXISTE em rbac.server.ts:45-49. Service a ser criado (M4). Teste E2E chain 6."
+    }
+  },
+  "stats": {
+    "critical": 0,
+    "high": 0,
+    "medium": 6,
+    "low": 4,
+    "info": 0,
+    "total": 10
+  },
+  "passThreshold": {
+    "maxCritical": 0,
+    "maxHigh": 0,
+    "currentCritical": 0,
+    "currentHigh": 0,
+    "passes": true
+  },
+  "blockingFindings": 0,
+  "passed": true,
+  "reAuditRequired": true,
+  "reAuditTrigger": "Rodar esta auditoria em modo 'real' (não preventiva) após implementação S03-T01..T13, com código concreto em app/lib/{discipleship,ministries,finance}.server.ts, app/lib/schemas/{discipulado,ministerios}.ts, 20+ componentes, 4 rotas. Validar 10 itens: (1) MAX_DISCIPULOS = 12 exportado e boundary test 12/13 verde; (2) isDescendantOf com profundidade 10 e fail-safe; (3) assertCanSeeFinancials PRIMEIRO em getDizimosByMembro; (4) <TabFidelidadeFinanceira> usa <Can> ou equivalente; (5) loader de membros.$id.tsx força tab='dados' se bypass; (6) deleteMinisterio com 409 quando há membros vinculados; (7) RN-MEM-06 continua com 0 matches; (8) senhaHash continua 0 em app/routes/app/; (9) cpf/rg/cnpj continua 0 em schema + schemas + componentes; (10) MEMBRO_SAFE_SELECT continua sendo o único caminho de leitura."
+}

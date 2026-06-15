@@ -1,0 +1,188 @@
+{
+  "_type": "harness-lgpd-audit-v6",
+  "agent": "lgpd-officer",
+  "sprint": "S03",
+  "timestamp": "2026-06-13T16:44:22Z",
+  "scope": "S03 (tasks T-01 a T-13) — discipulado, ministérios, fidelidade financeira, promoção de tipo, RBAC Can",
+  "parecer": "CONFORME COM RESSALVAS",
+  "personalDataInventory": {
+    "collected": [
+      {
+        "category": "identificacao",
+        "fields": ["nome", "email", "telefone"],
+        "legalBasis": "Art. 7º, V (execucao de contrato)",
+        "sensitive": false,
+        "encrypted": false
+      },
+      {
+        "category": "endereco",
+        "fields": ["logradouro", "numero", "bairro", "cidade", "estado", "cep"],
+        "legalBasis": "Art. 7º, V",
+        "sensitive": false,
+        "encrypted": false
+      },
+      {
+        "category": "religioso (sensivel Art. 5º, II)",
+        "fields": ["dataConversao", "dataBatismo", "tipo", "discipuladorId", "ministerios[]"],
+        "legalBasis": "Art. 7º, V + Art. 11, I/II (execucao de contrato religioso + consentimento)",
+        "sensitive": true,
+        "encrypted": false,
+        "note": "Dado sensivel religioso — sem consentimento granular registrado (fora MVP)"
+      },
+      {
+        "category": "financeiro (dizimo sensivel Art. 5º, II)",
+        "fields": ["Lancamento.valorCentavos", "Lancamento.categoria"],
+        "legalBasis": "Art. 7º, V + Art. 11, II (obrigacao religiosa)",
+        "sensitive": true,
+        "encrypted": false,
+        "restrictedTo": ["ADMIN", "PASTOR", "FINANCEIRO"],
+        "note": "Gate RN-MEM-03 — 3 camadas de defesa implementadas e testadas"
+      }
+    ],
+    "totalFieldsProcessed": 12,
+    "sensitiveFieldsProcessed": 6,
+    "internationalTransfers": [],
+    "noteRNMEM02": "Schema SEM cpf, rg, cnpj, tituloEleitor, pis, cartaoSus (conforme RN-MEM-02)"
+  },
+  "gates": {
+    "rn_mem_03_fidelidade_3_camadas": {
+      "status": "PASS",
+      "camada1_ui": {
+        "status": "PASS",
+        "evidence": "TabFidelidadeFinanceira.tsx existe; TabsMembro.tsx:172 renderiza tab link condicional a canSeeFinancials; teste TabFidelidadeFinanceira.test.tsx cobre placeholders sem dados financeiros"
+      },
+      "camada2_loader": {
+        "status": "PASS",
+        "evidence": "membros.$id.tsx:83-86 checa canSeeFinancials e força tab=dados se tab=fidelidade sem permissao; teste bypass via URL em membros.$id.test.tsx:465"
+      },
+      "camada3_service": {
+        "status": "PASS",
+        "evidence": "finance.server.ts:62 chama assertCanSeeFinancials(user) ANTES de qualquer DB; teste finance.server.test.ts cobre 6 perfis; spy confirma DB nao tocado para bloqueados"
+      }
+    },
+    "rn_mem_06_zero_cron": {
+      "status": "PASS",
+      "evidence": "grep setTimeout|setInterval|node-cron|bull app/ → 0 em código runtime (so comentarios)"
+    },
+    "rn_mem_02_sem_cpf": {
+      "status": "PASS",
+      "evidence": "grep cpf|rg|cnpj|titulo_eleitor|pis|cartaoSus prisma/schema.prisma → 0"
+    },
+    "mem_bro_safe_select": {
+      "status": "PASS",
+      "evidence": "MEMBRO_SAFE_SELECT definido em members.server.ts:50; usado em todas queries; sem senhaHash"
+    }
+  },
+  "lgpdCoverage": {
+    "principles": {
+      "finalidade": { "compliant": true, "findings": [] },
+      "necessidade": { "compliant": true, "findings": [], "note": "RN-MEM-02 garante minimizacao" },
+      "seguranca": { "compliant": true, "findings": [], "note": "3 camadas RN-MEM-03 implementadas" },
+      "transparencia": { "compliant": true, "findings": [], "note": "Tipos e finalidades documentados no codigo" },
+      "responsabilizacao": { "compliant": false, "findings": ["LGPD-FIND-S03-001"] }
+    },
+    "rights18": {
+      "implementados": ["correcao (parcial, S02)", "eliminacao (parcial, S02)"],
+      "faltando": ["confirmacao", "acesso", "portabilidade", "revogacao", "oposicao"],
+      "note": "Fora do MVP (brief.md §4). S03 nao introduz nem agrava.",
+      "findings": []
+    },
+    "sensitiveDataArt11": {
+      "note": "Dados sensiveis religiosos tratados sem consentimento granular registrado. Base legal mista Art. 11, I/II + Art. 7º, V. Criacao de tabela Consentimento e Sprint 2+.",
+      "compliant": "partial",
+      "findings": []
+    },
+    "dpo": {
+      "designated": false,
+      "contactPublic": false,
+      "note": "Fora do MVP (brief.md §4). Sprint 2+.",
+      "findings": []
+    },
+    "incidentResponse": {
+      "planExists": false,
+      "note": "Fora do MVP.",
+      "findings": []
+    },
+    "internationalTransfer": {
+      "occurs": false,
+      "legalBasisDocumented": true,
+      "findings": []
+    },
+    "retention": {
+      "policyDefined": false,
+      "note": "Fora do MVP. Dados retidos indefinidamente (decisao consciente).",
+      "findings": []
+    },
+    "ripd": {
+      "exists": false,
+      "required": false,
+      "note": "Nao obrigatorio para S03 (sem perfilamento automatizado ou larga escala).",
+      "findings": []
+    }
+  },
+  "findings": [
+    {
+      "id": "LGPD-FIND-S03-001",
+      "severity": "medium",
+      "category": "responsabilizacao-auditoria",
+      "legalBasis": "Art. 6º, X (responsabilizacao e prestacao de contas)",
+      "title": "safeLog ausente em mutacoes de discipulado e ministerios",
+      "files": [
+        "app/lib/discipleship.server.ts (assignDisciple, unassignDisciple)",
+        "app/lib/ministries.server.ts (createMinisterio, updateMinisterio, deleteMinisterio, addMembroToMinisterio, removeMembroFromMinisterio)"
+      ],
+      "evidence": "grep 'safeLog' em discipleship.server.ts e ministries.server.ts → 0 resultados. Apenas promoteTipo em members.server.ts:395 usa safeLog.",
+      "impact": "Sem registro de auditoria em operacoes que alteram dados sensiveis (vinculo de discipulado, atribuicao a ministerios). Viola Art. 6º, X — ANPD pode solicitar evidencias de quem fez o que, quando.",
+      "proposedChange": "Adicionar safeLog({ userId, action, resource, result, timestamp }) apos cada operacao de mutacao em discipleship.server.ts e ministries.server.ts. Pattern ja estabelecido em members.server.ts:395.",
+      "effort": "low",
+      "regulatoryRisk": "Baixo (igreja local, sem historico de autuacao), mas ANPD pode considerar agravante em caso de incidente com vazamento de dados sensiveis religiosos."
+    },
+    {
+      "id": "LGPD-FIND-S03-002",
+      "severity": "medium",
+      "category": "seguranca-evidencia",
+      "legalBasis": "Art. 46 (medidas de seguranca) + RN-MEM-03",
+      "title": "Testes E2E de bypass de Fidelidade nao implementados (S03-T12 pendente)",
+      "files": ["e2e/fidelidade-bypass.spec.ts (NÃO EXISTE)", "e2e/discipulado.spec.ts (NÃO EXISTE)"],
+      "evidence": "ls e2e/ → apenas auth.spec.ts. Os arquivos esperados e2e/discipulado.spec.ts e e2e/fidelidade-bypass.spec.ts nao existem.",
+      "impact": "A defesa em 3 camadas existe no codigo e e testada por testes unitarios, mas nao ha prova E2E (Playwright) do bloqueio. Refactor futuro pode quebrar a cadeia sem deteccao.",
+      "proposedChange": "Implementar e2e/fidelidade-bypass.spec.ts com 3 chains: (1) UI — SECRETARIO nao ve tab; (2) URL — bypass ?tab=fidelidade → tab=dados; (3) Service — chamada direta a getDizimosByMembro → 403.",
+      "effort": "medium",
+      "regulatoryRisk": "Sem prova E2E, a defesa e 'achismo' ate ser testada em browser real. Auditoria ANPD pode solicitar evidencia de teste integrado."
+    },
+    {
+      "id": "LGPD-FIND-S03-003",
+      "severity": "informational",
+      "category": "dados-sensiveis",
+      "legalBasis": "Art. 11, I (consentimento especifico e destacado)",
+      "title": "Dados sensiveis religiosos sem registro de consentimento granular",
+      "files": ["prisma/schema.prisma (dataConversao, dataBatismo, tipo, discipuladorId)"],
+      "evidence": "Campos dataConversao, dataBatismo, tipo, discipuladorId sao PII sensivel (Art. 5º, II) tratados sem tabela Consentimento que registre grant, timestamp, ip, policyVersion.",
+      "impact": "Titular informa dados sensiveis voluntariamente, mas nao ha registro auditavel de consentimento especifico.",
+      "proposedChange": "Criar tabela Consentimento (Sprint 2+) conforme brief.md §4 (fora do MVP). Documentar no docs/politica-privacidade.md.",
+      "effort": "high",
+      "regulatoryRisk": "Baixo no MVP (consentimento implicito via cadastro), mas necessario para conformidade total com Art. 11."
+    }
+  ],
+  "stats": {
+    "critical": 0,
+    "high": 0,
+    "medium": 2,
+    "low": 0,
+    "informational": 1
+  },
+  "thresholds": {
+    "maxCritical": 0,
+    "maxHigh": 0,
+    "lgpdStatus": "compliant-with-advisory"
+  },
+  "passed": true,
+  "blockers": [],
+  "advisory": [
+    "LGPD-FIND-S03-001: Adicionar safeLog nas mutacoes de discipulado e ministerios (baixo esforco).",
+    "LGPD-FIND-S03-002: Implementar testes E2E de bypass (S03-T12) para garantir a defesa a longo prazo.",
+    "LGPD-FIND-S03-003: Em Sprint 2+, criar tabela Consentimento para dados sensiveis religiosos.",
+    "Art. 18: Direitos do titular (fora do MVP) — programar para Sprint 2+."
+  ],
+  "confirmation": "Parecer atualizado para CONFORME COM RESSALVAS. Todos os 3 HIGH do parecer anterior (S03-parecer.md obsoleto) foram resolvidos com a implementacao do codigo. O sprint pode avancar para qa-gate com 2 MEDIUM e 1 INFORMATIONAL abertos."
+}
