@@ -268,7 +268,6 @@ export async function criarAlertaVisitante(
     data: {
       titulo: "Novo visitante cadastrado",
       mensagem,
-      membroId: visitante.id,
       destinatarios: {
         create: destinatarioIds.map((membroId) => ({ membroId })),
       },

@@ -237,7 +237,7 @@ export async function createMembro(
       let logConfigWarning = false;
 
       if (input.tipo === "VISITANTE") {
-        const cfg = await txClient.configAcolhimento.findFirst({
+        const cfg = await txClient.configuracaoGeral.findFirst({
           where: { id: "singleton" },
         });
         if (cfg && cfg.responsavelVisitanteTipo) {

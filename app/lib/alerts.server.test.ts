@@ -154,7 +154,7 @@ describe("alerts.server — marcarLido", () => {
     const ad = await prismaTest.alertaDestinatario.findFirst({
       where: { alertaId: a.id, membroId: u1.id },
     });
-    expect(alerta?.lido).toBe(false);
+    // lido nao existe em Alerta (e sim em AlertaDestinatario)
     expect(ad?.lido).toBe(true);
   });
 

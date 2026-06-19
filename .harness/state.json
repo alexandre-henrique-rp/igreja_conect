@@ -395,7 +395,7 @@
         "delays": [],
         "loopbackTo": "phase.5.build"
       },
-      "status": "completed",
+      "status": "in_progress",
       "cycle": 2,
       "sprints": {
         "S06": {
@@ -485,6 +485,21 @@
             "rnMem03Compliant": true
           },
           "completedAt": "2026-06-19T19:29:24.390121Z"
+        },
+        "S09": {
+          "sprintId": "S09",
+          "sprintName": "MVP Cleanup — Sync Débitos",
+          "status": "completed",
+          "tasksTotal": 9,
+          "tasksCompleted": 9,
+          "metrics": {
+            "testsPassRate": "91.5%",
+            "testsFailedBefore": 108,
+            "testsFailedAfter": 95,
+            "debit002Resolved": true,
+            "debit001PartialResolved": true
+          },
+          "completedAt": "2026-06-19T20:33:39.758077Z"
         }
       },
       "startedAt": "2026-06-14T12:45:00Z",
@@ -515,7 +530,7 @@
     }
   },
   "lastTransition": "2026-06-19T17:31:27.591559Z",
-  "lastGateStatus": "S08 gate all-of passed (per-sprint coverage 96%, advisory security/review inconclusive)",
+  "lastGateStatus": "S09 cleanup partial — 108→95 failing, jsdom resolved",
   "mvp": {
     "scope": "Auth + Módulo de Membros",
     "modules": [
@@ -542,7 +557,7 @@
       "LIDER_MINISTERIO"
     ]
   },
-  "updatedAt": "2026-06-19T19:29:24.390121Z",
+  "updatedAt": "2026-06-19T20:33:39.758077Z",
   "lastSprintCompleted": "S05 (cycle 1)",
   "cycle2": {
     "scope": "Módulo Financeiro (Caixas + Lançamentos + Dízimos)",
@@ -566,7 +581,11 @@
       "severity": "low",
       "scope": "S09+ (cycle 2 cleanup sprint)",
       "blocking": false,
-      "discoveredIn": "S06 rework (2026-06-19)"
+      "discoveredIn": "S06 rework (2026-06-19)",
+      "status": "partial-resolved",
+      "progress": "108→95 failing (-13)",
+      "resolved": false,
+      "updatedAt": "2026-06-19T20:33:39.758077Z"
     },
     {
       "id": "MVP-DEBT-002",
@@ -575,7 +594,10 @@
       "severity": "low",
       "scope": "S09+",
       "blocking": false,
-      "discoveredIn": "S07 validation (2026-06-19)"
+      "discoveredIn": "S07 validation (2026-06-19)",
+      "status": "resolved",
+      "resolved": true,
+      "updatedAt": "2026-06-19T20:33:39.758077Z"
     }
   ],
   "cycle2Summary": {

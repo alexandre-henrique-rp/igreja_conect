@@ -24,7 +24,7 @@ export const SESSION_COOKIE_NAME = "__session";
  * - `httpOnly: true` — sem JS, mitiga XSS roubando sessão.
  * - `sameSite: "lax"` — mitiga CSRF em mutações.
  * - `secure: NODE_ENV === "production"` — apenas HTTPS em prod.
- * - `path: "/"` — escopo global.
+ * - `path: "/" — escopo global.
  * - TTL do cookie: 7 dias (sliding; absoluto é controlado server-side).
  */
 export const sessionCookie = createCookie(SESSION_COOKIE_NAME, {
@@ -48,19 +48,25 @@ export type SessionUser = {
 /**
  * Cria uma sessão para o membro, persistindo no DB e retornando o `sid`.
  *
+ * Para testes, passe `prismaTest` como segundo argumento para usar o DB de teste.
+ *
  * @description Persiste registro em `Session` com `expiresAt = now + 7d`
  *   e `absoluteExpiresAt = now + 30d`.
  * @param {string} membroId - UUID do membro que está logando.
+ * @param {typeof import("../../generated/prisma/client").PrismaClient} [prismaClient] -
+ *   PrismaClient opcional para injeção de dependência (testes).
  * @returns {Promise<string>} `sid` (UUID) que vai no cookie.
  * @example
  *   const sid = await createSession(membro.id);
- *   return redirect("/app", {
- *     headers: { "Set-Cookie": await sessionCookie.serialize(sid) }
- *   });
+ *   const sidTest = await createSession(membro.id, prismaTest);
  */
-export async function createSession(membroId: string): Promise<string> {
+export async function createSession(
+  membroId: string,
+  prismaClient?: typeof import("../../generated/prisma/client").PrismaClient
+): Promise<string> {
+  const p = prismaClient ?? prisma;
   const now = Date.now();
-  const sess = await prisma.session.create({
+  const sess = await p.session.create({
     data: {
       membroId,
       expiresAt: new Date(now + SLIDING_TTL_MS),
@@ -84,11 +90,15 @@ export async function createSession(membroId: string): Promise<string> {
  *   const user = await getUserFromRequest(request);
  *   if (!user) throw redirect("/login");
  */
-export async function getUserFromRequest(request: Request): Promise<SessionUser | null> {
+export async function getUserFromRequest(
+  request: Request,
+  prismaClient?: typeof import("../../generated/prisma/client").PrismaClient
+): Promise<SessionUser | null> {
+  const p = prismaClient ?? prisma;
   const sid = await sessionCookie.parse(request.headers.get("Cookie"));
   if (typeof sid !== "string" || !sid) return null;
 
-  const sess = await prisma.session.findUnique({
+  const sess = await p.session.findUnique({
     where: { id: sid },
     include: { membro: { select: { id: true, nome: true, cargo: true } } },
   });
@@ -96,12 +106,12 @@ export async function getUserFromRequest(request: Request): Promise<SessionUser 
 
   const now = Date.now();
   if (sess.absoluteExpiresAt.getTime() < now) {
-    await prisma.session.delete({ where: { id: sid } }).catch(() => {});
+    await p.session.delete({ where: { id: sid } }).catch(() => {});
     return null;
   }
   if (sess.expiresAt.getTime() < now) {
     const newExpires = Math.min(now + SLIDING_TTL_MS, sess.absoluteExpiresAt.getTime());
-    await prisma.session.update({
+    await p.session.update({
       where: { id: sid },
       data: { expiresAt: new Date(newExpires) },
     });
@@ -129,7 +139,11 @@ export async function getUserFromRequest(request: Request): Promise<SessionUser 
  *     headers: { "Set-Cookie": await sessionCookie.serialize("", { maxAge: 0 }) }
  *   });
  */
-export async function deleteSession(sid: string): Promise<void> {
+export async function deleteSession(
+  sid: string,
+  prismaClient?: typeof import("../../generated/prisma/client").PrismaClient
+): Promise<void> {
   if (!sid) return;
-  await prisma.session.delete({ where: { id: sid } }).catch(() => {});
+  const p = prismaClient ?? prisma;
+  await p.session.delete({ where: { id: sid } }).catch(() => {});
 }

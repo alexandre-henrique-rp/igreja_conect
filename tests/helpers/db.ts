@@ -49,7 +49,7 @@ export async function resetTestDb(): Promise<void> {
     "transferencias_caixa",
     "lancamentos",
     "caixas",
-    "configuracoes_gerais",
+    "config_acolhimento",
     "membros",
   ];
   for (const t of tables) {
@@ -73,7 +73,7 @@ export async function setupTestDb(): Promise<() => Promise<void>> {
   const testUrl = `file:${TEST_DB_PATH}`;
   process.env.DATABASE_URL = testUrl;
 
-  execSync("pnpm prisma migrate deploy", {
+  execSync("pnpm prisma db push --force-reset", {
     stdio: "pipe",
     env: { ...process.env, DATABASE_URL: testUrl },
   });

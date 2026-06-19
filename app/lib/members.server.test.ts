@@ -61,7 +61,7 @@ beforeEach(async () => {
   // Apaga dependentes antes do membro (FKs do schema)
   await prismaTest.alertaDestinatario.deleteMany();
   await prismaTest.alerta.deleteMany();
-  await prismaTest.configAcolhimento.deleteMany();
+  await prismaTest.configuracaoGeral.deleteMany();
   await prismaTest.ministerioMembro.deleteMany();
   await prismaTest.ministerio.deleteMany();
   await prismaTest.movimentacaoEstoque.deleteMany();
@@ -275,7 +275,7 @@ describe("members.server — createMembro", () => {
   });
 
   it("VISITANTE com config sem responsável: cria membro sem alerta", async () => {
-    await prismaTest.configAcolhimento.create({
+    await prismaTest.configuracaoGeral.create({
       data: {
         id: "singleton",
         responsavelVisitanteTipo: "MEMBRO",
@@ -300,7 +300,7 @@ describe("members.server — createMembro", () => {
         { ministerioId: ministerio.id, membroId: m2.id },
       ],
     });
-    await prismaTest.configAcolhimento.create({
+    await prismaTest.configuracaoGeral.create({
       data: {
         id: "singleton",
         responsavelVisitanteTipo: "MINISTERIO",
@@ -311,7 +311,7 @@ describe("members.server — createMembro", () => {
     const created = await createMembro({ nome: "Visitante Min", tipo: "VISITANTE" }, adminUser());
 
     const alertas = await prismaTest.alerta.findMany({
-      where: { membroId: created.id },
+      where: { destinatarios: { some: { membroId: created.id } } },
       include: { destinatarios: true },
     });
     expect(alertas).toHaveLength(1);
@@ -322,7 +322,7 @@ describe("members.server — createMembro", () => {
     const responsavel = await prismaTest.membro.create({
       data: { nome: "Resp", tipo: "MEMBRO_ATIVO", cargo: "ADMIN" },
     });
-    await prismaTest.configAcolhimento.create({
+    await prismaTest.configuracaoGeral.create({
       data: {
         id: "singleton",
         responsavelVisitanteTipo: "MEMBRO",
@@ -333,7 +333,7 @@ describe("members.server — createMembro", () => {
     const created = await createMembro({ nome: "Membro Ativo", tipo: "MEMBRO_ATIVO" }, adminUser());
 
     const alertas = await prismaTest.alerta.findMany({
-      where: { membroId: created.id },
+      where: { destinatarios: { some: { membroId: created.id } } },
     });
     expect(alertas).toHaveLength(0);
   });
@@ -347,7 +347,7 @@ describe("members.server — createMembro", () => {
     const responsavel = await prismaTest.membro.create({
       data: { nome: "Resp", tipo: "MEMBRO_ATIVO", cargo: "ADMIN" },
     });
-    await prismaTest.configAcolhimento.create({
+    await prismaTest.configuracaoGeral.create({
       data: {
         id: "singleton",
         responsavelVisitanteTipo: "MEMBRO",

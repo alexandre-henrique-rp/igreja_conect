@@ -26,7 +26,7 @@ afterAll(async () => { await cleanup(); });
 beforeEach(async () => {
   await prismaTest.alertaDestinatario.deleteMany();
   await prismaTest.alerta.deleteMany();
-  await prismaTest.configAcolhimento.deleteMany();
+  await prismaTest.configuracaoGeral.deleteMany();
   await prismaTest.ministerioMembro.deleteMany();
   await prismaTest.ministerio.deleteMany();
   await prismaTest.membro.updateMany({ data: { discipuladorId: null } });

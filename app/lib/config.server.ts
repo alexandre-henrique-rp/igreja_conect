@@ -29,7 +29,7 @@ import type { Prisma } from "../../generated/prisma/client";
  *   if (config) { /* usa config.responsavelMembroId *\/ }
  */
 export async function getConfigAcolhimento() {
-  const config = await prisma.configAcolhimento.findFirst({
+  const config = await prisma.configuracaoGeral.findFirst({
     where: { id: "singleton" },
     include: {
       responsavelMembro: true,
@@ -67,7 +67,7 @@ export async function updateConfigAcolhimento(
 
   // Usar Unchecked*Input para poder passar as scalar FK diretamente
   // (ConfigAcolhimentoUpdateInput só aceita relation objects).
-  const data: Prisma.ConfigAcolhimentoUncheckedUpdateInput = {
+  const data: Prisma.ConfiguracaoGeralUncheckedUpdateInput = {
     responsavelVisitanteTipo: validated.responsavelVisitanteTipo ?? null,
   };
 
@@ -80,13 +80,13 @@ export async function updateConfigAcolhimento(
     data.responsavelMembroId = null;
   }
 
-  const config = await prisma.configAcolhimento.upsert({
+  const config = await prisma.configuracaoGeral.upsert({
     where: { id: "singleton" },
     update: data,
     create: {
       id: "singleton",
       ...data,
-    } as Prisma.ConfigAcolhimentoUncheckedCreateInput,
+    } as Prisma.ConfiguracaoGeralUncheckedCreateInput,
   });
 
   safeLog({

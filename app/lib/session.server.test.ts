@@ -45,7 +45,7 @@ async function makeCookieHeader(sid: string): Promise<string> {
 describe("session.server — createSession", () => {
   it("persiste registro em Session com expiresAt e absoluteExpiresAt", async () => {
     const before = Date.now();
-    const sid = await createSession(membroId);
+    const sid = await createSession(membroId, prismaTest);
     const after = Date.now();
 
     const sess = await prismaTest.session.findUnique({ where: { id: sid } });
@@ -61,10 +61,10 @@ describe("session.server — createSession", () => {
 
 describe("session.server — getUserFromRequest", () => {
   it("retorna {id, nome, cargo} quando o cookie bate com sessão válida", async () => {
-    const sid = await createSession(membroId);
+    const sid = await createSession(membroId, prismaTest);
     const cookie = await makeCookieHeader(sid);
     const req = new Request("http://localhost/dashboard", { headers: { Cookie: cookie } });
-    const user = await getUserFromRequest(req);
+    const user = await getUserFromRequest(req, prismaTest);
     expect(user).not.toBeNull();
     expect(user!.id).toBe(membroId);
     expect(user!.nome).toBe("Test User");
@@ -73,56 +73,56 @@ describe("session.server — getUserFromRequest", () => {
 
   it("retorna null quando o cookie não existe", async () => {
     const req = new Request("http://localhost/dashboard");
-    expect(await getUserFromRequest(req)).toBeNull();
+    expect(await getUserFromRequest(req, prismaTest)).toBeNull();
   });
 
   it("retorna null quando o cookie é inválido (asssintatura não confere)", async () => {
     const req = new Request("http://localhost/dashboard", {
       headers: { Cookie: "__session=uuid-invalido-sem-assinatura" },
     });
-    expect(await getUserFromRequest(req)).toBeNull();
+    expect(await getUserFromRequest(req, prismaTest)).toBeNull();
   });
 
   it("faz sliding renewal: atualiza expiresAt para ~7d no futuro", async () => {
-    const sid = await createSession(membroId);
+    const sid = await createSession(membroId, prismaTest);
     await prismaTest.session.update({
       where: { id: sid },
       data: { expiresAt: new Date(Date.now() - 1000) },
     });
     const cookie = await makeCookieHeader(sid);
     const req = new Request("http://localhost/dashboard", { headers: { Cookie: cookie } });
-    await getUserFromRequest(req);
+    await getUserFromRequest(req, prismaTest);
     const after = await prismaTest.session.findUnique({ where: { id: sid } });
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
     expect(after!.expiresAt.getTime()).toBeGreaterThanOrEqual(Date.now() + sevenDays - 2000);
   });
 
   it("retorna null quando absoluteExpiresAt já passou", async () => {
-    const sid = await createSession(membroId);
+    const sid = await createSession(membroId, prismaTest);
     await prismaTest.session.update({
       where: { id: sid },
       data: { absoluteExpiresAt: new Date(Date.now() - 1000) },
     });
     const cookie = await makeCookieHeader(sid);
     const req = new Request("http://localhost/dashboard", { headers: { Cookie: cookie } });
-    expect(await getUserFromRequest(req)).toBeNull();
+    expect(await getUserFromRequest(req, prismaTest)).toBeNull();
   });
 });
 
 describe("session.server — deleteSession", () => {
   it("remove o registro da tabela sessions", async () => {
-    const sid = await createSession(membroId);
-    await deleteSession(sid);
+    const sid = await createSession(membroId, prismaTest);
+    await deleteSession(sid, prismaTest);
     const sess = await prismaTest.session.findUnique({ where: { id: sid } });
     expect(sess).toBeNull();
   });
 
   it("após deleteSession, getUserFromRequest retorna null", async () => {
-    const sid = await createSession(membroId);
+    const sid = await createSession(membroId, prismaTest);
     const cookie = await makeCookieHeader(sid);
     const req = new Request("http://localhost/dashboard", { headers: { Cookie: cookie } });
-    await deleteSession(sid);
-    expect(await getUserFromRequest(req)).toBeNull();
+    await deleteSession(sid, prismaTest);
+    expect(await getUserFromRequest(req, prismaTest)).toBeNull();
   });
 
   it("deleteSession com sid inexistente é no-op", async () => {

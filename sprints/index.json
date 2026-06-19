@@ -129,6 +129,16 @@
       "artifacts": [],
       "milestone": "M3 — Fidelidade Financeira (métrica macro fechada)",
       "promptRef": "sprints/S08.json"
+    },
+    {
+      "id": "S09",
+      "name": "MVP Cleanup — Sync Débitos",
+      "status": "in_progress",
+      "coverage": null,
+      "testsPassing": null,
+      "gate": "pending",
+      "reworkApplied": false,
+      "artifacts": []
     }
   ],
   "summary": {
@@ -138,7 +148,7 @@
       "S07",
       "S08"
     ],
-    "cycle2Status": "COMPLETED — Módulo Financeiro entregue",
+    "cycle2Status": "COMPLETED + S09 cleanup (partial)",
     "mvpStatus": "MODULE FINANCEIRO READY",
     "module": "financeiro"
   },

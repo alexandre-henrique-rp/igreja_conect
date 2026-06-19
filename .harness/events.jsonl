@@ -117,3 +117,8 @@
 {"ts": "2026-06-19T19:29:24.390121Z", "event": "gate.passed", "phase": "phase.5.build", "actor": "orchestrator", "data": {"sprint": "S08", "gate": "all-of", "note": "security/review inconclusive (3 retries vazias cada)"}}
 {"ts": "2026-06-19T19:29:24.390121Z", "event": "sprint.completed", "sprint": "S08", "actor": "orchestrator", "data": {"gate": "all-of passed", "testsS08": "89/89", "reworkApplied": 0, "rnMem03Compliant": true}}
 {"ts": "2026-06-19T19:29:24.390121Z", "event": "cycle.completed", "cycle": 2, "actor": "orchestrator", "data": {"module": "Financeiro", "sprints": ["S06", "S07", "S08"], "status": "COMPLETED", "releaseVersion": "v0.2.0-financeiro-preview", "advisories": ["MVP-DEBT-001", "MVP-DEBT-002"]}}
+{"ts": "2026-06-19T19:35:30.378553Z", "event": "sprint.started", "sprint": "S09", "actor": "orchestrator", "data": {"sprintGoal": "Resolver MVP-DEBT-001 (108 tests) + MVP-DEBT-002 (vitest .tsx)", "taskCount": 9, "estimatedHours": 12, "dependsOn": ["S08"]}}
+{"ts": "2026-06-19T19:35:30.378553Z", "event": "state.transitioned", "actor": "orchestrator", "data": {"cycle2": "completed", "cycle3": "cleanup", "reason": "sync MVP-DEBTs antes de novo módulo"}}
+{"ts": "2026-06-19T20:33:39.758077Z", "event": "sprint.completed", "sprint": "S09", "actor": "orchestrator", "data": {"gate": "partial", "testsBefore": 108, "testsAfter": 95, "debit002Resolved": true}}
+{"ts": "2026-06-19T20:33:39.758077Z", "event": "debt.resolved", "actor": "orchestrator", "data": {"id": "MVP-DEBT-002", "status": "resolved", "fix": "jsdom instalado + vitest.config.ts inclui .tsx"}}
+{"ts": "2026-06-19T20:33:39.758077Z", "event": "debt.partial", "actor": "orchestrator", "data": {"id": "MVP-DEBT-001", "status": "partial-resolved", "progress": "108→95 failing"}}

@@ -26,8 +26,12 @@ export default defineConfig({
     fileParallelism: false,
     include: [
       "app/**/*.test.ts",
+      "app/**/*.test.tsx",
       "tests/**/*.test.ts",
       "prisma/**/*.test.ts",
+    ],
+    environmentMatchGlobs: [
+      ["app/**/*.test.tsx", "jsdom"],
     ],
     coverage: {
       provider: "v8",

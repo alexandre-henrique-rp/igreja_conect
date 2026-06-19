@@ -102,6 +102,9 @@ model Membro {
   estoquesRetirados    MovimentacaoEstoque[]
   alertasRecebidos     AlertaDestinatario[]
 
+  // Relação com Configuração de Acolhimento (1 ConfiguracaoGeral pode ter 1 membro responsável)
+  configuracoesAcolhimento ConfiguracaoGeral[] @relation("ResponsavelVisitante")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -304,10 +307,11 @@ model Alerta {
 }
 
 model AlertaDestinatario {
-  id       String  @id @default(uuid())
-  alertaId String
-  membroId String // ID do usuário administrativo que precisa ver o alerta
-  lido     Boolean @default(false)
+  id        String  @id @default(uuid())
+  alertaId  String
+  membroId  String // ID do usuário administrativo que precisa ver o alerta
+  lido      Boolean @default(false)
+  resolvido Boolean @default(false) // RN-ALERTA-01: estado por destinatário
 
   alerta Alerta @relation(fields: [alertaId], references: [id], onDelete: Cascade)
   membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
@@ -323,6 +327,7 @@ model ConfiguracaoGeral {
   responsavelMembroId      String?
   responsavelMinisterioId  String?
 
+  responsavelMembro     Membro?     @relation("ResponsavelVisitante", fields: [responsavelMembroId], references: [id])
   responsavelMinisterio Ministerio? @relation("MinisterioResponsavel", fields: [responsavelMinisterioId], references: [id])
 
   @@map("configuracoes_gerais")

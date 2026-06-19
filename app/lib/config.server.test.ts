@@ -32,7 +32,7 @@ afterAll(async () => { await cleanup(); });
 beforeEach(async () => {
   await prismaTest.alertaDestinatario.deleteMany();
   await prismaTest.alerta.deleteMany();
-  await prismaTest.configAcolhimento.deleteMany();
+  await prismaTest.configuracaoGeral.deleteMany();
   await prismaTest.ministerioMembro.deleteMany();
   await prismaTest.ministerio.deleteMany();
   await prismaTest.configuracaoGeral.deleteMany();
@@ -72,7 +72,7 @@ describe("config.server — getConfigAcolhimento", () => {
 
   it("com config MEMBRO → retorna dados", async () => {
     const membro = await makeMembro("Responsável", "ADMIN");
-    await prismaTest.configAcolhimento.create({
+    await prismaTest.configuracaoGeral.create({
       data: {
         id: "singleton",
         responsavelVisitanteTipo: "MEMBRO",
