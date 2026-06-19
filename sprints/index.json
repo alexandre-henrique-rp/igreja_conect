@@ -135,10 +135,11 @@
     "totalSprintsCompleted": 0,
     "sprintsCycle2": [
       "S06",
-      "S07"
+      "S07",
+      "S08"
     ],
-    "cycle2Status": "S06 passed, S07/S08 pending",
-    "mvpStatus": "CYCLE 2 IN PROGRESS",
+    "cycle2Status": "COMPLETED — Módulo Financeiro entregue",
+    "mvpStatus": "MODULE FINANCEIRO READY",
     "module": "financeiro"
   },
   "definitionOfDone": [

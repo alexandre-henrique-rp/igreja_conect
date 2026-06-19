@@ -79,6 +79,20 @@ export function assertCanSeeDizimos(user: SessionUser): void {
 }
 
 /**
+ * Retorna true se o usuário pode ver dados financeiros detalhados por membro.
+ * Versão boolean de `assertCanSeeDizimos` — não lança, retorna false.
+ *
+ * @description 3 perfis: ADMIN, PASTOR, FINANCEIRO (RN-MEM-03).
+ * @param {SessionUser} user - Usuário autenticado com `cargo`.
+ * @returns {boolean} true se pode ver, false caso contrário.
+ * @example
+ *   if (!canSeeFinancials(user)) return null; // UI trata como sem acesso
+ */
+export function canSeeFinancials(user: SessionUser): boolean {
+  return !!(user.cargo && (DIZIMO_CARGOS as readonly string[]).includes(user.cargo));
+}
+
+/**
  * Lança Response(403) se o usuário não pode criar lançamentos financeiros.
  *
  * @description 4 perfis: ADMIN, PASTOR, FINANCEIRO, SECRETARIO (SEC-005).

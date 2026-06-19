@@ -1,9 +1,9 @@
 /**
- * Service de Finanças — Igreja Conect (S03-T11, estendido S06-T07/S06-T10).
+ * Service de Finanças — Igreja Conect (S03-T11, estendido S06-T07/S06-T10, S08-T01/T05/T07).
  *
  * **RN-MEM-03 — Camada 3 (defense in depth):**
  * `getDizimosByMembro` é a função canônica de leitura de dízimos.
- * Ela aplica `assertCanSeeFinancials` ANTES de qualquer query — se
+ * Ela aplica `assertCanSeeDizimos` ANTES de qualquer query — se
  * um loader ou outro service esquecer de filtrar, este service barra
  * com `Response(403)`.
  *
@@ -29,13 +29,13 @@
  * @see .harness/RAG/lgpd-igreja-conect.md §2.2 e §2.5
  */
 import { prisma } from "~/db/prisma.server";
-import { assertCanSeeFinancials } from "./rbac.server";
+import { assertCanSeeFinancials, assertCanSeeDizimos, canSeeFinancials } from "./rbac.server";
 import { assertNonNegative } from "./money.server";
 import { safeLog } from "./audit.server";
 import type { SessionUser } from "./session.types";
 
 /**
- * Lista os dízimos de um membro. **Camada 3 RBAC** — bloqueia perfis
+ * Lista os dízimos de um membro com agregações. **Camada 3 RBAC** — bloqueia perfis
  * sem acesso a dados financeiros ANTES de qualquer query.
  *
  * **Perfis que passam:** ADMIN, PASTOR, FINANCEIRO.
@@ -44,11 +44,15 @@ import type { SessionUser } from "./session.types";
  * @description Camada 3 de defesa em profundidade (RN-MEM-03).
  * @param {string} membroId - UUID do membro.
  * @param {SessionUser} user - Usuário autenticado.
- * @returns {Promise<Array<unknown>>} Lançamentos do tipo DIZIMO do membro.
+ * @param {Object} [options] - Filtros opcionais de período.
+ * @param {Date} [options.dataInicio] - Data de início do filtro.
+ * @param {Date} [options.dataFim] - Data de fim do filtro.
+ * @returns {Promise<{dizimos: Array<{id: string, valorCentavos: number, dataCompetencia: Date, caixaId: string, caixaNome: string}>, totalCentavos: number, mesesComDizimo: number}>} Lista de dízimos e agregações.
  * @throws {Response} 403 se usuário não tem perfil financeiro.
  * @example
  *   try {
- *     const dizimos = await getDizimosByMembro(membroId, adminUser);
+ *     const result = await getDizimosByMembro(membroId, adminUser);
+ *     console.log(result.totalCentavos); // ex: 150000 (= R$ 1.500,00)
  *   } catch (e) {
  *     if (e instanceof Response && e.status === 403) {
  *       // UI não renderiza a aba
@@ -57,16 +61,86 @@ import type { SessionUser } from "./session.types";
  */
 export async function getDizimosByMembro(
   membroId: string,
-  user: SessionUser
-): Promise<Array<unknown>> {
+  user: SessionUser,
+  options?: { dataInicio?: Date; dataFim?: Date }
+): Promise<{
+  dizimos: Array<{
+    id: string;
+    valorCentavos: number;
+    dataCompetencia: Date;
+    caixaId: string;
+    caixaNome: string;
+  }>;
+  totalCentavos: number;
+  mesesComDizimo: number;
+}> {
   // Camada 3: PRIMEIRO verifica RBAC, DEPOIS toca o DB.
-  // Se um loader esquecer de aplicar a camada 1 ou 2, este service barra.
-  assertCanSeeFinancials(user);
+  assertCanSeeDizimos(user);
 
-  return prisma.lancamento.findMany({
-    where: { membroId, categoria: "DIZIMO" },
-    orderBy: { dataCompetencia: "desc" },
+  const where: Record<string, unknown> = {
+    membroId,
+    categoria: "DIZIMO" as const,
+  };
+  if (options?.dataInicio) {
+    where.dataCompetencia = { ...((where.dataCompetencia as Record<string, unknown>) || {}), gte: options.dataInicio };
+  }
+  if (options?.dataFim) {
+    where.dataCompetencia = { ...((where.dataCompetencia as Record<string, unknown>) || {}), lte: options.dataFim };
+  }
+
+  const [dizimosRaw, agregado] = await Promise.all([
+    prisma.lancamento.findMany({
+      where,
+      orderBy: { dataCompetencia: "desc" },
+      select: { id: true, valorCentavos: true, dataCompetencia: true, caixaId: true, caixa: { select: { nome: true } } },
+    }),
+    prisma.lancamento.aggregate({
+      where,
+      _sum: { valorCentavos: true },
+    }),
+  ]);
+
+  const uniqueMonths = new Set(
+    dizimosRaw.map((d) => `${d.dataCompetencia.getFullYear()}-${d.dataCompetencia.getMonth()}`)
+  );
+
+  const dizimos = dizimosRaw.map((d) => ({
+    id: d.id,
+    valorCentavos: d.valorCentavos,
+    dataCompetencia: d.dataCompetencia,
+    caixaId: d.caixaId,
+    caixaNome: d.caixa.nome,
+  }));
+
+  safeLog({
+    action: "view_fidelidade_financeira",
+    userId: user.id,
+    resource: membroId,
+    result: "ok",
   });
+
+  return {
+    dizimos,
+    totalCentavos: agregado._sum.valorCentavos ?? 0,
+    mesesComDizimo: uniqueMonths.size,
+  };
+}
+
+/**
+ * Retorna dízimos do membro ou null se usuário não tem permissão.
+ * Wrapper null-safe para UI — NÃO lança, retorna null.
+ *
+ * @description Usa `canSeeFinancials` (boolean) ao invés de `assertCanSeeDizimos`.
+ * @param {string} membroId - UUID do membro.
+ * @param {SessionUser} user - Usuário autenticado.
+ * @returns {Promise<{dizimos: Array<{...}>, totalCentavos: number, mesesComDizimo: number} | null>}
+ * @example
+ *   const result = await getFidelidadeFinanceira(membroId, user);
+ *   if (!result) return <MensagemSemAcesso />;
+ */
+export async function getFidelidadeFinanceira(membroId: string, user: SessionUser) {
+  if (!canSeeFinancials(user)) return null;
+  return getDizimosByMembro(membroId, user);
 }
 
 /**

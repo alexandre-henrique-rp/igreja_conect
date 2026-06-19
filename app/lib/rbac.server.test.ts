@@ -14,6 +14,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
+  canSeeFinancials,
   assertCanSeeFinancials,
   assertCanSeeFinancialModule,
   assertCanSeeDizimos,
@@ -187,6 +188,24 @@ describe("rbac.server — assertCanManageConfiguracaoGeral", () => {
 });
 
 // ==================== S07-T07: assertCanTransferir ====================
+// ==================== S08-T02: canSeeFinancials (boolean helper) ====================
+
+describe("rbac.server — canSeeFinancials (S08-T02)", () => {
+  it.each(["ADMIN", "PASTOR", "FINANCEIRO"] as const)(
+    "%s pode ver dados financeiros → true",
+    (cargo) => {
+      expect(canSeeFinancials(u(cargo))).toBe(true);
+    }
+  );
+
+  it.each(["SECRETARIO", "DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+    "%s NÃO pode ver dados financeiros → false",
+    (cargo) => {
+      expect(canSeeFinancials(u(cargo))).toBe(false);
+    }
+  );
+});
+
 
 describe("rbac.server — assertCanTransferir (S07-T07)", () => {
   it.each(["ADMIN", "PASTOR", "FINANCEIRO"] as const)(

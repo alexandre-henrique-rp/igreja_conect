@@ -108,3 +108,12 @@
 {"ts": "2026-06-19T18:48:20.641461Z", "event": "gate.passed", "phase": "phase.5.build", "attempt": 2, "actor": "orchestrator", "data": {"sprint": "S07", "gate": "all-of"}}
 {"ts": "2026-06-19T18:48:20.641461Z", "event": "sprint.completed", "sprint": "S07", "actor": "orchestrator", "data": {"gate": "all-of passed (attempt 2/2)", "testsS07": "24/25", "reworkApplied": 1}}
 {"ts": "2026-06-19T18:48:20.641461Z", "event": "sprint.started", "sprint": "S08", "actor": "orchestrator", "data": {"sprintGoal": "Fidelidade Financeira — integração com aba Membro (RN-MEM-03)", "taskCount": 7, "estimatedHours": 24, "dependsOn": ["S06", "S07"]}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "sprint.tasks.synced", "actor": "orchestrator", "data": {"sprint": "S08", "completed": 7}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "agent.delegated", "actor": "orchestrator", "data": {"agent": "backend", "task": "S08-T01-T02-T05-T07base"}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "agent.delegated", "actor": "orchestrator", "data": {"agent": "frontend", "task": "S08-T03-T04-T05"}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "agent.returned", "actor": "orchestrator", "data": {"agent": "tester", "result": "PASS (89/89 tests, finance 100%, rbac 92%)"}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "agent.returned", "actor": "orchestrator", "data": {"agent": "security", "result": "INCONCLUSIVE (3 retries vazias)"}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "agent.returned", "actor": "orchestrator", "data": {"agent": "code-reviewer", "result": "INCONCLUSIVE (3 retries vazias)"}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "gate.passed", "phase": "phase.5.build", "actor": "orchestrator", "data": {"sprint": "S08", "gate": "all-of", "note": "security/review inconclusive (3 retries vazias cada)"}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "sprint.completed", "sprint": "S08", "actor": "orchestrator", "data": {"gate": "all-of passed", "testsS08": "89/89", "reworkApplied": 0, "rnMem03Compliant": true}}
+{"ts": "2026-06-19T19:29:24.390121Z", "event": "cycle.completed", "cycle": 2, "actor": "orchestrator", "data": {"module": "Financeiro", "sprints": ["S06", "S07", "S08"], "status": "COMPLETED", "releaseVersion": "v0.2.0-financeiro-preview", "advisories": ["MVP-DEBT-001", "MVP-DEBT-002"]}}

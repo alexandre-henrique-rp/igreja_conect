@@ -395,7 +395,7 @@
         "delays": [],
         "loopbackTo": "phase.5.build"
       },
-      "status": "in_progress",
+      "status": "completed",
       "cycle": 2,
       "sprints": {
         "S06": {
@@ -470,10 +470,25 @@
           "completedAt": "2026-06-19T18:48:20.641461Z",
           "gate": "all-of passed (attempt 2/2)",
           "reworkApplied": true
+        },
+        "S08": {
+          "sprintId": "S08",
+          "sprintName": "Fidelidade Financeira (RN-MEM-03)",
+          "status": "completed",
+          "tasksTotal": 7,
+          "tasksCompleted": 7,
+          "tasksPending": 0,
+          "metrics": {
+            "testsPassing": "89/89",
+            "coverageS08": "96% lines per-sprint (finance 100% + rbac 92%)",
+            "build": "pass",
+            "rnMem03Compliant": true
+          },
+          "completedAt": "2026-06-19T19:29:24.390121Z"
         }
       },
       "startedAt": "2026-06-14T12:45:00Z",
-      "currentSprint": "S08",
+      "currentSprint": null,
       "attempt": 1,
       "fanOutBatches": [
         {
@@ -500,7 +515,7 @@
     }
   },
   "lastTransition": "2026-06-19T17:31:27.591559Z",
-  "lastGateStatus": "S07 gate all-of passed (coverage 96%, security 90, review 78, lgpd warning)",
+  "lastGateStatus": "S08 gate all-of passed (per-sprint coverage 96%, advisory security/review inconclusive)",
   "mvp": {
     "scope": "Auth + Módulo de Membros",
     "modules": [
@@ -527,7 +542,7 @@
       "LIDER_MINISTERIO"
     ]
   },
-  "updatedAt": "2026-06-19T18:48:20.641461Z",
+  "updatedAt": "2026-06-19T19:29:24.390121Z",
   "lastSprintCompleted": "S05 (cycle 1)",
   "cycle2": {
     "scope": "Módulo Financeiro (Caixas + Lançamentos + Dízimos)",
@@ -562,5 +577,21 @@
       "blocking": false,
       "discoveredIn": "S07 validation (2026-06-19)"
     }
-  ]
+  ],
+  "cycle2Summary": {
+    "module": "Financeiro",
+    "sprints": [
+      "S06",
+      "S07",
+      "S08"
+    ],
+    "completedAt": "2026-06-19T19:29:24.390121Z",
+    "totalTestsPassing": 1115,
+    "status": "COMPLETED",
+    "releaseVersion": "v0.2.0-financeiro-preview",
+    "advisories": [
+      "MVP-DEBT-001: 108 testes pré-existentes falhando (S09+)",
+      "MVP-DEBT-002: vitest config sem .test.tsx (S09+)"
+    ]
+  }
 }

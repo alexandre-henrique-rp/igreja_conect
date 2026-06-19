@@ -30,6 +30,7 @@ import type React from "react";
 import type { Route } from "./+types/membros.$id";
 import { userContext } from "~/lib/user-context";
 import { getMembroById, deleteMembro } from "~/lib/members.server";
+import { getFidelidadeFinanceira } from "~/lib/finance.server";
 import { BusinessRuleError, NotFoundError } from "~/lib/errors";
 import { Breadcrumb } from "~/components/Breadcrumb";
 import { Button } from "~/components/Button";
@@ -44,12 +45,12 @@ export function meta({ data }: Route.MetaArgs) {
 }
 
 /**
- * Loader: busca o membro com escopo RBAC.
+ * Loader: busca o membro com escopo RBAC + dados de fidelidade financeira (S08-T05).
  *
  * **DISCIPULADOR fora de escopo** → 404 (camada 2 RBAC).
  *
  * @param args - Loader args do RR7.
- * @returns Membro encontrado (sem `senhaHash`).
+ * @returns Membro + canDelete + fidelidadeFinanceira.
  */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const user = context.get(userContext);
@@ -62,7 +63,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   // Quem pode excluir? Só ADMIN/PASTOR.
   const canDelete = user.cargo === "ADMIN" || user.cargo === "PASTOR";
 
-  return { membro, canDelete };
+  const fidelidadeFinanceira = await getFidelidadeFinanceira(params.id, user);
+
+  return { membro, canDelete, fidelidadeFinanceira };
 }
 
 /**

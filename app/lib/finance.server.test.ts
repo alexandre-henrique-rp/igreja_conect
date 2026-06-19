@@ -1,6 +1,6 @@
 /**
  * Testes de app/lib/finance.server.ts — extensão S06-T07 (assertSaldoSuficiente)
- * + S06-T10 (getDashboardFinanceiro).
+ * + S06-T10 (getDashboardFinanceiro) + S08-T01/T05 (Fidelidade Financeira).
  *
  * Cobre:
  * - T007 — assertSaldoSuficiente (RAG pattern-trava-saldo-service §2.1):
@@ -260,6 +260,170 @@ describe("finance.server — getDashboardFinanceiro (S06-T10)", () => {
   it("getDizimosByMembro existente continua funcionando (regressão)", async () => {
     const membro = await makeMembro("Alvo");
     const result = await getDizimosByMembro(membro.id, userWith("ADMIN"));
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveProperty("dizimos"); expect(result).toHaveProperty("totalCentavos"); expect(result).toHaveProperty("mesesComDizimo"); expect(Array.isArray(result.dizimos)).toBe(true);
   });
+
+// ==================== S08-T01/T05: getDizimosByMembro + getFidelidadeFinanceira ====================
+
+describe("finance.server — getDizimosByMembro (S08-T01)", () => {
+  it("ADMIN: retorna 3 dízimos com totalCentavos e mesesComDizimo corretos", async () => {
+    const membro = await makeMembro("Dizimista");
+    const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 100000 });
+    // Cria 3 dízimos no mesmo mês
+    const baseDate = new Date("2024-03-15");
+    for (let i = 0; i < 3; i++) {
+      await prismaTest.lancamento.create({
+        data: {
+          tipo: "ENTRADA",
+          categoria: "DIZIMO",
+          valorCentavos: 5000 + i * 1000,
+          caixaId: caixa.id,
+          membroId: membro.id,
+          descricao: `Dizimo ${i + 1}`,
+          dataCompetencia: new Date(baseDate.getFullYear(), baseDate.getMonth(), 10 + i),
+        },
+      });
+    }
+
+    const result = await getDizimosByMembro(membro.id, userWith("ADMIN"));
+    expect(result.dizimos).toHaveLength(3);
+    expect(result.totalCentavos).toBe(18000); // 5000 + 6000 + 7000
+    expect(result.mesesComDizimo).toBe(1); // todos no mesmo mês
+    expect(result.dizimos[0]).toHaveProperty("id");
+    expect(result.dizimos[0]).toHaveProperty("valorCentavos");
+    expect(result.dizimos[0]).toHaveProperty("dataCompetencia");
+    expect(result.dizimos[0]).toHaveProperty("caixaId");
+    expect(result.dizimos[0]).toHaveProperty("caixaNome");
+  });
+
+  it("PASTOR: busca dízimos com sucesso", async () => {
+    const membro = await makeMembro("Dizimista Pastor");
+    const caixa = await makeCaixa({ nome: "Geral" });
+    await prismaTest.lancamento.create({
+      data: {
+        tipo: "ENTRADA", categoria: "DIZIMO", valorCentavos: 3000,
+        caixaId: caixa.id, membroId: membro.id, descricao: "Dizimo pastor",
+      },
+    });
+    const result = await getDizimosByMembro(membro.id, userWith("PASTOR"));
+    expect(result.dizimos).toHaveLength(1);
+    expect(result.totalCentavos).toBe(3000);
+  });
+
+  it("FINANCEIRO: busca dízimos com sucesso", async () => {
+    const membro = await makeMembro("Dizimista Financeiro");
+    const caixa = await makeCaixa({ nome: "Geral" });
+    await prismaTest.lancamento.create({
+      data: {
+        tipo: "ENTRADA", categoria: "DIZIMO", valorCentavos: 7000,
+        caixaId: caixa.id, membroId: membro.id, descricao: "Dizimo financeiro",
+      },
+    });
+    const result = await getDizimosByMembro(membro.id, userWith("FINANCEIRO"));
+    expect(result.dizimos).toHaveLength(1);
+    expect(result.totalCentavos).toBe(7000);
+  });
+
+  it("SECRETARIO: lança Response 403", async () => {
+    const membro = await makeMembro("Dizimista Sec");
+    let caught: unknown = null;
+    try {
+      await getDizimosByMembro(membro.id, userWith("SECRETARIO"));
+    } catch (e) { caught = e; }
+    expect(caught).toBeInstanceOf(Response);
+    if (caught instanceof Response) expect(caught.status).toBe(403);
+  });
+
+  it("DISCIPULADOR: lança Response 403", async () => {
+    const membro = await makeMembro("Dizimista Disc");
+    let caught: unknown = null;
+    try {
+      await getDizimosByMembro(membro.id, userWith("DISCIPULADOR"));
+    } catch (e) { caught = e; }
+    expect(caught).toBeInstanceOf(Response);
+    if (caught instanceof Response) expect(caught.status).toBe(403);
+  });
+
+  it("LIDER_MINISTERIO: lança Response 403", async () => {
+    const membro = await makeMembro("Dizimista Lider");
+    let caught: unknown = null;
+    try {
+      await getDizimosByMembro(membro.id, userWith("LIDER_MINISTERIO"));
+    } catch (e) { caught = e; }
+    expect(caught).toBeInstanceOf(Response);
+    if (caught instanceof Response) expect(caught.status).toBe(403);
+  });
+
+  it("membro sem dízimos: retorna array vazio + total 0 + meses 0", async () => {
+    const membro = await makeMembro("Sem Dizimo");
+    const result = await getDizimosByMembro(membro.id, userWith("ADMIN"));
+    expect(result.dizimos).toEqual([]);
+    expect(result.totalCentavos).toBe(0);
+    expect(result.mesesComDizimo).toBe(0);
+  });
+
+  it("filtro dataInicio/dataFim funciona", async () => {
+    const membro = await makeMembro("Dizimista Filtro");
+    const caixa = await makeCaixa({ nome: "Geral" });
+    // Dízimos em jan e mar 2024
+    await prismaTest.lancamento.create({
+      data: {
+        tipo: "ENTRADA", categoria: "DIZIMO", valorCentavos: 1000,
+        caixaId: caixa.id, membroId: membro.id, descricao: "Jan",
+        dataCompetencia: new Date("2024-01-15"),
+      },
+    });
+    await prismaTest.lancamento.create({
+      data: {
+        tipo: "ENTRADA", categoria: "DIZIMO", valorCentavos: 2000,
+        caixaId: caixa.id, membroId: membro.id, descricao: "Mar",
+        dataCompetencia: new Date("2024-03-15"),
+      },
+    });
+
+    // Filtra apenas jan-fev
+    const result = await getDizimosByMembro(membro.id, userWith("ADMIN"), {
+      dataInicio: new Date("2024-01-01"),
+      dataFim: new Date("2024-02-29"),
+    });
+    expect(result.dizimos).toHaveLength(1);
+    expect(result.dizimos[0].valorCentavos).toBe(1000);
+    expect(result.totalCentavos).toBe(1000);
+    expect(result.mesesComDizimo).toBe(1);
+  });
+
+  it("mesesComDizimo conta meses distintos corretamente", async () => {
+    const membro = await makeMembro("Dizimista MultiMes");
+    const caixa = await makeCaixa({ nome: "Geral" });
+    // 2 dízimos em jan, 1 em mar
+    for (const [mes, dia] of [[0, 10], [0, 20], [2, 5]] as [number, number][]) {
+      await prismaTest.lancamento.create({
+        data: {
+          tipo: "ENTRADA", categoria: "DIZIMO", valorCentavos: 1000,
+          caixaId: caixa.id, membroId: membro.id, descricao: `Mes ${mes}`,
+          dataCompetencia: new Date(2024, mes, dia),
+        },
+      });
+    }
+    const result = await getDizimosByMembro(membro.id, userWith("ADMIN"));
+    expect(result.mesesComDizimo).toBe(2); // jan e mar = 2 meses distintos
+  });
+});
+
+describe("finance.server — getFidelidadeFinanceira (S08-T05)", () => {
+  it("ADMIN: retorna objeto com dados", async () => {
+    const { getFidelidadeFinanceira } = await import("./finance.server");
+    const membro = await makeMembro("Admin Fidelity");
+    const result = await getFidelidadeFinanceira(membro.id, userWith("ADMIN"));
+    expect(result).not.toBeNull();
+    expect(result).toHaveProperty("dizimos");
+  });
+
+  it("SECRETARIO: retorna null (sem lançamento)", async () => {
+    const { getFidelidadeFinanceira } = await import("./finance.server");
+    const membro = await makeMembro("Sec Fidelity");
+    const result = await getFidelidadeFinanceira(membro.id, userWith("SECRETARIO"));
+    expect(result).toBeNull();
+  });
+});
 });
