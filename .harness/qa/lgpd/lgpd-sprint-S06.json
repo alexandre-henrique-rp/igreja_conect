@@ -1,0 +1,305 @@
+{
+  "_type": "harness-lgpd-audit-v6",
+  "agent": "lgpd-officer",
+  "sprint": "S06",
+  "cycle": 2,
+  "scope": "S06 (cycle 2) — Módulo Financeiro (Caixas, Lançamentos, Dashboard, RBAC fina)",
+  "timestamp": "2026-06-19T17:30:00Z",
+  "parecer": "WARNING",
+  "personalDataInventory": {
+    "collected": [
+      {
+        "category": "financeiro (sensivel Art. 5º, II)",
+        "fields": ["Lancamento.valorCentavos", "Lancamento.categoria", "Lancamento.descricao", "Lancamento.dataCompetencia", "Lancamento.membroId"],
+        "legalBasis": "Art. 7º, V (execucao contrato religioso) + Art. 11, II (obrigacao religiosa) + Art. 7º, IX (interesse legitimo comunidade religiosa)",
+        "sensitive": true,
+        "encrypted": false,
+        "restrictedTo": ["ADMIN", "PASTOR", "FINANCEIRO"],
+        "note": "Dízimo — DADO SENSÍVEL (religioso + financeiro). RN-MEM-03 3 camadas. SECRETARIO filtra DIZIMO service-side (lancamentos.server.ts:213-215; finance.server.ts:227-229)."
+      },
+      {
+        "category": "financeiro comum",
+        "fields": ["Caixa.nome", "Caixa.saldoCentavos", "Caixa.ativo"],
+        "legalBasis": "Art. 7º, VI (exercicio regular de direitos) + Art. 7º, V (execucao contrato)",
+        "sensitive": false,
+        "encrypted": false,
+        "restrictedTo": ["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"]
+      },
+      {
+        "category": "identificacao (referencia via Lancamento.membroId)",
+        "fields": ["Lancamento.membroId (FK)"],
+        "legalBasis": "Art. 7º, V (execucao contrato religioso)",
+        "sensitive": false,
+        "encrypted": false,
+        "note": "FK para Membro. Vínculo DIZIMO obrigatório (RN-FIN-05); OFERTA opcional (anônimo); outras categorias rejeitadas via Zod superRefine."
+      },
+      {
+        "category": "operador (transferencia executada por)",
+        "fields": ["TransferenciaCaixa.executadoPorId (FK)"],
+        "legalBasis": "Art. 7º, V",
+        "sensitive": false,
+        "encrypted": false,
+        "note": "Model TransferenciaCaixa ja existe; feature S07."
+      }
+    ],
+    "totalFieldsProcessed": 7,
+    "sensitiveFieldsProcessed": 1,
+    "internationalTransfers": [],
+    "noteRNMEM02": "Schema Caixa/Lancamento SEM cpf, rg, cnpj, tituloEleitor, pis, cartaoSus (RN-MEM-02 mantida). Únicas menções a 'cpf' no projeto estao em membros.ts (gate .strict() que REJEITA) e testes LGPD que validam REJEICAO."
+  },
+  "gates": {
+    "rn_mem_03_financeiro_3_camadas": {
+      "status": "PASS",
+      "camada1_ui": {
+        "status": "PASS",
+        "evidence": "<Can allow={['ADMIN', 'PASTOR', 'FINANCEIRO', 'SECRETARIO']}> em financeiro._index.tsx:92, financeiro.caixas._index.tsx:139, financeiro.caixas.$id.tsx:168. UI esconde botoes de acao restritos."
+      },
+      "camada2_loader": {
+        "status": "PASS",
+        "evidence": "Todas 5 rotas chamam assertCanSeeFinancialModule (4 perfis) — SEC-001/SEC-002 do security-audit JA CORRIGIDOS em rbac.server.ts:61-65 (separacao entre assertCanSeeFinancialModule e assertCanSeeDizimos)."
+      },
+      "camada3_service": {
+        "status": "PASS",
+        "evidence": "assertCanSeeFinancialModule / assertCanSeeFinancials / assertCanWriteLancamento chamados PRIMEIRO em TODOS os services do modulo: criarLancamento, listarPorCaixa, listarCaixas, criarCaixa, arquivarCaixa, reabrirCaixa, getDashboardFinanceiro, getDizimosByMembro, listarPorCaixa, assertSaldoSuficiente. Filtro DIZIMO para SECRETARIO aplicado em 2 services (lancamentos.server.ts:213-215; finance.server.ts:227-229). Spy em testes confirma DB nao tocado para bloqueados."
+      }
+    },
+    "rn_fin_04_trava_saldo": {
+      "status": "PASS",
+      "evidence": "assertSaldoSuficiente em finance.server.ts:97-127; chamada ANTES de prisma.$transaction para SAIDAS; re-leitura anti-TOCTOU DENTRO do $transaction (lancamentos.server.ts:99-119). Teste de borda #3 (caixa saldo=0 + SAIDA 1 centavo) cobre."
+    },
+    "rn_fin_05_dizimo_exige_membro": {
+      "status": "PASS",
+      "evidence": "LancamentoCreateSchema.superRefine (schemas/lancamentos.ts:52-69): DIZIMO sem membroId → ZodError; DESPESA/COMPRA/MANUTENCAO/TRANSFERENCIA com membroId → ZodError. RN-FIN-05 integralmente coberto."
+    },
+    "caixa_ativo_soft_delete": {
+      "status": "PASS",
+      "evidence": "Caixa.ativo Boolean @default(true) + @@index([ativo]) (prisma/schema.prisma:168,177). listarCaixas default filtra ativo=true (caixas.server.ts:64-66). assertSaldoSuficiente rejeita caixa arquivado (finance.server.ts:115-120). criarLancamento re-checa DENTRO de $transaction (lancamentos.server.ts:105-110)."
+    },
+    "transparencia_politica_publicada": {
+      "status": "FAIL",
+      "evidence": "Sem pagina /privacidade. Sem politica publicada. Advisory S05-A01 mantido. Nao bloqueia S06 (gate passa em 'warning').",
+      "recomendacao": "Criar /privacidade em S09+"
+    },
+    "direitos_titular_art_18": {
+      "status": "PARTIAL",
+      "implementados": ["III (correcao parcial via /membros/:id/editar)"],
+      "faltando": ["I (confirmacao dedicada)", "II (acesso/export)", "IV (anonimizacao)", "V (portabilidade)", "VI (eliminacao granular)", "VIII (info nao-consentimento)", "IX (revogacao)", "§1 (oposicao)"],
+      "evidence": "Titular ve seus dados via /app/membros/:id (S02) mas NAO ve seus dizimos (RN-MEM-03 — proposital). Sem export JSON/CSV dedicado. Sem workflow de eliminacao parcial.",
+      "recomendacao": "Implementar /app/privacidade/exportar (GET) e /app/privacidade/minha-conta (DELETE) em S07+"
+    },
+    "dpo_designado": {
+      "status": "FAIL",
+      "evidence": "Sem DPO designado. Sem e-mail publico. Sem comunicacao a ANPD (Res. CD/ANPD 18/2024 obriga identificacao do encarregado a ANPD).",
+      "recomendacao": "Designar DPO (sugestao: Pastor presidente) em S09+"
+    },
+    "plano_incidente": {
+      "status": "FAIL",
+      "evidence": "Sem docs/incidents.md. Sem runbook. Sem template ANPD. Sem template titulares. Prazo 2 dias uteis (Res. CD/ANPD 18/2024) nao documentado.",
+      "recomendacao": "Criar docs/incidents.md em S09+"
+    },
+    "logs_sem_pii": {
+      "status": "PASS",
+      "evidence": "safeLog com allowlist {userId, action, resource, result, timestamp, ip} (audit.server.ts:11-18). Aplicado em 6 pontos: criarCaixa, arquivarCaixa, reabrirCaixa, criarLancamento, view_extrato, view_dashboard_financeiro. ZERO valorCentavos/descricao/membroId/email em logs. Grep confirma: ZERO console.log fora de safeLog no escopo S06."
+    },
+    "schema_anotado_lgpd": {
+      "status": "FAIL",
+      "evidence": "prisma/schema.prisma:164-179 (Caixa) e 196-215 (Lancamento) SEM comentarios LGPD Art. 7º V/IX e Art. 11º II. Unico comentario inline: linha 207 'Se for Dízimo, o vínculo com Membro é obrigatório...' (RN-FIN-05, nao LGPD). RAG lgpd-bases-legais-igreja.md §2.2/2.3 define o template esperado.",
+      "recomendacao": "Adicionar comentarios LGPD no schema (esforco ~30min). Debito LGPD-S06-003."
+    },
+    "internacional": {
+      "status": "N/A",
+      "evidence": "Stack 100% local (Prisma + SQLite). Zero provedores externos. Art. 33 N/A."
+    },
+    "sessao_segura": {
+      "status": "PASS",
+      "evidence": "session.server.ts:1-7 SESSION_SECRET fail-fast em prod (>=32 chars). Cookie httpOnly + sameSite=lax + secure(prod). Sliding 7d + absoluto 30d. SEC-003 do security-audit CORRIGIDO."
+    }
+  },
+  "lgpdCoverage": {
+    "principles": {
+      "finalidade": { "compliant": true, "findings": [] },
+      "necessidade": { "compliant": true, "findings": [] },
+      "adequacao": { "compliant": true, "findings": [] },
+      "livre_acesso": { "compliant": false, "findings": ["LGPD-S06-002"] },
+      "qualidade": { "compliant": true, "findings": [] },
+      "transparencia": { "compliant": false, "findings": ["LGPD-S06-A01"] },
+      "seguranca": { "compliant": true, "findings": [], "note": "SEC-003 corrigido (SESSION_SECRET fail-fast). 3 camadas RBAC + bcrypt + httpOnly + safeLog + Zod .strict()." },
+      "prevencao": { "compliant": true, "findings": [] },
+      "nao_discriminacao": { "compliant": true, "findings": [] },
+      "responsabilizacao": { "compliant": true, "findings": ["LGPD-S06-003"] }
+    },
+    "rights18": {
+      "implementados": ["III (correcao)"],
+      "faltando": ["I", "II", "IV", "V", "VI", "VII", "VIII", "IX", "§1"],
+      "findings": ["LGPD-S06-002"],
+      "note": "Gate passa: 0 high em Art. 18. Debito LGPD-S06-002 (medium) para S07+."
+    },
+    "sensitiveDataArt11": {
+      "note": "Dizimo = DADO SENSIVEL (religioso + financeiro). Base legal Art. 7º V + Art. 11 II. Acesso restrito 3 camadas (RN-MEM-03).",
+      "compliant": "partial",
+      "findings": ["LGPD-S06-003"]
+    },
+    "dpo": {
+      "designated": false,
+      "contactPublic": false,
+      "findings": ["LGPD-S06-A02"]
+    },
+    "incidentResponse": {
+      "planExists": false,
+      "prazoANPDConhecido": false,
+      "findings": ["LGPD-S06-004"]
+    },
+    "internationalTransfer": {
+      "occurs": false,
+      "legalBasisDocumented": true,
+      "findings": []
+    },
+    "cookies": {
+      "bannerImplemented": false,
+      "granularConsent": false,
+      "findings": [],
+      "note": "Stack 100% local. ZERO cookies de tracking. Res. CD/ANPD 4/2023 NAO aplicavel. Unico cookie = __session (essencial, httpOnly)."
+    },
+    "retention": {
+      "policyDefined": false,
+      "findings": ["LGPD-S06-005"]
+    },
+    "ripd": {
+      "exists": "partial",
+      "note": "RAG lgpd-bases-legais-igreja.md cobre mapeamento campo-a-campo. RIPD formal nao exigido pela ANPD para o porte da igreja (Art. 38, §unico).",
+      "findings": []
+    }
+  },
+  "findings": [
+    {
+      "id": "LGPD-S06-002",
+      "severity": "medium",
+      "category": "direitos-titular",
+      "legalBasis": "Art. 18, II e V",
+      "title": "Sem export/portabilidade dos dados do titular (Art. 18, II e V)",
+      "file": "app/routes/app/privacidade/ (nao existe)",
+      "evidence": "Nao ha endpoint /app/privacidade/exportar nem /app/privacidade/portability. Titular ve seus dados via /app/membros/:id (S02) mas nao seus dizimos (proposital, RN-MEM-03). Sem export JSON/CSV. Res. CD/ANPD 15/2024: prazo 15 dias para resposta.",
+      "impact": "Reclamacao direta do titular a ANPD pode gerar sancao (Art. 52). Risco real: titular pede e igreja nao atende em 15 dias = multa + publicizacao.",
+      "proposedChange": "1) Criar /app/privacidade/exportar (GET, retorna JSON com todos os dados pessoais do titular incluindo dízimos que ele proprio cadastrou). 2) Criar /app/privacidade/portability (GET, mesmo payload, formato estruturado). 3) UI em /app/meus-dados com botao 'Baixar meus dados'. 4) Logs de atendimento (Art. 37). 5) Identificacao por sessao atual (ja autenticado). 6) Teste E2E: titular baixa e recebe JSON valido.",
+      "effort": "medium",
+      "regulatoryRisk": "Nao bloqueia gate S06 (advisory). Bloquearia gate S09 se nao implementado."
+    },
+    {
+      "id": "LGPD-S06-003",
+      "severity": "medium",
+      "category": "responsabilizacao",
+      "legalBasis": "Art. 6º, X (responsabilizacao) + Art. 7º (bases legais) + Art. 11 (dados sensiveis)",
+      "title": "Schema Prisma sem comentarios LGPD Art. 7º/11º nos models Caixa e Lancamento",
+      "file": "prisma/schema.prisma:164-179 (Caixa) e 196-215 (Lancamento)",
+      "evidence": "Unico comentario inline: linha 207 'Se for Dízimo, o vínculo com Membro é obrigatório. Se for Oferta, pode ser anônimo (RN-FIN-05)'. RAG lgpd-bases-legais-igreja.md §2.2/2.3 define o template esperado (Art. 7º V + Art. 11 II + retencao + perfis de acesso).",
+      "impact": "ANPD pode exigir prova de base legal em auditoria (Art. 37, LGPD). Sem comentario no schema, mapeamento depende de RAG separado. Risco de classificacao errada por dev junior (ex: tratar dízimo como contrato puro, esquecer Art. 11, II).",
+      "proposedChange": "Adicionar comentarios LGPD em prisma/schema.prisma: 1) model Caixa — Art. 7º VI (gestao patrimonial). 2) model Lancamento — Art. 7º V + Art. 11 II (dízimo é sensivel religioso + financeiro). 3) model TransferenciaCaixa — Art. 7º V (operador com cargo). 4) Para cada campo: retencao (ex: 5 anos pós-óbito para histórico) + perfis de acesso.",
+      "effort": "low",
+      "regulatoryRisk": "Recomendacao formal em caso de auditoria. Nao bloqueia gate S06 (cosmético, RAG ja cobre)."
+    },
+    {
+      "id": "LGPD-S06-004",
+      "severity": "medium",
+      "category": "resposta-incidente",
+      "legalBasis": "Art. 48 + Res. CD/ANPD 18/2024",
+      "title": "Sem plano formal de resposta a incidente",
+      "file": "docs/incidents.md (nao existe)",
+      "evidence": "Sem runbook. Sem template ANPD. Sem template titulares. Prazo 2 dias uteis (Res. CD/ANPD 18/2024) nao documentado. Canal de comunicacao a titulares inexistente.",
+      "impact": "Quando incidente ocorrer, time nao sabera reagir dentro do prazo. Falta de runbook = atraso na notificacao = agravamento de sancao. Caso Banco Pan (2024) — acao coletiva por demora na comunicacao.",
+      "proposedChange": "1) Criar docs/incidents.md com: definicao de incidente, equipe de resposta, contatos, runbook (contencao 1h, avaliacao risco 4h, notificacao ANPD 2 dias uteis, notificacao titulares 72h). 2) Template de comunicado a ANPD (Res. 18/2024, Anexo). 3) Template de e-mail a titulares. 4) Teste de tabletop trimestral. 5) Integrar com alerta de monitoramento (Sentry/PagerDuty quando entrar).",
+      "effort": "low",
+      "regulatoryRisk": "Atraso na notificacao ANPD = agravamento. Recomendacao forte. Nao bloqueia gate S06 (advisory)."
+    },
+    {
+      "id": "LGPD-S06-005",
+      "severity": "medium",
+      "category": "retencao",
+      "legalBasis": "Art. 6º, V (necessidade) + Art. 15 (eliminacao apos cessada finalidade)",
+      "title": "Politica de retencao de logs nao definida",
+      "file": "docs/data-retention.md (nao existe)",
+      "evidence": "safeLog grava em console (stdout). Em DEV ok. Em PROD, stack de log externa precisa de politica de retencao. Hoje: indefinida.",
+      "impact": "Logs retidos por tempo indefinido pode violar Art. 6º, V (necessidade) e Art. 15 (eliminacao). Risco de manter dado pessoal de ex-titular por anos sem justificativa. RECEITA FEDERAL exige 5 anos para livros caixa (IN 1.234/2012 + art. 173/174 CTN).",
+      "proposedChange": "1) Definir retencao por categoria: (a) Lancamento = 5 anos (obrigacao fiscal); (b) Membro (apos desligamento) = 5 anos (prescricao civil); (c) Logs de auditoria = 6-12 meses (Art. 6º, V); (d) Visitante inativo = 24 meses. 2) Job automatico de purga (cron). 3) Documentar em docs/data-retention.md.",
+      "effort": "medium",
+      "regulatoryRisk": "Recomendacao formal em caso de auditoria. Pode ser classificado como 'coleta sem finalidade' em caso de reclamacao."
+    },
+    {
+      "id": "LGPD-S06-A01",
+      "severity": "informational",
+      "category": "transparencia",
+      "legalBasis": "Art. 6º, VI + Art. 9º",
+      "title": "Politica de privacidade nao publicada",
+      "file": "app/routes/privacidade.tsx (nao existe)",
+      "evidence": "Sem /privacidade. Sem politica publicada. Advisory S05-A01 mantido.",
+      "impact": "Titular nao tem onde consultar finalidades, bases legais, prazos de retencao, direitos. ANPD pode exigir em fiscalizacao.",
+      "proposedChange": "Criar pagina publica /privacidade com 13 itens obrigatorios do Art. 9º (controlador, DPO, finalidades, bases legais, destinatarios, retencao, direitos do titular, seguranca, cookies, etc.). Hospedar fora do /app (acesso publico).",
+      "effort": "low",
+      "regulatoryRisk": "Recomendacao. Nao bloqueia gate."
+    },
+    {
+      "id": "LGPD-S06-A02",
+      "severity": "informational",
+      "category": "dpo",
+      "legalBasis": "Art. 41",
+      "title": "DPO/Encarregado nao designado",
+      "file": "AGENTS.md (nao menciona DPO)",
+      "evidence": "Sem e-mail de DPO publico. Sem designacao formal. ANPD exige comunicacao do encarregado (Res. CD/ANPD 18/2024).",
+      "impact": "Multa ANPD em casos de fiscalizacao. Caso Telekall 2023: R$ 14.400 (1a sancao) por nao designar DPO.",
+      "proposedChange": "1) Designar DPO (sugestao: Pastor presidente, ou membro do conselho). 2) Publicar e-mail em /privacidade e rodape do site. 3) Comunicar a ANPD via sistema proprio. 4) Documentar em AGENTS.md.",
+      "effort": "low",
+      "regulatoryRisk": "Recomendacao. Bloqueia gate S09 se nao implementado."
+    },
+    {
+      "id": "LGPD-S06-006",
+      "severity": "low",
+      "category": "seguranca",
+      "legalBasis": "Art. 6º, VII (seguranca) + Art. 46",
+      "title": "getDashboardFinanceiro expoe total agregado que pode inferir volume de dízimos",
+      "file": "app/lib/finance.server.ts:218-224 (saldoAgregadoCentavos)",
+      "evidence": "saldoAgregadoCentavos = soma de todos os saldos de caixas ativos. SECRETARIO ve esse numero. Como dízimos sao a principal ENTRADA, e SECRETARIO nao ve dízimos individuais mas ve o agregado, ha inferencia possivel.",
+      "impact": "Baixo. SECRETARIO ja tem perfil financeiro. Inferencia exige conhecimento externo do volume de saidas. Sem impacto regulatorio direto.",
+      "proposedChange": "Opcional: separar saldoAgregadoCentavos entre ENTRADA de DIZIMO e outras entradas. Ou exibir apenas para ADMIN/PASTOR. Decisão de UX, nao juridica.",
+      "effort": "low",
+      "regulatoryRisk": "Baixo. Informational."
+    },
+    {
+      "id": "LGPD-S06-007",
+      "severity": "low",
+      "category": "seguranca",
+      "legalBasis": "Art. 6º, VII (seguranca)",
+      "title": "lancamentosMes: number por caixa expoe volume agregado mensal",
+      "file": "app/lib/finance.server.ts:200-217",
+      "evidence": "getDashboardFinanceiro retorna lancamentosMes: number por caixa (1 query groupBy). Em combinação com saldoCentavos, SECRETARIO pode inferir fluxo de dízimos.",
+      "impact": "Baixo. Inferencia exige conhecimento externo. Sem impacto regulatorio direto.",
+      "proposedChange": "Opcional: exibir lancamentosMes apenas para ADMIN/PASTOR. Decisão de UX.",
+      "effort": "low",
+      "regulatoryRisk": "Baixo. Informational."
+    }
+  ],
+  "stats": {
+    "critical": 0,
+    "high": 0,
+    "medium": 4,
+    "low": 2,
+    "informational": 2
+  },
+  "thresholds": {
+    "maxCritical": 0,
+    "maxHigh": 0,
+    "lgpdStatus": "warning"
+  },
+  "passed": true,
+  "blockers": [],
+  "advisory": [
+    "LGPD-S06-A01: publicar politica de privacidade em S09+",
+    "LGPD-S06-A02: designar DPO em S09+",
+    "LGPD-S06-004: criar docs/incidents.md em S09+",
+    "LGPD-S06-005: definir politica de retencao em S09+",
+    "LGPD-S06-002: implementar Art. 18 II/V (export) em S07+",
+    "LGPD-S06-003: adicionar comentarios LGPD no schema (esforco low, pode ser S07)",
+    "LGPD-S06-006/007: considerar segregação de dados agregados por perfil (UX, não jurídico)"
+  ],
+  "artifacts": [
+    ".harness/sprints/S06/lgpd-parecer.md"
+  ]
+}

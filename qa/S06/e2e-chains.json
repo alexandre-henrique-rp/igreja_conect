@@ -1,0 +1,546 @@
+{
+  "$schema": "https://raw.githubusercontent.com/akita/akita-harness/main/templates/E2E-CHAIN-TEMPLATE.json",
+  "sprint": "S06",
+  "module": "financeiro",
+  "chains": [
+    {
+      "id": "E2E-FIN-CHAIN-1",
+      "name": "FINANCEIRO registra DÍZIMO e vê R$ 50,00 no extrato",
+      "description": "US-FIN-003 (Dízimos vinculados). Métrica macro §7.1: FINANCEIRO lança dízimo em < 2 min.",
+      "usCovered": ["US-FIN-002", "US-FIN-003", "US-FIN-007"],
+      "source": "e2e/financeiro-basico.spec.ts:101-171",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-financeiro",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "financeiro+e2e@igreja.local", "cargo": "FINANCEIRO" },
+          "expected": { "status": 200, "contains": "Financeiro" }
+        },
+        {
+          "step": 2,
+          "name": "dashboard-acesso",
+          "action": "navigate",
+          "path": "/app/financeiro",
+          "expected": { "status": 200, "contains": "Financeiro" }
+        },
+        {
+          "step": 3,
+          "name": "verifica-saldo-zero",
+          "action": "assert",
+          "path": null,
+          "data": { "testId": "card-saldo-caixa", "text": "Caixa Geral", "saldo": "R$ 0,00" },
+          "expected": { "contains": "R$ 0,00" }
+        },
+        {
+          "step": 4,
+          "name": "clicar-lancar",
+          "action": "click",
+          "path": "/app/financeiro",
+          "data": { "testId": "btn-lancar" },
+          "expected": { "urlPattern": "/app/financeiro/lancamentos/novo" }
+        },
+        {
+          "step": 5,
+          "name": "criar-lancamento-dizimo",
+          "action": "submit",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": {
+            "tipo": "ENTRADA",
+            "categoria": "DIZIMO",
+            "valor": "50,00",
+            "membro": "Maria",
+            "descricao": "Dízimo E2E Chain 1"
+          },
+          "expected": { "status": 302, "redirect": "/app/financeiro/caixas/" }
+        },
+        {
+          "step": 6,
+          "name": "verifica-extrato",
+          "action": "assert",
+          "path": "/app/financeiro/caixas/{caixaId}",
+          "data": { "text": "+ R$ 50,00" },
+          "expected": { "contains": "+ R$ 50,00" }
+        },
+        {
+          "step": 7,
+          "name": "cleanup",
+          "action": "cleanup",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": {
+            "tipo": "SAIDA",
+            "categoria": "DESPESA_OPERACIONAL",
+            "valor": "50,00"
+          },
+          "expected": { "status": 302 },
+          "cleanup": true
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-2",
+      "name": "SECRETARIO vê dashboard e extrato SEM DÍZIMOS (filtro RBAC)",
+      "description": "US-FIN-008 (RBAC fina 3 camadas). SECRETARIO não vê DÍZIMOS - filtro service-side.",
+      "usCovered": ["US-FIN-007", "US-FIN-008"],
+      "source": "e2e/financeiro-basico.spec.ts:173-216",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-secretario",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "secretario+e2e@igreja.local", "cargo": "SECRETARIO" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "dashboard-sem-dizimo",
+          "action": "navigate",
+          "path": "/app/financeiro",
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 3,
+          "name": "verifica-sem-dizimo",
+          "action": "assert",
+          "path": "/app/financeiro",
+          "data": { "notContains": "Dízimo" },
+          "expected": { "pass": true }
+        },
+        {
+          "step": 4,
+          "name": "acessa-caixas",
+          "action": "navigate",
+          "path": "/app/financeiro/caixas",
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 5,
+          "name": "verifica-lista-caixas",
+          "action": "assert",
+          "path": "/app/financeiro/caixas",
+          "data": { "contains": "Caixas" },
+          "expected": { "pass": true }
+        },
+        {
+          "step": 6,
+          "name": "acessa-detalhe-sem-dizimo",
+          "action": "navigate",
+          "path": "/app/financeiro/caixas/{caixaId}",
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 7,
+          "name": "verifica-extrato-sem-dizimo",
+          "action": "assert",
+          "path": "/app/financeiro/caixas/{caixaId}",
+          "data": { "notContains": "Dízimo" },
+          "expected": { "pass": true }
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-3",
+      "name": "SECRETARIO recebe 403 ao criar caixa (RBAC Layer 2)",
+      "description": "US-FIN-008. SECRETARIO não tem permissão para criar caixas.",
+      "usCovered": ["US-FIN-001", "US-FIN-008"],
+      "source": "e2e/financeiro-basico.spec.ts:218-250",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-secretario",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "secretario+e2e@igreja.local", "cargo": "SECRETARIO" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "tenta-criar-caixa",
+          "action": "navigate",
+          "path": "/app/financeiro/caixas/novo",
+          "expected": { "status": 403 }
+        },
+        {
+          "step": 3,
+          "name": "verifica-acesso-restrito",
+          "action": "assert",
+          "path": "/app/financeiro/caixas/novo",
+          "data": { "contains": "Acesso restrito" },
+          "expected": { "pass": true }
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-4",
+      "name": "DISCIPULADOR recebe 403 no financeiro (RBAC Layer 2)",
+      "description": "US-FIN-008. DISCIPULADOR não tem acesso ao módulo financeiro.",
+      "usCovered": ["US-FIN-008"],
+      "source": "e2e/financeiro-basico.spec.ts:252-284",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-discipulador",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "discipulador+e2e@igreja.local", "cargo": "DISCIPULADOR" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "tenta-acessar-financeiro",
+          "action": "navigate",
+          "path": "/app/financeiro",
+          "expected": { "status": 403 }
+        },
+        {
+          "step": 3,
+          "name": "verifica-acesso-restrito",
+          "action": "assert",
+          "path": "/app/financeiro",
+          "data": { "contains": "Acesso restrito" },
+          "expected": { "pass": true }
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-5",
+      "name": "DISCIPULADOR recebe 403 no detalhe do caixa (RBAC Layer 2+3)",
+      "description": "US-FIN-008. DISCIPULADOR não tem acesso a detalhes de caixas.",
+      "usCovered": ["US-FIN-001", "US-FIN-008"],
+      "source": "e2e/financeiro-basico.spec.ts:286-320",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-discipulador",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "discipulador+e2e@igreja.local", "cargo": "DISCIPULADOR" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "tenta-acessar-detalhe-caixa",
+          "action": "navigate",
+          "path": "/app/financeiro/caixas/{caixaId}",
+          "expected": { "status": 403 }
+        },
+        {
+          "step": 3,
+          "name": "verifica-acesso-restrito",
+          "action": "assert",
+          "path": "/app/financeiro/caixas/{caixaId}",
+          "data": { "contains": "Acesso restrito" },
+          "expected": { "pass": true }
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-6",
+      "name": "Caixa arquivado rejeita lançamento (RN-FIN-01)",
+      "description": "US-FIN-001 + US-FIN-002. Caixa arquivado não aceita movimentações (decisão Caixa.ativo).",
+      "usCovered": ["US-FIN-001", "US-FIN-002", "US-FIN-005"],
+      "source": "e2e/financeiro-basico.spec.ts:322-391",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-admin",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "admin@igreja.local", "cargo": "ADMIN" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "arquivar-caixa",
+          "action": "submit",
+          "path": "/app/financeiro/caixas",
+          "data": { "_action": "arquivar", "caixaId": "{caixaId}" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 3,
+          "name": "tenta-lancar-em-caixa-arquivado",
+          "action": "submit",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": {
+            "tipo": "ENTRADA",
+            "categoria": "OFERTA",
+            "valor": "10,00",
+            "caixaId": "{caixaId}",
+            "descricao": "Tentativa em caixa arquivado"
+          },
+          "expected": { "status": 409 }
+        },
+        {
+          "step": 4,
+          "name": "verifica-mensagem-arquivado",
+          "action": "assert",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": { "contains": "arquivado" },
+          "expected": { "pass": true }
+        },
+        {
+          "step": 5,
+          "name": "cleanup-reabrir-caixa",
+          "action": "submit",
+          "path": "/app/financeiro/caixas",
+          "data": { "_action": "reabrir", "caixaId": "{caixaId}" },
+          "expected": { "status": 200 },
+          "cleanup": true
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-7",
+      "name": "ADMIN cria caixa e valida duplicidade de nome",
+      "description": "US-FIN-001. ADMIN cria caixa e sistema rejeita nome duplicado (P2002).",
+      "usCovered": ["US-FIN-001"],
+      "source": "e2e/financeiro-basico.spec.ts:393-445",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-admin",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "admin@igreja.local", "cargo": "ADMIN" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "acessa-novo-caixa",
+          "action": "navigate",
+          "path": "/app/financeiro/caixas/novo",
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 3,
+          "name": "cria-novo-caixa",
+          "action": "submit",
+          "path": "/app/financeiro/caixas/novo",
+          "data": { "nome": "Caixa Teste E2E" },
+          "expected": { "status": 302 }
+        },
+        {
+          "step": 4,
+          "name": "verifica-caixa-criado",
+          "action": "assert",
+          "path": "/app/financeiro/caixas",
+          "data": { "contains": "Caixa Teste E2E" },
+          "expected": { "pass": true }
+        },
+        {
+          "step": 5,
+          "name": "tenta-nome-duplicado",
+          "action": "submit",
+          "path": "/app/financeiro/caixas/novo",
+          "data": { "nome": "Caixa Geral" },
+          "expected": { "contains": "Já existe um caixa com este nome" }
+        },
+        {
+          "step": 6,
+          "name": "cleanup-arquiva-caixa",
+          "action": "submit",
+          "path": "/app/financeiro/caixas",
+          "data": { "_action": "arquivar", "caixaId": "{caixaId}" },
+          "expected": { "status": 200 },
+          "cleanup": true
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-8",
+      "name": "SAIDA com saldo insuficiente rejeita (teste borda #3 - BLOQUEADOR)",
+      "description": "US-FIN-005 (Trava de Saldo). Saldo=0 + SAIDA 1 centavo → 409. Implementação em assertSaldoSuficiente.",
+      "usCovered": ["US-FIN-005"],
+      "source": "app/lib/lancamentos.server.test.ts (S06-T07)",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-admin",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "admin@igreja.local", "cargo": "ADMIN" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "garantir-saldo-zero",
+          "action": "navigate",
+          "path": "/app/financeiro/caixas/{caixaId}",
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 3,
+          "name": "tenta-saida-insuficiente",
+          "action": "submit",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": {
+            "tipo": "SAIDA",
+            "categoria": "DESPESA_OPERACIONAL",
+            "valor": "0,01",
+            "caixaId": "{caixaId}",
+            "descricao": "Teste saldo insuficiente"
+          },
+          "expected": { "status": 409 }
+        },
+        {
+          "step": 4,
+          "name": "verifica-mensagem-saldo-insuficiente",
+          "action": "assert",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": { "contains": "Saldo insuficiente" },
+          "expected": { "pass": true }
+        },
+        {
+          "step": 5,
+          "name": "verifica-saldo-inalterado",
+          "action": "navigate",
+          "path": "/app/financeiro/caixas/{caixaId}",
+          "data": { "saldo": "R$ 0,00" },
+          "expected": { "contains": "R$ 0,00" }
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-9",
+      "name": "DIZIMO sem membro rejeita (teste borda #4)",
+      "description": "US-FIN-003. DÍZIMO exige membroId (RN-FIN-05 superRefine).",
+      "usCovered": ["US-FIN-003"],
+      "source": "app/lib/schemas/lancamentos.test.ts (S06-T06)",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-admin",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "admin@igreja.local", "cargo": "ADMIN" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "preenche-form-sem-membro",
+          "action": "fill",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": {
+            "tipo": "ENTRADA",
+            "categoria": "DIZIMO",
+            "valor": "50,00",
+            "descricao": "Dízimo sem membro"
+          },
+          "expected": { "pass": true }
+        },
+        {
+          "step": 3,
+          "name": "submeter-sem-membro",
+          "action": "submit",
+          "path": "/app/financeiro/lancamentos/novo",
+          "expected": { "status": 422 }
+        },
+        {
+          "step": 4,
+          "name": "verifica-erro-membro",
+          "action": "assert",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": { "field": "membroId", "contains": "obrigatório" },
+          "expected": { "pass": true }
+        }
+      ]
+    },
+    {
+      "id": "E2E-FIN-CHAIN-10",
+      "name": "OFERTA sem membro aceite (teste borda #5)",
+      "description": "US-FIN-003. OFERTA é anônima - membro opcional.",
+      "usCovered": ["US-FIN-002", "US-FIN-003"],
+      "source": "app/lib/schemas/lancamentos.test.ts (S06-T06)",
+      "dataSource": "fresh",
+      "sequence": [
+        {
+          "step": 1,
+          "name": "login-admin",
+          "action": "login",
+          "path": "/app/login",
+          "data": { "email": "admin@igreja.local", "cargo": "ADMIN" },
+          "expected": { "status": 200 }
+        },
+        {
+          "step": 2,
+          "name": "criar-oferta-anonima",
+          "action": "submit",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": {
+            "tipo": "ENTRADA",
+            "categoria": "OFERTA",
+            "valor": "25,00",
+            "descricao": "Oferta anônima"
+          },
+          "expected": { "status": 302 }
+        },
+        {
+          "step": 3,
+          "name": "verifica-oferta-criada",
+          "action": "assert",
+          "path": "/app/financeiro/caixas/{caixaId}",
+          "data": { "text": "+ R$ 25,00" },
+          "expected": { "contains": "+ R$ 25,00" }
+        },
+        {
+          "step": 4,
+          "name": "cleanup",
+          "action": "submit",
+          "path": "/app/financeiro/lancamentos/novo",
+          "data": {
+            "tipo": "SAIDA",
+            "categoria": "DESPESA_OPERACIONAL",
+            "valor": "25,00"
+          },
+          "expected": { "status": 302 },
+          "cleanup": true
+        }
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "GAP-1",
+      "description": "lancamentos.server.ts listarPorCaixa não tem testes unitários (apenas 2/4 funcs covered)",
+      "impact": "US-FIN-002 parcialmente coberto",
+      "recommendation": "Adicionar testes unitários para listarPorCaixa em app/lib/lancamentos.server.test.ts"
+    },
+    {
+      "id": "GAP-2",
+      "description": "CAIXAS: 78.95% stmts (faltam 12 statements). Linhas 87, 152, 252-292 sem cobertura.",
+      "impact": "US-FIN-001 parcialmente coberto",
+      "recommendation": "Revisar linhas não cobertas em caixas.server.ts"
+    },
+    {
+      "id": "GAP-3",
+      "description": "Components React (CardSaldoCaixa, CaixaHeader, etc.) sem testes de render",
+      "impact": "US-FIN-007 Dashboard parcialmente coberto via E2E",
+      "recommendation": "CardSaldoCaixa.test.tsx existe mas precisa coverage > 85%"
+    },
+    {
+      "id": "GAP-4",
+      "description": "Routes /app/financeiro/** não têm testes de integração (loader/action)",
+      "impact": "RBAC Layer 2 (loader) não coberto por unit tests",
+      "recommendation": "Considerar route-level integration tests"
+    }
+  ],
+  "summary": {
+    "totalChains": 10,
+    "usCovered": ["US-FIN-001", "US-FIN-002", "US-FIN-003", "US-FIN-005", "US-FIN-007", "US-FIN-008"],
+    "usMissing": [],
+    "chainsFromSpec": 7,
+    "chainsFromGaps": 3
+  }
+}
