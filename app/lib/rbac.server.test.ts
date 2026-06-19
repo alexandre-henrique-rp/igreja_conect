@@ -21,6 +21,7 @@ import {
   assertCanWriteLancamento,
   assertIsAdmin,
   assertCanManageConfiguracaoGeral,
+  assertCanTransferir,
 } from "./rbac.server";
 import type { SessionUser } from "./session.server";
 
@@ -177,6 +178,30 @@ describe("rbac.server — assertCanManageConfiguracaoGeral", () => {
       try {
         assertCanManageConfiguracaoGeral(u(cargo));
         expect.fail("deveria ter lançado");
+      } catch (e) {
+        expect(e).toBeInstanceOf(Response);
+        expect((e as Response).status).toBe(403);
+      }
+    }
+  );
+});
+
+// ==================== S07-T07: assertCanTransferir ====================
+
+describe("rbac.server — assertCanTransferir (S07-T07)", () => {
+  it.each(["ADMIN", "PASTOR", "FINANCEIRO"] as const)(
+    "%s pode realizar transferencias",
+    (cargo) => {
+      expect(() => assertCanTransferir(u(cargo))).not.toThrow();
+    }
+  );
+
+  it.each(["SECRETARIO", "DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+    "%s NAO pode realizar transferencias (lança Response 403)",
+    (cargo) => {
+      try {
+        assertCanTransferir(u(cargo));
+        expect.fail("deveria ter lancado");
       } catch (e) {
         expect(e).toBeInstanceOf(Response);
         expect((e as Response).status).toBe(403);

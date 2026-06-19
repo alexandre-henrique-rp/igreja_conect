@@ -297,3 +297,36 @@ export async function getCaixaDetalhe(
     pageSize: result.pageSize,
   };
 }
+
+// -------------------- S07-T07: listarCaixasParaTransferencia --------------------
+
+/**
+ * Lista caixas ativos para uso em transferência (S07-T07).
+ *
+ * **Camada 3 RBAC PRIMEIRO:** `assertCanTransferir(user)`.
+ *   Os 3 perfis autorizados (ADMIN, PASTOR, FINANCEIRO) veem todos os caixas.
+ *
+ * **RN-FIN-01:** Retorna apenas caixas ativos (caixas arquivados não aceitam transferência).
+ *
+ * @description Lista caixas que podem ser usados como origem ou destino de transferência.
+ * @param {SessionUser} user - Usuário autenticado.
+ * @returns {Promise<Array<{id: string, nome: string, saldoCentavos: number}>>}
+ * @throws {Response} 403 se cargo não está em TRANSFERENCIA_CARGOS.
+ * @example
+ *   const caixas = await listarCaixasParaTransferencia(user);
+ *   // [{ id: "...", nome: "Caixa Geral", saldoCentavos: 5000 }, ...]
+ */
+export async function listarCaixasParaTransferencia(
+  user: SessionUser
+): Promise<Array<{ id: string; nome: string; saldoCentavos: number }>> {
+  // CAMADA 3: RBAC primeiro (RN-FIN-02: apenas ADMIN, PASTOR, FINANCEIRO)
+  const { assertCanTransferir } = await import("./rbac.server");
+  assertCanTransferir(user);
+
+  return prisma.caixa.findMany({
+    where: { ativo: true },
+    select: { id: true, nome: true, saldoCentavos: true },
+    orderBy: { nome: "asc" },
+    take: 100,
+  });
+}

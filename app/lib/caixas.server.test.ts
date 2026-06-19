@@ -361,3 +361,69 @@ describe("caixas.server — listarCaixas para select (coverage)", () => {
     expect(result.arquivados).toHaveLength(1);
   });
 });
+
+// ==================== S07-T07: listarCaixasParaTransferencia ====================
+
+describe("caixas.server — listarCaixasParaTransferencia (S07-T07)", () => {
+  let listarCaixasParaTransferencia: typeof import("./caixas.server").listarCaixasParaTransferencia;
+
+  beforeAll(async () => {
+    vi.resetModules();
+    const mod = await import("./caixas.server");
+    listarCaixasParaTransferencia = mod.listarCaixasParaTransferencia;
+  });
+
+  it("ADMIN lista caixas ativos para transferencia", async () => {
+    await makeCaixa({ nome: "Caixa Ativo", saldoCentavos: 1000, ativo: true });
+    await makeCaixa({ nome: "Caixa Inativo", saldoCentavos: 2000, ativo: false });
+
+    const result = await listarCaixasParaTransferencia(userWith("ADMIN"));
+    expect(result).toHaveLength(1);
+    expect(result[0].nome).toBe("Caixa Ativo");
+  });
+
+  it("PASTOR lista caixas ativos para transferencia", async () => {
+    await makeCaixa({ nome: "Caixa Pastor", saldoCentavos: 1000 });
+    const result = await listarCaixasParaTransferencia(userWith("PASTOR"));
+    expect(result.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("FINANCEIRO lista caixas ativos para transferencia", async () => {
+    await makeCaixa({ nome: "Caixa Fin", saldoCentavos: 1000 });
+    const result = await listarCaixasParaTransferencia(userWith("FINANCEIRO"));
+    expect(result.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("SECRETARIO NAO pode listar caixas para transferencia (403)", async () => {
+    let caught: unknown = null;
+    try {
+      await listarCaixasParaTransferencia(userWith("SECRETARIO"));
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(Response);
+    expect((caught as Response).status).toBe(403);
+  });
+
+  it("DISCIPULADOR NAO pode listar caixas para transferencia (403)", async () => {
+    let caught: unknown = null;
+    try {
+      await listarCaixasParaTransferencia(userWith("DISCIPULADOR"));
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(Response);
+    expect((caught as Response).status).toBe(403);
+  });
+
+  it("retorna saldoCentavos dos caixas", async () => {
+    await makeCaixa({ nome: "Caixa Com Saldo", saldoCentavos: 5432 });
+    const result = await listarCaixasParaTransferencia(userWith("ADMIN"));
+    expect(result[0].saldoCentavos).toBe(5432);
+  });
+
+  it("0 caixas: retorna array vazio", async () => {
+    const result = await listarCaixasParaTransferencia(userWith("ADMIN"));
+    expect(result).toEqual([]);
+  });
+});

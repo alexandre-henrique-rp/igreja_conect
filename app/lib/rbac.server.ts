@@ -147,3 +147,23 @@ export function assertCanManageCaixa(user: SessionUser): void {
     throw new Response("Você não tem permissão para criar ou arquivar caixas.", { status: 403 });
   }
 }
+
+/** Cargos que podem realizar transferências entre caixas (RN-FIN-02). */
+export const TRANSFERENCIA_CARGOS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const;
+
+/**
+ * Lança Response(403) se o usuário não pode realizar transferências entre caixas.
+ *
+ * @description 3 perfis: ADMIN, PASTOR, FINANCEIRO (RN-FIN-02). SECRETARIO é
+ *   bloqueado mesmo podendo fazer lançamentos — é regra de produto.
+ * @param {SessionUser} user - Usuário autenticado.
+ * @throws {Response} 403 se cargo não está em TRANSFERENCIA_CARGOS.
+ * @example
+ *   assertCanTransferir(user);
+ *   await transferirEntreCaixas(input, user); // só chega aqui se passou
+ */
+export function assertCanTransferir(user: SessionUser): void {
+  if (!user.cargo || !(TRANSFERENCIA_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Você não tem permissão para realizar transferências entre caixas.", { status: 403 });
+  }
+}

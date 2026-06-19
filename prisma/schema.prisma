@@ -185,6 +185,10 @@ model TransferenciaCaixa {
   caixaDestinoId String
   executadoPorId String // Usuário/Membro que realizou a transferência (RN-FIN-02)
   dataHora       DateTime @default(now())
+  descricao      String?
+
+  /** UUID v4 opcional — previne double-submit/race (SEC-S07-003). */
+  idempotencyKey String?  @unique
 
   caixaOrigem  Caixa  @relation("CaixaOrigem", fields: [caixaOrigemId], references: [id], onDelete: Restrict)
   caixaDestino Caixa  @relation("CaixaDestino", fields: [caixaDestinoId], references: [id], onDelete: Restrict)
@@ -208,9 +212,13 @@ model Lancamento {
   membroId String?
   membro   Membro? @relation("MembroDizimo", fields: [membroId], references: [id], onDelete: SetNull)
 
+  // RN-FIN-02: UUID que agrupa os dois lançamentos de uma transferência atômica
+  transferenciaGrupoId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([transferenciaGrupoId])
   @@map("lancamentos")
 }
 

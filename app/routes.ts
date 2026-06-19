@@ -61,6 +61,7 @@ export default [
             route("financeiro/caixas/novo", "routes/app/financeiro.caixas.novo.tsx"),
             route("financeiro/caixas/:id", "routes/app/financeiro.caixas.$id.tsx"),
             route("financeiro/lancamentos/novo", "routes/app/financeiro.lancamentos.novo.tsx"),
+            route("financeiro/transferencias/nova", "routes/app/financeiro.transferencia-nova.tsx"),
         ]),
     ]),
 ] satisfies RouteConfig;
