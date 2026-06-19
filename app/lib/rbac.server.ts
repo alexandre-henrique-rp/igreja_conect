@@ -176,6 +176,29 @@ export const TRANSFERENCIA_CARGOS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const;
  *   assertCanTransferir(user);
  *   await transferirEntreCaixas(input, user); // só chega aqui se passou
  */
+/**
+ * Helper boolean — pode gerenciar ministérios? (3 perfis: ADMIN/PASTOR/SECRETARIO).
+ * @description RBAC fina para ministries CRUD.
+ * @param {SessionUser} user
+ * @returns {boolean}
+ */
+export function canManageMinisterios(user: SessionUser): boolean {
+  const cargo = user.cargo;
+  if (!cargo) return false;
+  return (["ADMIN", "PASTOR", "SECRETARIO"] as readonly string[]).includes(cargo);
+}
+
+/**
+ * Helper que lança 403 se user não pode gerenciar ministérios.
+ * @param {SessionUser} user
+ * @throws {Response} 403 se sem permissão.
+ */
+export function assertCanManageMinisterios(user: SessionUser): void {
+  if (!canManageMinisterios(user)) {
+    throw new Response("Acesso restrito a ADMIN/PASTOR/SECRETARIO.", { status: 403 });
+  }
+}
+
 export function assertCanTransferir(user: SessionUser): void {
   if (!user.cargo || !(TRANSFERENCIA_CARGOS as readonly string[]).includes(user.cargo)) {
     throw new Response("Você não tem permissão para realizar transferências entre caixas.", { status: 403 });

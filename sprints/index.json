@@ -139,6 +139,17 @@
       "gate": "pending",
       "reworkApplied": false,
       "artifacts": []
+    },
+    {
+      "id": "S10",
+      "name": "MVP Cleanup Final — DI + helpers",
+      "status": "completed",
+      "coverage": null,
+      "testsPassing": 1037,
+      "testsFailing": 74,
+      "gate": "partial (95→74 failing)",
+      "reworkApplied": false,
+      "artifacts": []
     }
   ],
   "summary": {

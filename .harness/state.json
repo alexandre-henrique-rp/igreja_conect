@@ -500,10 +500,24 @@
             "debit001PartialResolved": true
           },
           "completedAt": "2026-06-19T20:33:39.758077Z"
+        },
+        "S10": {
+          "sprintId": "S10",
+          "sprintName": "MVP Cleanup Final — DI",
+          "status": "completed",
+          "tasksTotal": 8,
+          "tasksCompleted": 7,
+          "metrics": {
+            "testsBefore": 95,
+            "testsAfter": 74,
+            "testsPassing": 1037,
+            "debit001Progress": "95→74 (-21)"
+          },
+          "completedAt": "2026-06-19T21:06:10.507324Z"
         }
       },
       "startedAt": "2026-06-14T12:45:00Z",
-      "currentSprint": null,
+      "currentSprint": "S10",
       "attempt": 1,
       "fanOutBatches": [
         {
@@ -530,7 +544,7 @@
     }
   },
   "lastTransition": "2026-06-19T17:31:27.591559Z",
-  "lastGateStatus": "S09 cleanup partial — 108→95 failing, jsdom resolved",
+  "lastGateStatus": "S10 partial — 95→74 failing",
   "mvp": {
     "scope": "Auth + Módulo de Membros",
     "modules": [
@@ -557,7 +571,7 @@
       "LIDER_MINISTERIO"
     ]
   },
-  "updatedAt": "2026-06-19T20:33:39.758077Z",
+  "updatedAt": "2026-06-19T21:06:10.507324Z",
   "lastSprintCompleted": "S05 (cycle 1)",
   "cycle2": {
     "scope": "Módulo Financeiro (Caixas + Lançamentos + Dízimos)",
@@ -583,9 +597,9 @@
       "blocking": false,
       "discoveredIn": "S06 rework (2026-06-19)",
       "status": "partial-resolved",
-      "progress": "108→95 failing (-13)",
+      "progress": "108→95→74 failing (-34 total)",
       "resolved": false,
-      "updatedAt": "2026-06-19T20:33:39.758077Z"
+      "updatedAt": "2026-06-19T21:06:10.507324Z"
     },
     {
       "id": "MVP-DEBT-002",

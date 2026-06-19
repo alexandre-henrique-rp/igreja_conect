@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "~/db/prisma.server";
+import type { PrismaClient } from "@prisma/client";
 import type { SessionUser } from "./session.types";
 
 /**
@@ -17,9 +18,10 @@ import type { SessionUser } from "./session.types";
  */
 export async function verifyCredentials(
   email: string,
-  senha: string
+  senha: string,
+  prismaClient: PrismaClient = prisma
 ): Promise<SessionUser | null> {
-  const membro = await prisma.membro.findUnique({
+  const membro = await prismaClient.membro.findUnique({
     where: { email },
     select: { id: true, nome: true, cargo: true, senhaHash: true },
   });
