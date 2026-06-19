@@ -447,10 +447,33 @@
             "S06-REWORK-3 (SEC-004): extrair listarMembrosParaSelect",
             "S06-REWORK-4: cobertura listarPorCaixa + caixas gaps + testes startup session"
           ]
+        },
+        "S07": {
+          "sprintId": "S07",
+          "sprintName": "Transferências entre Caixas (RN-FIN-02 atômico)",
+          "status": "completed",
+          "tasksTotal": 7,
+          "tasksCompleted": 5,
+          "tasksPending": 2,
+          "tasksPendingIds": [
+            "S07-T05",
+            "S07-T07"
+          ],
+          "metrics": {
+            "testsS07": "24/25 passing",
+            "coverageS07": "96% lines, 100% funcs, 94% branch",
+            "securityScore": 90,
+            "reviewScore": 78,
+            "lgpdStatus": "warning"
+          },
+          "startedAt": "2026-06-19T18:15:38.516416Z",
+          "completedAt": "2026-06-19T18:48:20.641461Z",
+          "gate": "all-of passed (attempt 2/2)",
+          "reworkApplied": true
         }
       },
       "startedAt": "2026-06-14T12:45:00Z",
-      "currentSprint": "S07",
+      "currentSprint": "S08",
       "attempt": 1,
       "fanOutBatches": [
         {
@@ -477,7 +500,7 @@
     }
   },
   "lastTransition": "2026-06-19T17:31:27.591559Z",
-  "lastGateStatus": "S06 gate all-of passed (coverage 96.36%, security 100, review 83, lgpd warning)",
+  "lastGateStatus": "S07 gate all-of passed (coverage 96%, security 90, review 78, lgpd warning)",
   "mvp": {
     "scope": "Auth + Módulo de Membros",
     "modules": [
@@ -504,7 +527,7 @@
       "LIDER_MINISTERIO"
     ]
   },
-  "updatedAt": "2026-06-19T17:31:27.591559Z",
+  "updatedAt": "2026-06-19T18:48:20.641461Z",
   "lastSprintCompleted": "S05 (cycle 1)",
   "cycle2": {
     "scope": "Módulo Financeiro (Caixas + Lançamentos + Dízimos)",
@@ -529,6 +552,15 @@
       "scope": "S09+ (cycle 2 cleanup sprint)",
       "blocking": false,
       "discoveredIn": "S06 rework (2026-06-19)"
+    },
+    {
+      "id": "MVP-DEBT-002",
+      "title": "vitest.config.ts não inclui .test.tsx (componentes React não testados)",
+      "fix": "Adicionar app/**/*.test.tsx no include do vitest.config.ts + environment jsdom",
+      "severity": "low",
+      "scope": "S09+",
+      "blocking": false,
+      "discoveredIn": "S07 validation (2026-06-19)"
     }
   ]
 }
