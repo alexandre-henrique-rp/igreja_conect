@@ -418,137 +418,11 @@
         "delays": [],
         "loopbackTo": "phase.5.build"
       },
-      "status": "in_progress",
+      "status": "pending",
       "cycle": 3,
-      "sprints": {
-        "S06": {
-          "sprintId": "S06",
-          "sprintName": "Foundation Financeiro — Caixas + Lançamentos + Dashboard",
-          "status": "completed",
-          "tasksTotal": 15,
-          "tasksCompleted": 14,
-          "tasksPending": 1,
-          "tasksPendingIds": [
-            "S06-T15"
-          ],
-          "metrics": {
-            "testsS06": "121/121 passing",
-            "coverageS06": "96.36% lines, 100% funcs, 95.83% branch",
-            "securityScore": 100,
-            "reviewScore": 83,
-            "lgpdStatus": "warning",
-            "build": "pass"
-          },
-          "retomada": {
-            "detectedAt": "2026-06-19T16:19:52.450405Z",
-            "interruptedAt": "2026-06-14T12:45:00Z",
-            "interruptionGap": "5 dias",
-            "workRecovered": "T01-T14: 14/15 tasks prontas; código compilando, testes passando, build OK"
-          },
-          "startedAt": "2026-06-14T12:45:00Z",
-          "fanOut": {
-            "batch1": [
-              "backend",
-              "frontend",
-              "code-reviewer"
-            ],
-            "batch1Status": "concluído retroativamente (código verificado em disco)",
-            "batch2": [
-              "tester",
-              "security",
-              "lgpd-officer"
-            ],
-            "batch2Status": "a iniciar"
-          },
-          "completedAt": "2026-06-19T17:31:27.591559Z",
-          "gate": "all-of passed",
-          "reworkApplied": true,
-          "reworkReason": "6 findings security + coverage gap (17.24% → 96.36%)",
-          "reworkTasks": [
-            "S06-REWORK-1 (SEC-001/002/005): split assertCanSeeFinancials em module vs dízimo + assertCanWriteLancamento",
-            "S06-REWORK-2 (SEC-003): SESSION_SECRET validation no startup",
-            "S06-REWORK-3 (SEC-004): extrair listarMembrosParaSelect",
-            "S06-REWORK-4: cobertura listarPorCaixa + caixas gaps + testes startup session"
-          ]
-        },
-        "S07": {
-          "sprintId": "S07",
-          "sprintName": "Transferências entre Caixas (RN-FIN-02 atômico)",
-          "status": "completed",
-          "tasksTotal": 7,
-          "tasksCompleted": 5,
-          "tasksPending": 2,
-          "tasksPendingIds": [
-            "S07-T05",
-            "S07-T07"
-          ],
-          "metrics": {
-            "testsS07": "24/25 passing",
-            "coverageS07": "96% lines, 100% funcs, 94% branch",
-            "securityScore": 90,
-            "reviewScore": 78,
-            "lgpdStatus": "warning"
-          },
-          "startedAt": "2026-06-19T18:15:38.516416Z",
-          "completedAt": "2026-06-19T18:48:20.641461Z",
-          "gate": "all-of passed (attempt 2/2)",
-          "reworkApplied": true
-        },
-        "S08": {
-          "sprintId": "S08",
-          "sprintName": "Fidelidade Financeira (RN-MEM-03)",
-          "status": "completed",
-          "tasksTotal": 7,
-          "tasksCompleted": 7,
-          "tasksPending": 0,
-          "metrics": {
-            "testsPassing": "89/89",
-            "coverageS08": "96% lines per-sprint (finance 100% + rbac 92%)",
-            "build": "pass",
-            "rnMem03Compliant": true
-          },
-          "completedAt": "2026-06-19T19:29:24.390121Z"
-        },
-        "S09": {
-          "sprintId": "S09",
-          "sprintName": "MVP Cleanup — Sync Débitos",
-          "status": "completed",
-          "tasksTotal": 9,
-          "tasksCompleted": 9,
-          "metrics": {
-            "testsPassRate": "91.5%",
-            "testsFailedBefore": 108,
-            "testsFailedAfter": 95,
-            "debit002Resolved": true,
-            "debit001PartialResolved": true
-          },
-          "completedAt": "2026-06-19T20:33:39.758077Z"
-        },
-        "S10": {
-          "sprintId": "S10",
-          "sprintName": "MVP Cleanup Final — DI",
-          "status": "completed",
-          "tasksTotal": 8,
-          "tasksCompleted": 7,
-          "metrics": {
-            "testsBefore": 95,
-            "testsAfter": 74,
-            "testsPassing": 1037,
-            "debit001Progress": "95→74 (-21)"
-          },
-          "completedAt": "2026-06-19T21:06:10.507324Z"
-        },
-        "S11": {
-          "sprintId": "S11",
-          "sprintName": "Foundation Estoque + Patrimônio",
-          "status": "in_progress",
-          "tasksTotal": 14,
-          "tasksCompleted": 0,
-          "startedAt": "2026-06-19T22:04:31.696628Z"
-        }
-      },
+      "sprints": {},
       "startedAt": "2026-06-19T22:04:31.696628Z",
-      "currentSprint": "S11",
+      "currentSprint": null,
       "attempt": 1,
       "fanOutBatches": [
         {
@@ -572,11 +446,12 @@
           "reason": "validate após build"
         }
       ],
-      "scope": "estoque+patrimonio"
+      "scope": "estoque+patrimonio",
+      "note": "Cycle 3 Phase 5 (Build S11-S13) adiada — checkpoint aqui. Phases 0-4 completas (brief + docs + PRD/SPEC + DESIGN+PROMPT + sprint planning)."
     }
   },
   "lastTransition": "2026-06-19T21:21:23.362590Z",
-  "lastGateStatus": "phase.4 coverage-check passed (100% SPEC §E.4, 5/5 RNs, 33 tasks)",
+  "lastGateStatus": "checkpoint cycle 3 phases 0-4 complete — phase 5 deferred",
   "mvp": {
     "scope": "Auth + Módulo de Membros",
     "modules": [
@@ -603,7 +478,7 @@
       "LIDER_MINISTERIO"
     ]
   },
-  "updatedAt": "2026-06-19T22:04:31.696628Z",
+  "updatedAt": "2026-06-19T22:25:56.839933Z",
   "lastSprintCompleted": "S05 (cycle 1)",
   "cycle2": {
     "scope": "Módulo Financeiro (Caixas + Lançamentos + Dízimos)",
