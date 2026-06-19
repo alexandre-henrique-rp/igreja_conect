@@ -2,16 +2,18 @@
 
 > **Documento vivo de arquitetura técnica.** Diagramas, decisões macro (ADR-style) e fluxos críticos. Complementa `agents/AGENTS.md` (que é o guia de onboarding para agentes LLM).
 >
-> **Última atualização:** 2026-06-14 (Fase 1, ciclo 2 — Módulo Financeiro)
+> **Última atualização:** 2026-06-19 (Fase 1, ciclo 3 — Módulo Estoque + Patrimônio)
 > **Mantido por:** `documenter` agent (Fase 1 do Harness v6)
 > **Audiência:** arquitetos, desenvolvedores seniores, novos agentes do Harness.
 > **Localização:** `docs/architecture/ARCH.md` (em `docs/`, conforme path-boundary do projeto).
 >
-> **Mudanças desta versão (ciclo 2):**
-> - Adicionada §8 "Módulo Financeiro — Arquitetura" (camadas, fluxos, lifecycles, RBAC fina, travas).
-> - §4 "Modelo de dados" atualizada: status de `Caixa`, `TransferenciaCaixa`, `Lancamento` mudou de "schema apenas" para "schema + service + UI (ciclo 2)".
-> - §12 "Roadmap" atualizada: ciclo 2 (S06-S08) marcado como em andamento.
-> - Decisão de modelagem `Caixa.ativo` documentada como **proposta pendente** (formalização na Fase 2).
+> **Mudanças desta versão (ciclo 3):**
+> - Adicionada §9 "Módulo Estoque + Patrimônio — Arquitetura" (camadas, state machine, trava de quantidade, alerta on-consulta, RBAC fina).
+> - §4 "Modelo de dados" atualizada: status de `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo` mudou de "schema apenas, backlog" para "schema + service + UI (ciclo 3, S11–S12)".
+> - §4.2 "Enums (resumo)" atualizada: enums `TipoItemEstoque` e `StatusItemPatrimonio` detalhados.
+> - §4.3 "Relacionamentos críticos" ampliada com ligações `ItemEstoque` ↔ `MovimentacaoEstoque` ↔ `ManutencaoAtivo` ↔ `Membro` (autorizadoPor).
+> - §12 "Roadmap" atualizada: ciclo 2 (S06–S10) marcado como **fechado**, ciclo 3 (S11–S12) marcado como **em andamento**.
+> - Decisão de modelagem `ItemEstoque.ativo` documentada como **proposta pendente** (formalização na Fase 2; espelha `Caixa.ativo` do ciclo 2, já aprovada).
 
 ## 1. Visão geral
 
@@ -112,7 +114,7 @@ A camada de Apresentação **nunca** importa `db.server` diretamente. Sempre pas
 | **Alertas** (ciclo 1) | `Alerta`, `AlertaDestinatario` | ✅ UI básica + service (S00–S05) |
 | **Configuração** (ciclo 1) | `ConfiguracaoGeral`, `ConfigAcolhimento` | ✅ Service + 1 tela ADMIN (S05) |
 | **Financeiro** (ciclo 2, **em andamento**) | `Caixa`, `TransferenciaCaixa`, `Lancamento` | 🟡 **Schema pronto (ciclo 1) + services+UI no ciclo 2 (S06-S08)** |
-| **Estoque** (backlog) | `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo` | ❌ Schema apenas, **zero UI/service** (ciclo 3+) |
+| **Estoque + Patrimônio** (ciclo 3, **em andamento**) | `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo` | 🟡 **Schema pronto (ciclo 1) + services+UI no ciclo 3 (S11-S12)** |
 
 ### 4.2 Enums (resumo)
 
@@ -551,7 +553,370 @@ sequenceDiagram
 
 ---
 
-## 9. Tratamento de centavos
+## 9. Módulo Estoque + Patrimônio — Arquitetura (ciclo 3)
+
+> **Escopo do ciclo 3:** Estoque de Consumo (almoxarifado com trava de quantidade) + Patrimônio (state machine de status + manutenção externa + baixa por perda). 5 RNs já documentadas (`RN-EST-01` a `RN-EST-05`). Schema Prisma pronto desde o ciclo 1; serviços e UI a serem entregues em S11–S12.
+>
+> **Fonte canônica:** `brief.md` §4-§8 + RAGs `pattern-estoque-trava-quantidade`, `pattern-patrimonio-status-state-machine`, `pattern-manutencao-alerta-manual`, `convention-tipos-item-estoque`.
+
+### 9.1 Camadas do módulo
+
+Mesma arquitetura monolítica modular dos ciclos anteriores (RAG `architecture-monolith-modular`), com a fronteira estrita `Apresentação → Aplicação → Domínio → Infra → Dados`.
+
+```
+UI (app/components/, app/routes/app/estoque/**)
+  ↓ chama service via loader/action
+Domínio (app/lib/estoque.server.ts, movimentacao.server.ts, patrimonio.server.ts, manutencao.server.ts)
+  ↓ chama helpers transversais
+Infra (app/lib/rbac.server.ts, app/db/prisma.server.ts)
+  ↓
+Dados (prisma/schema.prisma — ItemEstoque, MovimentacaoEstoque, ManutencaoAtivo)
+```
+
+**4 services no Módulo Estoque + Patrimônio:**
+
+| Service | Responsabilidade | RN coberta |
+|---|---|---|
+| `app/lib/estoque.server.ts` | CRUD `ItemEstoque` (listar, criar, editar, arquivar) + `assertSaldoQuantidade` (Camada 3) | RN-EST-01, RN-EST-02 |
+| `app/lib/movimentacao.server.ts` | `criarMovimentacao` (ENTRADA/SAIDA com trava de quantidade) | RN-EST-02 |
+| `app/lib/patrimonio.server.ts` | State machine helpers (`assertTransicaoPatrimonioValida`, `assertItemIsPatrimonio`, `assertItemIsConsumo`) | RN-EST-01, RN-EST-03, RN-EST-05 |
+| `app/lib/manutencao.server.ts` | `enviarParaManutencao`, `retornarDeManutencao`, `baixaPorPerda`, `verificarAlertaManutencaoSemPrazo` (RN-EST-04) | RN-EST-03, RN-EST-04, RN-EST-05 |
+
+**Rotas adicionadas (todas em `app/routes/app/estoque/**`):**
+
+- `estoque._index.tsx` — listagem unificada com filtros (tipo, status, busca textual).
+- `estoque.novo.tsx` — criar item (form com `discriminatedUnion` Zod, campos condicionais por tipo).
+- `estoque.$id.tsx` — detalhe do item + 2 abas (Movimentações para CONSUMO / Manutenções para PATRIMONIO).
+- `estoque.$id.editar.tsx` — editar item.
+- `estoque.$id.movimentacao.nova.tsx` — registrar movimentação (toggle ENTRADA/SAIDA, `nomeRetirante` obrigatório para saída).
+- `estoque.$id.manutencao.nova.tsx` — enviar patrimônio para manutenção externa.
+- `estoque.$id.manutencao.retorno.tsx` — registrar retorno de manutenção.
+- `estoque.$id.baixa-perda.tsx` — baixa por perda (apenas ADMIN, RN-EST-05).
+
+### 9.2 Diagrama de models
+
+```mermaid
+erDiagram
+  ItemEstoque ||--o{ MovimentacaoEstoque : "movimenta (CONSUMO)"
+  ItemEstoque ||--o{ ManutencaoAtivo : "em reparo (PATRIMONIO)"
+  Membro ||--o{ MovimentacaoEstoque : "autorizou (autorizadoPorId)"
+  Membro ||--o{ ItemEstoque : "cadastrou (createdById futuro)"
+
+  ItemEstoque {
+    string id PK
+    string nome
+    string descricao
+    enum tipo "CONSUMO | PATRIMONIO"
+    int quantidade
+    string numeroSerie UK "PATRIMONIO only"
+    enum statusPatrimonio "DISPONIVEL | EM_MANUTENCAO | BAIXADO_PERDA"
+    string localizacaoFisica
+    bool ativo "soft-delete (proposta pendente Fase 2)"
+  }
+  MovimentacaoEstoque {
+    string id PK
+    string itemEstoqueId FK
+    int quantidade "delta: +entrada, -saida"
+    string justificativa
+    string autorizadoPorId FK
+    string nomeRetirante "texto livre, sem FK Membro"
+    datetime createdAt
+  }
+  ManutencaoAtivo {
+    string id PK
+    string itemEstoqueId FK
+    string assistenciaTecnica
+    string enderecoAssistencia
+    string numeroOs "opcional"
+    datetime dataEnvio
+    datetime prazoTermino "opcional — se null, ativa alerta RN-EST-04"
+    datetime dataRetorno "null = em manutenção"
+    bool foiPerdaTotal "RN-EST-05"
+    string urlLaudoTecnico "null neste ciclo (sem S3)"
+  }
+```
+
+### 9.3 Fluxo crítico 1: Cadastro de Item (discriminatedUnion Zod)
+
+```mermaid
+flowchart TD
+  A[UI: Form Estoque - select tipo] -->|tipo=CONSUMO| B[Renderiza campo quantidade]
+  A -->|tipo=PATRIMONIO| C[Renderiza numeroSerie + localizacaoFisica]
+  B --> D[submit formData]
+  C --> D
+  D --> E[Action: loader/loader.tsx]
+  E --> F[Zod ItemCreateSchema.safeParse]
+  F -->|discriminatedUnion falha| G[400 com fieldErrors]
+  F -->|passa| H[Service: criarItem]
+  H --> I[Camada 3: assertCanManageEstoque]
+  I -->|403| J[Response 403]
+  I -->|ok| K{tipo == PATRIMONIO?}
+  K -->|sim| L[prisma.itemEstoque.findUnique numeroSerie]
+  L -->|existe| M[409 numeroSerie duplicado]
+  L -->|nao| N[prisma.itemEstoque.create]
+  K -->|nao| N
+  N --> O[return item]
+  O --> P[302 /app/estoque/:id]
+```
+
+**Pontos críticos:**
+
+- **Discriminated union Zod** rejeita payload inconsistente em tempo de validação (Camada 2), antes do DB. Ex: `tipo: PATRIMONIO` sem `numeroSerie` → 400 imediato.
+- **Campos condicionais na UI** evitam erro humano: `numeroSerie` aparece só para PATRIMONIO; `quantidade` em input livre só para CONSUMO.
+- **RBAC:** ADMIN, PASTOR, SECRETARIO podem criar. DISCIPULADOR, LIDER_MINISTERIO, FINANCEIRO recebem 403 nas 3 camadas.
+
+### 9.4 Fluxo crítico 2: Movimentação de Consumo (RN-EST-02 + trava de quantidade)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as Almoxarife (SECRETARIO)
+  participant FE as FormMovimentacao
+  participant RR as loader/action
+  participant SVC as criarMovimentacao
+  participant RBAC as rbac.server
+  participant EST as assertSaldoQuantidade
+  participant TX as prisma.$transaction
+  participant DB as Prisma/SQLite
+
+  U->>FE: tipo=SAIDA, quantidade=5, nomeRetirante="João"
+  U->>FE: submit
+  FE->>RR: POST { formData }
+  RR->>RR: MovimentacaoCreateSchema.safeParse (.strict() + superRefine nomeRetirante se delta<0)
+  RR->>SVC: criarMovimentacao(parsed, user)
+
+  SVC->>RBAC: assertCanMovimentarConsumo(user)
+  RBAC-->>SVC: ok (SECRETARIO)
+
+  SVC->>DB: prisma.itemEstoque.findUnique({ select: { tipo, quantidade, ativo } })
+  DB-->>SVC: { tipo: "CONSUMO", quantidade: 100, ativo: true }
+
+  Note over SVC: assertItemIsConsumo — trava de tipo (400 se PATRIMONIO)
+
+  SVC->>EST: assertSaldoQuantidade(itemId, -5, "Saída de 5 un.")
+  EST->>DB: prisma.itemEstoque.findUnique({ select: { quantidade } })
+  DB-->>EST: { quantidade: 100 }
+  EST-->>SVC: ok (100 + (-5) = 95 >= 0)
+
+  SVC->>TX: $transaction(async tx => ...)
+  Note over TX: Re-leitura da quantidade (anti-TOCTOU)
+  TX->>DB: tx.movimentacaoEstoque.create({ delta: -5, nomeRetirante: "João", autorizadoPorId: user.id, ... })
+  TX->>DB: tx.itemEstoque.update({ quantidade: { increment: -5 } })  // 95
+  TX-->>SVC: { movimentacao }
+
+  SVC-->>RR: movimentacao
+  RR-->>U: 302 /app/estoque/{itemId} (toast "Saída registrada — saldo: 95")
+```
+
+**Pontos críticos:**
+
+- **RN-EST-02:** `nomeRetirante` é **obrigatório** para saída (delta<0). Schema Zod rejeita string vazia com 400.
+- **Trava de quantidade** (helper `assertSaldoQuantidade`): rejeita saída que deixaria `quantidade < 0` com 409.
+- **Trava de tipo:** movimentação em item `PATRIMONIO` → 400 (helper `assertItemIsConsumo`).
+- **RBAC:** apenas ADMIN, PASTOR, SECRETARIO podem criar movimentação. Demais perfis (DISCIPULADOR, LIDER_MINISTERIO, FINANCEIRO) recebem 403 em todas as 3 camadas.
+- **Atomicidade:** movimentação + update de quantidade em `$transaction` único. Anti-TOCTOU: re-leitura dentro do `$transaction`.
+
+### 9.5 Fluxo crítico 3: State Machine de Patrimônio (RN-EST-01/03/05)
+
+```mermaid
+stateDiagram-v2
+  [*] --> DISPONIVEL : criarItem (PATRIMONIO)
+  DISPONIVEL --> EM_MANUTENCAO : enviarParaManutencao (RN-EST-03)
+  EM_MANUTENCAO --> DISPONIVEL : retornarDeManutencao (RN-EST-03 retorno)
+  EM_MANUTENCAO --> BAIXADO_PERDA : baixaPorPerda (RN-EST-05, ADMIN ONLY)
+  DISPONIVEL --> BAIXADO_PERDA : baixaPorPerda (RN-EST-05, item perdido diretamente)
+  BAIXADO_PERDA --> [*] : arquivarItem (soft-delete, ativo=false, terminal)
+```
+
+**Matriz de transições válidas (helper `assertTransicaoPatrimonioValida`):**
+
+| Origem | → Destino | Operação | RBAC (Camada 3) | RN |
+|---|---|---|---|---|
+| (novo) | `DISPONIVEL` | `criarItem({ tipo: PATRIMONIO })` | ADMIN, PASTOR, SECRETARIO | RN-EST-01 |
+| `DISPONIVEL` | `EM_MANUTENCAO` | `enviarParaManutencao(itemId)` | ADMIN, PASTOR, SECRETARIO | RN-EST-03 |
+| `EM_MANUTENCAO` | `DISPONIVEL` | `retornarDeManutencao(manutencaoId)` | ADMIN, PASTOR, SECRETARIO | RN-EST-03 |
+| `EM_MANUTENCAO` | `BAIXADO_PERDA` | `baixaPorPerda(manutencaoId, motivo)` | **ADMIN ONLY** | RN-EST-05 |
+| `DISPONIVEL` | `BAIXADO_PERDA` | `baixaPorPerda(itemId, motivo)` (sem manutenção prévia) | **ADMIN ONLY** | RN-EST-05 |
+| `BAIXADO_PERDA` | (nenhum) | — | — | Terminal: nenhuma transição sai |
+
+> **Diferencial crítico:** Baixa por Perda é única operação restrita a ADMIN (RN-EST-05), mesmo que SECRETARIO/PASTOR possam tudo o mais no módulo.
+
+### 9.6 Fluxo crítico 4: Envio para Manutenção Externa (RN-EST-03)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as ADMIN
+  participant FE as FormManutencao
+  participant RR as loader/action
+  participant SVC as enviarParaManutencao
+  participant RBAC as rbac.server
+  participant TX as prisma.$transaction
+  participant DB as Prisma/SQLite
+
+  U->>FE: itemId, assistenciaTecnica="Sony Center", enderecoAssistencia="Rua X, 123", prazoTermino=null
+  U->>FE: submit
+  FE->>RR: POST { formData }
+  RR->>RR: ManutencaoEnvioSchema.safeParse (.strict())
+  RR->>SVC: enviarParaManutencao(parsed, user)
+
+  SVC->>RBAC: assertCanManagePatrimonio(user)
+  RBAC-->>SVC: ok (ADMIN)
+
+  SVC->>DB: prisma.itemEstoque.findUnique({ select: { tipo, statusPatrimonio, numeroSerie } })
+  DB-->>SVC: { tipo: "PATRIMONIO", statusPatrimonio: "DISPONIVEL", numeroSerie: "PJ-001" }
+
+  Note over SVC: assertItemIsPatrimonio — trava de tipo (400 se CONSUMO)
+  Note over SVC: assertItemHasNumeroSerie — paranoid check (400 se vazio)
+  Note over SVC: assertTransicaoPatrimonioValida("DISPONIVEL", "EM_MANUTENCAO", "Envio") — 409 se inválida
+
+  SVC->>TX: $transaction(async tx => ...)
+  TX->>DB: tx.manutencaoAtivo.create({ itemEstoqueId, assistenciaTecnica, enderecoAssistencia, prazoTermino, dataEnvio: now, ... })
+  TX->>DB: tx.itemEstoque.update({ statusPatrimonio: "EM_MANUTENCAO" })
+  TX-->>SVC: { manutencao }
+
+  SVC-->>RR: manutencao
+  RR-->>U: 302 /app/estoque/{itemId} (toast "Item enviado para manutenção")
+```
+
+**Pontos críticos:**
+
+- **Trava de tipo (400):** item `CONSUMO` não vai para manutenção externa.
+- **Trava de transição (409):** item já em `EM_MANUTENCAO` não pode ser enviado de novo.
+- **`assistenciaTecnica` + `enderecoAssistencia` obrigatórios** (RN-EST-03); `numeroOs` e `prazoTermino` opcionais.
+- **`prazoTermino` null** ativa o gatilho de alerta manual (RN-EST-04 — ver §9.7).
+
+### 9.7 Fluxo crítico 5: Alerta On-Consulta para Manutenção sem Prazo (RN-EST-04)
+
+```mermaid
+flowchart TD
+  A[Usuario abre /app/estoque/:id] --> B[Loader: getItemById]
+  B --> C[verificarAlertaManutencaoSemPrazo itemId, user]
+  C --> D{item.statusPatrimonio == EM_MANUTENCAO?}
+  D -- nao --> Z1[null - sem alerta]
+  D -- sim --> E{manutencao.prazoTermino == null?}
+  E -- nao --> Z2[null - tem prazo]
+  E -- sim --> F[idadeMs = now - dataEnvio]
+  F --> G{idadeDias >= 30?}
+  G -- sim --> H1[Mensagem: 'manutencao ha >30 dias urgente']
+  G -- nao --> I{idadeDias >= 6?}
+  I -- sim --> H2[Mensagem: 'manutencao ha >6 dias aviso']
+  I -- nao --> Z3[null - dentro do toleravel]
+  H1 --> J{Existe alerta para este item nas ultimas 24h?}
+  H2 --> J
+  J -- sim --> Z4[null - idempotente]
+  J -- nao --> K[criarAlerta com destinatario=todos]
+  K --> L[Alerta visivel em /app/alertas]
+```
+
+**Pontos críticos:**
+
+- **Decisão de design (brief §5.1):** sem cron job no MVP. Gatilho on-consulta (loader) com idempotência 24h.
+- **Rotas quentes:** `/app/estoque/:id` (detalhe do item) + `/app/alertas` (central de alertas, visitação frequente).
+- **Helper é idempotente:** janela de 24h impede spam mesmo com múltiplas consultas.
+- **Escalonamento:** 6 dias (aviso) / 30 dias (urgente, mensagem强调 "Atualize o status").
+- **`.catch` no loader:** falha na criação do alerta NÃO bloqueia render do item (efeito colateral, não pode quebrar UX principal).
+- **Trade-off aceito:** se ninguém consultar a rota `/app/estoque/:id` por 60 dias, alerta não dispara. Mitigação parcial: rota `/app/alertas` também checa.
+
+### 9.8 Fluxo crítico 6: Baixa por Perda Total (RN-EST-05, ADMIN ONLY)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as ADMIN
+  participant FE as FormBaixaPerda
+  participant RR as loader/action
+  participant SVC as baixaPorPerda
+  participant RBAC as rbac.server
+  participant TX as prisma.$transaction
+  participant DB as Prisma/SQLite
+
+  U->>FE: itemId, motivo="Roubo durante evento", manutencaoId=null
+  U->>FE: submit
+  FE->>RR: POST { formData }
+  RR->>RR: BaixaPerdaSchema.safeParse (.strict() + motivo.min 10 chars)
+  RR->>SVC: baixaPorPerda(parsed, user)
+
+  SVC->>RBAC: assertCanBaixarPerda(user)
+  RBAC-->>SVC: ok (ADMIN ONLY)
+
+  SVC->>DB: prisma.itemEstoque.findUnique({ select: { statusPatrimonio } })
+  DB-->>SVC: { statusPatrimonio: "DISPONIVEL" }
+
+  Note over SVC: assertTransicaoPatrimonioValida("DISPONIVEL", "BAIXADO_PERDA", "Baixa") — 409 se origem inválida
+
+  SVC->>TX: $transaction(async tx => ...)
+  TX->>DB: tx.itemEstoque.update({ statusPatrimonio: "BAIXADO_PERDA", ativo: false })
+  Note over TX: Se manutencaoId != null, atualiza ManutencaoAtivo.foiPerdaTotal=true
+  TX->>DB: tx.manutencaoAtivo.update({ foiPerdaTotal: true, dataRetorno: now })
+  TX-->>SVC: { item }
+
+  Note over SVC: safeLog estruturado SEM motivo em texto livre (RN-LGPD)
+
+  SVC-->>RR: item
+  RR-->>U: 302 /app/estoque (toast "Item baixado por perda")
+```
+
+**Pontos críticos:**
+
+- **RBAC mais restritiva do módulo:** apenas ADMIN (RN-EST-05). SECRETARIO recebe 403 mesmo que possa tudo o mais.
+- **Motivo textual obrigatório** (mínimo 10 caracteres). Upload de laudo (`urlLaudoTecnico`) backlog (sem S3/MinIO).
+- **`BAIXADO_PERDA` é terminal:** item não volta para `DISPONIVEL`. Para "recuperar" item perdido, criar item NOVO.
+- **Soft-delete:** `ativo = false` some da listagem padrão; histórico de manutenções/movimentações preservado.
+- **Audit log SEM motivo:** `motivo` pode conter texto sensível (ex: "Pastor X desviou verba"). Log estruturado guarda apenas metadados (itemId, executadoPorId, timestamp).
+
+### 9.9 RBAC fina do Módulo Estoque + Patrimônio (matriz completa, brief §4.9)
+
+| Operação \ Perfil | ADMIN | PASTOR | SECRETARIO | FINANCEIRO | LIDER_MIN. | DISCIPULADOR |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Ver listagem e detalhe | ✅ | ✅ | ✅ | 👁 | 👁 | 👁 |
+| Criar/editar Item (qualquer tipo) | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Arquivar Item | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Movimentação ENTRADA (Consumo) | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Movimentação SAÍDA (Consumo, com nomeRetirante) | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Enviar para Manutenção | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Retornar de Manutenção | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| **Baixa por Perda Total (RN-EST-05)** | ✅ | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 |
+| Ver aba Manutenções (detalhe) | ✅ | ✅ | ✅ | 👁 | 👁 | 👁 |
+
+> 👁 = leitura / 🚫 = bloqueado / ✅ = permitido. Defesa em 3 camadas obrigatória: `<Can>` (UI) + `assertCan*` (loader) + `assertCan*` (service).
+
+### 9.10 Decisões macro do Módulo Estoque + Patrimônio (consolidadas)
+
+- **Monólito modular** (RAG `architecture-monolith-modular`): sem microsserviço, sem message broker. Decisão herdada.
+- **Camada 3 (service) é a única segurança real** (RAG `pattern-3-layer-rbac`): trava de quantidade, RBAC fina e state machine moram no service.
+- **Discriminated union Zod** (RAG `convention-tipos-item-estoque`): payload inconsistente (`tipo: PATRIMONIO` sem `numeroSerie`) rejeitado em tempo de validação (Camada 2).
+- **`BAIXADO_PERDA` é terminal** (state machine): nenhuma transição sai dele. Decisão consciente (auditoria de patrimônio).
+- **`nomeRetirante` é texto livre, sem FK Membro** (RN-EST-02): reduz atrito operacional, elimina PII cadastrada. Decisão consciente (brief §6.2).
+- **Sem cron job no MVP** (RN-EST-04): alerta on-consulta com idempotência 24h. Decisão consciente (brief §5.1).
+- **Sem upload S3/MinIO no MVP** (RN-EST-05 adaptado): `motivo` textual, `urlLaudoTecnico` permanece `null`. Decisão consciente (brief §5.2).
+- **`ItemEstoque.ativo: Boolean @default(true)`** (proposta pendente Fase 2): soft-delete. Espelha `Caixa.ativo` do ciclo 2 (já aprovada). Helpers já antecipam (`assertSaldoQuantidade` checa `ativo === false`).
+- **`ManutencaoAtivo.custoCentavos: Int?`** (custo de manutenção): segue RAG `convention-monetary-values` quando aplicável.
+
+### 9.11 Limites conhecidos do Módulo Estoque + Patrimônio
+
+| Limite | Onde | Mitigação |
+|---|---|---|
+| **Sem cron job** | RN-EST-04 alerta | On-consulta via loader (gated + idempotente 24h). Migração para cron em ciclo futuro. |
+| **Sem upload de laudo** | RN-EST-05 anexo | `motivo` textual. Migração para S3/MinIO em ciclo futuro. |
+| **Sem upload de foto** | Patrimônio sem foto | `localizacaoFisica` textual. Migração para S3/MinIO em ciclo futuro. |
+| **Sem sincronização Estoque ↔ Financeiro** | Compra de estoque e manutenção | Lançamento manual pelo `FINANCEIRO` (enum `CategoriaLancamento.COMPRA_ESTOQUE` e `MANUTENCAO` já existem). Integração automática backlog. |
+| **Sem inventário físico mobile** | Reconciliação de estoque | Script `pnpm audit:estoque` (backlog). |
+| **Sem relatório de curva ABC** | Consumo por item | Loader básico + filtros. Relatório avançado backlog. |
+| **`BAIXADO_PERDA` é terminal** | Item perdido não volta | Decisão consciente (auditoria). Para "recuperar" item perdido, criar item NOVO. |
+| **SQLite single-writer** | `dev.db` | 1 processo Node + `$transaction` atômico. Postgres futuro é mudança aditiva. |
+
+### 9.12 Próximos passos (S11+)
+
+1. **S11 — Estoque Consumo + Movimentação (Sprint 1):** CRUD básico de `ItemEstoque` (CONSUMO), `criarMovimentacao` com trava, RAG `pattern-estoque-trava-quantidade` implementado.
+2. **S12 — Patrimônio + Manutenção + Baixa (Sprint 2):** CRUD `ItemEstoque` (PATRIMONIO), state machine completa (`enviarParaManutencao`, `retornarDeManutencao`, `baixaPorPerda`), alerta on-consulta (RN-EST-04), E2E de bypass para RN-EST-05 (SECRETARIO → 403).
+3. **S13+ (backlog):** cron real para alertas, upload S3/MinIO (laudos + fotos), inventário físico mobile, sincronização automática Estoque ↔ Financeiro.
+
+> **Definition of Done (herdado do MVP + ciclo 2 + ciclo 3):** cobertura ≥ 85% global, **100% em services** (`estoque`, `movimentacao`, `patrimonio`, `manutencao`), 0 vuln critical/high, `planning-reviewer` ≥ 70, LGPD compliant, 17 testes de borda do brief §7.3 **todos verdes**, métrica macro (brief §7.1) cumprida.
+
+---
+
+## 10. Tratamento de centavos
 
 **Convenção:** todos os valores monetários são `Int` em **centavos** no banco e em trânsito. Conversão só na borda (formulário de input, renderização).
 
@@ -587,9 +952,9 @@ export const formatBRL = (centavos: number): string =>
 
 ---
 
-## 10. Sessão e segurança
+## 11. Sessão e segurança
 
-### 9.1 Decisões
+### 11.1 Decisões
 
 | Aspecto | Decisão | Justificativa |
 |---|---|---|
@@ -601,7 +966,7 @@ export const formatBRL = (centavos: number): string =>
 | **Renovação** | A cada request autenticado: `expira = now + 7d` (até 30d abs) | Usuário ativo não é deslogado; inativo expira |
 | **Invalidação** | `deleteSession(sid)` no DB + cookie `Max-Age=0` | Logout robusto |
 
-### 9.2 Estrutura da session (sugestão)
+### 11.2 Estrutura da session (sugestão)
 
 ```ts
 // app/lib/session.server.ts
@@ -613,9 +978,9 @@ type SessionData = {
 };
 ```
 
-> Tabela `Session` ainda não foi adicionada ao schema — o backend agent da Fase 5 deve adicioná-la como primeira migration (ver §17.1 Pendências).
+> Tabela `Session` ainda não foi adicionada ao schema — o backend agent da Fase 5 deve adicioná-la como primeira migration (ver §18.1 Pendências).
 
-### 9.3 Cenários de segurança
+### 11.3 Cenários de segurança
 
 - **Cookie theft (XSS):** impossível ler via JS (httpOnly). Mitigação adicional: CSP.
 - **Cookie theft (CSRF):** `sameSite=lax` + checagem de `Origin` em mutações (RR7 já valida form actions com mesma origem por padrão).
@@ -624,7 +989,7 @@ type SessionData = {
 
 ---
 
-## 11. Decisões de design registradas (ADRs)
+## 12. Decisões de design registradas (ADRs)
 
 > **Formato:** ADR mínimo (Architecture Decision Record) — Contexto, Alternativas, Decisão, Consequências.
 
@@ -685,7 +1050,7 @@ type SessionData = {
 
 ---
 
-## 12. Como o sistema escala (do MVP para 3 módulos)
+## 13. Como o sistema escala (do MVP para 3 módulos)
 
 > **Roadmap de alto nível** — não inclui datas, apenas sequência.
 
@@ -695,23 +1060,28 @@ gantt
     dateFormat YYYY-MM-DD
     section Ciclo 1 (FECHADO 2026-06-13)
     MVP Auth + Membros + Discipulado + Alertas + Acolhimento (S00-S05) :done, mvp, 2026-06-12, 30d
-    section Ciclo 2 (EM ANDAMENTO 2026-06-14+)
-    Financeiro — caixas + lançamentos (S06) :active, fin1, after mvp, 14d
-    Financeiro — transferência + trava saldo (S07) :fin2, after fin1, 14d
-    Financeiro — Fidelidade Financeira + RBAC fina (S08) :fin3, after fin2, 14d
-    section Ciclo 3+ (backlog)
-    Estoque — consumo + movimentação :est1, after fin3, 14d
-    Estoque — patrimônio + manutenção :est2, after est1, 21d
+    section Ciclo 2 (FECHADO 2026-06-19)
+    Financeiro — caixas + lançamentos (S06) :done, fin1, after mvp, 14d
+    Financeiro — transferência + trava saldo (S07) :done, fin2, after fin1, 14d
+    Financeiro — Fidelidade Financeira + RBAC fina (S08) :done, fin3, after fin2, 14d
+    Cleanup Financeiro (S09-S10) :done, fin4, after fin3, 14d
+    section Ciclo 3 (EM ANDAMENTO 2026-06-19+)
+    Estoque — consumo + movimentação (S11) :active, est1, after fin4, 14d
+    Estoque — patrimônio + manutenção + baixa (S12) :est2, after est1, 21d
+    section Ciclo 4+ (backlog)
     Cron de alertas + relatórios :cron, after est2, 14d
+    Upload S3/MinIO (laudos + fotos) :s3, after est2, 14d
+    Inventário físico mobile :inv, after s3, 21d
 ```
 
-**Critérios para mover de sprint (definition of done herdado do MVP + ciclo 2):**
+**Critérios para mover de sprint (definition of done herdado do MVP + ciclo 2 + ciclo 3):**
 
 1. Cobertura ≥ 85% global, **100% em services de regra de negócio**.
 2. Zero vuln critical/high.
 3. LGPD compliant.
 4. `planning-reviewer` score ≥ 70.
-5. **Métrica macro do ciclo 2 (brief §7.1):** FINANCEIRO lança dízimo de Membro X no Caixa Geral em < 2 min, PASTOR vê na aba Fidelidade.
+5. **Métrica macro do ciclo 3 (brief §7.1):** SECRETARIO cadastra 5 pacotes de papel A4, registra saída de 2 com `nomeRetirante`, ADMIN abre detalhe e vê histórico completo.
+6. **Métrica macro do ciclo 2 (brief §7.1, regressão):** FINANCEIRO lança dízimo de Membro X no Caixa Geral em < 2 min, PASTOR vê na aba Fidelidade.
 
 **Módulos por status (jun/2026):**
 
@@ -720,15 +1090,14 @@ gantt
 | **Membros** (RN-MEM-01 a 06) | ✅ Completo (ciclo 1, S00-S05) | — |
 | **Alertas** (RN-MEM-05) | ✅ Completo (ciclo 1) | — |
 | **Acolhimento** (RN-MEM-05) | ✅ Completo (ciclo 1) | — |
-| **Financeiro** (RN-FIN-01 a 05) | 🟡 **Em andamento (ciclo 2, S06-S08)** | Schema ✅. Services + UI em S06-S08. Decisão `Caixa.ativo` pendente (Fase 2). |
-| **Estoque — Consumo** (RN-EST-01, 02) | ❌ Schema apenas (ciclo 3+) | — |
-| **Estoque — Patrimônio** (RN-EST-01, 03) | ❌ Schema apenas (ciclo 3+) | Necessita upload (MinIO/S3) |
-| **Manutenção + Cron** (RN-EST-04) | ❌ Schema ok, falta scheduler | Definir scheduler: `node-cron` em processo único |
-| **Baixa por perda** (RN-EST-05) | ❌ Schema ok, falta upload + service | MinIO/S3 |
+| **Financeiro** (RN-FIN-01 a 05) | ✅ **Completo (ciclo 2, S06-S10)** | `gate: all-of passed` 2026-06-19. Decisão `Caixa.ativo` já aprovada. |
+| **Estoque — Consumo** (RN-EST-01, 02) | 🟡 **Em andamento (ciclo 3, S11)** | Schema ✅. Services + UI em S11. Decisão `ItemEstoque.ativo` pendente (Fase 2). |
+| **Estoque — Patrimônio** (RN-EST-01, 03, 05) | 🟡 **Em andamento (ciclo 3, S12)** | Schema ✅. Services + UI em S12. Baixa por perda: ADMIN only (RN-EST-05). Upload de laudo backlog. |
+| **Manutenção + Alerta** (RN-EST-04) | 🟡 **Em andamento (ciclo 3, S12)** | Alerta on-consulta (sem cron job, decisão do brief §5.1). Scheduler real backlog. |
 
 ---
 
-## 13. Dependências externas
+## 14. Dependências externas
 
 **MVP (atual):**
 
@@ -751,7 +1120,7 @@ gantt
 
 ---
 
-## 14. Performance e limites
+## 15. Performance e limites
 
 | Limite | Onde | Mitigação |
 |---|---|---|
@@ -771,9 +1140,9 @@ gantt
 
 ---
 
-## 15. Testes
+## 16. Testes
 
-### 14.1 Estratégia em 3 camadas
+### 16.1 Estratégia em 3 camadas
 
 | Camada | Ferramenta | O que testa | Localização |
 |---|---|---|---|
@@ -781,12 +1150,12 @@ gantt
 | **Integração** | Vitest + Prisma test DB | Services com DB real (SQLite in-memory ou arquivo de teste) | `app/**/*.integration.test.ts` |
 | **E2E** | Playwright (MCP) | Fluxos críticos: login, RBAC (RN-MEM-03), trava 12 (RN-MEM-04), alerta visitante (RN-MEM-05) | `e2e/**/*.spec.ts` |
 
-### 14.2 Cobertura mínima
+### 16.2 Cobertura mínima
 
 - **Gate do phase 5:** 85% global, 100% em services de regra de negócio.
 - **Críticos sem cobertura:** nenhuma PR é mergeada (gate).
 
-### 14.3 Casos obrigatórios (do brief)
+### 16.3 Casos obrigatórios (do brief)
 
 - **RN-MEM-02:** schema/service rejeita `cpf` (teste de integração).
 - **RN-MEM-03:** bypass via URL retorna 403 em 3 perfis (E2E).
@@ -796,9 +1165,9 @@ gantt
 
 ---
 
-## 16. Diagramas de sequência adicionais
+## 17. Diagramas de sequência adicionais
 
-### 15.1 Login bem-sucedido
+### 17.1 Login bem-sucedido
 
 ```mermaid
 sequenceDiagram
@@ -823,7 +1192,7 @@ sequenceDiagram
   FE-->>U: redireciona
 ```
 
-### 15.2 Cadastrar visitante (RN-MEM-05)
+### 17.2 Cadastrar visitante (RN-MEM-05)
 
 ```mermaid
 sequenceDiagram
@@ -852,7 +1221,7 @@ sequenceDiagram
   RR-->>FE: 302 /app/membros/:id
 ```
 
-### 15.3 Tentar acessar aba dízimos sem permissão (RN-MEM-03)
+### 17.3 Tentar acessar aba dízimos sem permissão (RN-MEM-03)
 
 ```mermaid
 sequenceDiagram
@@ -880,11 +1249,11 @@ sequenceDiagram
 
 ---
 
-## 17. Pendências para próximos agentes
+## 18. Pendências para próximos agentes
 
 > Lista de itens **fora do escopo desta task** que precisam ser endereçados em fases seguintes.
 
-### 16.1 Backend agent (Fase 5)
+### 18.1 Backend agent (Fase 5)
 
 - [ ] Criar `prisma/seed.ts` com `upsert` do primeiro ADMIN (idempotente).
 - [ ] Adicionar model `Session` ao schema (id, userId, expiresAt, absoluteExpiresAt).
@@ -893,19 +1262,19 @@ sequenceDiagram
 - [ ] Implementar `app/services/membros.server.ts` com TDD.
 - [ ] Implementar `app/services/alertas.server.ts` com TDD.
 
-### 16.2 Designer agent (Fase 3)
+### 18.2 Designer agent (Fase 3)
 
 - [ ] Wireframes de baixa fidelidade: login, lista de membros, ficha do membro, central de alertas, config de acolhimento.
 - [ ] Diagrama de navegação entre rotas autenticadas.
 
-### 16.3 RAG-curator (Fase 1 auxiliar)
+### 18.3 RAG-curator (Fase 1 auxiliar)
 
 - [ ] `.harness/RAG/cpf-validation.md` — por que não coletamos.
 - [ ] `.harness/RAG/session-security.md` — checklist de session cookie.
 - [ ] `.harness/RAG/rbac-pattern.md` — padrão defense in depth aplicado a 3 camadas.
 - [ ] `.harness/RAG/prisma-rr7-setup.md` — gotchas do Prisma 7 com React Router 7 SSR.
 
-### 16.4 Decisions pendentes (`[A CONFIRMAR]`)
+### 18.4 Decisions pendentes (`[A CONFIRMAR]`)
 
 1. **Zod vs Valibot vs TypeBox** (ADR-003) — sugestão: Zod.
 2. **TTL exato da sessão** — sugestão: 7d sliding, teto 30d abs.
@@ -916,11 +1285,11 @@ sequenceDiagram
 
 ---
 
-## 18. Anexo: Decisões pendentes detectadas
+## 19. Anexo: Decisões pendentes detectadas
 
 Durante a Fase 1, identifiquei os seguintes pontos que precisam de decisão explícita antes de começar a Fase 5:
 
-### 17.1 Duplicata `prisma.config.ts`
+### 19.1 Duplicata `prisma.config.ts`
 
 Existem **dois** arquivos de configuração do Prisma:
 
@@ -929,7 +1298,7 @@ Existem **dois** arquivos de configuração do Prisma:
 
 **Recomendação:** manter apenas `prisma.config.ts` na raiz. O `app/prisma.config.ts` deve ser deletado pelo backend agent. **Decisão pendente** — confirmar com o usuário.
 
-### 17.2 Model `Session` não existe no schema
+### 19.2 Model `Session` não existe no schema
 
 Sem `Session`, não há como invalidar sessões no servidor (logout real). **Decisão:** adicionar como migration inicial. Estrutura sugerida:
 
@@ -948,7 +1317,7 @@ model Session {
 
 > Isso requer adicionar o back-relation em `Membro.alter()`. **Decisão pendente** — confirmar com o designer.
 
-### 17.3 `app/routes.ts` tem `index("app/api/auth/login.ts")` como rota
+### 19.3 `app/routes.ts` tem `index("app/api/auth/login.ts")` como rota
 
 A linha 11 do `app/routes.ts` atual tem:
 
@@ -965,4 +1334,4 @@ Isso faz com que `app/api/auth/login.ts` seja tratado como rota (substituindo `/
 
 - **Quando:** ao final de cada sprint (Fase 5 completa) ou quando schema/fluxos mudarem.
 - **Por quem:** `documenter` agent, acionado pelo orchestrator.
-- **O que atualizar:** especialmente a §11 (ADRs), §12 (Roadmap) e §18 (Pendências) — os itens 18.1-18.3 devem sumir à medida que forem resolvidos.
+- **O que atualizar:** especialmente a §12 (ADRs), §13 (Roadmap) e §19 (Pendências) — os itens 19.1-19.3 devem sumir à medida que forem resolvidos.

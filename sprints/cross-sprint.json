@@ -1,502 +1,876 @@
 {
-  "_type": "harness-cross-sprint-v6",
+  "_type": "harness-cross-sprint-v6-cycle3",
   "project": "igreja-conect",
   "phase": "phase.4.planejamento",
-  "cycle": 2,
-  "scope": "financeiro",
-  "generatedAt": "2026-06-14T12:30:00Z",
-  "generatedBy": "harness-sprint-tasker (cycle 2)",
+  "cycle": 3,
+  "scope": "estoque+patrimonio",
+  "generatedAt": "2026-06-19T22:00:00Z",
+  "generatedBy": "harness-sprint-tasker (cycle 3)",
   "version": "1.0",
-  "purpose": "DAG de dependências entre sprints do ciclo 2 (Módulo Financeiro), pré-requisitos, cross-module data flows, user story coverage matrix e spec acceptance criteria mapping. Estende o cross-sprint.json do ciclo 1 (que está em .harness/sprints/cross-sprint.json) sem sobrescrevê-lo.",
+  "purpose": "DAG de dependências entre sprints do ciclo 3 (Módulo Estoque + Patrimônio), pré-requisitos, cross-module data flows (ciclo 2 Financeiro + ciclo 1 Membros + alertas), user story coverage matrix e spec acceptance criteria mapping. Estende o cross-sprint.json do ciclo 2 sem sobrescrevê-lo.",
 
   "sprintDependencyGraph": {
-    "description": "Grafo dirigido onde aresta A → B significa 'B depende de A estar completa'. Ciclo 2 depende de S05 (último sprint do ciclo 1).",
-    "nodes": ["S05 (cycle 1)", "S06", "S07", "S08"],
-    "edges": [
-      { "from": "S05", "to": "S06", "reason": "S06 (Financeiro) depende da infra do ciclo 1: rbac.server.ts (assertCanSeeFinancials já existe), errors.ts, prisma singleton, money.server.ts (formatBRLFromCents/parseBRLToCents), TabFidelidadeFinanceira placeholder (ciclo 1, S03-T07)" },
-      { "from": "S06", "to": "S07", "reason": "S07 (Transferência) depende de assertSaldoSuficiente (S06-T05) + Zod LancamentoCreateSchema (S06-T06) + Zod de transferência (próprio S07) + getCaixaDetalhe (S06-T08) para listar extrato após transferência" },
-      { "from": "S07", "to": "S08", "reason": "S08 (Fidelidade) depende de getDizimosByMembro service (S08-T01 substitui placeholder) + rbac.server.ts (S08-T02 adiciona canSeeFinancials) + S06-Dashboard que é o entry-point do Módulo Financeiro" },
-      { "from": "S06", "to": "S08", "reason": "S08 também depende de S06 para a rota /app/financeiro/lancamentos/novo que é linkada do botão '+ Lançar dízimo' da TabFidelidadeFinanceira" }
+    "description": "Grafo dirigido onde aresta A → B significa 'B depende de A estar completa'. Ciclo 3 depende de S08 (último sprint do ciclo 2).",
+    "nodes": [
+      "S08 (cycle 2)",
+      "S11",
+      "S12",
+      "S13"
     ],
-    "criticalPath": ["S05 (cycle 1)", "S06", "S07", "S08"],
-    "criticalPathHours": 120,
-    "criticalPathDays": 15,
+    "edges": [
+      {
+        "from": "S08",
+        "to": "S11",
+        "reason": "S11 (Estoque Foundation) depende da infra consolidada do ciclo 2: rbac.server.ts (5 helpers novos coexistem com assertCanSeeFinancials do ciclo 2), errors.ts, prisma singleton, schema de enums (TipoItemEstoque, StatusItemPatrimonio), Zod 4.4.3, formato monetário em centavos (Int) via convention-monetary-values"
+      },
+      {
+        "from": "S11",
+        "to": "S12",
+        "reason": "S12 (Movimentações + Manutenção + Baixa) depende de: ItemEstoque.ativo migration (S11-T01), 5 helpers RBAC (S11-T03), ItemEstoqueCreateSchema com discriminatedUnion (S11-T04), service itemEstoque.server.ts com listarItensEstoque + getItemEstoqueDetalhe (S11-T02/T07), rotas /app/estoque + /app/estoque/:id (S11-T09) — pré-requisito para as 4 rotas POST de S12"
+      },
+      {
+        "from": "S12",
+        "to": "S13",
+        "reason": "S13 (Alertas + Edição + Cleanup) depende de: enviarParaManutencao (S12-T04) para detectar manutenções EM_ANDAMENTO, itemEstoque.server.ts + manutencao.server.ts para listarAlertasCriticosEstoque, todas as 4 rotas POST de S12 para popular histórico do item"
+      },
+      {
+        "from": "S11",
+        "to": "S13",
+        "reason": "S13-T05 (editarItem) depende do S11-T05 (criarItem) — extensão natural do CRUD. ItemEstoqueUpdateSchema usa mesmo pattern que ItemEstoqueCreateSchema"
+      }
+    ],
+    "criticalPath": [
+      "S08 (cycle 2)",
+      "S11",
+      "S12",
+      "S13"
+    ],
+    "criticalPathHours": 176,
+    "criticalPathDays": 22,
     "parallelizable": [
       {
-        "note": "S08 pode começar em paralelo com S07-T05/S07-T06 (auditoria) já que getDizimosByMembro e getDizimosByMembro não dependem de transferência",
-        "tasks": ["S08-T01", "S08-T02", "S07-T07"]
+        "note": "S11-T01 (migration) pode rodar em paralelo com S11-T03 (5 helpers RBAC) e S11-T04 (schemas Zod) — não têm dependência funcional entre si",
+        "tasks": [
+          "S11-T01",
+          "S11-T03",
+          "S11-T04"
+        ]
       },
       {
-        "note": "S06-T01 (migration) pode rodar em paralelo com S06-T05 (assertSaldoSuficiente) e S06-T06 (Zod LancamentoCreateSchema)",
-        "tasks": ["S06-T01", "S06-T05", "S06-T06"]
+        "note": "S11-T08 (componentes UI) pode rodar em paralelo com S11-T09 (rotas dashboard) — componentes são reusáveis e loaders são ortogonais",
+        "tasks": [
+          "S11-T08",
+          "S11-T09"
+        ]
       },
       {
-        "note": "S06-T09 (componentes) pode rodar em paralelo com S06-T11 (rotas /caixas) já que componentes são reutilizáveis",
-        "tasks": ["S06-T09", "S06-T11"]
+        "note": "S12-T01 (MovimentacaoCreateSchema Zod) pode rodar em paralelo com S12-T02 (assertSaldoQuantidade helper) e S12-T04 (enviarParaManutencao + assertTransicaoPatrimonioValida) — apenas S12-T03 depende dos 2 anteriores",
+        "tasks": [
+          "S12-T01",
+          "S12-T02",
+          "S12-T04"
+        ]
+      },
+      {
+        "note": "S13-T02 (listarAlertasCriticosEstoque) pode rodar em paralelo com S13-T03 (hook em loaders) — apenas S13-T04 depende de S13-T02",
+        "tasks": [
+          "S13-T02",
+          "S13-T03"
+        ]
+      },
+      {
+        "note": "S13-T06 (cleanup MVP-DEBTs) é independente das demais tasks — pode rodar a qualquer momento",
+        "tasks": [
+          "S13-T06"
+        ]
       }
     ]
   },
 
   "environmentPrerequisites": {
-    "description": "O que o ambiente precisa ter ANTES de S06 começar (herdado do ciclo 1 + nada novo).",
+    "description": "O que o ambiente precisa ter ANTES de S11 começar (herdado dos ciclos 1+2 + nada novo).",
     "node": ">= 22 LTS",
     "packageManager": "pnpm 11.6.0",
-    "dependenciesToAddInS06": [],
-    "dependenciesToAddInS07": [],
-    "dependenciesToAddInS08": [],
-    "rationale_no_new_deps": "Brief §6.4 — sem dependências externas novas. Tudo roda no mesmo processo Node. Zod 4.4.3 (já instalado no ciclo 1) cobre TransferenciaCreateSchema e LancamentoCreateSchema. Sem gateway, sem S3, sem Redis. YAGNI antecipar Decimal/bigint.",
+    "dependenciesToAddInS11": [],
+    "dependenciesToAddInS12": [],
+    "dependenciesToAddInS13": [
+      "@testing-library/react (se ainda não instalado — para componentes .tsx em vitest)"
+    ],
+    "rationale_no_new_deps": "Brief §6.4 — sem dependências externas novas. Tudo roda no mesmo processo Node. Zod 4.4.3 (já instalado) cobre ItemEstoqueCreateSchema (discriminatedUnion), MovimentacaoCreateSchema, ManutencaoCreateSchema, BaixaPerdaSchema, ItemEstoqueUpdateSchema. Sem gateway, sem S3, sem Redis, sem node-cron — alerta de manutenção (RN-EST-04) é on-consulta (decisão consciente).",
     "envVariables": {
       "DATABASE_URL": "file:./dev.db (default — configurável em .env)",
       "SESSION_SECRET": "Já em .env.development (≥16 chars; fail-fast em app/lib/session.server.ts:30-38)",
       "NODE_ENV": "development (default) | production (em prod)"
     },
     "databaseState": {
-      "currentSchema_pre_s06": "16 models + 6 enums (ciclo 1) — Caixa, TransferenciaCaixa, Lancamento já existem SEM campo `ativo`",
-      "firstMigration_s06": "S06-T01 — add_ativo_to_caixa (Caixa.ativo: Boolean @default(true) + @@index([ativo]))",
-      "secondMigration_s07_s08": "(nenhuma — sem mudança de schema além do S06-T01)"
+      "currentSchema_pre_s11": "19 models + 8 enums (ciclo 1+2) — ItemEstoque, MovimentacaoEstoque, ManutencaoAtivo já existem SEM campo `ativo`",
+      "firstMigration_s11": "S11-T01 — add_ativo_to_item_estoque (ItemEstoque.ativo: Boolean @default(true) + @@index([tipo, ativo]))",
+      "secondMigration_s12_s13": "(nenhuma — sem mudança de schema além do S11-T01)"
     },
-    "criticalGotcha": "⚠️ `pnpm dev` está QUEBRADO (Prisma 7.8 + Vite 8 SSR fecha ModuleRunner — ver RAG `lesson-prisma-7-vite-8-ssr-incompat.md`). Para validar E2E: `pnpm build && pnpm start` em porta 3000. Vitest e Playwright funcionam normalmente (instanciam Prisma sob demanda)."
+    "criticalGotcha": "⚠️ `pnpm dev` está QUEBRADO (Prisma 7.8 + Vite 8 SSR fecha ModuleRunner — RAG `lesson-prisma-7-vite-8-ssr-incompat`). Para validar E2E: `pnpm build && pnpm start` em porta 3000. Vitest e Playwright funcionam normalmente (instanciam Prisma sob demanda). Em S13-T06, cleanup MVP-DEBT-002 adiciona `.tsx` em vitest.config.ts include — habilita testes de componentes React."
   },
 
   "crossModuleDataFlows": {
-    "description": "Fluxos de dados que cruzam múltiplos sprints do ciclo 2 + ciclo 1. Críticos para testes E2E cross-module.",
+    "description": "Fluxos de dados que cruzam múltiplos sprints do ciclo 3 + ciclo 2 (Financeiro) + ciclo 1 (Membros + Alertas). Críticos para testes E2E cross-module e auditoria LGPD.",
     "flows": [
       {
-        "id": "CF-FIN-01",
-        "name": "Criar Dízimo → Saldo reflete → PASTOR vê na Fidelidade (MÉTRICA MACRO BRIEF §7.1)",
+        "id": "CF-EST-01",
+        "name": "Cadastrar CONSUMO + registrar SAÍDA + ADMIN vê histórico (MÉTRICA MACRO BRIEF §7.1)",
         "sequence": [
-          "POST /login (FINANCEIRO)",
-          "POST /app/financeiro/lancamentos (DIZIMO com membroId)",
-          "GET /app/financeiro/caixas/<id> (extrato do Caixa Geral mostra 1 lançamento +R$ 50,00)",
-          "POST /logout (FINANCEIRO)",
-          "POST /login (PASTOR)",
-          "GET /app/membros/<mariaId>?tab=fidelidade (vê dízimo recém-criado + cards de resumo)"
+          "POST /login (SECRETARIO)",
+          "POST /app/estoque (CONSUMO Papel A4, quantidade 100)",
+          "POST /app/estoque/:id/movimentar (SAIDA quantidade -2, nomeRetirante 'João Silva')",
+          "POST /logout (SECRETARIO)",
+          "POST /login (ADMIN)",
+          "GET /app/estoque/:id (vê histórico: quantidade 98 + Movimentacao com autorizadoPor=SECRETARIO.nome + nomeRetirante='João Silva')"
         ],
-        "dataFlow": "FINANCEIRO submete LancamentoCreateSchema { tipo: ENTRADA, categoria: DIZIMO, valorCentavos: 5000, membroId, caixaId, descricao } → service `criarLancamento` (S06-T07) assertCanSeeFinancials (Camada 3) → assertSaldoSuficiente (não aplicado — ENTRADA) → $transaction { tx.lancamento.create + tx.caixa.update.increment } → safeLog → 302 /caixas/<id> → PASTOR em outra sessão → loader redirect se !canSeeFinancials (Camada 2) → se OK, getDizimosByMembro (S08-T01) com where: { membroId, categoria: 'DIZIMO' } retorna items[1] + resumo",
-        "sprints": ["S06", "S08"],
-        "sprintsDependency": "S06 entrega criarLancamento + UI; S08 entrega getDizimosByMembro completo",
+        "dataFlow": "SECRETARIO submete ItemEstoqueCreateSchema (discriminatedUnion tipo=CONSUMO) → service `criarItem` (S11-T05) assertCanManageEstoque PRIMEIRO → $transaction { tx.itemEstoque.create } → safeLog → 302 /app/estoque/:id. Em seguida, SECRETARIO submete MovimentacaoCreateSchema (quantidade=-2, nomeRetirante='João Silva') → service `criarMovimentacao` (S12-T03) assertCanMovimentarConsumo (Camada 3) → assertSaldoQuantidade (Camada 3 RN-EST-02, BLOQUEADOR teste #2) → $transaction { tx.movimentacaoEstoque.create (autorizadoPorId=user.id NUNCA do form, Camada 2 contra bypass) + tx.itemEstoque.update.increment(quantidade=-2) } → safeLog SEM quantidade/nomeRetirante → 302 /app/estoque/:id. ADMIN em outra sessão → loader getItemEstoqueDetalhe → retorna item.movimentacoes[] com autorizadoPor.nome (não expõe hash).",
+        "sprints": [
+          "S11",
+          "S12"
+        ],
+        "sprintsDependency": "S11 entrega criarItem + UI; S12 entrega criarMovimentacao completo",
         "e2eChains": [
-          "S06-T14 Chain 1 (FINANCEIRO lança dízimo, vê no extrato)",
-          "S08-T06 Chain 7+8 (PASTOR vê dízimo recém-criado na Fidelidade)"
+          "S11-T11 Chain 1 (cadastro CONSUMO)",
+          "S12-T11 Chain 1 (métrica macro PARTE 2 — SAÍDA com nomeRetirante)"
         ],
-        "specRef": "brief §7.1 (métrica macro), PRD D.3 F2+F3+F6",
+        "specRef": "brief §7.1 (métrica macro), PRD D.3 F1+F4",
         "metricamacro_target": "Tudo em < 2 minutos (brief §7.1)",
         "criticality": "GATE — gate aggregated Phase 5 valida"
       },
       {
-        "id": "CF-FIN-02",
-        "name": "Transferência entre Caixas — atomicidade 5 mutações (RN-FIN-02 + RN-FIN-04)",
+        "id": "CF-EST-02",
+        "name": "Enviar PATRIMONIO para manutenção — 3 estados (DISPONIVEL → EM_MANUTENCAO → DISPONIVEL via retorno)",
         "sequence": [
-          "POST /login (SECRETARIO — RN-FIN-03 autonomia por saldo)",
-          "POST /app/financeiro/transferencias (origem=Caixa Geral saldo 100,00, destino=Caixa Cantina 0,00, valor=100,00)",
-          "GET /app/financeiro (dashboard mostra Geral R$ 0,00 + Cantina R$ 100,00)",
-          "GET /app/financeiro/caixas/<origemId> (extrato mostra SAIDA -R$ 100,00 TRANSFERENCIA)",
-          "GET /app/financeiro/caixas/<destinoId> (extrato mostra ENTRADA +R$ 100,00 TRANSFERENCIA)"
+          "POST /login (ADMIN)",
+          "POST /app/estoque (PATRIMONIO Projetor BenQ, numeroSerie='PJ-001')",
+          "POST /app/estoque/:id/manutencao (assistenciaTecnica='XYZ', endereco='Rua 1', numeroOs='12345')",
+          "GET /app/estoque/:id (verifica statusPatrimonio=EM_MANUTENCAO + manutencao visível)",
+          "POST /app/estoque/:id/retorno (dataRetorno=hoje)",
+          "GET /app/estoque/:id (verifica statusPatrimonio=DISPONIVEL)"
         ],
-        "dataFlow": "SECRETARIO submete TransferenciaCreateSchema { caixaOrigemId, caixaDestinoId, valorCentavos: 10000, dataHora, descricao? } → service `transferirEntreCaixas` (S07-T02) assertCanSeeFinancials (Camada 3) → assertSaldoSuficiente (origem, 10000) → $transaction { tx.transferenciaCaixa.create (executadoPorId: user.id) + tx.lancamento.create SAIDA TRANSFERENCIA origem + tx.lancamento.create ENTRADA TRANSFERENCIA destino + tx.caixa.update decrement origem + tx.caixa.update increment destino } → safeLog → 302 /transferencias",
-        "sprints": ["S07"],
-        "sprintsDependency": "S07 standalone (depende de S06-T05 assertSaldoSuficiente + S07-T01 Zod)",
+        "dataFlow": "ADMIN submete ItemEstoqueCreateSchema (discriminatedUnion tipo=PATRIMONIO, numeroSerie obrigatório) → service `criarItem` (S11-T05) check P2002 unique numeroSerie → assertItemIsPatrimonio no ato da manutenção (helper S12-T04) → assertTransicaoPatrimonioValida(DISPONIVEL, EM_MANUTENCAO) → $transaction { tx.manutencaoAtivo.create + tx.itemEstoque.update(statusPatrimonio=EM_MANUTENCAO) } → safeLog SEM assistenciaTecnica/endereco/custoCentavos → 302 /app/estoque/:id. Retorno: assertTransicaoPatrimonioValida(EM_MANUTENCAO, DISPONIVEL) + validação dataRetorno ≥ dataEnvio → $transaction { tx.manutencaoAtivo.update(dataRetorno=now) + tx.itemEstoque.update(statusPatrimonio=DISPONIVEL) }.",
+        "sprints": [
+          "S11",
+          "S12"
+        ],
+        "sprintsDependency": "S11 entrega criarItem com numeroSerie; S12 entrega enviarParaManutencao + retornarDeManutencao",
         "e2eChains": [
-          "S07-T05 Chain 1 (SECRETARIO transfere, vê toasts)",
-          "S07-T05 Chain 2 (extrato de ambos reflete)",
-          "S07-T05 Chain 6 (atomicidade — smoke)"
+          "S12-T11 (Chain 1 do patrimonio-manutencao.spec.ts — 3 estados)"
         ],
-        "specRef": "PRD D.3 F4, brief §7.3 testes #6 #7 #8",
-        "atomicityRequirement": "5 mutações em 1 $transaction; se 1 falhar, todas revertem (R-FIN-02 — transferência parcial é INACEITÁVEL)",
+        "specRef": "PRD D.4 F5, SPEC E.4 POST /manutencao + /retorno, RAG pattern-patrimonio-status-state-machine",
+        "atomicityRequirement": "2 mutações em 1 $transaction (ManutencaoAtivo + ItemEstoque.statusPatrimonio); se 1 falhar, todas revertem",
         "criticality": "GATE — testado com mock que injeta erro"
       },
       {
-        "id": "CF-FIN-03",
-        "name": "RBAC 3 Camadas — Fidelidade Financeira (RN-MEM-03 — REGRESSÃO DO CICLO 1 + EXTENSÃO S08)",
+        "id": "CF-EST-03",
+        "name": "Baixa por Perda — ADMIN ONLY (RN-EST-05 — BLOQUEADOR teste #11)",
         "sequence": [
-          "Camada 1 (UI): SECRETARIO loga → /app/membros/<id> → aba Fidelidade NÃO renderiza (TabsMembro usa <Can allow={['ADMIN','PASTOR','FINANCEIRO']}>)",
-          "Camada 2 (Loader): SECRETARIO via cookie sid → fetch /app/membros/<id>?tab=fidelidade → loader detecta tab=fidelidade + !canSeeFinancials → throw redirect /app/membros/<id>?tab=dados",
-          "Camada 3 (Service): Bypass programático (curl) → chama getDizimosByMembro diretamente → assertCanSeeFinancials(user) → Response(403)"
+          "POST /login (SECRETARIO) → /app/estoque/:id/baixa → 403 (Camada 2)",
+          "POST /login (PASTOR) → /app/estoque/:id/baixa → 403 (Camada 2)",
+          "POST /login (ADMIN) → /app/estoque/:id/baixa → 200 (form vazio)",
+          "POST /app/estoque/:id/baixa (motivo='Incêndio em 2026-05-15, sem conserto possível') → 302 /app/estoque (lista)",
+          "GET /app/estoque/:id → 404 (item removido — ativo=false)"
         ],
-        "dataFlow": "user.cargo é o pivot. TabsMembro filtra na render (Camada 1, ciclo 1 S03-T07). Loader S08-T05 checa canSeeFinancials (novo helper S08-T02) e redireciona (Camada 2 — UX, não 403). Service S08-T01 chama assertCanSeeFinancials PRIMEIRO (Camada 3 — segurança real).",
-        "sprints": ["S08"],
-        "sprintsDependency": "S08 standalone (substitui placeholder do TabFidelidadeFinanceira de S03)",
+        "dataFlow": "PASTOR/SECRETARIO → loader `assertCanBaixarPerda(user)` em /app/estoque/:id/baixa → 403 IMEDIATO (Camada 2). ADMIN submete BaixaPerdaSchema (motivo min 10 chars) → service `baixaPorPerda` (S12-T06) assertCanBaixarPerda (Camada 3 — APENAS ADMIN) → assertItemIsPatrimonio → assertTransicaoPatrimonioValida(qualquer, BAIXADO_PERDA) → $transaction { tx.manutencaoAtivo.create (foiPerdaTotal=true, motivo implícito via dataEnvio+dataRetorno) + tx.itemEstoque.update(statusPatrimonio=BAIXADO_PERDA, ativo=false — soft-delete) } → safeLog SEM motivo → 302 /app/estoque. Listagem subsequente (apenasAtivos=true por default) exclui item. Cross-sprint com decision-itemEstoque-soft-delete (espelha Caixa.ativo do S06).",
+        "sprints": [
+          "S12"
+        ],
+        "sprintsDependency": "S12 standalone (depende de S11-T05 criarItem + S11-T03 assertCanBaixarPerda helper)",
         "e2eChains": [
-          "S08-T06 Chain 4 (UI ausente)",
-          "S08-T06 Chain 5 (URL redirect)",
-          "S08-T06 Chain 6 (service 403 — bypass programático)"
+          "S12-T11 (Chain 1 do patrimonio-baixa-perda.spec.ts — BLOQUEADOR SECRETARIO 403)",
+          "S12-T11 (Chain 2 — happy path ADMIN)"
         ],
-        "specRef": "PRD D.3 F6, brief §7.3 teste #10, SPEC D.5",
-        "criticality": "GATE — lgpd-officer valida 3 camadas"
+        "specRef": "PRD D.4 F6, brief §7.3 teste #11, SPEC E.4 POST /baixa, RAG pattern-patrimonio-status-state-machine §3.3",
+        "atomicityRequirement": "2 mutações em 1 $transaction (ManutencaoAtivo foiPerdaTotal=true + ItemEstoque statusPatrimonio=BAIXADO_PERDA + ativo=false)",
+        "criticality": "GATE BLOQUEADOR — sem este teste verde (SECRETARIO 403), sprint não fecha"
       },
       {
-        "id": "CF-FIN-04",
-        "name": "Caixa Arquivado rejeita movimentação (RN-FIN-01 + decisão Caixa.ativo — cross-sprint S06/S07)",
+        "id": "CF-EST-04",
+        "name": "Alerta on-consulta RN-EST-04 — manutenção >30d gera Alerta na Central (decisão sem cron)",
         "sequence": [
-          "Admin arquiva Caixa Cantina (S06-T04 + S06-T11 UI)",
-          "Tentar criarLancamento com caixaId = Cantina (S06-T07) → 409 'Caixa arquivado. Movimentações bloqueadas.'",
-          "Tentar transferirEntreCaixas com caixaOrigemId = Cantina OU caixaDestinoId = Cantina (S07-T02) → 409 'Caixa de origem/destino está arquivado.'"
+          "ADMIN envia item para manutenção (S12-T04)",
+          "Time travel (mock ou wait): 31 dias",
+          "POST /login (qualquer perfil autorizado) → GET /app/alertas",
+          "Loader chama `verificarAlertaManutencaoSemPrazo(user)` (S13-T01) → detecta item EM_MANUTENCAO >30d sem prazoTermino → cria Alerta + AlertaDestinatario para ADMIN/PASTOR/SECRETARIO",
+          "GET /app/alertas lista novo alerta com titulo '🚨 URGENTE: Manutenção atrasada há 31 dias — <nome>'"
         ],
-        "dataFlow": "Caixa.ativo = false (soft-delete, decisão PRD D.9 + RAG decision-caixa-soft-delete). assertSaldoSuficiente (S06-T05) checa caixa.ativo ANTES de validar saldo → 409. transferirEntreCaixas (S07-T02) checa ativo de AMBOS os caixas dentro do $transaction → 409. Reabrir (S06-T04 reabrirCaixa) restaura acesso.",
-        "sprints": ["S06", "S07"],
-        "sprintsDependency": "S06-T04 arquivarCaixa/reabrirCaixa; S06-T07 criarLancamento consome assertSaldoSuficiente; S07-T02 transferirEntreCaixas checa dentro de $transaction",
+        "dataFlow": "Decisão consciente do brief §5.1: sem cron job. Gatilho on-consulta em /app/estoque/:id e /app/alertas. Helper `verificarAlertaManutencaoSemPrazo(user)` (S13-T01) — Promise.all 3 etapas (findMany manutenções sem prazo + cálculo diasEmManutencao + idempotência 24h via findFirst alerta.createdAt >= now-24h). Se crítico + sem alerta recente: tx.alerta.create + tx.alertaDestinatario.create (somente 3 perfis manage). Idempotência 24h honrada — 2 visitas em <24h = 1 alerta total. Trade-off aceito: se ninguém consultar a rota, alerta não dispara.",
+        "sprints": [
+          "S12",
+          "S13"
+        ],
+        "sprintsDependency": "S12 entrega enviarParaManutencao (cria ManutencaoAtivo EM_MANUTENCAO); S13 entrega verificarAlertaManutencaoSemPrazo + hook em loaders",
         "e2eChains": [
-          "S06-T14 Chain 7 (caixa arquivado rejeita criarLancamento no form)",
-          "S07-T06 (4 cenários de teste #2 do brief — origem/destino arquivados)"
+          "S13-T01 (teste unit #15: 7 dias → aviso; #17: 31 dias → urgente; #18: idempotência 24h)",
+          "S13-T09 (E2E — admin abre /alertas → vê alerta criado)"
         ],
-        "specRef": "PRD D.7.3 teste #2, PRD D.9 (4 testes de borda)",
-        "criticality": "GATE — testado em S06-T04 + S07-T06"
+        "specRef": "PRD D.4 F7, brief §7.3 testes #15 #17 #18, RAG pattern-manutencao-alerta-manual",
+        "atomicityRequirement": "2 mutações em 1 $transaction (Alerta + AlertaDestinatario[])",
+        "criticality": "GATE — LGPD compliant (destinatários restritos a 3 perfis); 3 testes borda verdes antes de S13 fechar"
       },
       {
-        "id": "CF-FIN-05",
-        "name": "Trava de Saldo no service (RN-FIN-04 — REGRESSÃO CONTÍNUA)",
+        "id": "CF-EST-05",
+        "name": "Item arquivado rejeita movimentação (RN-EST-02 + decision-itemEstoque-soft-delete — cross-sprint S11/S12)",
         "sequence": [
-          "FINANCEIRO tenta criarLancamento com tipo=SAIDA, valorCentavos=1, caixaId=caixa com saldo=0",
-          "criarLancamento chama assertSaldoSuficiente(caixaId, 1, 'ctx') (S06-T05) → throws Response(409, 'Saldo insuficiente...')"
+          "ADMIN arquiva Item (S11-T06 arquivarItem) — soft-delete via ativo=false",
+          "Tentar criarMovimentacao com itemId arquivado (S12-T03) → 409 'Item \"<nome>\" está arquivado e não aceita movimentações.'",
+          "Tentar enviarParaManutencao com itemId arquivado (S12-T04) → 409 'Item arquivado. Aguarde reabrir para manutenção.'",
+          "Reabrir (S11-T06 reabrirItem) → ativo=true → movimentações voltam a ser aceitas"
         ],
-        "dataFlow": "Helper canônico assertSaldoSuficiente (S06-T05) em app/lib/finance.server.ts. É a única porta de entrada para validação de saldo (Camada 3 — service). UI pode desabilitar submit (UX), mas Camada 3 é a real.",
-        "sprints": ["S06"],
-        "sprintsDependency": "S06-T05 (helper) + S06-T07 (criarLancamento usa helper) + S07-T02 (transferirEntreCaixas usa helper)",
+        "dataFlow": "Item.ativo = false (soft-delete, decisão `decision-itemEstoque-soft-delete` espelha `decision-caixa-soft-delete` do S06). assertSaldoQuantidade (S12-T02) checa `item.ativo === false` ANTES de validar saldo → 409. enviarParaManutencao (S12-T04) checa `item.ativo` dentro do $transaction → 409. Reabrir preserva `quantidade`, `statusPatrimonio`, `numeroSerie` (reversibilidade total).",
+        "sprints": [
+          "S11",
+          "S12"
+        ],
+        "sprintsDependency": "S11-T06 arquivarItem/reabrirItem; S12-T02 assertSaldoQuantidade consome `ativo`; S12-T04 enviarParaManutencao checa dentro de $transaction",
         "e2eChains": [
-          "S06-T14 (smoke — implicitamente via criarLancamento test)",
-          "S07-T02 (5 testes de borda: #3 saldo insuficiente, #5 borda exata)"
+          "S11-T11 Chain 8 (cadastro item arquivado)",
+          "S12-T03 teste #14 (cross-sprint — item arquivado rejeita movimentação)"
         ],
-        "specRef": "brief §7.3 teste #3 (BLOQUEADOR — saldo=0 + SAIDA 1 centavo → 409)",
+        "specRef": "PRD D.7.3 teste #14, RAG decision-itemEstoque-soft-delete (espelha decision-caixa-soft-delete)",
+        "criticality": "GATE — testado em S11-T06 + S12-T03 + S12-T04"
+      },
+      {
+        "id": "CF-EST-06",
+        "name": "Trava de Quantidade no service (RN-EST-02 — BLOQUEADOR teste #2 — REGRESSÃO CONTÍNUA)",
+        "sequence": [
+          "SECRETARIO tenta criarMovimentacao com quantidade=-1, itemId=item com saldo=0",
+          "criarMovimentacao chama assertSaldoQuantidade(itemId, -1, 'Movimentação') (S12-T02) → throws Response(409, 'saldo insuficiente...')"
+        ],
+        "dataFlow": "Helper canônico assertSaldoQuantidade em `app/lib/itemEstoque.server.ts`. É a única porta de entrada para validação de saldo (Camada 3 — service). UI pode desabilitar submit (UX), mas Camada 3 é a real. Espelha conceitualmente assertSaldoSuficiente do S06 (Financeiro) mas com sinal — saldo + delta < 0 → 409.",
+        "sprints": [
+          "S12"
+        ],
+        "sprintsDependency": "S12-T02 (helper) + S12-T03 (criarMovimentacao usa helper) — mesma sprint, sequencial",
+        "e2eChains": [
+          "S12-T11 (Chain 2 do estoque-movimentacao.spec.ts — BLOQUEADOR saldo=0 + SAIDA 1 un. → 409)"
+        ],
+        "specRef": "brief §7.3 teste #2 (BLOQUEADOR — saldo=0 + SAIDA 1 un. → 409)",
         "criticality": "GATE BLOQUEADOR — sem este teste verde, sprint não fecha"
       }
     ]
   },
 
   "debtRegistry": {
-    "description": "Débitos técnicos e pendências identificados durante o planejamento do ciclo 2. Severidade define ação.",
+    "description": "Débitos técnicos e pendências identificados durante o planejamento do ciclo 3. Severidade define ação.",
     "items": [
       {
-        "id": "DEBT-016",
+        "id": "DEBT-024",
         "severity": "blocker",
-        "title": "Campo Caixa.ativo não existe no schema (S06-T01 resolve)",
-        "origin": "PRD D.9 (decisão aprovada), SPEC D.2.1 (migration proposta)",
-        "resolution": "S06-T01: migration `add_ativo_to_caixa` adiciona Boolean @default(true) + @@index([ativo])",
-        "blocksSprints": ["S06", "S07"],
-        "note": "Decisão Caixa.ativo APROVADA pelo prd-reviewer (2026-06-14) com score 90"
+        "title": "Campo ItemEstoque.ativo não existe no schema (S11-T01 resolve)",
+        "origin": "PRD D.4 F1 (soft-delete), SPEC E.2.1 (migration proposta), RAG decision-itemEstoque-soft-delete",
+        "resolution": "S11-T01: migration `add_ativo_to_item_estoque` adiciona Boolean @default(true) + @@index([tipo, ativo])",
+        "blocksSprints": [
+          "S11",
+          "S12"
+        ],
+        "note": "Decisão ItemEstoque.ativo APROVADA pelo prd-reviewer (2026-06-19) com score pending"
       },
       {
-        "id": "DEBT-017",
+        "id": "DEBT-025",
         "severity": "major",
-        "title": "Placeholder TabFidelidadeFinanceira ainda ativo (S08-T04 resolve)",
-        "origin": "Ciclo 1, S03-T07 (placeholder aguardando dados reais)",
-        "resolution": "S08-T04: substituir placeholder por implementação real (dados via getDizimosByMembro)",
-        "blocksSprints": ["S08"]
+        "title": "Service `criarMovimentacao` ainda não existe (S12-T03 resolve)",
+        "origin": "Ciclo 1+2 schema tem tabela MovimentacaoEstoque mas zero service",
+        "resolution": "S12-T03: criarMovimentacao com assertSaldoQuantidade + $transaction + nomeRetirante",
+        "blocksSprints": [
+          "S12"
+        ]
       },
       {
-        "id": "DEBT-018",
+        "id": "DEBT-026",
         "severity": "major",
-        "title": "Service getDizimosByMembro é stub (retorna vazio)",
-        "origin": "Ciclo 1, S03-T11 (Camada 3 RBAC pronta, mas corpo é stub)",
-        "resolution": "S08-T01: substituir stub por implementação completa (paginação + resumo mês/ano via Promise.all)",
-        "blocksSprints": ["S08"]
+        "title": "Service `enviarParaManutencao` ainda não existe (S12-T04 resolve)",
+        "origin": "Ciclo 1 schema tem tabela ManutencaoAtivo mas zero service",
+        "resolution": "S12-T04: enviarParaManutencao + retornarDeManutencao + assertTransicaoPatrimonioValida",
+        "blocksSprints": [
+          "S12",
+          "S13"
+        ]
       },
       {
-        "id": "DEBT-019",
+        "id": "DEBT-027",
         "severity": "major",
-        "title": "Helper canSeeFinancials (Camada 2) não existe (S08-T02 resolve)",
-        "origin": "RAG pattern-3-layer-rbac §2.1 (helper UX, não throw)",
-        "resolution": "S08-T02: adicionar `canSeeFinancials(user): boolean` em rbac.server.ts; coexiste com assertCanSeeFinancials",
-        "blocksSprints": ["S08"]
+        "title": "Helper `verificarAlertaManutencaoSemPrazo` ainda não existe (S13-T01 resolve)",
+        "origin": "RN-EST-04 ainda não implementada (sem cron, on-consulta)",
+        "resolution": "S13-T01: helper on-consulta + idempotência 24h + escalonamento 6d/30d",
+        "blocksSprints": [
+          "S13"
+        ]
       },
       {
-        "id": "DEBT-020",
+        "id": "DEBT-028",
+        "severity": "major",
+        "title": "Helper `assertCanBaixarPerda` (ADMIN only) ainda não existe (S11-T03 resolve)",
+        "origin": "RN-EST-05 — Baixa por Perda é única operação restrita a ADMIN",
+        "resolution": "S11-T03: helper em rbac.server.ts + 30 cenários de teste (5 helpers × 6 perfis)",
+        "blocksSprints": [
+          "S12"
+        ]
+      },
+      {
+        "id": "DEBT-029",
         "severity": "minor",
-        "title": "audit log de leitura (LGPD art. 37) — fora do escopo do ciclo 2",
-        "origin": "PRD D.5 não-objetivos #11, brief §8",
-        "resolution": "Fora do ciclo 2. Backlog S09+ (criação de AuditLog table + hook em getDizimosByMembro)",
+        "title": "MVP-DEBT-002 — vitest config sem .tsx (S13-T06 resolve)",
+        "origin": "Ciclo 1 — débitos pré-existentes do MVP",
+        "resolution": "S13-T06: vitest.config.ts → include 'app/**/*.{test,spec}.{ts,tsx}' + jsdom environment",
         "blocksSprints": []
       },
       {
-        "id": "DEBT-021",
+        "id": "DEBT-030",
         "severity": "minor",
-        "title": "Listagem de transferências `/app/financeiro/transferencias` é backlog",
-        "origin": "SPEC D.3.2 menciona a rota mas não é bloqueador; S07-T04 redireciona para /app/financeiro após submit",
-        "resolution": "Backlog S09+. Listagem read-only com filtros por período, caixa origem, caixa destino, operador.",
+        "title": "MVP-DEBT-007 — app/prisma.config.ts duplicado (S13-T06 resolve)",
+        "origin": "Ciclo 0 — duplicata acidental",
+        "resolution": "S13-T06: deletar app/prisma.config.ts, manter raiz",
         "blocksSprints": []
       },
       {
-        "id": "DEBT-022",
+        "id": "DEBT-031",
         "severity": "minor",
-        "title": "Auditoria semanal de reconciliação (R-FIN-08) é backlog",
-        "origin": "PRD D.6 R-FIN-08, brief §8",
-        "resolution": "Fora do ciclo 2. Backlog S09+ (script `pnpm audit:saldo` que reconcilia SUM(Lancamento) vs Caixa.saldoCentavos)",
+        "title": "MVP-DEBT-008 — routes.ts linha 11 trata auth/login como rota (S13-T06 resolve)",
+        "origin": "Ciclo 0 — bug arquitetural",
+        "resolution": "S13-T06: remover tratamento incorreto de /app/api/auth/login.ts em routes.ts",
         "blocksSprints": []
       },
       {
-        "id": "DEBT-023",
+        "id": "DEBT-032",
         "severity": "minor",
-        "title": "Migrar de Float para Decimal — já somos Int em centavos, sem necessidade",
-        "origin": "Brief §6.2 confirmou `Int` em centavos como padrão imutável",
-        "resolution": "N/A — já correto. RAG `convention-monetary-values` §3 documenta.",
+        "title": "Sem sincronização Estoque ↔ Financeiro (backlog)",
+        "origin": "Compra de estoque e manutenção — Lançamento manual pelo FINANCEIRO (enum CategoriaLancamento.COMPRA_ESTOQUE e MANUTENCAO já existem). Integração automática backlog.",
+        "resolution": "Fora do ciclo 3. Backlog S14+ (criação de hook em criarMovimentacao que dispara Lancamento automático COMPRA_ESTOQUE)",
+        "blocksSprints": []
+      },
+      {
+        "id": "DEBT-033",
+        "severity": "minor",
+        "title": "Sem inventário físico mobile (backlog)",
+        "origin": "Reconciliação de estoque",
+        "resolution": "Fora do ciclo 3. Backlog S14+ (script `pnpm audit:estoque` que percorre MovimentacaoEstoque e reconcilia com ItemEstoque.quantidade atual)",
         "blocksSprints": []
       }
     ],
     "statsBySeverity": {
       "blocker": 1,
-      "major": 3,
-      "minor": 4,
-      "total": 8
+      "major": 4,
+      "minor": 5,
+      "total": 10
     }
   },
 
   "taskDependencyGraph": {
-    "description": "DAG de tasks dentro e entre sprints do ciclo 2. Cada task lista dependsOn = IDs de tasks (no mesmo sprint ou sprint anterior).",
+    "description": "DAG de tasks dentro e entre sprints do ciclo 3. Cada task lista dependsOn = IDs de tasks (no mesmo sprint ou sprint anterior).",
     "crossSprintDependencies": [
       {
-        "from": { "sprint": "S06", "task": "S06-T02 (listarCaixas)" },
-        "to": { "sprint": "S06", "task": "S06-T01 (migration)" },
-        "reason": "listarCaixas precisa do campo Caixa.ativo (default true) — depende da migration"
+        "from": {
+          "sprint": "S12",
+          "task": "S12-T02 (assertSaldoQuantidade)"
+        },
+        "to": {
+          "sprint": "S11",
+          "task": "S11-T02 (listarItensEstoque)"
+        },
+        "reason": "helper checa item.ativo === false (default true) e item.tipo === 'CONSUMO' — depende do campo ativo da migration S11-T01"
       },
       {
-        "from": { "sprint": "S06", "task": "S06-T05 (assertSaldoSuficiente)" },
-        "to": { "sprint": "S06", "task": "S06-T01 (migration)" },
-        "reason": "helper checa caixa.ativo === false — depende do campo"
+        "from": {
+          "sprint": "S12",
+          "task": "S12-T03 (criarMovimentacao)"
+        },
+        "to": {
+          "sprint": "S12",
+          "task": "S12-T01 (MovimentacaoCreateSchema) + S12-T02 (assertSaldoQuantidade)"
+        },
+        "reason": "service usa Zod + helper antes do $transaction"
       },
       {
-        "from": { "sprint": "S06", "task": "S06-T07 (criarLancamento)" },
-        "to": { "sprint": "S06", "task": "S06-T05 (assertSaldoSuficiente) + S06-T06 (LancamentoCreateSchema)" },
-        "reason": "service usa helper + valida input via Zod"
+        "from": {
+          "sprint": "S12",
+          "task": "S12-T04 (enviarParaManutencao)"
+        },
+        "to": {
+          "sprint": "S11",
+          "task": "S11-T03 (assertCanSendToMaintenance + assertItemIsPatrimonio) + S11-T04 (ManutencaoCreateSchema)"
+        },
+        "reason": "service chama helpers RBAC + valida input Zod + assertTransicaoPatrimonioValida"
       },
       {
-        "from": { "sprint": "S07", "task": "S07-T02 (transferirEntreCaixas)" },
-        "to": { "sprint": "S06", "task": "S06-T05 (assertSaldoSuficiente) + S07-T01 (TransferenciaCreateSchema)" },
-        "reason": "service chama assertSaldoSuficiente na origem + parse Zod"
+        "from": {
+          "sprint": "S12",
+          "task": "S12-T05 (retornarDeManutencao)"
+        },
+        "to": {
+          "sprint": "S12",
+          "task": "S12-T04 (enviarParaManutencao)"
+        },
+        "reason": "service depende de ManutencaoAtivo criado"
       },
       {
-        "from": { "sprint": "S07", "task": "S07-T04 (rota /transferencias/nova)" },
-        "to": { "sprint": "S07", "task": "S07-T02 (service) + S06-T13 (listarCaixasParaSelect reusado)" },
-        "reason": "rota chama service + reusa helper do S06 para popular selects"
+        "from": {
+          "sprint": "S12",
+          "task": "S12-T06 (baixaPorPerda)"
+        },
+        "to": {
+          "sprint": "S12",
+          "task": "S12-T04 (assertTransicaoPatrimonioValida)"
+        },
+        "reason": "service chama helper state machine + ManutencaoAtivo (criado ou atualizado)"
       },
       {
-        "from": { "sprint": "S08", "task": "S08-T04 (TabFidelidadeFinanceira)" },
-        "to": { "sprint": "S08", "task": "S08-T01 (getDizimosByMembro)" },
-        "reason": "componente consome dados do service"
+        "from": {
+          "sprint": "S13",
+          "task": "S13-T01 (verificarAlertaManutencaoSemPrazo)"
+        },
+        "to": {
+          "sprint": "S12",
+          "task": "S12-T04 (enviarParaManutencao)"
+        },
+        "reason": "helper procura ManutencaoAtivo com dataRetorno=null + prazoTermino=null — depende de itens EM_MANUTENCAO criados em S12"
       },
       {
-        "from": { "sprint": "S08", "task": "S08-T05 (loader membros.$id)" },
-        "to": { "sprint": "S08", "task": "S08-T01 (service) + S08-T02 (canSeeFinancials)" },
-        "reason": "loader chama service + novo helper"
+        "from": {
+          "sprint": "S13",
+          "task": "S13-T02 (listarAlertasCriticosEstoque)"
+        },
+        "to": {
+          "sprint": "S13",
+          "task": "S13-T01 (verificarAlertaManutencaoSemPrazo)"
+        },
+        "reason": "service dispara on-consulta antes de listar — garante que alertas estão atualizados"
+      },
+      {
+        "from": {
+          "sprint": "S13",
+          "task": "S13-T04 (rota /app/estoque/alertas)"
+        },
+        "to": {
+          "sprint": "S13",
+          "task": "S13-T02 (listarAlertasCriticosEstoque)"
+        },
+        "reason": "loader chama service"
+      },
+      {
+        "from": {
+          "sprint": "S13",
+          "task": "S13-T05 (editarItem)"
+        },
+        "to": {
+          "sprint": "S11",
+          "task": "S11-T05 (criarItem)"
+        },
+        "reason": "service é extensão de criarItem — mesmo ItemEstoque, edição parcial"
       }
     ],
     "orphanCheck": {
-      "method": "Validado: cada dependsOn[] em task aponta para task ID que existe (no mesmo sprint ou em sprint anterior). crossSprint deps resolvidas pelo grafo S05→S06→S07→S08.",
+      "method": "Validado: cada dependsOn[] em task aponta para task ID que existe (no mesmo sprint ou em sprint anterior). crossSprint deps resolvidas pelo grafo S08→S11→S12→S13.",
       "result": "0 órfãos detectados",
-      "verification": "Auditoria manual das 29 tasks — todas as dependências têm destino válido"
+      "verification": "Auditoria manual das 33 tasks (14+11+8) — todas as dependências têm destino válido"
     }
   },
 
   "userStoryCoverageMatrix": {
-    "description": "Cada user story do SPEC/PRD ciclo 2 mapeada para tasks específicas que a implementam.",
+    "description": "Cada user story do SPEC/PRD ciclo 3 mapeada para tasks específicas que a implementam.",
     "matrix": [
       {
-        "userStory": "US-FIN-001",
-        "title": "CRUD de Caixas (F1 — RN-FIN-01)",
-        "specSection": "PRD D.3 F1, SPEC D.4",
+        "userStory": "US-EST-001",
+        "title": "CRUD de Item (F1 — RN-EST-01)",
+        "specSection": "PRD D.4 F1, SPEC E.4",
         "primaryTasks": [
-          "S06-T01 (migration add_ativo_to_caixa)",
-          "S06-T02 (listarCaixas service)",
-          "S06-T03 (criarCaixa + assertCanManageCaixa)",
-          "S06-T04 (arquivarCaixa + reabrirCaixa)",
-          "S06-T11 (rotas /caixas lista + /caixas/novo)",
-          "S06-T12 (rota /caixas/:id detalhe + extrato)"
+          "S11-T01 (migration add_ativo_to_item_estoque)",
+          "S11-T02 (listarItensEstoque)",
+          "S11-T05 (criarItem + assertCanManageEstoque)",
+          "S11-T06 (arquivarItem + reabrirItem)",
+          "S11-T07 (getItemEstoqueDetalhe)",
+          "S11-T09 (rota /app/estoque dashboard)",
+          "S11-T10 (rota /app/estoque/novo + /app/patrimonio)"
         ],
         "coverage": "100%",
-        "e2eCoverage": "S06-T14 Chain 3 (SECRETARIO 403 em /novo)"
+        "e2eCoverage": "S11-T11 Chains 1-7 (cadastro + RBAC)"
       },
       {
-        "userStory": "US-FIN-002",
-        "title": "CRUD de Lançamentos (F2 — RN-FIN-01, 04, 05)",
-        "specSection": "PRD D.3 F2, SPEC D.4",
+        "userStory": "US-EST-002",
+        "title": "RBAC fina Estoque (F2 — 5 helpers × 6 perfis × 9 operações)",
+        "specSection": "PRD D.4 F2, SPEC E.4, SPEC E.6",
         "primaryTasks": [
-          "S06-T05 (assertSaldoSuficiente helper)",
-          "S06-T06 (LancamentoCreateSchema Zod + superRefine RN-FIN-05)",
-          "S06-T07 (criarLancamento — $transaction + trava)",
-          "S06-T08 (listarPorCaixa + getCaixaDetalhe)",
-          "S06-T13 (rota /lancamentos/novo + form)"
+          "S11-T03 (5 helpers RBAC novos)",
+          "S11-T09 (loader assertCanSeeEstoque)",
+          "S11-T10 (loader assertCanManageEstoque)",
+          "S12-T04 (assertCanSendToMaintenance)",
+          "S12-T06 (assertCanBaixarPerda — único ADMIN)",
+          "S12-T08 (loaders 4 rotas POST)",
+          "S13-T04 (loader /app/estoque/alertas)"
         ],
         "coverage": "100%",
-        "e2eCoverage": "S06-T14 Chain 1 (métrica macro PARTE 1)"
+        "e2eCoverage": "S11-T11 Chain 3-5 (DISCIPULADOR UI/URL/service 403) + S12-T11 (RBAC fina manutencao + BLOQUEADOR baixaPorPerda)"
       },
       {
-        "userStory": "US-FIN-003",
-        "title": "Dízimos vinculados a Membro (F3 — RN-FIN-05)",
-        "specSection": "PRD D.3 F3, SPEC D.4",
+        "userStory": "US-EST-003",
+        "title": "Diferenciação Consumo vs Patrimônio (F3 — discriminatedUnion Zod)",
+        "specSection": "PRD D.4 F3, SPEC E.5.1, RAG convention-tipos-item-estoque",
         "primaryTasks": [
-          "S06-T06 (LancamentoCreateSchema superRefine — DIZIMO exige membro, OFERTA aceita, DESPESA rejeita)",
-          "S06-T07 (criarLancamento — RN-FIN-05 enforcement)",
-          "S06-T13 (FormLancamento — campo Membro condicional à categoria)"
+          "S11-T04 (ItemEstoqueCreateSchema com discriminatedUnion)",
+          "S11-T05 (criarItem aplica Zod)",
+          "S12-T02 (assertSaldoQuantidade trava PATRIMONIO)",
+          "S12-T04 (assertItemIsPatrimonio trava CONSUMO em manutenção)"
         ],
         "coverage": "100%",
-        "e2eCoverage": "S06-T14 (teste borda #4 DIZIMO sem membro fail)"
+        "e2eCoverage": "S11-T11 Chain 6 (PATRIMONIO sem numeroSerie fail) + S12-T03 teste #7 (PATRIMONIO tentar movimentar fail)"
       },
       {
-        "userStory": "US-FIN-004",
-        "title": "Transferências entre Caixas (F4 — RN-FIN-02)",
-        "specSection": "PRD D.3 F4, SPEC D.4",
+        "userStory": "US-EST-004",
+        "title": "Movimentação de Consumo com trava (F4 — RN-EST-02)",
+        "specSection": "PRD D.4 F4, SPEC E.4 POST /movimentar",
         "primaryTasks": [
-          "S07-T01 (TransferenciaCreateSchema — superRefine origem≠destino + valor > 0)",
-          "S07-T02 (transferirEntreCaixas — 5 mutações em 1 $transaction)",
-          "S07-T03 (FormTransferencia + ModalConfirmarTransferencia)",
-          "S07-T04 (rota /transferencias/nova)",
-          "S07-T05 (E2E atomicidade + 3 testes de borda)"
+          "S12-T01 (MovimentacaoCreateSchema com superRefine nomeRetirante)",
+          "S12-T02 (assertSaldoQuantidade helper)",
+          "S12-T03 (criarMovimentacao — $transaction + trava)",
+          "S12-T07 (FormMovimentacao)",
+          "S12-T08 (rota /app/estoque/:id/movimentar)"
         ],
         "coverage": "100%",
-        "e2eCoverage": "S07-T05 Chains 1, 2, 6 (SECRETARIO transfere, ambos extratos, atomicidade)"
+        "e2eCoverage": "S12-T11 (4 chains estoque-movimentacao.spec.ts — métrica macro + 3 testes borda)"
       },
       {
-        "userStory": "US-FIN-005",
-        "title": "Trava de Saldo no service (F5 — RN-FIN-04)",
-        "specSection": "PRD D.3 F5, SPEC D.4",
+        "userStory": "US-EST-005",
+        "title": "Manutenção Externa com state machine (F5 — RN-EST-03)",
+        "specSection": "PRD D.4 F5, SPEC E.4 POST /manutencao + /retorno",
         "primaryTasks": [
-          "S06-T05 (assertSaldoSuficiente helper canônico)",
-          "S06-T07 (criarLancamento usa helper + re-leitura anti-TOCTOU)",
-          "S07-T02 (transferirEntreCaixas usa helper + re-leitura dentro de $transaction)"
+          "S12-T04 (enviarParaManutencao + assertTransicaoPatrimonioValida)",
+          "S12-T05 (retornarDeManutencao + validação dataRetorno)",
+          "S12-T07 (FormManutencao + FormRetorno)",
+          "S12-T08 (rotas /manutencao + /retorno)"
         ],
         "coverage": "100%",
-        "e2eCoverage": "S06-T07 teste #3 (BLOQUEADOR — saldo=0 + 1 centavo → 409)"
+        "e2eCoverage": "S12-T11 (4 chains patrimonio-manutencao.spec.ts — 3 estados + RBAC + reenvio bloqueado + dataRetorno)"
       },
       {
-        "userStory": "US-FIN-006",
-        "title": "Aba Fidelidade Financeira integrada (F6 — RN-MEM-03)",
-        "specSection": "PRD D.3 F6, SPEC D.4",
+        "userStory": "US-EST-006",
+        "title": "Baixa por Perda (F6 — RN-EST-05 ADMIN ONLY)",
+        "specSection": "PRD D.4 F6, SPEC E.4 POST /baixa",
         "primaryTasks": [
-          "S08-T01 (getDizimosByMembro — substitui stub, paginação + resumo)",
-          "S08-T03 (ResumoFinanceiro + TabelaDizimos + CardDizimo)",
-          "S08-T04 (TabFidelidadeFinanceira — substituir placeholder)",
-          "S08-T05 (loader membros.$id — Camada 2 redirect)"
+          "S12-T06 (baixaPorPerda + soft-delete via ativo=false)",
+          "S12-T07 (FormBaixa + ModalConfirmarBaixa)",
+          "S12-T08 (rota /app/estoque/:id/baixa)"
         ],
         "coverage": "100%",
-        "e2eCoverage": "S08-T06 Chain 7+8 (métrica macro PARTE 2)"
+        "e2eCoverage": "S12-T11 (4 chains patrimonio-baixa-perda.spec.ts — BLOQUEADOR SECRETARIO 403 + happy path + motivo <10 + terminal)"
       },
       {
-        "userStory": "US-FIN-007",
-        "title": "Dashboard de saldos (F7)",
-        "specSection": "PRD D.3 F7, SPEC D.4",
+        "userStory": "US-EST-007",
+        "title": "Alerta Manutenção Sem Prazo (F7 — RN-EST-04)",
+        "specSection": "PRD D.4 F7, SPEC E.4 GET /app/estoque/alertas, RAG pattern-manutencao-alerta-manual",
         "primaryTasks": [
-          "S06-T09 (KpiSaldoTotal + CardSaldoCaixa + UltimasMovimentacoes)",
-          "S06-T10 (rota /app/financeiro + service getDashboardFinanceiro)"
+          "S13-T01 (verificarAlertaManutencaoSemPrazo — on-consulta + idempotência 24h)",
+          "S13-T03 (hook em /app/estoque/:id + /app/alertas loaders)"
         ],
         "coverage": "100%",
-        "e2eCoverage": "S06-T14 (login FINANCEIRO → dashboard)"
+        "e2eCoverage": "S13-T01 + S13-T09 (3 testes borda #15 #17 #18 + E2E alerta aparece em /alertas)"
       },
       {
-        "userStory": "US-FIN-008",
-        "title": "RBAC fina (F8 — 3 camadas)",
-        "specSection": "PRD D.3 F8, SPEC D.5",
+        "userStory": "US-EST-008",
+        "title": "Central de Alertas Críticos do Estoque (F8)",
+        "specSection": "PRD D.4 F7, SPEC E.4 GET /app/estoque/alertas",
         "primaryTasks": [
-          "S06-T03 (assertCanManageCaixa — novo helper)",
-          "S06-T10 (assertCanSeeFinancials no loader + service)",
-          "S06-T11 (rota /caixas — loader assertCanSeeFinancials, action 403 SECRETARIO)",
-          "S06-T12 (rota /caixas/:id — idem)",
-          "S06-T13 (rota /lancamentos/novo — idem)",
-          "S07-T04 (rota /transferencias/nova — idem)",
-          "S08-T05 (loader membros.$id — Camada 2 redirect)"
+          "S13-T02 (listarAlertasCriticosEstoque — 3 tipos + ordenação urgência)",
+          "S13-T04 (rota /app/estoque/alertas + componentes Card/Badge)"
         ],
         "coverage": "100%",
-        "e2eCoverage": "S06-T14, S07-T05, S08-T06 — 100% da matriz §D.5"
+        "e2eCoverage": "S13-T04 testes integração (4 cenários) + E2E (S13-T09)"
       },
       {
-        "userStory": "US-MEM-005 (re-uso)",
-        "title": "Aba Fidelidade Financeira bloqueada (ciclo 1 — métrica macro PARTE 2)",
-        "specSection": "SPEC §6.0, §6.9, §7.3",
+        "userStory": "US-EST-009",
+        "title": "Edição de Item + Cleanup MVP-DEBTs (F9)",
+        "specSection": "SPEC E.4 PUT /app/estoque/:id, SPEC §12.1 pendências",
         "primaryTasks": [
-          "S08-T01 (getDizimosByMembro — Camada 3 assertCanSeeFinancials)",
-          "S08-T04 (TabFidelidadeFinanceira — Camada 1 UI)",
-          "S08-T05 (loader — Camada 2 redirect)"
+          "S13-T05 (rota /app/estoque/:id/editar + ItemEstoqueUpdateSchema)",
+          "S13-T06 (cleanup MVP-DEBTs 002/007/008)",
+          "S13-T07 (atualizar agents/AGENTS.md)"
         ],
-        "coverage": "100% (3 camadas verificadas)",
-        "e2eCoverage": "S08-T06 Chain 4+5+6 (3 vetores de bypass)",
-        "criticality": "GATE — lgpd-officer valida 3 camadas"
+        "coverage": "100%",
+        "e2eCoverage": "S13-T05 testes integração (5 cenários)"
       }
     ],
     "summary": {
-      "totalUserStoriesCycle2": 8,
-      "coveredUserStories": 8,
-      "userStoriesReusedCycle1": 1,
+      "totalUserStoriesCycle3": 9,
+      "coveredUserStories": 9,
+      "userStoriesReusedCycle1_2": 1,
       "coveragePercent": 100,
-      "allAcceptanceCriteriaMet": true
+      "allAcceptanceCriteriaMet": "pending_phase5"
     }
   },
 
   "specAcceptanceCriteriaMapping": {
-    "description": "Cada critério de aceitação do SPEC/PRD ciclo 2 (Apêndice D.4 endpoints + D.7 métricas + D.7.3 testes de borda) mapeado para tasks/testes que o provam.",
+    "description": "Cada critério de aceitação do SPEC/PRD ciclo 3 (Apêndice E.4 endpoints + E.7 métricas + E.7 testes de borda) mapeado para tasks/testes que o provam.",
     "endpoints_coverage": {
-      "total_specced_d4": 12,
-      "covered_in_sprints": 12,
+      "total_specced_e4": 11,
+      "covered_in_sprints": 11,
       "by_sprint": {
-        "S06": [1, 2, 3, 4, 5, 6, 7, 8, 9],
-        "S07": [10, 11, 12],
-        "S08": []
+        "S11": [
+          1,
+          3,
+          5,
+          11
+        ],
+        "S12": [
+          4,
+          7,
+          8,
+          9,
+          10
+        ],
+        "S13": [
+          2,
+          6
+        ]
       },
       "by_endpoint": [
-        { "endpoint": "GET /app/financeiro", "covered_in": "S06-T10" },
-        { "endpoint": "GET /app/financeiro/caixas", "covered_in": "S06-T11" },
-        { "endpoint": "GET /app/financeiro/caixas/nova", "covered_in": "S06-T11" },
-        { "endpoint": "POST /app/financeiro/caixas", "covered_in": "S06-T03 + S06-T11" },
-        { "endpoint": "GET /app/financeiro/caixas/:id", "covered_in": "S06-T12" },
-        { "endpoint": "PATCH /app/financeiro/caixas/:id/arquivar", "covered_in": "S06-T04 + S06-T11/12" },
-        { "endpoint": "PATCH /app/financeiro/caixas/:id/reabrir", "covered_in": "S06-T04 + S06-T11/12" },
-        { "endpoint": "GET /app/financeiro/lancamentos/novo", "covered_in": "S06-T13" },
-        { "endpoint": "POST /app/financeiro/lancamentos", "covered_in": "S06-T07 + S06-T13" },
-        { "endpoint": "GET /app/financeiro/transferencias", "covered_in": "S07-T04 (action redirect — listagem é backlog S09+)" },
-        { "endpoint": "GET /app/financeiro/transferencias/nova", "covered_in": "S07-T04" },
-        { "endpoint": "POST /app/financeiro/transferencias", "covered_in": "S07-T02 + S07-T04" }
+        {
+          "endpoint": "GET /app/estoque",
+          "covered_in": "S11-T09 (loader + dashboard)"
+        },
+        {
+          "endpoint": "GET /app/estoque/alertas",
+          "covered_in": "S13-T04 (rota centralizada de críticos)"
+        },
+        {
+          "endpoint": "GET /app/estoque/novo",
+          "covered_in": "S11-T10 (form de criação)"
+        },
+        {
+          "endpoint": "POST /app/estoque",
+          "covered_in": "S11-T05 (criarItem) + S11-T10 (action)"
+        },
+        {
+          "endpoint": "GET /app/estoque/:id",
+          "covered_in": "S11-T09 (detalhe) + S12-T09 (abas Movimentações/Manutenções)"
+        },
+        {
+          "endpoint": "PUT /app/estoque/:id",
+          "covered_in": "S13-T05 (editarItem + ItemEstoqueUpdateSchema)"
+        },
+        {
+          "endpoint": "POST /app/estoque/:id/movimentar",
+          "covered_in": "S12-T03 (criarMovimentacao) + S12-T08 (action)"
+        },
+        {
+          "endpoint": "POST /app/estoque/:id/manutencao",
+          "covered_in": "S12-T04 (enviarParaManutencao) + S12-T08 (action)"
+        },
+        {
+          "endpoint": "POST /app/estoque/:id/retorno",
+          "covered_in": "S12-T05 (retornarDeManutencao) + S12-T08 (action)"
+        },
+        {
+          "endpoint": "POST /app/estoque/:id/baixa",
+          "covered_in": "S12-T06 (baixaPorPerda) + S12-T08 (action)"
+        },
+        {
+          "endpoint": "GET /app/patrimonio",
+          "covered_in": "S11-T10 (alias UX — lista filtrada tipo=PATRIMONIO)"
+        }
       ]
     },
     "testes_borda_coverage": {
-      "total_brief_7_3": 12,
-      "covered_in_sprints": 12,
+      "total_brief_7_3_estoq_patrim": 18,
+      "covered_in_sprints": 18,
       "by_sprint": {
-        "S06": [3, 4, 5, 9, 11, 12],
-        "S07": [2, 6, 7, 8],
-        "S08": [10]
+        "S11": [
+          1,
+          3,
+          6,
+          9,
+          14,
+          16
+        ],
+        "S12": [
+          2,
+          4,
+          5,
+          7,
+          8,
+          10,
+          11,
+          12,
+          13
+        ],
+        "S13": [
+          15,
+          17,
+          18
+        ]
       },
       "by_test": [
-        { "id": 1, "name": "12 discípulos: passa (regressão ciclo 1)", "covered_in": "ciclo 1 S03 (regressão)" },
-        { "id": 2, "name": "13º discípulo: bloqueia com mensagem clara", "covered_in": "ciclo 1 S03 (regressão)" },
-        { "id": 3, "name": "Saldo=0 + SAIDA R$0,01 → 409 (BLOQUEADOR)", "covered_in": "S06-T05 + S06-T07" },
-        { "id": 4, "name": "DIZIMO sem membro → 400", "covered_in": "S06-T06 + S06-T07" },
-        { "id": 5, "name": "OFERTA sem membro → OK anônimo", "covered_in": "S06-T06 + S06-T07" },
-        { "id": 6, "name": "Transferência origem = destino → 400", "covered_in": "S07-T01 + S07-T02" },
-        { "id": 7, "name": "Transferência valor = 0 → 400", "covered_in": "S07-T01 + S07-T02" },
-        { "id": 8, "name": "Transferência valor negativo → 400", "covered_in": "S07-T01 + S07-T02" },
-        { "id": 9, "name": "SECRETARIO /app/financeiro 403", "covered_in": "S06-T14 Chain 4" },
-        { "id": 10, "name": "SECRETARIO aba Fidelidade (UI+URL+service 403)", "covered_in": "S08-T01 + S08-T05 + S08-T06" },
-        { "id": 11, "name": "DISCIPULADOR /app/financeiro/** 403", "covered_in": "S06-T14 Chain 5" },
-        { "id": 12, "name": "Caixa arquivado rejeita movimentação", "covered_in": "S06-T04 + S06-T07 + S07-T06" }
+        {
+          "id": 1,
+          "name": "PATRIMONIO sem numeroSerie → 422 Zod (RN-EST-01)",
+          "covered_in": "S11-T04 + S11-T05 + S11-T11 (E2E Chain 6)"
+        },
+        {
+          "id": 2,
+          "name": "Saldo=0 + SAIDA 1 un. → 409 (BLOQUEADOR — RN-EST-02)",
+          "covered_in": "S12-T02 + S12-T03 + S12-T11 (E2E Chain 2)"
+        },
+        {
+          "id": 3,
+          "name": "numeroSerie duplicado → 409 (P2002 unique)",
+          "covered_in": "S11-T05 + S11-T11 (E2E Chain 7)"
+        },
+        {
+          "id": 4,
+          "name": "SAIDA sem nomeRetirante → 400 (RN-EST-02)",
+          "covered_in": "S12-T01 + S12-T03 + S12-T11 (E2E Chain 3)"
+        },
+        {
+          "id": 5,
+          "name": "ENTRADA sem nomeRetirante OK (entrada não exige)",
+          "covered_in": "S12-T01 + S12-T03 + S12-T11 (E2E Chain 4)"
+        },
+        {
+          "id": 6,
+          "name": "FINANCEIRO /app/estoque/novo → 403 (Camada 2)",
+          "covered_in": "S11-T10 + S11-T11 (E2E Chain 4)"
+        },
+        {
+          "id": 7,
+          "name": "PATRIMONIO tentar movimentar → 400 (trava tipo)",
+          "covered_in": "S12-T02 + S12-T03"
+        },
+        {
+          "id": 8,
+          "name": "Movimentação quantidade=0 → 400",
+          "covered_in": "S12-T01 + S12-T03"
+        },
+        {
+          "id": 9,
+          "name": "FINANCEIRO service criarItem → 403 (Camada 3)",
+          "covered_in": "S11-T05 + S11-T11 (E2E Chain 5)"
+        },
+        {
+          "id": 10,
+          "name": "FINANCEIRO /app/estoque/:id/manutencao → 403 (Camada 2)",
+          "covered_in": "S12-T08 + S12-T11 (E2E)"
+        },
+        {
+          "id": 11,
+          "name": "SECRETARIO /app/estoque/:id/baixa → 403 (BLOQUEADOR — RN-EST-05 ADMIN only)",
+          "covered_in": "S12-T06 + S12-T08 + S12-T11 (E2E Chain 1)"
+        },
+        {
+          "id": 12,
+          "name": "Item EM_MANUTENCAO tentar enviar de novo → 409 (transição inválida)",
+          "covered_in": "S12-T04 + S12-T11 (E2E Chain 3)"
+        },
+        {
+          "id": 13,
+          "name": "BAIXADO_PERDA tentar enviar manutenção → 409 (terminal)",
+          "covered_in": "S12-T04 + S12-T11 (E2E Chain 4)"
+        },
+        {
+          "id": 14,
+          "name": "PATRIMONIO arquivado bloqueia movimentação (RN-EST-02 + decision-soft-delete)",
+          "covered_in": "S11-T06 (reabrirItem) + S12-T02 (assertSaldoQuantidade) + S12-T03"
+        },
+        {
+          "id": 15,
+          "name": "Item EM_MANUTENCAO há 7 dias sem prazo → cria alerta 'aviso' (RN-EST-04)",
+          "covered_in": "S13-T01 + S13-T03 (loader hook)"
+        },
+        {
+          "id": 16,
+          "name": "DISCIPULADOR /app/estoque/novo → 403 em todas as 3 camadas",
+          "covered_in": "S11-T10 (loader) + S11-T05 (service) + S11-T11 (E2E)"
+        },
+        {
+          "id": 17,
+          "name": "Item EM_MANUTENCAO há 31 dias sem prazo → cria alerta 'URGENTE' (RN-EST-04)",
+          "covered_in": "S13-T01 + S13-T03 (loader hook)"
+        },
+        {
+          "id": 18,
+          "name": "Idempotência: 2ª verificação < 24h → 0 alertas criados (RN-EST-04)",
+          "covered_in": "S13-T01 (idempotência 24h via findFirst alerta.createdAt >= now-24h)"
+        }
+      ]
+    },
+    "rns_coverage": {
+      "total_rns_estoq_patrim": 5,
+      "covered_in_sprints": 5,
+      "by_sprint": {
+        "S11": [
+          "RN-EST-01"
+        ],
+        "S12": [
+          "RN-EST-02",
+          "RN-EST-03",
+          "RN-EST-05"
+        ],
+        "S13": [
+          "RN-EST-04"
+        ]
+      },
+      "by_rn": [
+        {
+          "rn": "RN-EST-01",
+          "title": "Escopo dual (Consumo vs Patrimônio)",
+          "covered_in": "S11-T04 (discriminatedUnion Zod) + S11-T05 (criarItem) + S11-T11 (E2E)"
+        },
+        {
+          "rn": "RN-EST-02",
+          "title": "Restrição de baixa de consumo (trava quantidade + nomeRetirante)",
+          "covered_in": "S12-T01 (MovimentacaoCreateSchema) + S12-T02 (assertSaldoQuantidade) + S12-T03 (criarMovimentacao) + S12-T11 (E2E BLOQUEADOR)"
+        },
+        {
+          "rn": "RN-EST-03",
+          "title": "Manutenção externa (state machine patrimônio)",
+          "covered_in": "S12-T04 (enviarParaManutencao + assertTransicaoPatrimonioValida) + S12-T05 (retornarDeManutencao) + S12-T11 (E2E)"
+        },
+        {
+          "rn": "RN-EST-04",
+          "title": "Alerta Manutenção Sem Prazo (on-consulta + idempotência 24h)",
+          "covered_in": "S13-T01 (verificarAlertaManutencaoSemPrazo) + S13-T03 (loader hook) + S13-T09 (E2E)"
+        },
+        {
+          "rn": "RN-EST-05",
+          "title": "Baixa por Perda (ADMIN ONLY)",
+          "covered_in": "S11-T03 (assertCanBaixarPerda helper) + S12-T06 (baixaPorPerda) + S12-T11 (E2E BLOQUEADOR SECRETARIO 403)"
+        }
       ]
     },
     "summary": {
-      "totalEndpoints": 12,
-      "endpointsWithProvenImplementation": 12,
-      "totalTestesBorda": 12,
-      "testesBordaWithProvenImplementation": 12,
+      "totalEndpoints": 11,
+      "endpointsWithProvenImplementation": 11,
+      "totalTestesBorda": 18,
+      "testesBordaWithProvenImplementation": 18,
+      "totalRns": 5,
+      "rnsWithProvenImplementation": 5,
       "endpointsCoveragePercent": 100,
-      "testesBordaCoveragePercent": 100
+      "testesBordaCoveragePercent": 100,
+      "rnsCoveragePercent": 100
     }
   },
 
   "stats": {
     "totalSprints": 3,
-    "totalTasks": 29,
-    "totalEstimatedHours": 120,
-    "totalEstimatedDays": 15,
-    "criticalPathHours": 120,
-    "totalRAGsReferenced": 11,
-    "ragsCiclo2Referenced": 4,
-    "ragsCiclo1Referenced": 7,
-    "totalCrossSprintFlows": 5,
-    "totalUserStories": 8,
-    "userStoriesReusedFromCycle1": 1,
+    "totalTasks": 33,
+    "totalEstimatedHours": 176,
+    "totalEstimatedDays": 22,
+    "criticalPathHours": 176,
+    "totalRAGsReferenced": 14,
+    "ragsCiclo3Referenced": 4,
+    "ragsCiclo1_2Referenced": 10,
+    "totalCrossSprintFlows": 6,
+    "totalUserStories": 9,
+    "userStoriesReusedFromCycle1_2": 1,
     "userStoryCoveragePercent": 100,
-    "totalSpecEndpoints": 12,
+    "totalSpecEndpoints": 11,
     "endpointCoveragePercent": 100,
-    "totalTestesBorda": 12,
+    "totalTestesBorda": 18,
     "testesBordaCoveragePercent": 100,
-    "totalDebts": 8,
+    "totalRns": 5,
+    "rnsCoveragePercent": 100,
+    "totalDebts": 10,
     "blockerDebts": 1,
-    "majorDebts": 3,
-    "minorDebts": 4
+    "majorDebts": 4,
+    "minorDebts": 5
   },
 
   "validationChecklist": {
@@ -507,6 +881,7 @@
     "specCoverage100Percent": true,
     "prdCoverage100Percent": true,
     "testesBordaCoverage100Percent": true,
+    "rnsCoverage100Percent": true,
     "ragsReferencesValid": true,
     "dependenciesValid": true,
     "readyForCoverageCheck": true

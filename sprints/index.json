@@ -1,179 +1,167 @@
 {
-  "_type": "harness-sprints-index-v6-cycle2",
-  "generatedAt": "2026-06-19T17:31:27.591559Z",
-  "generatedBy": "orchestrator (cycle 2)",
+  "_type": "harness-sprints-index-v6-cycle3",
+  "generatedAt": "2026-06-19T22:00:00Z",
+  "generatedBy": "harness-sprint-tasker (cycle 3)",
   "phase": "phase.4.planejamento",
-  "cycle": 2,
-  "scope": "financeiro",
+  "cycle": 3,
+  "scope": "estoque+patrimonio",
   "totalSprints": 3,
-  "totalEstimatedHours": 120,
-  "totalEstimatedDays": 15,
+  "totalEstimatedHours": 176,
+  "totalEstimatedDays": 22,
   "sprints": [
     {
-      "id": "S06",
-      "name": "Foundation Financeiro — Caixas + Lançamentos + Dashboard",
+      "id": "S11",
+      "name": "Foundation Estoque + Patrimônio — CRUD Item + RBAC 3 camadas + Migration",
+      "status": "pending",
+      "estimatedHours": 72,
+      "estimatedDays": 9,
+      "dependsOn": [
+        "S08"
+      ],
+      "totalTasks": 14,
+      "owner": "sprint-tasker",
+      "scope": "Migration ItemEstoque.ativo + CRUD Item + 5 helpers RBAC + Schemas Zod + Dashboard + Lista + Detalhe + Criar + Patrimônio (alias)",
+      "specCoverage": {
+        "endpoints_specced_e4": [
+          1,
+          3,
+          5,
+          11
+        ],
+        "testes_borda_cobertos": [
+          1,
+          3,
+          6,
+          9,
+          14,
+          16
+        ],
+        "rns_implemented": [
+          "RN-EST-01"
+        ]
+      },
+      "userStories": [
+        "US-EST-001 (F1 — CRUD de Item de Estoque + Patrimônio)",
+        "US-EST-002 (F2 — RBAC fina — 6 perfis × 9 operações)",
+        "US-EST-003 (F3 — Diferenciação Consumo vs Patrimônio)"
+      ],
+      "artifacts": [],
+      "milestone": "M1 — Foundation (Item CRUD + RBAC 3 camadas)",
+      "promptRef": "sprints/S11.json"
+    },
+    {
+      "id": "S12",
+      "name": "Movimentações + Manutenção + Baixa por Perda — RN-EST-02/03/05",
       "status": "pending",
       "estimatedHours": 64,
       "estimatedDays": 8,
       "dependsOn": [
-        "S05"
+        "S11"
       ],
-      "totalTasks": 15,
+      "totalTasks": 11,
       "owner": "sprint-tasker",
-      "scope": "Caixas + Lançamentos + Dashboard + RBAC 3 camadas",
+      "scope": "criarMovimentacao (RN-EST-02 trava) + enviar/retornar manutencao (RN-EST-03) + baixaPorPerda (RN-EST-05 ADMIN only) + 4 rotas POST + componentes Form",
       "specCoverage": {
-        "endpoints_specced_d4": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
+        "endpoints_specced_e4": [
           7,
           8,
-          9
-        ],
-        "testes_borda_cobertos": [
-          3,
-          4,
-          5,
           9,
-          11,
-          12
-        ],
-        "rns_implemented": [
-          "RN-FIN-01",
-          "RN-FIN-04",
-          "RN-FIN-05"
-        ]
-      },
-      "userStories": [
-        "US-FIN-001",
-        "US-FIN-002",
-        "US-FIN-003",
-        "US-FIN-005",
-        "US-FIN-007",
-        "US-FIN-008"
-      ],
-      "artifacts": [],
-      "milestone": "M1 — Foundation (Caixas + Lançamentos + Dashboard)",
-      "promptRef": "sprints/S06.json"
-    },
-    {
-      "id": "S07",
-      "name": "Transferências entre Caixas (RN-FIN-02 atômico)",
-      "status": "pending",
-      "estimatedHours": 32,
-      "estimatedDays": 4,
-      "dependsOn": [
-        "S06"
-      ],
-      "totalTasks": 7,
-      "owner": "sprint-tasker",
-      "scope": "Transferência atômica 1+2+2 em $transaction",
-      "specCoverage": {
-        "endpoints_specced_d4": [
           10,
-          11,
-          12
+          4
         ],
         "testes_borda_cobertos": [
           2,
-          6,
+          4,
+          5,
           7,
-          8
+          8,
+          10,
+          11,
+          12,
+          13
         ],
         "rns_implemented": [
-          "RN-FIN-02",
-          "RN-FIN-03",
-          "RN-FIN-04 (em transferência)"
+          "RN-EST-02",
+          "RN-EST-03",
+          "RN-EST-05"
         ]
       },
       "userStories": [
-        "US-FIN-004",
-        "US-FIN-005",
-        "US-FIN-008"
+        "US-EST-004 (F4 — Movimentação de Consumo com trava)",
+        "US-EST-005 (F5 — Manutenção externa com state machine)",
+        "US-EST-006 (F6 — Baixa por Perda — ADMIN only)"
       ],
       "artifacts": [],
-      "milestone": "M2 — Transferências",
-      "promptRef": "sprints/S07.json"
+      "milestone": "M2 — Movimentações + Manutenção + Baixa (regras de negócio)",
+      "promptRef": "sprints/S12.json"
     },
     {
-      "id": "S08",
-      "name": "Fidelidade Financeira — Integração com aba de Membro (RN-MEM-03)",
+      "id": "S13",
+      "name": "Alertas Manutenção Sem Prazo + Dashboard Final + Cleanup MVP-DEBTs",
       "status": "pending",
-      "estimatedHours": 24,
-      "estimatedDays": 3,
+      "estimatedHours": 40,
+      "estimatedDays": 5,
       "dependsOn": [
-        "S07"
+        "S12"
       ],
-      "totalTasks": 7,
+      "totalTasks": 8,
       "owner": "sprint-tasker",
-      "scope": "Substituir placeholder do TabFidelidadeFinanceira; 3 camadas RBAC; métrica macro PARTE 2",
+      "scope": "RN-EST-04 (alerta on-consulta + idempotência 24h) + rota /app/estoque/alertas + edição item + cleanup 3 débitos MVP",
       "specCoverage": {
-        "endpoints_specced_d4": [],
-        "endpoints_reused": "Aba Fidelidade reusa rota existente /app/membros/:id (ciclo 1)",
+        "endpoints_specced_e4": [
+          2,
+          6
+        ],
         "testes_borda_cobertos": [
-          10
+          15,
+          17,
+          18
         ],
         "rns_implemented": [
-          "RN-MEM-03 (3 camadas)",
-          "RN-FIN-05 (filtro DIZIMO)"
+          "RN-EST-04"
+        ],
+        "mvp_debts_addressed": [
+          "MVP-DEBT-002",
+          "MVP-DEBT-007",
+          "MVP-DEBT-008"
         ]
       },
       "userStories": [
-        "US-FIN-006",
-        "US-FIN-008",
-        "US-MEM-005"
+        "US-EST-007 (F7 — Alerta de manutenção sem prazo)",
+        "US-EST-008 (F8 — Central de Alertas Críticos do Estoque)",
+        "US-EST-009 (F9 — Edição de Item + Cleanup MVP-DEBTs)"
       ],
       "artifacts": [],
-      "milestone": "M3 — Fidelidade Financeira (métrica macro fechada)",
-      "promptRef": "sprints/S08.json"
-    },
-    {
-      "id": "S09",
-      "name": "MVP Cleanup — Sync Débitos",
-      "status": "in_progress",
-      "coverage": null,
-      "testsPassing": null,
-      "gate": "pending",
-      "reworkApplied": false,
-      "artifacts": []
-    },
-    {
-      "id": "S10",
-      "name": "MVP Cleanup Final — DI + helpers",
-      "status": "completed",
-      "coverage": null,
-      "testsPassing": 1037,
-      "testsFailing": 74,
-      "gate": "partial (95→74 failing)",
-      "reworkApplied": false,
-      "artifacts": []
+      "milestone": "M3 — Alertas + Cleanup + Gate Final",
+      "promptRef": "sprints/S13.json"
     }
   ],
   "summary": {
     "totalSprintsCompleted": 0,
-    "sprintsCycle2": [
-      "S06",
-      "S07",
-      "S08"
+    "sprintsCycle3": [
+      "S11",
+      "S12",
+      "S13"
     ],
-    "cycle2Status": "COMPLETED + S09 cleanup (partial)",
-    "mvpStatus": "MODULE FINANCEIRO READY",
-    "module": "financeiro"
+    "cycle3Status": "PLANNING COMPLETE (Phase 4) — awaiting Phase 5 fan-out",
+    "mvpStatus": "MODULE ESTOQUE+PATRIMONIO PLANNED (S11-S13 ready for execution)",
+    "module": "estoque+patrimonio"
   },
   "definitionOfDone": [
-    "100% SPEC D.4 coverage (12/12 endpoints do SPEC mapeados para tasks)",
-    "100% PRD D.3 coverage (8/8 features do PRD mapeados para tasks)",
-    "12/12 testes de borda do brief §7.3 cobertos (distribuídos pelos 3 sprints)",
-    "RBAC 3 camadas (UI + loader + service) verificada em todas as rotas /app/financeiro/** e /app/membros/:id?tab=fidelidade",
-    "Trava de saldo no service (assertSaldoSuficiente + re-leitura anti-TOCTOU)",
-    "Atomicidade de transferência (5 mutações em 1 $transaction)",
-    "Métrica macro do brief §7.1 fechada (FINANCEIRO lança dízimo + PASTOR vê na aba Fidelidade em < 2 min)",
-    "Cobertura ≥ 85% global, 100% em services (caixas, lancamentos, transferencias, finance, rbac)",
+    "100% SPEC E.4 coverage (11/11 endpoints do Apêndice Estoque mapeados para tasks)",
+    "100% PRD §5.3 coverage (5/5 RN-EST-01 a 05 implementadas e testadas)",
+    "18/18 testes de borda do brief §7.3 estoq+patrim cobertos (distribuídos pelos 3 sprints)",
+    "RBAC 3 camadas (UI + loader + service) verificada em todas as rotas /app/estoque/** e /app/patrimonio",
+    "Trava de quantidade no service (assertSaldoQuantidade + re-leitura anti-TOCTOU) — espelha assertSaldoSuficiente do ciclo 2",
+    "Atomicidade de movimentação (2 mutações: MovimentacaoEstoque + ItemEstoque) e manutenção (2 mutações: ManutencaoAtivo + ItemEstoque)",
+    "State machine de patrimônio (assertTransicaoPatrimonioValida) com 6 transições válidas + BAIXADO_PERDA terminal",
+    "Baixa por Perda única restrita a ADMIN (RN-EST-05) — assertCanBaixarPerda em 3 camadas",
+    "Alerta on-consulta (RN-EST-04) sem cron job — decisão consciente do brief §5.1; idempotência 24h + escalonamento 6d/30d",
+    "discriminatedUnion Zod (CONSUMO vs PATRIMONIO) — pattern-convention-tipos-item-estoque",
+    "Cobertura ≥ 85% global, 100% em services (itemEstoque, movimentacao, patrimonio, manutencao)",
     "0 vuln critical/high (security audit por sprint)",
-    "LGPD compliant (3 decisões verificadas: sem CPF, dízimos restritos, logs sem PII)",
-    "Planning-reviewer score ≥ 70 (revisão de S06, S07, S08)"
+    "LGPD compliant (sem CPF/RG/CNPJ; logs sem PII; destinatários de alertas restritos a 3 perfis)",
+    "3 MVP-DEBTs remanescentes endereçados em S13 (vitest .tsx, app/prisma.config.ts, routes.ts bug)",
+    "Planning-reviewer score ≥ 70 (revisão de S11, S12, S13)"
   ]
 }

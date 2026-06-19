@@ -1,26 +1,28 @@
-# Brief — Igreja Conect — Ciclo 2: Módulo Financeiro
+# Brief — Igreja Conect — Ciclo 3: Módulo Estoque + Patrimônio
 
-> **Escopo deste brief:** Módulo Financeiro (ciclo 2 do Harness v6).
-> **Data:** 2026-06-14.
-> **Autor:** `harness-briefing` agent (Fase 0, ciclo 2).
+> **Escopo deste brief:** Módulo de Estoque (Consumo + Patrimônio) com Manutenção Externa e Baixa por Perda. **RNs já documentadas** em `docs/REGRAS_DE_NEGOCIO.md §3` (`RN-EST-01` a `RN-EST-05`). **Schema Prisma já pronto** com `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo`, `TipoItemEstoque`, `StatusItemPatrimonio`.
+>
+> **Data:** 2026-06-19.
+> **Autor:** `harness-briefing` agent (Fase 0, ciclo 3).
 > **Estado:** aguardando `user-approval` para iniciar Fase 1 (Documentação).
-> **Versão:** 1.0 (ciclo 2).
-> **Cross-ref ao ciclo anterior:** [`brief-mvp.md`](./brief-mvp.md) — stub histórico do ciclo 1 (Auth + Membros + Discipulado + Alertas + Acolhimento, `gate: all-of passed` em 2026-06-13).
+> **Versão:** 1.0 (ciclo 3).
+> **Cross-ref aos ciclos anteriores:**
+> - [`brief-mvp.md`](./brief-mvp.md) — ciclo 1 (Auth + Membros + Discipulado + Alertas + Acolhimento, `gate: all-of passed` em 2026-06-13).
+> - [`brief-mvp-financeiro.md`](./brief-mvp-financeiro.md) — ciclo 2 (Caixas + Lançamentos + Transferências + Fidelidade, `gate: all-of passed` em 2026-06-19, 1115 testes passando, 2 sprints de rework aplicadas).
 
 ---
 
 ## 1. Contexto e propósito do ciclo
 
-O **ciclo 1 do Harness v6** (S00–S05) entregou o **MVP** da Igreja Conect: autenticação por session cookie, cadastro de membros com discipulado limitado a 12 discípulos, central de alertas, configuração de acolhimento de visitantes e a matriz RBAC de 6 perfis com **defesa em profundidade em 3 camadas** (UI → loader → service). Ao final do ciclo 1: 905 testes passando, cobertura de linhas 88,21%, `gate: all-of passed`.
+O **ciclo 1** entregou o MVP: auth + membros + discipulado + alertas + acolhimento (872 unit + 28 E2E + 5 smoke, cobertura 88,21%, `gate: all-of passed`).
 
-O **ciclo 2** tem escopo único e bem delimitado: **implementar o Módulo Financeiro**, cujas 5 regras de negócio (`RN-FIN-01` a `RN-FIN-05`) já estão **documentadas, com schema Prisma pronto e sem UI nem service**. A infraestrutura crítica para o ciclo já existe:
+O **ciclo 2** entregou o Módulo Financeiro: caixas + lançamentos + transferências + fidelidade (1115 testes, 96% cobertura/sprint, `gate: all-of passed` em S06–S08 + cleanup S09–S10).
 
-- **Schema Prisma** já contém `Caixa`, `TransferenciaCaixa` e `Lancamento` (com `Int` em centavos e 7 valores em `CategoriaLancamento`).
-- **RAGs** [`security-rbac-matrix.md`](./.harness/RAG/security-rbac-matrix.md) e [`convention-monetary-values.md`](./.harness/RAG/convention-monetary-values.md) já estão `approved` e definem padrões não-negociáveis (defesa em 3 camadas, helpers de dinheiro, trava de saldo).
-- **Aba "Fidelidade Financeira"** já existe na ficha do membro, restrita aos perfis `ADMIN`, `PASTOR`, `FINANCEIRO` (RN-MEM-03), em formato placeholder aguardando dados reais.
-- **Service `getDizimosByMembro`** já aplica `assertCanSeeFinancials` como Camada 3, retornando `[]` (placeholder).
+O **ciclo 3** entrega o **Módulo de Estoque (Consumo) + Patrimônio (com manutenção e baixa por perda)**. O ciclo 3 é de **execução**: 5 RNs já estão formalizadas, schema Prisma já tem os 3 models + 2 enums, e a matriz RBAC fina já está mapeada no `ARCH.md §6.1`. O custo é implementar services + UI + testes, sem nova decisão arquitetural.
 
-O propósito do ciclo 2 é, portanto, **executar o que a Fase 0 do ciclo 1 já planejou**, sem expansão de requisitos não-ditos. Não há nova decisão arquitetural a tomar — toda decisão de modelagem, segurança, dinheiro e RBAC já foi tomada.
+### Por que Estoque agora
+
+Igrejas médias-grandes têm 2 estoques reais e muitas vezes invisíveis: (a) **almoxarifado de Consumo** (limpeza, papelaria, ceia, som) controlado em caderno; (b) **patrimônio físico** (cadeiras, som, projetores, instrumentos) controlado em planilha paralela sem foto, sem histórico de manutenção, sem alerta de "esquecido na assistência técnica". O módulo resolve os 3 problemas clássicos do fluxo de patrimônio: **rastreabilidade de onde está cada bem**, **histórico de manutenções**, **controle de perdas com justificativa formal**.
 
 ---
 
@@ -28,180 +30,205 @@ O propósito do ciclo 2 é, portanto, **executar o que a Fase 0 do ciclo 1 já p
 
 ### 2.1 Problema
 
-A igreja opera hoje o controle financeiro em planilhas paralelas, cadernos físicos ou mesmo na memória do pastor/tesoureiro. Isso gera três riscos concretos:
-
-1. **Risco de governança:** sem trava automatizada, saídas podem ser aprovadas sem saldo no caixa — risco financeiro real.
-2. **Risco pastoral:** o histórico de dízimos é informação sensível (RN-MEM-03). Sem controle de acesso adequado, um vazamento destrói a confiança da congregação e infringe LGPD (Art. 18 e 31).
-3. **Risco operacional:** sem registro imutável de transferências entre caixas (RN-FIN-02), não há como auditar movimentações suspeitas.
+1. **Consumo sem controle:** sem trava automatizada, saídas de material acontecem sem registro de quem retirou — risco de desperdício, sumiço e falta de auditoria.
+2. **Patrimônio sem paradeiro:** "onde está o projetor BenQ que sumiu do inventário?" — sem status atualizado e sem histórico de manutenção, não há como responder.
+3. **Manutenção sem retorno:** equipamento enviado para assistência técnica em março/2025 sem prazo termina esquecido em abril/2026. Sem alerta recorrente, ninguém cobra.
+4. **Perda sem rasto:** baixa por perda é feita em planilha à parte, sem laudo arquivado, sem notificação — risco pastoral e contábil.
 
 ### 2.2 Oportunidade
 
-O **schema já está pronto, os RAGs já estão aprovados, a aba já está restrita ao perfil correto, e a Camada 3 do RBAC já está codificada**. O custo deste ciclo é **executar o que está planejado**, não arquitetar. Estimativa: 3–5 sprints (S06–S10, a ser refinado na Fase 4 — Planejamento).
+- **Schema 100% pronto:** `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo` + 2 enums já existem em `prisma/schema.prisma:232–289`. **Zero migration de model.**
+- **5 RNs documentadas** em `docs/REGRAS_DE_NEGOCIO.md §3` (`RN-EST-01` a `RN-EST-05`).
+- **Matriz RBAC fina já mapeada** em `ARCH.md §6.1` (linha 220–223): Consumo (✅ ADMIN, 👁 PASTOR, ✅ SECRETARIO, 👁 outros), Patrimônio CRUD (✅ ADMIN, ✅ SECRETARIO, 👁 outros), Manutenção Baixa (✅ ADMIN only).
+- **Integração com Módulo Financeiro já possível:** o enum `CategoriaLancamento` já tem `COMPRA_ESTOQUE` e `MANUTENCAO` (do ciclo 2). Apenas o fluxo de "ao confirmar manutenção, lançar despesa" **fica fora do MVP** (ciclo futuro).
+- **Integração com Alertas:** `Alerta` + `AlertaDestinatario` já existem (ciclo 1). **RN-EST-04** (alerta recorrente sem prazo) pode ser entregue de forma simplificada: alerta manual disparado quando alguém consulta o item há >30 dias (sem cron nesta entrega).
 
-### 2.3 Restrições herdadas (do ciclo 1, imutáveis)
+### 2.3 Restrições herdadas (imutáveis dos ciclos 1 e 2)
 
-- **Stack:** React Router 7.16 SSR + Prisma 7.8 + SQLite + Tailwind 4 + Vite 8 + TypeScript 5.9.
-- **Monólito modular, sem microsserviço.** Sem Redis, sem message broker, sem upload S3 neste ciclo.
-- **Defesa em profundidade em 3 camadas é obrigatória** (UI → loader → service) — qualquer caminho de leitura ou escrita de `Lancamento`/`Caixa`/`TransferenciaCaixa` deve aplicar a checagem adequada.
-- **Valores monetários são `Int` em centavos** com sufixo `Centavos`. Conversão só na borda (form parse → cents, cents → `formatBRLFromCents`).
-- **LGPD:** `valorCentavos` é dado financeiro e **não pode aparecer em log de auditoria**. Lock de saldo no **service**, não na UI.
+- **Stack:** React Router 7.17 SSR + Prisma 7.8 + SQLite + Tailwind 4 + Vite 8 + TypeScript 5.9 strict. **Monólito modular.** Sem microsserviço, sem Redis, sem message broker.
+- **Defesa em profundidade em 3 camadas** (UI → loader → service). Padrão `assertCan*` em `app/lib/rbac.server.ts`.
+- **LGPD estrito:** sem CPF/RG/CNPJ. `ItemEstoque` não tem dados pessoais (apenas `nomeRetirante` textual livre na movimentação, **não** vincula a `Membro`).
+- **Sem upload S3/MinIO:** o campo `ManutencaoAtivo.urlLaudoTecnico` existe no schema mas **fica null** neste ciclo (será preenchido em ciclo futuro, RN-EST-05 backlog). Mesma decisão para foto de patrimônio.
+- **`pnpm dev` quebrado:** usar `pnpm build && pnpm start`.
 
 ---
 
 ## 3. Usuários primários
 
-| Persona | Perfil RBAC | Papel no módulo Financeiro | Frequência |
-|---------|-------------|---------------------------|------------|
-| **Tesoureiro(a)** | `FINANCEIRO` | Operador do dia-a-dia: lança dízimos, ofertas, despesas, faz transferências entre caixas, consulta saldos. Pode criar e arquivar caixas. | Diária |
-| **Secretário(a)** | `SECRETARIO` | Lança despesas operacionais e transferências, com **trava de saldo** (RN-FIN-03). **NÃO** pode ver histórico de dízimos de um membro (RN-MEM-03). **NÃO** pode criar/arquivar caixas. | Diária |
-| **Pastor** | `PASTOR` | Visão pastoral eclesiástica. Acompanha dízimos de membros da sua congregação. Pode criar/arquivar caixas. CRUD total no módulo. | Semanal |
-| **Administrador** | `ADMIN` | Configura a estrutura: cria caixas, arquiva caixas, ajusta regras. Visão total. Auditoria. | Sob demanda |
-| **Discipulador** | `DISCIPULADOR` | **BLOQUEADO** no módulo Financeiro. Não vê, não lança, não transfere. (RN-MEM-03) | — |
-| **Líder de Ministério** | `LIDER_MINISTERIO` | **BLOQUEADO** no módulo Financeiro. (RN-MEM-03) | — |
+| Persona | Perfil RBAC | Papel no módulo | Frequência |
+|---|---|---|---|
+| **Almoxarife / Secretário(a)** | `SECRETARIO` | Operador do dia-a-dia: cadastra itens de Consumo, registra entradas e saídas com nome do retirante, autoriza retiradas. Consulta Patrimônio. | Diária |
+| **Pastor / Administrador** | `ADMIN` | CRUD total em ambos os tipos. Único perfil que pode fazer **baixa por perda** (RN-EST-05). | Semanal |
+| **Pastor** | `PASTOR` | CRUD total + leitura. Pode enviar patrimônio para manutenção externa (RN-EST-03). | Semanal |
+| **Líder de Ministério** | `LIDER_MINISTERIO` | **Somente leitura** (consulta para "onde está o microfone do louvor?"). | Sob demanda |
+| **Discipulador / Tesoureiro** | `DISCIPULADOR` / `FINANCEIRO` | **Somente leitura** em ambos os tipos. | Sob demanda |
 
-**Observação LGPD:** o `DISCIPULADOR` e o `LIDER_MINISTERIO` realizam CRUD de Membros (com escopo: discípulos / membros do seu ministério), mas **nunca** tocam dados financeiros. A defesa em 3 camadas cobre esse isolamento.
+**Observação crítica:** o módulo é **majoritariamente leitura** para 4 dos 6 perfis. O CRUD ativo se concentra em `ADMIN`, `PASTOR` e `SECRETARIO` — convergência operacional que simplifica a matriz.
 
 ---
 
-## 4. Escopo do ciclo 2 — Entregáveis
+## 4. Escopo do ciclo 3 — Entregáveis
 
-Oito entregáveis, mapeados contra as 5 regras de negócio `RN-FIN-01` a `RN-FIN-05` e contra a matriz RBAC.
+**9 entregáveis**, mapeados contra `RN-EST-01` a `RN-EST-05`.
 
-### 4.1 CRUD de Caixas (RN-FIN-01)
+### 4.1 CRUD de ItemEstoque (RN-EST-01)
 
-- `Caixa` já tem schema (`id`, `nome @unique`, `saldoCentavos`, timestamps). Falta:
-  - **Service** `caixas.server.ts` com `listar`, `criar`, `editar`, `arquivar` (soft-delete via campo `ativo: Boolean @default(true)` a ser adicionado em migration).
-  - **Rota** `/app/financeiro/caixas` (listagem) e `/app/financeiro/caixas/nova` (formulário).
-  - **RBAC:** criar/editar/arquivar restrito a `ADMIN`, `PASTOR`, `FINANCEIRO`. Listar: todos os perfis com `canSeeFinancials` (`ADMIN`, `PASTOR`, `FINANCEIRO`, `SECRETARIO`).
-- **Decisão de modelagem pendente:** adicionar campo `ativo: Boolean` ao model `Caixa` (ver §5.4).
+- **Schema pronto:** `nome`, `descricao`, `tipo` (CONSUMO/PATRIMONIO), `quantidade`, `numeroSerie?`, `statusPatrimonio?`, `localizacaoFisica?`.
+- **Service** `itemEstoque.server.ts` com `listar(user, filtros)`, `criar(input, user)`, `editar(id, input, user)`, `arquivar(id, user)` (soft-delete via flag `ativo` a ser adicionada em migration — espelha decisão `Caixa.ativo` do ciclo 2).
+- **Rotas:**
+  - `/app/estoque` (listagem com filtros: tipo, status, busca textual).
+  - `/app/estoque/novo` (formulário com campos condicionais por tipo).
+  - `/app/estoque/:id` (detalhe + abas: Movimentações, Manutenções).
+  - `/app/estoque/:id/editar`.
+- **RBAC:** criar/editar/arquivar restrito a `ADMIN`, `PASTOR`, `SECRETARIO`. Listar: todos os 6 perfis autenticados (leitura).
 
-### 4.2 CRUD de Lançamentos (RN-FIN-01, RN-FIN-04, RN-FIN-05)
+### 4.2 Escopo Dual: Consumo vs Patrimônio (RN-EST-01)
 
-- `Lancamento` já tem schema (`tipo: TipoLancamento`, `categoria: CategoriaLancamento`, `valorCentavos`, `descricao`, `dataCompetencia`, `caixaId`, `membroId?`).
-- **Categorias implementadas:** `DIZIMO`, `OFERTA`, `CAMPANHA`, `DESPESA_OPERACIONAL`, `COMPRA_ESTOQUE`, `MANUTENCAO`, `TRANSFERENCIA`.
-- **Tipos implementados:** `ENTRADA`, `SAIDA`.
-- **Service** `lancamentos.server.ts` com `criar`, `listarPorCaixa`, `listarPorMembro` (apenas `DIZIMO` — RN-FIN-05), `editar` (apenas campos descritivos; valor e tipo são imutáveis para preservar auditoria).
-- **Rota** `/app/financeiro/caixas/:id` (extrato do caixa, com filtros por período e categoria) e `/app/financeiro/lancamentos/novo` (formulário).
-- **Trava de saldo (RN-FIN-04):** bloqueia `SAIDA` se `caixa.saldoCentavos < valorCentavos`. Implementada no service, **nunca** apenas na UI.
+- **Diferenciação lógica** no schema (`tipo: TipoItemEstoque`) e na UI (formulário mostra campos diferentes por tipo).
+- **CONSUMO:** `quantidade` é estoque atual; movimentações somam/subtraem.
+- **PATRIMONIO:** `quantidade` é geralmente 1 (uma unidade física); `numeroSerie` é único e obrigatório para PATRIMONIO; `localizacaoFisica` é texto livre ("Sala de som", "Cozinha"); `statusPatrimonio` é obrigatório (default `DISPONIVEL`).
 
-### 4.3 Dízimos vinculados a Membro (RN-FIN-05)
+### 4.3 Movimentação de Consumo (RN-EST-02)
 
-- `Lancamento.membroId` é `SetNull` no delete — coerente com RN-FIN-05 (dízimo órfão vira histórico sem identificação).
-- **Validação no service:** se `categoria === 'DIZIMO'`, `membroId` é **obrigatório**. Se `categoria === 'OFERTA'`, `membroId` é **opcional** (anônimo). Qualquer outra categoria: `membroId` deve ser `null`.
-- **UI:** no formulário de lançamento, mostrar campo "Membro" apenas quando a categoria selecionada exige.
+- **Service** `movimentacao.server.ts` com `criarMovimentacao(itemId, input, user)` em `prisma.$transaction` (atomicidade: insert movimentação + update `ItemEstoque.quantidade`).
+- **Validação de borda (obrigatória):**
+  - `nomeRetirante` é **obrigatório** quando `quantidade < 0` (saída). Não pode ser vazio.
+  - Estoque **não pode ficar negativo** (RN-EST-02 + trava de negócio): se tentativa de saída deixar `quantidade < 0`, lança `BusinessRuleError` com 409.
+  - `autorizadoPorId` = `user.id` (do session). Carimbo automático, imutável.
+  - `justificativa` é **obrigatória** para saídas, **opcional** para entradas.
+- **RBAC:** apenas `ADMIN` e `SECRETARIO` podem registrar movimentações de saída. Demais perfis não veem o botão (Camada 1) + 403 no loader/service (Camadas 2 e 3).
+- **Rota:** `/app/estoque/:id/movimentacao/nova` (formulário com toggle Entrada/Saída).
 
-### 4.4 Transferências entre Caixas (RN-FIN-02)
+### 4.4 Envio para Manutenção Externa (RN-EST-03)
 
-- `TransferenciaCaixa` já tem schema (`caixaOrigemId`, `caixaDestinoId`, `valorCentavos`, `executadoPorId`, `dataHora`).
-- **Decisão de modelagem (confirmada no discovery):** toda transferência gera **1 registro em `TransferenciaCaixa`** (imutável, carimbo do operador, RN-FIN-02) **+ 2 registros em `Lancamento`** (um `SAIDA / TRANSFERENCIA` no caixa origem, um `ENTRADA / TRANSFERENCIA` no caixa destino). Ver §5.2.
-- **Service** `transferencias.server.ts` com `transferir({caixaOrigemId, caixaDestinoId, valorBRL, executadoPorId})` em `prisma.$transaction` (atomicidade obrigatória).
-- **Rota** `/app/financeiro/transferencias/nova` (formulário) e listagem em `/app/financeiro/transferencias`.
+- **Service** `manutencao.server.ts` com `enviarParaManutencao(itemId, input, user)` em `prisma.$transaction` (insert `ManutencaoAtivo` + update `ItemEstoque.statusPatrimonio = EM_MANUTENCAO`).
+- **Validação:**
+  - Item deve ser `tipo = PATRIMONIO` (consumo não vai para manutenção externa — trava de tipo).
+  - Item deve estar `statusPatrimonio = DISPONIVEL` (não pode enviar o que já está em manutenção).
+  - `assistenciaTecnica`, `enderecoAssistencia` são **obrigatórios** (RN-EST-03).
+  - `numeroOs` é **opcional** (RN-EST-03).
+  - `prazoTermino` é **opcional** (se nulo, dispara fluxo de alerta manual — ver §4.6).
+- **RBAC:** `ADMIN`, `PASTOR`, `SECRETARIO` podem enviar.
+- **Rota:** `/app/estoque/:id/manutencao/nova`.
 
-### 4.5 Trava de saldo no service (RN-FIN-04) — não na UI
+### 4.5 Retorno de Manutenção
 
-- **Implementação canônica** já documentada no RAG [`convention-monetary-values.md`](./.harness/RAG/convention-monetary-values.md) §4 (linhas 105–136) — exemplo de `transferirEntreCaixas` em `prisma.$transaction`.
-- **Reuso:** mesma trava deve ser aplicada em `criarLancamento` quando `tipo === 'SAIDA'` (checar saldo do caixa **antes** do `INSERT`, dentro da transação).
-- **TDD obrigatório:** o teste de borda "saldo = 0, tenta SAIDA de 1 centavo → 409" é **bloqueador** para a sprint que entregar.
+- **Service** com `retornarDeManutencao(manutencaoId, dataRetorno, user)` em `prisma.$transaction` (update `ManutencaoAtivo.dataRetorno` + update `ItemEstoque.statusPatrimonio = DISPONIVEL`).
+- **Validação:** `dataRetorno >= dataEnvio` (não pode voltar no tempo).
+- **RBAC:** `ADMIN`, `PASTOR`, `SECRETARIO`.
 
-### 4.6 Integração com aba "Fidelidade Financeira"
+### 4.6 Alerta para Manutenção sem prazo (RN-EST-04 — versão simplificada)
 
-- O componente `TabFidelidadeFinanceira` hoje é placeholder ([`app/components/TabFidelidadeFinanceira.tsx`](./app/components/TabFidelidadeFinanceira.tsx)).
-- **Substituir** o placeholder por:
-  - **Tabela de dízimos** do membro, ordem decrescente por `dataCompetencia`, com colunas: data, valor formatado BRL, descrição.
-  - **Card de resumo** com totais do mês corrente e do ano corrente.
-  - Estado vazio amigável caso o membro não tenha dízimos.
-- **Camada 3 já está pronta:** `getDizimosByMembro(membroId, user)` já chama `assertCanSeeFinancials(user)` antes do SELECT. **Basta remover o `return []` e descomentar a query real** (linha 67 do `app/lib/finance.server.ts`).
+- **Escopo MVP:** quando alguém (qualquer perfil autenticado) consulta `/app/estoque/:id` de um item com `statusPatrimonio = EM_MANUTENCAO`, o loader **verifica** a `ManutencaoAtivo` ativa:
+  - Se `prazoTermino IS NULL` E `dataEnvio < now() - 30 dias` → gera **1 alerta manual** (não-recorrente) com destino `todos` (visível para todos os usuários) e mensagem: *"Item X em manutenção há >30 dias sem prazo definido. Atualize o status."*
+  - Se `prazoTermino IS NULL` E `dataEnvio < now() - 6 dias` → gera alerta com mensagem: *"Item X em manutenção há >6 dias sem prazo definido."*
+- **Escalonamento implementado como **consulta**, não como cron. O alerta é disparado quando alguém abre a página (UX simples, sem scheduler). **Cron automático fica para ciclo futuro** (constraint: sem scheduler no MVP).
+- **Idempotência:** o loader verifica se já existe alerta para este item nas últimas 24h antes de criar novo (evita spam).
+- **RBAC:** qualquer perfil pode **receber** o alerta. Apenas service `criarAlertaManutencaoSemPrazo` é interno (chamado pelo loader).
 
-### 4.7 Visão consolidada de saldos (dashboard)
+### 4.7 Baixa por Perda Total (RN-EST-05)
 
-- Página `/app/financeiro` (raiz do módulo):
-  - **Card por caixa** com nome + saldo atual formatado BRL.
-  - **Indicador agregado** (soma de todos os caixas ativos).
-  - **Ações rápidas** (link para nova transferência, novo lançamento, gerenciar caixas).
-- **RBAC:** visível a `ADMIN`, `PASTOR`, `FINANCEIRO`, `SECRETARIO`. `DISCIPULADOR` e `LIDER_MINISTERIO` recebem 403 ao tentar acessar.
+- **Service** `baixaPorPerda(manutencaoId, motivo, user)` em `prisma.$transaction` (update `ManutencaoAtivo.foiPerdaTotal = true`, update `ItemEstoque.statusPatrimonio = BAIXADO_PERDA`, soft-delete via `ativo = false` no item).
+- **Validação:**
+  - Apenas `ADMIN` pode fazer baixa por perda (RN-EST-05 explícito).
+  - Item deve estar atualmente `EM_MANUTENCAO` (não pode baixar o que está disponível ou já baixado).
+  - `motivo` é texto livre obrigatório (substitui upload de laudo neste ciclo — S3 fora de escopo).
+  - `urlLaudoTecnico` permanece `null` (campo existe, sem upload).
+- **RBAC:** apenas `ADMIN` (Camada 1, 2 e 3). `SECRETARIO` recebe 403.
+- **Rota:** `/app/estoque/:id/baixa-perda` (formulário com textarea de motivo).
 
-### 4.8 RBAC fina (matriz completa do módulo)
+### 4.8 Histórico Consolidado no Detalhe do Item
 
-| Operação \ Perfil | ADMIN | PASTOR | FINANCEIRO | SECRETARIO | DISCIPULADOR | LIDER_MIN. |
-|------------------|:-----:|:------:|:----------:|:----------:|:------------:|:----------:|
-| Ver dashboard de saldos | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| Criar / arquivar Caixa | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
-| Lançar DIZIMO | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| Lançar OFERTA (anônima) | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| Lançar DESPESA / SAIDA (com trava) | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| Transferir entre Caixas | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| Ver aba Fidelidade Financeira (RN-MEM-03) | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
-| Ver extrato de Caixa alheio | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
+- Página `/app/estoque/:id` tem **2 abas** (componente similar à `TabFidelidadeFinanceira` do ciclo 2):
+  - **Movimentações** (apenas para CONSUMO): tabela com data, tipo (entrada/saída), quantidade, nomeRetirante, justificativa, autorizadoPor.
+  - **Manutenções** (apenas para PATRIMONIO): tabela com dataEnvio, assistencia, O.S., prazo, retorno, status (em manutenção / retornou / perda total).
+- **Camada 3 já antecipada:** `assertCanReadItem` revalida `user.cargo` em qualquer query (helper a ser criado, espelhado em `assertCanSeeFinancials`).
+
+### 4.9 RBAC Fina — matriz completa do módulo
+
+| Operação \ Perfil | ADMIN | PASTOR | SECRETARIO | FINANCEIRO | LIDER_MIN. | DISCIPULADOR |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Ver listagem e detalhe | ✅ | ✅ | ✅ | 👁 | 👁 | 👁 |
+| Criar/editar Item (qualquer tipo) | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Arquivar Item | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Movimentação ENTRADA (Consumo) | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Movimentação SAÍDA (Consumo, com nomeRetirante) | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Enviar para Manutenção | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Retornar de Manutenção | ✅ | ✅ | ✅ | 🚫 | 🚫 | 🚫 |
+| Baixa por Perda Total (RN-EST-05) | ✅ | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 |
+| Ver aba Manutenções (detalhe) | ✅ | ✅ | ✅ | 👁 | 👁 | 👁 |
 
 **Defesa em 3 camadas obrigatória:**
-1. **UI:** `if (!canSeeFinancials(user))` — esconde links, botões e rotas.
-2. **Loader/Action:** `assertCanSeeFinancials(user)` ou `assertCanEditCaixa(user)` **antes** de qualquer I/O.
-3. **Service:** revalida `user.cargo` em qualquer ponto de entrada (helper `assertCanSeeFinancials` já existe em `app/lib/rbac.server.ts`).
+1. **UI:** `<Can cargo={...}>` esconde botões e rotas.
+2. **Loader/Action:** `assertCanManageEstoque(user)` ou `assertCanBaixarPerda(user)` **antes** de qualquer I/O.
+3. **Service:** revalida `user.cargo` em qualquer ponto de entrada (helper `assertCan*` em `app/lib/rbac.server.ts`).
 
 ---
 
 ## 5. Decisões confirmadas neste discovery
 
-Três decisões foram tomadas na rodada de discovery de 2026-06-14:
+Três decisões foram tomadas em 2026-06-19:
 
-### 5.1 Caixas seed
+### 5.1 Sem cron job no MVP (RN-EST-04 simplificada)
 
-- **Decisão:** Apenas o **Caixa Geral** é seedado na primeira inicialização. Outros caixas são criados sob demanda via UI.
-- **Implementação:** adicionar `Caixa Geral` (idempotente via `upsert`) ao `prisma/seed.ts` — sem dependência de UI para o estado inicial.
-- **Risco aceito:** a primeira tela do módulo exibe apenas um caixa. Mitigação: mensagem clara "Use o botão '+ Nova Caixa' para criar caixas temáticos (Cantina, Missões, etc.)".
+- **Decisão:** o alerta de manutenção sem prazo (§4.6) é disparado **na consulta** do item, não por scheduler. Implementação é uma checagem no loader com idempotência de 24h.
+- **Justificativa:** constraint do stack (sem Redis, sem `node-cron` configurado neste ciclo). A RN-EST-04 está 100% coberta na **intenção** (alertas existem), apenas o **gatilho** é diferente.
+- **Risco aceito:** se ninguém consultar o item por 60 dias, o alerta não dispara. **Mitigação:** incluir checagem também na rota `/app/alertas` (todos usuários visitam essa rota com frequência).
+- **Ciclo futuro:** scheduler real (cron em processo único, conforme `ARCH.md §12 backlog`) quando a base de usuários justificar.
 
-### 5.2 Modelagem de transferências
+### 5.2 Sem upload de arquivos (RN-EST-05 adaptada)
 
-- **Decisão:** toda transferência gera **1 `TransferenciaCaixa` (imutável, auditoria) + 2 `Lancamento` espelho** (um `SAIDA / TRANSFERENCIA` na origem, um `ENTRADA / TRANSFERENCIA` no destino).
-- **Por que duplicar:**
-  - `TransferenciaCaixa` satisfaz literalmente a RN-FIN-02 (rastreabilidade, carimbo, imutabilidade).
-  - Os 2 `Lancamento` espelho mantêm `caixa.saldoCentavos` reconciliável via `SELECT SUM(valorCentavos) FROM lancamentos WHERE caixaId = X AND tipo = 'ENTRADA' - ...`.
-  - É o padrão já documentado no RAG [`convention-monetary-values.md`](./.harness/RAG/convention-monetary-values.md) §4.
-- **Atomicidade obrigatória:** a operação inteira em `prisma.$transaction` — se qualquer INSERT/update falhar, todos os 3 registros são revertidos.
+- **Decisão:** o campo `ManutencaoAtivo.urlLaudoTecnico` permanece `null` neste ciclo. A baixa por perda é justificada por campo **texto livre** `motivo` (obrigatório).
+- **Justificativa:** stack monólito sem S3/MinIO. Constraint herdada dos ciclos 1 e 2.
+- **Schema impactado:** migration mínima para adicionar `motivoPerda: String?` ao model `ManutencaoAtivo` (ou usar `justificativa` se já existir campo equivalente — verificar na Fase 3).
+- **Ciclo futuro:** quando S3/MinIO entrar, preencher `urlLaudoTecnico` + UI de upload.
 
-### 5.3 RBAC para criar/arquivar Caixa
+### 5.3 Soft-delete via campo `ativo`
 
-- **Decisão:** apenas `ADMIN`, `PASTOR` e `FINANCEIRO` podem criar ou arquivar caixas. `SECRETARIO` opera dentro dos caixas existentes.
-- **Justificativa:** decisão estrutural da igreja. Criar/arquivar caixa é decisão administrativa eclesiástica, não operacional do dia-a-dia. `SECRETARIO` tem autonomia de lançamento (RN-FIN-03) mas não de estrutura.
-- **Implementação:** novo helper `assertCanManageCaixa(user)` em `app/lib/rbac.server.ts`, espelhado em `assertCanSeeFinancials`.
-
-### 5.4 Decisão de modelagem adicional (proposta, requer confirmação na Fase 2)
-
-- Adicionar campo `ativo: Boolean @default(true)` ao model `Caixa` para suportar **soft-delete (arquivamento)**. Caixas arquivados continuam no banco (para histórico de saldos), mas somem da listagem padrão.
-- Sem esta coluna, a única alternativa é `onDelete: Restrict` (impede delete se há lançamentos) — funcional, mas perdemos a semântica de "arquivado" que o usuário pediu.
+- **Decisão:** adicionar `ativo: Boolean @default(true)` ao model `ItemEstoque`, espelhando a decisão `Caixa.ativo` do ciclo 2 (RAG `decision-caixa-soft-delete`, aprovado pelo `prd-reviewer` em 2026-06-14).
+- **Implementação:** migration aditiva no mesmo sprint de fundação.
+- **Filtro padrão:** listagem mostra apenas `ativo = true`. Itens arquivados continuam no DB (histórico de movimentações).
 
 ---
 
 ## 6. Restrições
 
-### 6.1 Stack e arquitetura (imutáveis, herdadas do ciclo 1)
+### 6.1 Stack e arquitetura (imutáveis)
 
-- **Frontend:** React Router 7.16 (SSR + future flags `v8_*`), Tailwind 4, Vite 8, TypeScript 5.9 strict.
-- **Backend:** mesmo processo Node 22, Prisma 7.8 client em `app/db.server.ts`.
-- **DB:** SQLite local (`prisma/dev.db`).
-- **Auth:** session cookie httpOnly + sliding renewal (TTL 7d, teto 30d abs). Já em produção.
-- **Validação:** Zod (recomendado no ADR-003 do `ARCH.md`; pode ser revisado na Fase 3).
-- **Hash:** bcryptjs (salt rounds ≥ 10).
-- **Testes:** Vitest (unit + integração) + Playwright (E2E) — 3 camadas de teste.
-- **Cobertura:** gate ≥ 85% por sprint, 100% em services de regra de negócio.
+- **Frontend:** React Router 7.17 SSR (mesmo dos ciclos 1 e 2), Tailwind 4, Vite 8, TypeScript 5.9 strict.
+- **Backend:** Node 22 + Prisma 7.8 client em `app/db/prisma.server.ts`.
+- **DB:** SQLite local (`prisma/dev.db`). Sem mudança de banco.
+- **Auth:** session cookie httpOnly + sliding renewal (já em produção).
+- **Validação:** Zod 4 (schemas em `app/lib/schemas/estoque.ts`).
+- **Testes:** Vitest (unit + integração) + Playwright (E2E) — 3 camadas.
+- **Cobertura:** gate ≥ 85% por sprint, **100% em services de regra de negócio** (`itemEstoque.server.ts`, `movimentacao.server.ts`, `manutencao.server.ts`).
 
 ### 6.2 Compliance e LGPD
 
-- **RN-MEM-02:** **nenhum campo de CPF, dados fiscais, ou informações financeiras invasivas** pode ser adicionado neste ciclo. Recibo de dízimo usa apenas `nome` (já no `Membro`) e `valorCentavos` (já no `Lancamento`).
-- **RN-MEM-03:** aba Fidelidade Financeira continua restrita a `ADMIN`, `PASTOR`, `FINANCEIRO`. Logs de auditoria **nunca** registram `valorCentavos`.
-- **LGPD Art. 18 e 31:** o `lgpd-officer` auditará este módulo. Atenção especial à: (a) minimização de dados, (b) segregação por perfil, (c) registro de operações sensíveis.
+- **Sem dados pessoais sensíveis:** o módulo Estoque **não coleta** CPF, RG, endereço residencial, telefone, e-mail. Os campos de `ItemEstoque` são: nome textual, descrição textual, número de série (pode conter identificador de fabricante), localização física textual.
+- **`MovimentacaoEstoque.nomeRetirante`:** é **texto livre** (não vincula a `Membro`). Decisão consciente: não exigir cadastro do retirante reduz atrito operacional e elimina necessidade de tratar LGPD para pessoas físicas externas (ex: "João da limpeza", "Maria visitante"). O carimbo de quem **autorizou** a saída (`autorizadoPorId`) é o `user.id` do sistema, com auditoria via log estruturado (sem PII em log).
+- **Logs:** `safeLog` em `app/lib/audit.server.ts` (allowlist, sem `nomeRetirante`, sem `motivo` em texto livre).
+- **LGPD art. 18 e 31:** o `lgpd-officer` auditará este módulo. Atenção à: (a) **minimização** (não expandir campos pessoais sem justificativa), (b) **segregação por perfil** (matriz §4.9), (c) **registro de operações sensíveis** (baixa por perda e manutenção são registradas).
 
 ### 6.3 RAGs a seguir (não-negociáveis)
 
-- [`security-rbac-matrix.md`](./.harness/RAG/security-rbac-matrix.md) — matriz RBAC, padrão de 3 camadas, helper `assertCanSeeFinancials`.
-- [`convention-monetary-values.md`](./.harness/RAG/convention-monetary-values.md) — `Int` em centavos, helpers `formatBRLFromCents` / `parseBRLToCents` / `assertNonNegative`.
-- (A criar na Fase 1) `lgpd-igreja-conect.md` — checklist LGPD aplicado a dados financeiros.
+**Obrigatórios (críticos):**
+- [`security-rbac-matrix.md`](./.harness/RAG/security-rbac-matrix.md) — matriz 6 perfis × 6 domínios.
+- [`pattern-3-layer-rbac.md`](./.harness/RAG/pattern-3-layer-rbac.md) — UI / loader / service.
+- [`lgpd-igreja-conect.md`](./.harness/RAG/lgpd-igreja-conect.md) — checklist LGPD.
+
+**Específicos a criar na Fase 1:**
+- `architecture-estoque` (high) — visão macro do módulo.
+- `pattern-movimentacao-estoque` (high) — modelagem de Consumo + trava de saldo.
+- `pattern-manutencao-patrimonio` (high) — RN-EST-03, RN-EST-04, RN-EST-05.
+- `decision-itemEstoque-soft-delete` (medium) — espelha `decision-caixa-soft-delete`.
 
 ### 6.4 Restrições operacionais
 
-- **Prazo:** alvo de **3 sprints** (S06, S07, S08) para entregar os 8 entregáveis. Refinamento na Fase 4 (Planejamento).
-- **Sem dependências externas novas:** nenhum gateway de pagamento, nenhum serviço de e-mail, nenhum S3, nenhum Redis. Tudo roda no mesmo processo Node.
-- **Sem novas rotas `app/api/**`:** manter-se no padrão RR7 (loader/action em `app/routes/**`).
+- **Prazo:** alvo de **2 sprints** (S11, S12) para os 9 entregáveis. Refinamento na Fase 4 (Planejamento).
+- **Sem dependências externas novas:** mesmo processo Node. Sem `node-cron`, sem `minio`, sem SMTP.
+- **Sem novas rotas `app/api/**`:** padrão RR7 (loader/action em `app/routes/app/estoque/**`).
+- **Débitos pré-existentes do ciclo 2:** 74 testes falhando (DI consumers) e 107 typecheck errors estão **fora do escopo** deste ciclo. Serão tratados em sprint de cleanup dedicada (S13+) — não bloquear este ciclo, mas incluir task de smoke-test dos 74 no checklist de release.
 
 ---
 
@@ -209,48 +236,56 @@ Três decisões foram tomadas na rodada de discovery de 2026-06-14:
 
 ### 7.1 Métrica macro (única)
 
-> **O ciclo 2 é considerado bem-sucedido quando um `FINANCEIRO` consegue, em menos de 2 minutos, registrar um dízimo de `Membro X` no `Caixa Geral`, ver o saldo do caixa refletir a entrada, e o `PASTOR` consegue abrir a aba "Fidelidade Financeira" do `Membro X` e ver o dízimo recém-lançado.**
+> **O ciclo 3 é considerado bem-sucedido quando um `SECRETARIO` consegue, em menos de 2 minutos, cadastrar 5 pacotes de papel A4 no estoque de Consumo, registrar uma saída de 2 pacotes informando o nome do retirante, ver o saldo atualizar para 3 pacotes, e o `ADMIN` consegue abrir o detalhe do item e ver o histórico completo de movimentações com nome do autorizador e do retirante.**
 
 ### 7.2 Métricas de qualidade (gate do phase 5)
 
-- **Cobertura de testes:** ≥ 85% global, **100% em services de regra de negócio** (`caixas.server.ts`, `lancamentos.server.ts`, `transferencias.server.ts`).
+- **Cobertura de testes:** ≥ 85% global, **100% em services de regra de negócio** (`itemEstoque.server.ts`, `movimentacao.server.ts`, `manutencao.server.ts`).
 - **Vulnerabilidades:** 0 critical, 0 high (gate do `security-scanner`).
 - **`planning-reviewer` score:** ≥ 70.
-- **LGPD:** `lgpd-officer` status ≥ `warning`, 0 critical, 0 high em Art. 18/48.
-- **Defesa em 3 camadas comprovada:** 100% das células da matriz §4.8 cobertas por testes (E2E obrigatórios para RN-MEM-03, RN-FIN-04, RN-FIN-05).
+- **`code-reviewer` score:** ≥ 70.
+- **LGPD:** `lgpd-officer` status ≥ `warning`, 0 critical, 0 high em Art. 18/31.
+- **Defesa em 3 camadas comprovada:** 100% das células da matriz §4.9 cobertas por testes (E2E obrigatórios para RN-EST-02, RN-EST-04, RN-EST-05).
 
 ### 7.3 Testes de borda obrigatórios (TDD antes do service)
 
-- 12 discípulos: passa (regressão do ciclo 1, não do ciclo 2).
-- **13º discípulo:** bloqueia com mensagem clara (regressão).
-- **Saldo = 0, SAIDA de R$ 0,01:** bloqueia com 409 e mensagem "Saldo insuficiente no caixa de origem." (RN-FIN-04)
-- **DIZIMO sem membro:** bloqueia com 400 (RN-FIN-05).
-- **OFERTA sem membro:** passa, anônimo (RN-FIN-05).
-- **Transferência origem = destino:** bloqueia com 400.
-- **Transferência valor = 0:** bloqueia com 400.
-- **Transferência valor negativo:** bloqueia com 400.
-- **SECRETARIO acessando `/app/financeiro`:** recebe 403.
-- **SECRETARIO acessando `/app/membros/:id?tab=fidelidade`:** aba Fidelidade não renderiza, e `getDizimosByMembro` retorna 403 (RN-MEM-03).
-- **DISCIPULADOR tentando qualquer rota `/app/financeiro/**`:** recebe 403 em todas as camadas.
+- Saída com `nomeRetirante` vazio → 400.
+- Saída que deixa estoque negativo → 409 (RN-EST-02 + trava de negócio).
+- Entrada sem justificativa → passa (opcional).
+- Saída sem justificativa → 400 (obrigatória).
+- Enviar para manutenção item `CONSUMO` → 400 (trava de tipo).
+- Enviar para manutenção item já em manutenção → 400.
+- Manutenção sem `assistenciaTecnica` ou sem `enderecoAssistencia` → 400 (RN-EST-03).
+- Manutenção sem `prazoTermino` → passa (opcional, dispara §4.6).
+- Retorno de manutenção com `dataRetorno < dataEnvio` → 400.
+- Baixa por perda por `SECRETARIO` → 403 (RN-EST-05).
+- Baixa por perda por `PASTOR` → 403 (RN-EST-05).
+- Baixa por perda por `ADMIN` em item `DISPONIVEL` → 400.
+- Baixa por perda por `ADMIN` sem `motivo` → 400.
+- Item com patrimônio mesmo `numeroSerie` → 409 (unique).
+- Listagem filtra itens com `ativo = false` por padrão.
+- DISCIPULADOR tentando `/app/estoque/novo` → 403 em todas as 3 camadas.
+- FINANCEIRO tentando criar movimentação de saída → 403 em todas as 3 camadas.
 
 ---
 
 ## 8. Não-objetivos (fora de escopo deste ciclo)
 
-Listados explicitamente para evitar **scope creep**. Qualquer item aqui pode virar ciclo futuro se a demanda surgir.
+Listados explicitamente para evitar **scope creep**:
 
-- ❌ **Gateway de pagamento** (Pix, cartão, boleto). Não há integração com bancos ou PSPs.
-- ❌ **Conciliação bancária automática.** Caixas são internos; não há extrato bancário para reconciliar.
-- ❌ **Relatórios PDF ou Excel.** Exportação é manual via UI ou copy-paste de tabela. CSV/Excel podem entrar em ciclo futuro.
+- ❌ **Cron automático** (RN-EST-04 scheduler real). Implementação manual via consulta (§4.6). Sem `node-cron` neste ciclo.
+- ❌ **Upload de laudo técnico** (RN-EST-05 anexos PDF/imagem). Campo `urlLaudoTecnico` permanece `null`. Sem S3/MinIO.
+- ❌ **Upload de fotos de patrimônio** (cadeira.jpg, instrumento.jpg). Sem S3/MinIO. `localizacaoFisica` é texto.
+- ❌ **Sincronização automática Estoque ↔ Financeiro.** Lançamento de despesa de `MANUTENCAO` ou `COMPRA_ESTOQUE` continua manual pelo `FINANCEIRO`. O enum `CategoriaLancamento` já tem essas categorias; integração automática fica para ciclo futuro.
+- ❌ **Códigos de barras / QR Code** para patrimônio. Identificação por `numeroSerie` textual é suficiente.
+- ❌ **Relatórios avançados** (curva ABC de consumo, tempo médio de manutenção, etc.).
+- ❌ **Inventário físico com checklist mobile.** Sem app nativo.
+- ❌ **Notificações por e-mail/push** para manutenção. Apenas in-app via Alertas.
 - ❌ **Multi-igreja / multi-tenant.** Uma instância = uma igreja.
-- ❌ **Multi-moeda.** Apenas BRL. A constante `Int` cobre até R$ 21 milhões por caixa.
-- ❌ **Recibo físico ou envio por e-mail.** Sem SMTP neste ciclo.
-- ❌ **Notificações de saldo baixo.** Sem cron jobs neste ciclo (alinhado com a Fase 5 do ciclo 1 que já trata o cron de manutenção de estoque).
-- ❌ **Aprovação multi-nível para saídas grandes.** A RN-FIN-03 (autonomia por saldo real) já é a regra; não há "aprovação do pastor" como portão separado.
-- ❌ **Upload de comprovantes.** Sem S3/MinIO neste ciclo. Campo `descricao` é suficiente.
-- ❌ **Módulo de Estoque (ciclo futuro).** O schema já tem `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo`, mas a UI/service **não** é deste ciclo. As categorias `COMPRA_ESTOQUE` e `MANUTENCAO` do enum `CategoriaLancamento` existirão no schema, mas os fluxos que as usam virão no ciclo 3+.
-- ❌ **Criar/editar regras de negócio via UI.** RN-FIN-* são fixas no código.
-- ❌ **Camada extra de "auditor" como perfil RBAC.** Os 6 perfis ficam como estão.
+- ❌ **Workflow de aprovação multi-nível** para baixa por perda. Apenas `ADMIN` (single-approver).
+- ❌ **Reconciliação contábil** automática com sistema externo.
+- ❌ **Etiquetas impressas** de patrimônio. Fora de escopo digital.
+- ❌ **Resolver débitos pré-existentes do ciclo 2** (74 testes + 107 typecheck). Será sprint dedicada após S12, não bloqueia este ciclo.
 
 ---
 
@@ -258,47 +293,51 @@ Listados explicitamente para evitar **scope creep**. Qualquer item aqui pode vir
 
 ### 9.1 Documentos de domínio (fonte da verdade)
 
-- [`docs/REGRAS_DE_NEGOCIO.md`](./docs/REGRAS_DE_NEGOCIO.md) — RN-MEM-01 a 06, **RN-FIN-01 a 05**, RN-EST-01 a 05.
-- [`docs/DESCRIÇÃO_DOS_MODULOS.md`](./docs/DESCRIÇÃO_DOS_MODULOS.md) — matriz RBAC, objetivos por módulo, escopo dual do estoque.
-- [`docs/architecture/ARCH.md`](./docs/architecture/ARCH.md) — 17 seções, ADRs, modelo de dados, fluxos de auth/RBAC/Membros.
+- [`docs/REGRAS_DE_NEGOCIO.md`](./docs/REGRAS_DE_NEGOCIO.md) §3 — **RN-EST-01 a 05** (canônica).
+- [`docs/DESCRIÇÃO_DOS_MODULOS.md`](./docs/DESCRIÇÃO_DOS_MODULOS.md) — visão de produto do módulo.
+- [`docs/architecture/ARCH.md`](./docs/architecture/ARCH.md) — §6.1 matriz RBAC, §12 backlog de Estoque.
 
 ### 9.2 RAGs (memória de longo prazo do projeto)
 
-- [`.harness/RAG/security-rbac-matrix.md`](./.harness/RAG/security-rbac-matrix.md) — **crítico para este ciclo**.
-- [`.harness/RAG/convention-monetary-values.md`](./.harness/RAG/convention-monetary-values.md) — **crítico para este ciclo**.
+- [`security-rbac-matrix.md`](./.harness/RAG/security-rbac-matrix.md) — **crítico**.
+- [`pattern-3-layer-rbac.md`](./.harness/RAG/pattern-3-layer-rbac.md) — **crítico**.
+- [`lgpd-igreja-conect.md`](./.harness/RAG/lgpd-igreja-conect.md) — **crítico**.
+- [`convention-prisma-sqlite.md`](./.harness/RAG/convention-prisma-sqlite.md) — alta (transações, soft-delete).
+- (A criar na Fase 1) `architecture-estoque.md`, `pattern-movimentacao-estoque.md`, `pattern-manutencao-patrimonio.md`, `decision-itemEstoque-soft-delete.md`.
 
 ### 9.3 Schema e código existente
 
-- [`prisma/schema.prisma`](./prisma/schema.prisma) — models `Caixa`, `TransferenciaCaixa`, `Lancamento`, enums `TipoLancamento`, `CategoriaLancamento`.
-- [`app/lib/finance.server.ts`](./app/lib/finance.server.ts) — placeholder `getDizimosByMembro` (Camada 3 já pronta).
-- [`app/components/TabFidelidadeFinanceira.tsx`](./app/components/TabFidelidadeFinanceira.tsx) — placeholder a ser substituído.
+- [`prisma/schema.prisma`](./prisma/schema.prisma) — models `ItemEstoque` (linha 232), `MovimentacaoEstoque` (linha 253), `ManutencaoAtivo` (linha 271), enums `TipoItemEstoque`, `StatusItemPatrimonio`.
+- `app/lib/rbac.server.ts` — adicionar `assertCanManageEstoque`, `assertCanBaixarPerda`, `assertCanMovimentarConsumo` (espelhados em `assertCanSeeFinancials`).
+- `app/lib/alert.server.ts` (ou nome equivalente do ciclo 1) — reaproveitar helper de criação de alerta.
 
 ### 9.4 Estado do Harness
 
-- [`.harness/state.json`](./.harness/state.json) — `currentCycle: 2`, `currentPhase: phase.0.briefing`, `cycle2.scope: "Módulo Financeiro (Caixas + Lançamentos + Dízimos)"`.
+- [`.harness/state.json`](./.harness/state.json) — `currentCycle: 3`, `currentPhase: phase.0.briefing`, `cycle3.scope: "Módulo Estoque + Patrimônio"`.
 - [`.harness/state-machine.json`](./.harness/state-machine.json) — contrato read-only. Não editar.
 
-### 9.5 Pendências conhecidas (para o orchestrator)
+### 9.5 Débitos pré-existentes (conhecimento, fora do escopo)
 
-| # | Pendência | Origem | Tratamento esperado |
-|---|-----------|--------|---------------------|
-| 1 | `brief-mvp.md` não pôde ser criado pelo `briefing` agent (bloqueio do path-boundary hook — allowlist global não contém o path, apesar da capability grant da task declarar) | task do orchestrator, ciclo 2 | Orquestrador decide: editar via Python/bash direto (workaround já em uso para `state.json`, vide `state.json:183-186`), ou atualizar o allowlist e re-rodar este agent. |
-| 2 | Ferramentas `harness_status` / `harness_advance` quebradas (`u.split` error) | `state.json:183-186` | Continuar usando edição direta de `state.json` via Python. O `briefing` agent não chama essas tools — apenas retorna JSON para o orchestrator. |
-| 3 | 2 models de configuração no schema (`ConfiguracaoGeral` em `schema.prisma:317` e `ConfigAcolhimento` em `schema.prisma:329`) | resíduo do ciclo 1 | Avaliar consolidação na Fase 3 (Design). Não é bloqueador. |
-| 4 | Decisão de modelagem `Caixa.ativo` (proposta §5.4) | este brief | Formalizar na Fase 2 (Requisitos) — `prd-reviewer` deve aprovar antes de migration. |
+| # | Débito | Origem | Status |
+|---|---|---|---|
+| MVP-DEBT-001 | 74 testes pré-existentes falhando em arquivos não-S06/S07/S08 (alerts, config, dashboard, members, session, _middleware, smoke) — DI consumers | Ciclo 2, descoberto em S06 rework | partial-resolved (108→74), sprint dedicada S13+ |
+| MVP-DEBT-003 | 107 typecheck errors pré-existentes | Ciclo 2 | Aberto, sprint dedicada S13+ |
+| S07-DEBT-001 | 1 mock edge case atômico em `transferirEntreCaixas` | Ciclo 2, S07 | Aberto, sprint dedicada S13+ |
+| CYCLE-3-DEBT-001 | `MotivoPerda` é texto livre em vez de upload de laudo (S3 fora de escopo) | Este brief, §5.2 | Aceito neste ciclo, integração com S3 em ciclo futuro |
+| CYCLE-3-DEBT-002 | Alerta RN-EST-04 é manual (consulta), não cron | Este brief, §5.1 | Aceito neste ciclo, scheduler real em ciclo futuro |
 
 ---
 
 ## Próxima revisão
 
-- **Quando:** ao final de cada sprint do ciclo 2, ou se regra de negócio / RBAC / RAG mudar.
+- **Quando:** ao final de cada sprint do ciclo 3 (S11, S12), ou se RN-EST mudar.
 - **Por quem:** `documenter` agent (Fase 1) ao consolidar; `requirements` e `designer` ao detalhar.
 - **Quem consome este brief:** `documenter` (Fase 1) → `requirements` (Fase 2) → `designer` (Fase 3) → `sprint-tasker` (Fase 4) → orchestrator + 5 workers (Fase 5).
 
 ---
 
 > **Pedido de aprovação:**
-> Aprova este `brief.md` para iniciar a **Fase 1 (Documentação)** do ciclo 2?
+> Aprova este `brief.md` para iniciar a **Fase 1 (Documentação)** do ciclo 3?
 >
 > - ✅ **Aprovar** — Fase 1 inicia com base neste escopo, decisões e restrições.
 > - ✏️ **Editar** — apontar o que ajustar (seções 4, 5, 6, 7 ou 8 são as mais prováveis de iteração).

@@ -1,13 +1,13 @@
 {
   "_type": "harness-rag-index-v6",
-  "generatedAt": "2026-06-14T12:00:00Z",
-  "generatedBy": "documenter (cycle 2 — phase 1) + rag-curator delegation",
-  "cycle": 2,
-  "cycleScope": "Módulo Financeiro (Caixas + Lançamentos + Dízimos + Transferências)",
-  "totalDocs": 14,
+  "generatedAt": "2026-06-19T12:00:00Z",
+  "generatedBy": "documenter (cycle 3 — phase 1) + rag-curator delegation",
+  "cycle": 3,
+  "cycleScope": "Módulo Estoque + Patrimônio (Consumo + Manutenção Externa + Baixa por Perda)",
+  "totalDocs": 18,
   "byCategory": {
-    "convention": 2,
-    "pattern": 3,
+    "convention": 3,
+    "pattern": 6,
     "antipattern": 1,
     "workflow": 0,
     "architecture": 2,
@@ -20,12 +20,12 @@
   },
   "byPriority": {
     "critical": 5,
-    "high": 7,
-    "medium": 2,
+    "high": 9,
+    "medium": 4,
     "low": 0
   },
   "byStatus": {
-    "approved": 14,
+    "approved": 18,
     "pending": 0
   },
   "docs": [
@@ -313,16 +313,102 @@
       "updatedAt": "2026-06-14T12:00:00Z",
       "approvedAt": "2026-06-14T12:00:00Z",
       "approvedBy": "prd-reviewer (score 90, cycle 2 phase 2)"
+    },
+    {
+      "id": "pattern-estoque-trava-quantidade",
+      "title": "Pattern — Trava de Quantidade no Estoque (RN-EST-02) — assertSaldoQuantidade Antes do I/O + $transaction",
+      "description": "Helper canônico assertSaldoQuantidade em app/lib/estoque.server.ts. Ordem inegociável: assertCan* (RBAC) → assertSaldoQuantidade (RN-EST-02) → $transaction. Cobre criarMovimentacao saída, valida trava de tipo (PATRIMONIO rejeitado), nomeRetirante obrigatório para delta<0. Anti-TOCTOU: re-leitura da quantidade dentro do $transaction.",
+      "category": "pattern",
+      "tags": [
+        "pattern",
+        "estoque",
+        "quantidade",
+        "trava",
+        "rn-est-02",
+        "rn-est-03",
+        "prisma",
+        "transaction",
+        "defense-in-depth",
+        "atomicidade",
+        "ciclo-3"
+      ],
+      "priority": "high",
+      "status": "approved",
+      "updatedAt": "2026-06-19T12:00:00Z"
+    },
+    {
+      "id": "pattern-patrimonio-status-state-machine",
+      "title": "Pattern — State Machine de Status de Patrimônio (RN-EST-01/03/05) — Transições Válidas e RBAC por Estado",
+      "description": "Helper canônico assertTransicaoPatrimonioValida em app/lib/patrimonio.server.ts. Matriz de 6 transições (DISPONIVEL ↔ EM_MANUTENCAO ↔ DISPONIVEL, BAIXADO_PERDA terminal). Baixa por Perda é única operação restrita a ADMIN (RN-EST-05). Atômica em $transaction: ManutencaoAtivo.foiPerdaTotal + ItemEstoque.statusPatrimonio + ativo=false.",
+      "category": "pattern",
+      "tags": [
+        "pattern",
+        "patrimonio",
+        "state-machine",
+        "status",
+        "rn-est-01",
+        "rn-est-03",
+        "rn-est-05",
+        "rbac",
+        "manutencao",
+        "baixa",
+        "ciclo-3"
+      ],
+      "priority": "high",
+      "status": "approved",
+      "updatedAt": "2026-06-19T12:00:00Z"
+    },
+    {
+      "id": "pattern-manutencao-alerta-manual",
+      "title": "Pattern — Alerta Manual para Manutenção sem Prazo (RN-EST-04) — Gatilho On-Consulta Sem Cron",
+      "description": "Helper verificarAlertaManutencaoSemPrazo em app/lib/manutencao.server.ts. Decisão do brief §5.1: sem cron job no MVP. Gatilho on-consulta em loaders de /app/estoque/$id e /app/alertas. Idempotência 24h. Escalonamento: 6 dias (aviso) / 30 dias (urgente). Trade-off aceito: se ninguém consultar a rota, alerta não dispara.",
+      "category": "pattern",
+      "tags": [
+        "pattern",
+        "manutencao",
+        "alerta",
+        "rn-est-04",
+        "on-consulta",
+        "idempotencia",
+        "sem-cron",
+        "escalonamento",
+        "ciclo-3"
+      ],
+      "priority": "medium",
+      "status": "approved",
+      "updatedAt": "2026-06-19T12:00:00Z"
+    },
+    {
+      "id": "convention-tipos-item-estoque",
+      "title": "Convenção — Tipos de Item de Estoque (CONSUMO vs PATRIMONIO) — Diferenciação Semântica",
+      "description": "Convenção canônica de quando usar TipoItemEstoque.CONSUMO vs PATRIMONIO. DiscriminatedUnion Zod (ItemConsumoCreateSchema vs ItemPatrimonioCreateSchema). Helpers assertItemIsConsumo e assertItemIsPatrimonio. numeroSerie único obrigatório para PATRIMONIO; localizacaoFisica recomendada; statusPatrimonio default DISPONIVEL na criação.",
+      "category": "convention",
+      "tags": [
+        "convention",
+        "estoque",
+        "consumo",
+        "patrimonio",
+        "tipo",
+        "rn-est-01",
+        "semantica",
+        "modelagem",
+        "discriminated-union",
+        "ciclo-3"
+      ],
+      "priority": "medium",
+      "status": "approved",
+      "updatedAt": "2026-06-19T12:00:00Z"
     }
   ],
   "cycle1Preserved": true,
   "removedDocs": [],
   "notes": [
     "Ciclo 1 (10 docs) preservado integralmente — nenhum doc removido.",
-    "Ciclo 2 adiciona 4 docs: 1 architecture (high), 2 pattern (1 critical + 1 high), 1 decision (medium, pending).",
-    "Total: 14 docs (13 approved + 1 pending — decision-caixa-soft-delete aguarda validação do prd-reviewer na Fase 2).",
-    "Decisão Caixa.ativo formalizada em RAG próprio (decision) com status pending, conforme brief §5.4 + §9.5.",
-    "Helpers assertSaldoSuficiente (pattern-trava-saldo-service) e transferirEntreCaixas (pattern-transferencia-caixas) já antecipam o campo Caixa.ativo — ganham null-safe se a migration for aprovada.",
-    "A skill MCP do rag-curator não está fisicamente disponível neste ambiente; a criação dos 4 RAGs novos foi feita pelo documenter seguindo o template dos 7 RAGs existentes (YAML frontmatter + 7 seções obrigatórias: Contexto, Decisão/Regra, Consequências, Exemplos, Anti-exemplos, Cross-refs, Quando revisar/Audit trail)."
+    "Ciclo 2 adiciona 4 docs: 1 architecture (high), 2 pattern (1 critical + 1 high), 1 decision (medium, agora approved).",
+    "Ciclo 3 adiciona 4 docs: 3 pattern (2 high + 1 medium) + 1 convention (medium).",
+    "Total: 18 docs (todos approved). decision-caixa-soft-delete foi aprovado pelo prd-reviewer em 2026-06-14 (ciclo 2 Fase 2).",
+    "Helpers assertSaldoQuantidade (pattern-estoque-trava-quantidade) e assertTransicaoPatrimonioValida (pattern-patrimonio-status-state-machine) já antecipam o campo ItemEstoque.ativo (proposta pendente decisão de Fase 2 do ciclo 3 — espelha Caixa.ativo do ciclo 2).",
+    "VerificarAlertaManutencaoSemPrazo (pattern-manutencao-alerta-manual) implementa RN-EST-04 com gatilho on-consulta (sem cron job) — decisão consciente do brief §5.1 + constraint de stack (sem Redis, sem node-cron).",
+    "A skill MCP do rag-curator não está fisicamente disponível neste ambiente; a criação dos 4 RAGs novos foi feita pelo documenter seguindo o template dos 10 RAGs existentes do ciclo 1+2 (YAML frontmatter + 7 seções obrigatórias: Contexto, Decisão/Regra, Consequências, Exemplos, Anti-exemplos, Cross-refs, Notas de aplicação/Audit trail)."
   ]
 }

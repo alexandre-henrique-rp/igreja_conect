@@ -1,0 +1,481 @@
+{
+  "_type": "harness-sprint-v6",
+  "id": "S13",
+  "cycle": 3,
+  "scope": "estoque+patrimonio",
+  "name": "Alertas Manutenção Sem Prazo + Dashboard Final + Cleanup MVP-DEBTs",
+  "goal": "Implementar RN-EST-04 (alerta de manutenção sem prazo com gatilho on-consulta, idempotência 24h, escalonamento 6 dias / 30 dias), rota `/app/estoque/alertas` (lista centralizada de críticos) + integração com `/app/alertas` existente do MVP, hook nos loaders de `/app/estoque/:id`, dashboard de saúde do estoque (cards KPI adicionais), cleanup de MVP-DEBTs remanescentes (vitest .tsx, `app/prisma.config.ts` duplicado, paths E2E). Cobre 2 endpoints restantes (#2 alertas e #6 editar item), 3 testes de borda, RN-EST-04. Auditoria final.",
+  "status": "pending",
+  "estimatedDays": 5,
+  "estimatedHours": 40,
+  "dependsOn": [
+    "S12"
+  ],
+  "userStories": [
+    "US-EST-007 (F7 — Alerta de manutenção sem prazo — RN-EST-04)",
+    "US-EST-008 (F8 — Central de Alertas Críticos do Estoque)",
+    "US-EST-009 (F9 — Edição de Item + Cleanup MVP-DEBTs)"
+  ],
+  "specCoverage": {
+    "endpoints_specced_e4": [
+      2,
+      6
+    ],
+    "testes_borda_cobertos": [
+      15,
+      17,
+      18
+    ],
+    "rns_implemented": [
+      "RN-EST-04 (alerta on-consulta)"
+    ],
+    "mvp_debts_addressed": [
+      "MVP-DEBT-002 (vitest config .tsx)",
+      "MVP-DEBT-007 (app/prisma.config.ts duplicado)",
+      "MVP-DEBT-008 (routes.ts bug linha 11)"
+    ]
+  },
+  "ragsReferenced": [
+    "pattern-manutencao-alerta-manual",
+    "pattern-estoque-trava-quantidade",
+    "pattern-patrimonio-status-state-machine",
+    "convention-tipos-item-estoque",
+    "security-rbac-matrix",
+    "pattern-3-layer-rbac",
+    "lgpd-igreja-conect",
+    "architecture-monolith-modular",
+    "convention-prisma-sqlite",
+    "lesson-route-service-bypass",
+    "decision-itemEstoque-soft-delete"
+  ],
+  "tasks": [
+    {
+      "id": "S13-T01",
+      "title": "Helper `verificarAlertaManutencaoSemPrazo(user)` em `app/lib/manutencao.server.ts` (RN-EST-04 — gatilho on-consulta + idempotência 24h)",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 3.5,
+      "dependsOn": [
+        "S12-T04"
+      ],
+      "specRefs": [
+        "PRD D.4 F7 (alerta manutenção sem prazo)",
+        "RAG pattern-manutencao-alerta-manual (código de referência)"
+      ],
+      "rags": [
+        "pattern-manutencao-alerta-manual",
+        "security-rbac-matrix",
+        "lgpd-igreja-conect §2.5"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "app/lib/manutencao.server.ts (+verificarAlertaManutencaoSemPrazo)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD BLOQUEADOR: verificarAlertaManutencaoSemPrazo(adminUser) com item EM_MANUTENCAO há 31 dias sem prazo → cria Alerta + AlertaDestinatario (todos membros ADMIN/PASTOR/SECRETARIO) com titulo 'Manutenção atrasada: <nome do item>'",
+        "testPath": "app/lib/manutencao.server.test.ts (estender)",
+        "acceptance": "100% cobertura + idempotência 24h + escalonamento (6d/30d)"
+      },
+      "acceptanceCriteria": [
+        "**Helper `verificarAlertaManutencaoSemPrazo(user: SessionUser): Promise<Alerta[]>` em `app/lib/manutencao.server.ts`**",
+        "**Decision consciente (brief §5.1 + RAG §1):** sem cron job. Gatilho on-consulta em loaders de `/app/estoque/:id` e `/app/alertas`. Trade-off aceito: se ninguém consultar, alerta não dispara.",
+        "**Algoritmo (3 etapas em paralelo via Promise.all):**",
+        "  - Etapa 1: `manutencoesSemPrazo = prisma.manutencaoAtivo.findMany({ where: { prazoTermino: null, dataRetorno: null, dataEnvio: { lte: thresholdDate } }, include: { itemEstoque: { select: { id, nome } } } })` — `thresholdDate = now - 6 dias` (todos) + `now - 30 dias` (urgentes)",
+        "  - Etapa 2: para cada manutenção, calcular `diasEmManutencao = (now - dataEnvio) / (1000*60*60*24)`",
+        "    - Se `diasEmManutencao >= 30`: urgente (alerta com titulo '🚨 URGENTE: Manutenção atrasada há X dias — <nome>')",
+        "    - Se `diasEmManutencao >= 6`: aviso (titulo '⚠️ Manutenção em andamento há X dias — <nome>')",
+        "    - Senão: skip",
+        "  - Etapa 3: **Idempotência 24h** — `prisma.alerta.findFirst({ where: { titulo: { contains: itemEstoque.nome }, origem: 'RN-EST-04', createdAt: { gte: now - 24h } } })` — se existe, skip criação",
+        "**Para cada item sem alerta recente, criar:**",
+        "  - `tx.alerta.create({ data: { titulo: <montado>, mensagem: 'Item \"<nome>\" está em manutenção há <X> dias sem prazo de retorno.', origem: 'RN-EST-04', destinatarios: { create: destinatariosTodos } } })`",
+        "  - **Destinatários:** todos os ADMIN/PASTOR/SECRETARIO do sistema (não LIDER_MIN./FINANCEIRO/DISCIPULADOR — RN-EST-04 é decisão operacional do almoxarifado)",
+        "  - `destinatariosTodos = prisma.membro.findMany({ where: { cargo: { in: ['ADMIN','PASTOR','SECRETARIO'] } }, select: { id: true } })`",
+        "`safeLog({ action: 'check_alerta_manutencao', resource: 'manutencao:<id>', userId, result: 'created|skipped' })` — sem nome do item",
+        "JSDoc completo: trade-off aceito, idempotência, escalonamento, exemplos",
+        "**Testes integração (todos VERDES — BLOQUEADOR):**",
+        "  - #15: item EM_MANUTENCAO há 7 dias sem prazo → cria 1 alerta 'aviso' para 3 destinatários",
+        "  - #17: item EM_MANUTENCAO há 31 dias sem prazo → cria 1 alerta 'URGENTE'",
+        "  - #18: idempotência — 2ª chamada em <24h → 0 alertas criados",
+        "  - Idempotência >24h — 2ª chamada após 24h → recria",
+        "  - Manutenção COM prazoTermino → skip (não é alerta)",
+        "  - Manutenção já retornada (dataRetorno !== null) → skip",
+        "  - Item EM_MANUTENCAO há 5 dias → skip (< 6 dias)",
+        "  - Atômico: mock injeta erro em `tx.alerta.create` → rollback (destinatários também revertem)"
+      ],
+      "done": false,
+      "status": "pending"
+    },
+    {
+      "id": "S13-T02",
+      "title": "Service `listarAlertasCriticosEstoque(user)` — itens em manutenção > 30 dias + estoque baixo + movimentação >90 dias sem estoque",
+      "type": "backend",
+      "owner": "backend",
+      "estimatedHours": 2.5,
+      "dependsOn": [
+        "S13-T01"
+      ],
+      "specRefs": [
+        "SPEC E.4 GET /app/estoque/alertas",
+        "PRD D.4 F7"
+      ],
+      "rags": [
+        "pattern-manutencao-alerta-manual",
+        "pattern-estoque-trava-quantidade",
+        "security-rbac-matrix"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "app/lib/manutencao.server.ts (+listarAlertasCriticosEstoque)",
+          "app/lib/itemEstoque.server.ts (+listarItensEstoqueBaixo)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD: listarAlertasCriticosEstoque(adminUser) com 2 itens críticos (1 manutenção >30d + 1 estoque baixo) retorna 2 alertas críticos",
+        "testPath": "app/lib/manutencao.server.test.ts (estender)",
+        "acceptance": "100% cobertura + ordenação por urgência"
+      },
+      "acceptanceCriteria": [
+        "Service `listarAlertasCriticosEstoque(user: SessionUser): Promise<AlertaCriticoEstoque[]>` em `manutencao.server.ts`",
+        "Camada 3 RBAC PRIMEIRO: `assertCanSeeEstoque(user)` (todos leem)",
+        "**3 queries em PARALELO via `Promise.all`:**",
+        "  - `itensEmManutencaoHaMaisDe30Dias = prisma.manutencaoAtivo.findMany({ where: { dataRetorno: null, dataEnvio: { lte: now - 30d } }, include: { itemEstoque: true } })` → derivado `diasEmManutencao`",
+        "  - `itensEstoqueBaixo = prisma.itemEstoque.findMany({ where: { ativo: true, tipo: 'CONSUMO', quantidade: { lte: 5 } } })` (limite arbitrário parametrizável)",
+        "  - `itensSemMovimentacaoHaMaisDe90Dias = prisma.itemEstoque.findMany({ where: { ativo: true, movimentacoes: { none: { createdAt: { gte: now - 90d } } } } })`",
+        "Retorno: array `AlertaCriticoEstoque` ordenado por urgência:",
+        "  - `{ tipo: 'MANUTENCAO_URGENTE', nivel: 'URGENTE', item: ItemEstoqueResumo, manutencao: ManutencaoResumo, diasEmManutencao: number }`",
+        "  - `{ tipo: 'ESTOQUE_BAIXO', nivel: 'AVISO', item: ItemEstoqueResumo }`",
+        "  - `{ tipo: 'SEM_MOVIMENTACAO', nivel: 'INFO', item: ItemEstoqueResumo, diasSemMovimento: number }`",
+        "Edge case: 0 alertas críticos → `[]`",
+        "**Dispara `verificarAlertaManutencaoSemPrazo(user)` ANTES de listar** — on-consulta (RN-EST-04)",
+        "`safeLog({ action: 'list_alertas_criticos_estoque', userId, result: 'ok' })`",
+        "JSDoc completo",
+        "Tipos: `export type NivelCritico = 'URGENTE' | 'AVISO' | 'INFO'`; `export type TipoAlertaCritico = 'MANUTENCAO_URGENTE' | 'ESTOQUE_BAIXO' | 'SEM_MOVIMENTACAO'`; `export type AlertaCriticoEstoque = { tipo: TipoAlertaCritico; nivel: NivelCritico; item: ItemEstoqueResumo; manutencao?: ManutencaoResumo; diasEmManutencao?: number; diasSemMovimento?: number }`",
+        "Testes: 6 cenários (admin lista 3 alertas, FINANCEIRO leitura OK, SECRETARIO leitura OK, 0 alertas edge, ordenação URGENTE primeiro, disparo automático de verificarAlerta antes)"
+      ],
+      "done": false,
+      "status": "pending"
+    },
+    {
+      "id": "S13-T03",
+      "title": "Hook em loaders existentes — `/app/estoque/:id` e `/app/alertas/:id` disparam `verificarAlertaManutencaoSemPrazo`",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 1.5,
+      "dependsOn": [
+        "S13-T01",
+        "S13-T02"
+      ],
+      "specRefs": [
+        "RAG pattern-manutencao-alerta-manual §4 (loader exemplo)"
+      ],
+      "rags": [
+        "pattern-manutencao-alerta-manual",
+        "lesson-prisma-7-commit-settle-e2e"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "app/routes/app/estoque.$id._index.tsx (adicionar chamada no loader)",
+          "app/routes/app/alertas._index.tsx (adicionar chamada no loader)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD implícito (E2E): após enviar item para manutenção há 31 dias (via mock ou simulação) → ADMIN abre /app/alertas → vê alerta URGENTE criado",
+        "testPath": "e2e/estoque-basico.spec.ts (estender) + e2e/alertas-cross.spec.ts (novo)",
+        "acceptance": "On-consulta funciona; idempotência 24h respeitada"
+      },
+      "acceptanceCriteria": [
+        "Loader de `app/routes/app/estoque.$id._index.tsx`: chama `await verificarAlertaManutencaoSemPrazo(user)` DEPOIS de `getItemEstoqueDetalhe` (não bloqueia render se helper lançar — try/catch silencioso)",
+        "Loader de `app/routes/app/alertas._index.tsx`: chama `await verificarAlertaManutencaoSemPrazo(user)` no início (1 chamada por visita à central)",
+        "**Idempotência 24h honrada:** helper já filtra — 2 visitas em <24h → 1 alerta total",
+        "**Logs:** safeLog com `result: 'ok'` se helper completou (não polui logs com itemId)",
+        "**Não bloqueia UX:** se helper lança, loga warning e segue (não propaga 500)",
+        "JSDoc nos 2 loaders explicando o hook",
+        "Testes integração: 2 cenários (loader estoq.$id chama helper, loader alertas chama helper)",
+        "E2E: criar manutenção >30d → ADMIN abre /alertas → vê alerta URGENTE"
+      ],
+      "done": false,
+      "status": "pending"
+    },
+    {
+      "id": "S13-T04",
+      "title": "Rota `/app/estoque/alertas` (lista centralizada de críticos) + componentes `<CardAlertaCritico>` + `<BadgeNivelCritico>`",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 3,
+      "dependsOn": [
+        "S13-T02"
+      ],
+      "specRefs": [
+        "SPEC E.4 GET /app/estoque/alertas (todos autenticados)"
+      ],
+      "rags": [
+        "pattern-manutencao-alerta-manual",
+        "convention-tipos-item-estoque",
+        "security-rbac-matrix",
+        "pattern-3-layer-rbac"
+      ],
+      "files": {
+        "create": [
+          "app/components/CardAlertaCritico.tsx",
+          "app/components/BadgeNivelCritico.tsx",
+          "app/components/ListaAlertasCriticos.tsx",
+          "app/routes/app/estoque.alertas.tsx"
+        ],
+        "modify": [
+          "app/routes.ts (registrar rota)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "Snapshot test dos componentes com mocks de alertas críticos (URGENTE/AVISO/INFO)",
+        "testPath": "app/components/*.test.tsx",
+        "acceptance": "Cards renderizam com cores corretas (vermelho/amber/azul)"
+      },
+      "acceptanceCriteria": [
+        "<BadgeNivelCritico nivel>: vermelho 'Urgente' / amber 'Aviso' / azul 'Info' (tailwind condicional)",
+        "<CardAlertaCritico alerta>: header com BadgeNivel + título + item.nome + dias (se aplicável) + CTA contextuais ('Ver item' link)",
+        "<ListaAlertasCriticos items>: grid de cards ordenados por urgência, EmptyState se vazio ('Nenhum alerta crítico. Estoque saudável.')",
+        "Rota `estoque.alertas.tsx`: loader chama `assertCanSeeEstoque` (Camada 2) + `listarAlertasCriticosEstoque(user)` (Camada 3)",
+        "Sidebar: adicionar item 'Alertas Estoque' (badge com count de URGENTES) — link para `/app/estoque/alertas`",
+        "JSDoc em todos components",
+        "Lighthouse Accessibility ≥ 95",
+        "Testes: 4 cenários integração (admin vê 3 cards, FINANCEIRO vê read-only, SECRETARIO vê read-only, 0 alertas edge case)"
+      ],
+      "done": false,
+      "status": "pending"
+    },
+    {
+      "id": "S13-T05",
+      "title": "Rota `/app/estoque/:id/editar` (PUT — atualização parcial: nome, descricao, localizacaoFisica)",
+      "type": "frontend",
+      "owner": "frontend",
+      "estimatedHours": 3,
+      "dependsOn": [
+        "S11-T05"
+      ],
+      "specRefs": [
+        "SPEC E.4 PUT /app/estoque/:id",
+        "PRD D.4 F1 (edição)"
+      ],
+      "rags": [
+        "security-rbac-matrix",
+        "pattern-3-layer-rbac",
+        "convention-tipos-item-estoque"
+      ],
+      "files": {
+        "create": [
+          "app/routes/app/estoque.$id.editar.tsx",
+          "app/components/FormEditarItemEstoque.tsx"
+        ],
+        "modify": [
+          "app/routes.ts (registrar rota)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "TDD: editarItem({ nome: 'Papel A4 Premium' }, adminUser) atualiza; FINANCEIRO → 403",
+        "testPath": "app/lib/itemEstoque.server.test.ts (estender)",
+        "acceptance": "100% cobertura + RBAC 3 camadas"
+      },
+      "acceptanceCriteria": [
+        "**Estender `ItemEstoqueUpdateSchema` em `app/lib/schemas/estoque.ts`**: `z.object({ nome: z.string().min(2).max(120).optional(), descricao: z.string().max(500).optional(), localizacaoFisica: z.string().max(120).optional() }).strict()` — **NÃO permite editar `tipo`, `quantidade` (apenas via movimentações), `numeroSerie`, `statusPatrimonio`, `ativo`** (decisão: edições estruturais via services específicos)",
+        "Service `editarItem(id, input: ItemEstoqueUpdateInput, user)` em `itemEstoque.server.ts` (S11-T05 stub) — implementação canônica:",
+        "  - `assertCanManageEstoque(user)`",
+        "  - `prisma.itemEstoque.findUniqueOrThrow` (404)",
+        "  - `prisma.itemEstoque.update({ where: { id }, data: input })` (apenas campos editáveis)",
+        "  - `safeLog({ action: 'edit_item_estoque', resource: 'item_estoque:<id>', userId, result: 'ok' })`",
+        "Rota `estoque.$id.editar.tsx`: loader chama `assertCanManageEstoque` (Camada 2) + `getItemEstoqueDetalhe` para pré-preencher",
+        "Action: parse `ItemEstoqueUpdateSchema.safeParse` + `editarItem` (Camada 3) → redirect 302 para `/app/estoque/:id` com toast 'Item atualizado'",
+        "Componente FormEditarItemEstoque: 3 campos (nome, descricao, localizacaoFisica) + Cancelar/Salvar",
+        "InfoBox warning se item arquivado (decisão: editar item arquivado é OK; reabrir é via action específica)",
+        "Camada 1 UI: link 'Editar' visível APENAS para 3 perfis manage",
+        "ErrorBoundary: 403 / 404 / 422 distintos",
+        "JSDoc em service, schema e loader",
+        "Testes integração: 5 cenários (admin OK nome, admin OK descricao+localizacao, FINANCEIRO 403, SECRETARIO OK, item inexistente 404)"
+      ],
+      "done": false,
+      "status": "pending"
+    },
+    {
+      "id": "S13-T06",
+      "title": "Cleanup MVP-DEBTs: vitest config .tsx + app/prisma.config.ts duplicado + routes.ts bug",
+      "type": "infra",
+      "owner": "backend",
+      "estimatedHours": 2.5,
+      "dependsOn": [],
+      "specRefs": [
+        "SPEC §12.1 pendências #7, #8",
+        "AGENTS.md §'MVP-DEBTs remanescentes'"
+      ],
+      "rags": [
+        "architecture-monolith-modular",
+        "convention-prisma-sqlite"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "vitest.config.ts (adicionar .tsx em include)",
+          "app/prisma.config.ts (deletar se duplicado)",
+          "app/routes.ts (corrigir linha 11 — tratamento de /app/api/auth/login.ts)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "N/A (cleanup de débitos técnicos)",
+        "testPath": "N/A",
+        "acceptance": "3 débitos resolvidos + testes continuam passando"
+      },
+      "acceptanceCriteria": [
+        "**MVP-DEBT-002:** `vitest.config.ts` → adicionar `include: ['app/**/*.{test,spec}.{ts,tsx}']` + `@testing-library/react` em deps (se ainda não estiver) + `environment: 'jsdom'` no test config para componentes React",
+        "Verificação: `pnpm test -- components/` agora roda testes .tsx",
+        "**MVP-DEBT-007:** `app/prisma.config.ts` vs `prisma.config.ts` (raiz) — manter apenas raiz, deletar `app/prisma.config.ts` (verificar antes se não é importado em nenhum lugar)",
+        "Verificação: `grep -r 'app/prisma.config' app/` → 0 matches",
+        "**MVP-DEBT-008:** `app/routes.ts` linha 11 — remover tratamento incorreto de `app/api/auth/login.ts` como rota (resource routes ficam em `app/api/`, não em `app/routes.ts`)",
+        "Verificação: `grep 'auth/login' app/routes.ts` → 0 matches",
+        "Re-rodar `pnpm test` + `pnpm build` + `pnpm typecheck` após cleanup — todos devem passar",
+        "Documentar em commit: `chore(s13): cleanup MVP-DEBTs 002/007/008`"
+      ],
+      "done": false,
+      "status": "pending"
+    },
+    {
+      "id": "S13-T07",
+      "title": "Atualizar `agents/AGENTS.md` §'Módulo Estoque + Patrimônio' — adicionar seções pós-implementação (S11-S13 done)",
+      "type": "docs",
+      "owner": "documenter",
+      "estimatedHours": 1,
+      "dependsOn": [
+        "S13-T06"
+      ],
+      "specRefs": [
+        "AGENTS.md §'Módulo Estoque + Patrimônio'"
+      ],
+      "rags": [
+        "architecture-monolith-modular",
+        "lgpd-igreja-conect"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "agents/AGENTS.md (atualizar estado do ciclo 3 para FEATURE COMPLETE)"
+        ]
+      },
+      "tdd": {
+        "testFirst": "N/A (docs)",
+        "testPath": "N/A",
+        "acceptance": "AGENTS.md reflete S11-S13 done + métricas finais"
+      },
+      "acceptanceCriteria": [
+        "Atualizar cabeçalho `**Estado do ciclo:**` para: `ciclo 1 (MVP) **FECHADO**. Ciclo 2 (Financeiro) **FECHADO**. Ciclo 3 (Estoque + Patrimônio) **FECHADO** em <data>.`",
+        "Atualizar `## TL;DR` ciclo 3 com métricas finais (cobertura, tests passing, gate result)",
+        "Adicionar subseção `### Quais services foram entregues em S11-S13` com lista canônica (itemEstoque, movimentacao, patrimonio, manutencao)",
+        "Adicionar subseção `### Comandos de verificação específicos` com `pnpm test:watch -- estoque`, `pnpm test:e2e -- estoque-cadastro`, etc. (AGENTS §'Comandos' já existe — estender)",
+        "Adicionar subseção `### Métrica macro do ciclo 3 (definition of done)` com citação do brief §7.1 (cadastrar + movimentar + histórico)"
+      ],
+      "done": false,
+      "status": "pending"
+    },
+    {
+      "id": "S13-T08",
+      "title": "Auditoria final S13 + LGPD + planning-reviewer (gate Phase 5 all-of: coverage ≥ 85%, 0 vuln critical/high, RBAC 3 camadas, RN-EST-04)",
+      "type": "review",
+      "owner": "security",
+      "estimatedHours": 3,
+      "dependsOn": [
+        "S13-T04",
+        "S13-T05",
+        "S13-T06"
+      ],
+      "specRefs": [
+        "PRD D.7.2 (gate qualidade)",
+        "PRD D.6 (riscos)",
+        "PRD §13 (gate aggregated Phase 5)"
+      ],
+      "rags": [
+        "lgpd-igreja-conect",
+        "security-rbac-matrix",
+        "pattern-manutencao-alerta-manual",
+        "pattern-3-layer-rbac"
+      ],
+      "files": {
+        "create": [
+          ".harness/audit/security-s13.md",
+          ".harness/audit/lgpd-s13.md",
+          ".harness/audit/planning-reviewer-ciclo3.md"
+        ],
+        "modify": []
+      },
+      "tdd": {
+        "testFirst": "N/A (auditoria manual + greps + score planning-reviewer)",
+        "testPath": "N/A (relatórios em .harness/audit/)",
+        "acceptance": "0 vuln critical/high; LGPD compliant; planning-reviewer score ≥ 70; gate all-of passed"
+      },
+      "acceptanceCriteria": [
+        "**Security audit (.harness/audit/security-s13.md):**",
+        "  - A01 (Broken Access Control): 3 camadas verificadas em TODAS as rotas `/app/estoque/**` (loader `assertCan*` + service `assertCan*` + UI `<Can>`); SECRETARIO 403 em `baixaPorPerda` (RN-EST-05 BLOQUEADOR — regressão S12); 5 helpers RBAC testados",
+        "  - A03 (Injection): Zod `.strict()` em todos schemas (S11-T04, S12-T01); `autorizadoPorId` do form → ZodError (Camada 2)",
+        "  - A04 (Insecure Design): trava quantidade `assertSaldoQuantidade` antes do I/O (S12-T02); re-leitura anti-TOCTOU; state machine patrimônio (S12-T04); alerta on-consulta com idempotência 24h (S13-T01 — sem cron job = vetor de negação)",
+        "  - A05 (Misconfiguration): erros 4xx/5xx genéricos; sem debug em prod",
+        "  - A09 (Logging): grep `console.log` em `app/lib/{itemEstoque,movimentacao,patrimonio,manutencao}.server.ts` → apenas safeLog; sem `quantidade`, `nomeRetirante`, `motivo`, `custoCentavos`, `assistenciaTecnica`, `prazoTermino` em log",
+        "  - Score: 0 critical, 0 high, < 3 medium",
+        "**LGPD audit (.harness/audit/lgpd-s13.md):**",
+        "  - §2.1 (sem CPF/RG/CNPJ): grep em `prisma/` e `app/lib/schemas/estoque.ts` → 0",
+        "  - §2.4 (numeroSerie é patrimonial, não pessoal): OK",
+        "  - §2.5 (logs sem PII): grep em todos os 4 services → 0 fora de JSDoc",
+        "  - §3.1 (alerta sem destinatários não-autorizados): destinatários do alerta são APENAS ADMIN/PASTOR/SECRETARIO (verificável em S13-T01)",
+        "  - Status: 'LGPD Compliant'",
+        "  - **R-EST-04 verificado:** teste BLOQUEADOR #15 (manutenção 7d → aviso) verde; #17 (>30d → urgente) verde; #18 (idempotência 24h) verde",
+        "**Planning-reviewer (.harness/audit/planning-reviewer-ciclo3.md):**",
+        "  - Score ≥ 70 (critérios: cobertura SPEC 100%, RBAC 3 camadas verificadas, RN-EST-04 documentada, débitos técnicos endereçados)",
+        "  - Validação: 11/11 endpoints cobertos (S11-T09/T10 + S12-T08 + S13-T04/T05)",
+        "  - Validação: 18/18 testes de borda cobertos (6 em S11 + 9 em S12 + 3 em S13)",
+        "  - Validação: 5/5 RNs (RN-EST-01/02/03/04/05) implementadas e testadas",
+        "  - Validação: 0 órfãos (cada task tem `dependsOn` resolvido)",
+        "  - Gate aggregated Phase 5: `coverage ≥ 85%`, `0 vuln critical/high`, `review ≥ 70`, `LGPD compliant`",
+        "  - **Recomendação ao orchestrator:** APROVAR ciclo 3 (gate all-of passed)"
+      ],
+      "done": false,
+      "status": "pending"
+    }
+  ],
+  "workers": [
+    "backend",
+    "frontend",
+    "tester",
+    "security",
+    "lgpd-officer",
+    "code-reviewer",
+    "documenter"
+  ],
+  "coverageTarget": 85,
+  "serviceCoverageTarget": 100,
+  "gate": {
+    "type": "all-of",
+    "expected": "pending"
+  },
+  "testesBordaObrigatorios": [
+    {
+      "id": 15,
+      "name": "Item EM_MANUTENCAO há 7 dias sem prazo → cria alerta 'aviso' (RN-EST-04)",
+      "covered_in": "S13-T01 (helper) + S13-T03 (loader hook) + E2E (S13-T09)"
+    },
+    {
+      "id": 17,
+      "name": "Item EM_MANUTENCAO há 31 dias sem prazo → cria alerta 'URGENTE' (RN-EST-04)",
+      "covered_in": "S13-T01 (helper) + E2E"
+    },
+    {
+      "id": 18,
+      "name": "Idempotência: 2ª verificação < 24h → 0 alertas criados (RN-EST-04)",
+      "covered_in": "S13-T01 (helper) + E2E"
+    }
+  ],
+  "userStoryCoverage": {
+    "US-EST-007 (F7 Alerta Manutenção)": "S13-T01, S13-T03, S13-T09",
+    "US-EST-008 (F8 Central Alertas Críticos)": "S13-T02, S13-T04",
+    "US-EST-009 (F9 Edição Item + Cleanup)": "S13-T05, S13-T06, S13-T07"
+  },
+  "notes": "Sprint final do ciclo 3. Implementa RN-EST-04 (alerta on-consulta, sem cron job — decisão consciente do brief §5.1), rota `/app/estoque/alertas` (centralizada), hook em loaders existentes (idempotência 24h), edição de item (PUT), cleanup de 3 MVP-DEBTs remanescentes (vitest .tsx, app/prisma.config.ts, routes.ts). Auditoria final + planning-reviewer para fechar gate aggregated Phase 5. Cobre 2/11 endpoints restantes do SPEC E.4 (#2 alertas + #6 editar), 3/18 testes de borda. Total ciclo 3: 72+64+40 = 176h, ~22 dias × 1 dev (3 sprints de 2 semanas). Decisão consciente: 1 task de cleanup (S13-T06) endereça débitos remanescentes do MVP — fora do escopo Estoque mas bloqueia gate.",
+  "lastUpdate": "2026-06-19T22:00:00Z"
+}

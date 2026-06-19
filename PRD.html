@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Igreja Conect — Product Requirements Document (MVP + Módulo Financeiro ciclo 2)</title>
-<meta name="description" content="Product Requirements Document do Igreja Conect: MVP (Auth + Membros + Discipulado + Alertas + Acolhimento) + Módulo Financeiro (ciclo 2: Caixas + Lançamentos + Dízimos + Transferências + Trava de Saldo)." />
+<title>Igreja Conect — Product Requirements Document (MVP + Módulo Financeiro + Estoque+Patrimônio)</title>
+<meta name="description" content="Product Requirements Document do Igreja Conect: MVP (Auth + Membros + Discipulado + Alertas + Acolhimento) + Módulo Financeiro (ciclo 2) + Módulo Estoque + Patrimônio (ciclo 3)." />
 <style>
   :root {
     --bg: #ffffff;
@@ -92,10 +92,10 @@
 
 <h1>Igreja Conect — Product Requirements Document</h1>
 <p class="meta">
-  <strong>Versão:</strong> 0.2 (MVP + ciclo 2) &middot;
-  <strong>Data:</strong> 2026-06-14 &middot;
-  <strong>Status:</strong> Aguardando revisão do PRD-reviewer (ciclo 2) &middot;
-  <strong>Escopo:</strong> MVP (Auth + Membros) + <strong>Módulo Financeiro (ciclo 2)</strong>
+  <strong>Versão:</strong> 0.3 (MVP + ciclo 2 + ciclo 3) &middot;
+  <strong>Data:</strong> 2026-06-19 &middot;
+  <strong>Status:</strong> Aguardando revisão do PRD-reviewer (ciclo 3) &middot;
+  <strong>Escopo:</strong> MVP (Auth + Membros) + <strong>Módulo Financeiro (ciclo 2)</strong> + <strong>Módulo Estoque + Patrimônio (ciclo 3)</strong>
 </p>
 
 <nav class="toc" aria-label="Sumário">
@@ -124,6 +124,18 @@
     <li><a href="#c2-metricas">D.7 Métricas de sucesso</a></li>
     <li><a href="#c2-glossario">D.8 Glossário do Financeiro (18 termos)</a></li>
     <li><a href="#c2-decisao-pendente">D.9 Decisão pendente: <code>Caixa.ativo</code></a></li>
+  </ol>
+  <strong style="display:block;margin-top:12px;">Apêndice E — Módulo Estoque + Patrimônio (ciclo 3, 2026-06-19)</strong>
+  <ol start="21">
+    <li><a href="#c3-sumario">E.1 Visão de produto do Estoque+Patrimônio</a></li>
+    <li><a href="#c3-personas">E.2 Personas × papel no Estoque</a></li>
+    <li><a href="#c3-features">E.3 Features (8 entregáveis: F1-F8)</a></li>
+    <li><a href="#c3-aceitacao">E.4 Critérios de aceitação por feature</a></li>
+    <li><a href="#c3-rns">E.5 Regras de negócio (RN-EST-01 a 05)</a></li>
+    <li><a href="#c3-lgpd">E.6 LGPD aplicada (Art. 6, 7, 18, 46)</a></li>
+    <li><a href="#c3-testes-borda">E.7 Testes de borda (10+)</a></li>
+    <li><a href="#c3-riscos">E.8 Riscos e mitigações</a></li>
+    <li><a href="#c3-fora">E.9 Fora do escopo (não-objetivos)</a></li>
   </ol>
 </nav>
 
@@ -324,15 +336,15 @@ A Igreja Conect reconhece 6 perfis administrativos. <strong>Todos os 6 perfis j�
   </tbody>
 </table>
 
-<h3>5.3 Estoque e Manutenção (referência — ciclo 3+)</h3>
+<h3>5.3 Estoque e Manutenção (implementadas no ciclo 3)</h3>
 <table>
-  <thead><tr><th>Código</th><th>Título</th></tr></thead>
+  <thead><tr><th>Código</th><th>Título</th><th>Resumo</th></tr></thead>
   <tbody>
-    <tr><td><code>RN-EST-01</code></td><td>Escopo dual (Consumo vs. Patrimônio)</td></tr>
-    <tr><td><code>RN-EST-02</code></td><td>Restrição de baixa de consumo (só Admin e Secretário, com identificação do retirante)</td></tr>
-    <tr><td><code>RN-EST-03</code></td><td>Manutenção externa (assistência, OS, prazo)</td></tr>
-    <tr><td><code>RN-EST-04</code></td><td>Escalonamento de alertas (6 em 6 dias, 3 em 3 após 30 dias)</td></tr>
-    <tr><td><code>RN-EST-05</code></td><td>Baixa por perda total (com upload obrigatório de laudo)</td></tr>
+    <tr><td><code>RN-EST-01</code></td><td>Escopo dual (Consumo vs. Patrimônio)</td><td>Modelagem <code>ItemEstoque.tipo</code> separa lógica; UI mostra campos diferentes por tipo.</td></tr>
+    <tr><td><code>RN-EST-02</code></td><td>Restrição de baixa de consumo (com nomeRetirante)</td><td>Saída exige <code>nomeRetirante</code> textual não-vazio e <code>justificativa</code>. Trava: estoque ≥ 0.</td></tr>
+    <tr><td><code>RN-EST-03</code></td><td>Manutenção externa (assistência, OS, prazo)</td><td>Item PATRIMONIO + status DISPONIVEL → <code>ManutencaoAtivo</code> + status EM_MANUTENCAO em <code>$transaction</code>.</td></tr>
+    <tr><td><code>RN-EST-04</code></td><td>Alerta de manutenção sem prazo (&gt;30 dias)</td><td>Versão simplificada: alerta manual disparado na consulta do item (sem cron). Idempotência 24h.</td></tr>
+    <tr><td><code>RN-EST-05</code></td><td>Baixa por perda total (motivo textual)</td><td>Apenas ADMIN. <code>motivo</code> textual substitui upload de laudo (S3 fora de escopo). Soft-delete via <code>ativo = false</code>.</td></tr>
   </tbody>
 </table>
 
@@ -474,6 +486,7 @@ No MVP, pedidos de acesso, correção ou eliminação de dados são atendidos <s
   <tbody>
     <tr><td>0.1</td><td>2026-06-12</td><td><code>requirements</code> agent</td><td>Versão inicial (MVP): Auth + Membros + Central de Alertas.</td></tr>
     <tr><td>0.2</td><td>2026-06-14</td><td><code>requirements</code> agent (ciclo 2)</td><td>Adicionado Apêndice D — Módulo Financeiro: 9 sub-seções, 5 RNs, 8 features, 12 testes de borda, decisão pendente <code>Caixa.ativo</code>.</td></tr>
+  <tr><td>0.3</td><td>2026-06-19</td><td><code>requirements</code> agent (ciclo 3)</td><td>Adicionado Apêndice E — Módulo Estoque + Patrimônio: 9 sub-seções, 5 RNs (RN-EST-01 a 05), 8 features (F1-F8), 10+ testes de borda, RBAC fina 6 perfis × 9 operações, LGPD Art. 6/7/18/46. Seção 5.3 promovida de "referência" para "implementado".</td></tr>
   </tbody>
 </table>
 
@@ -725,10 +738,216 @@ O discovery do ciclo 2 propôs (brief §5.4) adicionar campo <code>ativo: Boolea
 
 <hr />
 
+<!-- ===================================================== -->
+<!-- APÊNDICE E — MÓDULO ESTOQUE + PATRIMÔNIO (CICLO 3)    -->
+<!-- ===================================================== -->
+<h1 id="c3-apendice">Apêndice E — Módulo Estoque + Patrimônio (ciclo 3)</h1>
+<p class="meta">
+  <strong>Adicionado em:</strong> 2026-06-19 (Fase 2, ciclo 3) &middot;
+  <strong>Escopo:</strong> Estoque (Consumo) + Patrimônio (Manutenção externa + Baixa por perda) &middot;
+  <strong>Brief:</strong> <a href="brief.md">brief.md</a> (ciclo 3, 344 linhas)
+</p>
+
+<nav class="toc" aria-label="Apêndice E — Módulo Estoque + Patrimônio">
+  <strong>Apêndice E — Módulo Estoque + Patrimônio (ciclo 3)</strong>
+  <ol>
+    <li><a href="#c3-sumario">E.1 Visão de produto</a></li>
+    <li><a href="#c3-personas">E.2 Personas × papel</a></li>
+    <li><a href="#c3-features">E.3 Features (8 entregáveis F1-F8)</a></li>
+    <li><a href="#c3-aceitacao">E.4 Critérios de aceitação por feature</a></li>
+    <li><a href="#c3-rns">E.5 Regras de negócio (RN-EST-01 a 05)</a></li>
+    <li><a href="#c3-lgpd">E.6 LGPD aplicada (Art. 6, 7, 18, 46)</a></li>
+    <li><a href="#c3-testes-borda">E.7 Testes de borda (10+)</a></li>
+    <li><a href="#c3-riscos">E.8 Riscos e mitigações</a></li>
+    <li><a href="#c3-fora">E.9 Fora do escopo (não-objetivos)</a></li>
+  </ol>
+</nav>
+
+<h2 id="c3-sumario">E.1 Visão de produto do Módulo Estoque + Patrimônio</h2>
+<p>
+O <strong>Módulo de Estoque (Consumo) + Patrimônio</strong> é o escopo único do <strong>ciclo 3</strong>. Resolve 3 problemas clássicos da gestão eclesiástica: <strong>rastreabilidade de onde está cada bem</strong>, <strong>histórico de manutenções externas</strong>, e <strong>controle de perdas com justificativa formal</strong>. O schema Prisma já tem os 3 models (<code>ItemEstoque</code>, <code>MovimentacaoEstoque</code>, <code>ManutencaoAtivo</code>) e 2 enums (<code>TipoItemEstoque</code>, <code>StatusItemPatrimonio</code>) desde o ciclo 1. As 5 regras de negócio (<code>RN-EST-01</code> a <code>RN-EST-05</code>) já estão formalizadas em <code>docs/REGRAS_DE_NEGOCIO.md §3</code>. O ciclo 3 implementa services, UI e testes, sem nova decisão arquitetural.
+</p>
+
+<p>
+<strong>Métrica macro do ciclo (brief §7.1):</strong> <em>"um SECRETARIO consegue, em menos de 2 minutos, cadastrar 5 pacotes de papel A4 no estoque de Consumo, registrar uma saída de 2 pacotes informando o nome do retirante, ver o saldo atualizar para 3 pacotes, e o ADMIN consegue abrir o detalhe do item e ver o histórico completo de movimentações com nome do autorizador e do retirante."</em>
+</p>
+
+<script type="application/json" data-prd-section="E.1">
+{"visao":{"modulo":"Estoque + Patrimonio","ciclo":3,"substitui":"caderno de almoxarife + planilha de patrimonio sem foto","entrega":"5 RNs + 8 features + defesa em 3 camadas em 100% da matriz RBAC","metricamacro":"SECRETARIO cadastra 5 pacotes, registra saida de 2 com nome do retirante, saldo=3; ADMIN ve historico completo em < 2 min","esquecido_este_ciclo":["cron automatico RN-EST-04 (alerta manual na consulta)","upload de laudo tecnico (motivo textual)","upload de fotos de patrimonio","codigo de barras / QR code","integracao automatica Estoque <-> Financeiro"]}}
+</script>
+
+<h2 id="c3-personas">E.2 Personas × papel no Estoque + Patrimônio</h2>
+<p>Os 6 perfis administrativos do MVP ganham <strong>papel específico</strong> no módulo. <strong>4 dos 6 perfis são somente leitura</strong> — convergência operacional que simplifica a matriz.</p>
+
+<table>
+  <thead><tr><th>Persona</th><th>Perfil RBAC</th><th>Papel no módulo</th><th>Frequência</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Almoxarife / Secretário(a)</strong></td><td><code>SECRETARIO</code></td><td>Operador dia-a-dia: cadastra Consumo, registra entradas/saídas com nome do retirante, consulta Patrimônio.</td><td>Diária</td></tr>
+    <tr><td><strong>Pastor / Administrador</strong></td><td><code>ADMIN</code></td><td>CRUD total. <strong>Único</strong> que pode fazer baixa por perda (RN-EST-05).</td><td>Semanal</td></tr>
+    <tr><td><strong>Pastor</strong></td><td><code>PASTOR</code></td><td>CRUD total + leitura. Pode enviar patrimônio para manutenção externa.</td><td>Semanal</td></tr>
+    <tr><td><strong>Líder de Ministério</strong></td><td><code>LIDER_MINISTERIO</code></td><td><strong>Somente leitura</strong> (consulta para "onde está o microfone do louvor?").</td><td>Sob demanda</td></tr>
+    <tr><td><strong>Discipulador / Tesoureiro</strong></td><td><code>DISCIPULADOR</code> / <code>FINANCEIRO</code></td><td><strong>Somente leitura</strong> em ambos os tipos.</td><td>Sob demanda</td></tr>
+  </tbody>
+</table>
+
+<script type="application/json" data-prd-section="E.2">
+{"personas":[{"id":"P-EST-01","persona":"Almoxarife/Secretario","perfil":"SECRETARIO","papel":"Operador dia-a-dia","frequencia":"Diaria"},{"id":"P-EST-02","persona":"Pastor/Administrador","perfil":"ADMIN","papel":"CRUD total + baixa por perda","frequencia":"Semanal"},{"id":"P-EST-03","persona":"Pastor","perfil":"PASTOR","papel":"CRUD + manutencao","frequencia":"Semanal"},{"id":"P-EST-04","persona":"Lider Ministerio","perfil":"LIDER_MINISTERIO","papel":"Somente leitura","frequencia":"Sob demanda"},{"id":"P-EST-05","persona":"Discipulador/Tesoureiro","perfil":"DISCIPULADOR ou FINANCEIRO","papel":"Somente leitura","frequencia":"Sob demanda"}]}
+</script>
+
+<h2 id="c3-features">E.3 Features (8 entregáveis F1-F8)</h2>
+<ol>
+  <li><strong>F1 — CRUD ItemEstoque (Consumo, RN-EST-01):</strong> criar, listar com filtros (tipo, status, busca textual), editar, arquivar (soft-delete via <code>ativo</code>). RBAC: ADMIN, PASTOR, SECRETARIO.</li>
+  <li><strong>F2 — Movimentação Estoque com trava (RN-EST-02):</strong> ENTRADA/SAIDA em <code>prisma.$transaction</code> (insert + update <code>quantidade</code>). <code>nomeRetirante</code> obrigatório em SAIDA. Estoque ≥ 0 (BusinessRuleError 409). <code>justificativa</code> obrigatória em SAIDA, opcional em ENTRADA.</li>
+  <li><strong>F3 — CRUD Patrimônio (RN-EST-01):</strong> PATRIMONIO tem <code>numeroSerie</code> único e obrigatório, <code>localizacaoFisica</code> textual, <code>statusPatrimonio</code> (default DISPONIVEL). Mesma rota de F1 com campos condicionais.</li>
+  <li><strong>F4 — Manutenção externa (RN-EST-03):</strong> PATRIMONIO + DISPONIVEL → <code>ManutencaoAtivo</code> + status EM_MANUTENCAO em <code>$transaction</code>. <code>assistenciaTecnica</code> + <code>enderecoAssistencia</code> obrigatórios. <code>numeroOs</code> + <code>prazoTermino</code> opcionais.</li>
+  <li><strong>F5 — Baixa por perda total (RN-EST-05):</strong> ADMIN only. Item em EM_MANUTENCAO → status BAIXADO_PERDA + soft-delete (<code>ativo = false</code>). <code>motivo</code> textual obrigatório (substitui upload de laudo).</li>
+  <li><strong>F6 — Alerta manual de manutenção sem prazo (RN-EST-04):</strong> disparado na <strong>consulta</strong> do detalhe do item (sem cron). Se <code>prazoTermino IS NULL</code> e <code>dataEnvio &lt; now() - 30 dias</strong> → alerta "todos" com mensagem. Idempotência 24h. Mitigação: checagem também na rota <code>/app/alertas</code>.</li>
+  <li><strong>F7 — Dashboard Estoque (alertas críticos):</strong> rota <code>/app/estoque</code> lista com cards: "Em manutenção há &gt; 30 dias sem prazo" + "Estoque baixo" (quantidade ≤ 5). Visível a todos os perfis autenticados.</li>
+  <li><strong>F8 — RBAC fina 3 camadas:</strong> matriz 6 perfis × 9 operações. Defesa obrigatória: UI <code>&lt;Can&gt;</code>, loader <code>assertCanManageEstoque</code>, service <code>assertCanBaixarPerda</code> (ADMIN only). Helpers em <code>app/lib/rbac.server.ts</code>.</li>
+</ol>
+
+<script type="application/json" data-prd-section="E.3">
+{"features":[{"id":"F1","titulo":"CRUD ItemEstoque (Consumo)","rns":["RN-EST-01"],"rbac":["ADMIN","PASTOR","SECRETARIO"]},{"id":"F2","titulo":"Movimentacao Estoque com trava","rns":["RN-EST-02"],"rbac":["ADMIN","PASTOR","SECRETARIO"]},{"id":"F3","titulo":"CRUD Patrimonio","rns":["RN-EST-01"],"rbac":["ADMIN","PASTOR","SECRETARIO"]},{"id":"F4","titulo":"Manutencao externa","rns":["RN-EST-03"],"rbac":["ADMIN","PASTOR","SECRETARIO"]},{"id":"F5","titulo":"Baixa por perda total","rns":["RN-EST-05"],"rbac":["ADMIN"]},{"id":"F6","titulo":"Alerta manual manutencao >30 dias","rns":["RN-EST-04"],"rbac":["interno service"]},{"id":"F7","titulo":"Dashboard Estoque","rns":["RN-EST-01","RN-EST-04"],"rbac":["todos autenticados"]},{"id":"F8","titulo":"RBAC fina 3 camadas","rns":["todas"],"rbac":["todas as features"]}]}
+</script>
+
+<h2 id="c3-aceitacao">E.4 Critérios de aceitação por feature</h2>
+<table>
+  <thead><tr><th>Feature</th><th>Critério de aceitação (verificável)</th></tr></thead>
+  <tbody>
+    <tr><td>F1 — ItemEstoque</td><td><code>ItemEstoqueCreateSchema</code> valida <code>tipo</code> enum + <code>quantidade: int().min(0)</code>. <code>numeroSerie @unique</code>: duplicado → 409. Listagem padrão <code>ativo = true</code>. Soft-delete preserva histórico.</td></tr>
+    <tr><td>F2 — Movimentação</td><td>SAIDA com <code>nomeRetirante</code> vazio → 400. SAIDA que deixa <code>quantidade &lt; 0</code> → 409 "Estoque insuficiente". <code>autorizadoPorId = user.id</code> (carimbo imutável). ENTRADA com <code>justificativa</code> opcional.</td></tr>
+    <tr><td>F3 — Patrimônio</td><td><code>tipo: PATRIMONIO</code> exige <code>numeroSerie</code> (string não vazia, único) e <code>localizacaoFisica</code>. <code>statusPatrimonio</code> default DISPONIVEL. Editar não muda tipo (trava de tipo).</td></tr>
+    <tr><td>F4 — Manutenção</td><td>Item <code>tipo = CONSUMO</code> → 400. Item já EM_MANUTENCAO → 400. <code>assistenciaTecnica</code> + <code>enderecoAssistencia</code> obrigatórios. <code>prazoTermino</code> opcional. Atomicidade: 2 mutações em <code>$transaction</code>.</td></tr>
+    <tr><td>F5 — Baixa</td><td>SECRETARIO/PASTOR/DISCIPULADOR → 403 (3 camadas). Item DISPONIVEL → 400 (precisa estar EM_MANUTENCAO). <code>motivo</code> vazio → 400. <code>ativo = false</code> + <code>statusPatrimonio = BAIXADO_PERDA</code>.</td></tr>
+    <tr><td>F6 — Alerta</td><td>Loader de <code>/app/estoque/:id</code> checa ManutencaoAtivo ativa. Se &gt;30 dias sem prazo E nenhum alerta nas últimas 24h → cria 1 alerta "todos". Se &gt;6 dias sem prazo → cria alerta 6 dias.</td></tr>
+    <tr><td>F7 — Dashboard</td><td>Cards "Em manutenção &gt;30 dias" (count) + "Estoque baixo" (count &lt;= 5). Link para lista filtrada. Visível a todos os 6 perfis autenticados.</td></tr>
+    <tr><td>F8 — RBAC fina</td><td>100% das células da matriz (E.5) cobertas por teste E2E ou integração. Helpers <code>assertCanManageEstoque</code>, <code>assertCanMovimentarConsumo</code>, <code>assertCanBaixarPerda</code> em <code>app/lib/rbac.server.ts</code>.</td></tr>
+  </tbody>
+</table>
+
+<script type="application/json" data-prd-section="E.4">
+{"aceitacao":[{"feature":"F1","criterio_chave":"numeroSerie duplicado -> 409"},{"feature":"F2","criterio_chave":"SAIDA deixando quantidade<0 -> 409"},{"feature":"F3","criterio_chave":"PATRIMONIO exige numeroSerie + localizacao"},{"feature":"F4","criterio_chave":"CONSUMO -> 400; EM_MANUTENCAO -> 400; $transaction atomico"},{"feature":"F5","criterio_chave":"SECRETARIO/PASTOR -> 403 (3 camadas)"},{"feature":"F6","criterio_chave":">30 dias sem prazo + idempotencia 24h"},{"feature":"F7","criterio_chave":"todos perfis veem alertas criticos"},{"feature":"F8","criterio_chave":"100% matriz coberta por teste"}]}
+</script>
+
+<h2 id="c3-rns">E.5 Regras de negócio (RN-EST-01 a 05)</h2>
+<p>As 5 regras abaixo são a <strong>fonte de verdade</strong> do módulo, derivadas de <code>docs/REGRAS_DE_NEGOCIO.md §3</code> e do <code>brief.md</code> do ciclo 3.</p>
+
+<table>
+  <thead><tr><th>Código</th><th>Título</th><th>Resumo</th><th>Teste obrigatório</th></tr></thead>
+  <tbody>
+    <tr><td><code>RN-EST-01</code></td><td>Escopo dual Consumo vs. Patrimônio</td><td><code>ItemEstoque.tipo: TipoItemEstoque</code> separa lógica. UI mostra campos diferentes por tipo. PATRIMONIO exige <code>numeroSerie</code> + <code>localizacaoFisica</code>.</td><td>PATRIMONIO sem numeroSerie → 400.</td></tr>
+    <tr><td><code>RN-EST-02</code></td><td>Movimentação com trava de estoque</td><td>ENTRADA/SAIDA em <code>$transaction</code>. <code>nomeRetirante</code> obrigatório em SAIDA. <code>justificativa</code> obrigatória em SAIDA. Estoque ≥ 0.</td><td>SAIDA com estoque insuficiente → 409.</td></tr>
+    <tr><td><code>RN-EST-03</code></td><td>Manutenção externa</td><td>PATRIMONIO + DISPONIVEL → <code>ManutencaoAtivo</code> + status EM_MANUTENCAO. <code>assistenciaTecnica</code> + <code>enderecoAssistencia</code> obrigatórios. <code>prazoTermino</code> opcional.</td><td>CONSUMO tentando manutenção → 400.</td></tr>
+    <tr><td><code>RN-EST-04</code></td><td>Alerta de manutenção sem prazo</td><td>Versão simplificada: alerta manual disparado na consulta do item (sem cron). Janelas: 6 dias (aviso) e 30 dias (urgente). Idempotência 24h.</td><td>Item 31 dias sem prazo + sem alerta nas últimas 24h → cria alerta.</td></tr>
+    <tr><td><code>RN-EST-05</code></td><td>Baixa por perda total</td><td>ADMIN only. Item em EM_MANUTENCAO → status BAIXADO_PERDA + <code>ativo = false</code>. <code>motivo</code> textual obrigatório (substitui upload de laudo — S3 fora de escopo).</td><td>SECRETARIO tentando baixa → 403.</td></tr>
+  </tbody>
+</table>
+
+<script type="application/json" data-prd-section="E.5">
+{"rns":[{"id":"RN-EST-01","titulo":"Escopo dual","fonte":"docs/REGRAS_DE_NEGOCIO.md §3","teste":"PATRIMONIO sem numeroSerie -> 400"},{"id":"RN-EST-02","titulo":"Trava de estoque","fonte":"docs/REGRAS_DE_NEGOCIO.md §3","teste":"SAIDA insuficiente -> 409"},{"id":"RN-EST-03","titulo":"Manutencao externa","fonte":"docs/REGRAS_DE_NEGOCIO.md §3","teste":"CONSUMO em manutencao -> 400"},{"id":"RN-EST-04","titulo":"Alerta sem prazo","fonte":"brief.md §4.6","teste":"31 dias + idempotencia 24h"},{"id":"RN-EST-05","titulo":"Baixa por perda","fonte":"docs/REGRAS_DE_NEGOCIO.md §3","teste":"SECRETARIO -> 403"}]}
+</script>
+
+<h2 id="c3-lgpd">E.6 LGPD aplicada (Art. 6, 7, 18, 46)</h2>
+<p>O módulo Estoque é o que tem <strong>menor superfície LGPD</strong> do sistema, por design: <strong>nenhum dado pessoal identificável</strong> é persistido. Esta seção documenta o tratamento.</p>
+
+<h3>E.6.1 Princípios</h3>
+<ul>
+  <li><strong>Art. 6° (necessidade):</strong> o módulo <strong>não coleta</strong> CPF, RG, endereço residencial, telefone, e-mail. Os campos de <code>ItemEstoque</code> são apenas textuais: nome, descrição, número de série (identificador de fabricante), localização física.</li>
+  <li><strong>Art. 7° (legítimo interesse):</strong> base legal é <em>legítimo interesse da Igreja</em> para gestão patrimonial eclesiástica (Art. 7°, VI). <code>nomeRetirante</code> é texto livre sem vinculação a <code>Membro</code>, eliminando necessidade de tratar PII de pessoas externas.</li>
+  <li><strong>Art. 18 (direitos do titular):</strong> como não há dados pessoais, pedidos de acesso/eliminação de Estoque se aplicam apenas a logs de auditoria estruturados (não a dados de negócio). O <code>lgpd-officer</code> auditará.</li>
+  <li><strong>Art. 46 (segurança e responsabilidade):</strong> <code>safeLog</code> com allowlist. <strong>Proibido em logs:</strong> <code>nomeRetirante</code>, <code>motivo</code> (perda), <code>descricao</code> textual livre. Apenas IDs e ações.</li>
+</ul>
+
+<h3>E.6.2 Decisão consciente: <code>nomeRetirante</code> como texto livre</h3>
+<p>
+A decisão de <strong>não</strong> vincular <code>MovimentacaoEstoque.nomeRetirante</code> a <code>Membro.id</code> é <strong>consciente e aprovada</strong> (brief §6.2). Justificativas:
+</p>
+<ol>
+  <li>Reduz atrito operacional (ex: "João da limpeza", "Maria visitante" não precisam de cadastro).</li>
+  <li>Elimina necessidade de tratar LGPD para pessoas físicas externas.</li>
+  <li>O carimbo de quem <strong>autorizou</strong> a saída (<code>autorizadoPorId</code>) é o <code>user.id</code> do sistema, com auditoria completa.</li>
+</ol>
+
+<script type="application/json" data-prd-section="E.6">
+{"lgpd":{"artigos":{"6":"necessidade (sem CPF/RG/endereco/telefone/email)","7":"legitimo interesse gestao patrimonial (Art. 7 VI)","18":"direitos titular aplicam-se apenas a logs de auditoria","46":"seguranca: safeLog com allowlist (sem nomeRetirante/motivo/descricao)"},"decisao_chave":"nomeRetirante como texto livre (sem FK para Membro) por decisao consciente (brief §6.2)","risco_residual":"minimo por design; sem dados pessoais identificaveis"}}
+</script>
+
+<h2 id="c3-testes-borda">E.7 Testes de borda obrigatórios (10+)</h2>
+<p>Lista derivada do <code>brief.md §7.3</code> (12 testes) + 6 testes de RBAC = 18 totais. Cada teste é <strong>bloqueador da sprint</strong> que o entrega. TDD antes do service.</p>
+
+<table>
+  <thead><tr><th>#</th><th>Teste</th><th>RN</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>SAIDA com <code>nomeRetirante</code> vazio → 400</td><td>RN-EST-02</td><td>Unit + Integração</td></tr>
+    <tr><td>2</td><td>SAIDA que deixa estoque negativo → 409</td><td>RN-EST-02 + trava</td><td>Unit (bloqueador)</td></tr>
+    <tr><td>3</td><td>ENTRADA sem <code>justificativa</code> → passa (opcional)</td><td>RN-EST-02</td><td>Unit</td></tr>
+    <tr><td>4</td><td>SAIDA sem <code>justificativa</code> → 400 (obrigatória)</td><td>RN-EST-02</td><td>Unit</td></tr>
+    <tr><td>5</td><td>Enviar para manutenção item <code>CONSUMO</code> → 400 (trava de tipo)</td><td>RN-EST-03</td><td>Unit</td></tr>
+    <tr><td>6</td><td>Enviar para manutenção item já em manutenção → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
+    <tr><td>7</td><td>Manutenção sem <code>assistenciaTecnica</code> ou sem <code>enderecoAssistencia</code> → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
+    <tr><td>8</td><td>Manutenção sem <code>prazoTermino</code> → passa (opcional, dispara alerta)</td><td>RN-EST-03 + RN-EST-04</td><td>Unit</td></tr>
+    <tr><td>9</td><td>Retorno de manutenção com <code>dataRetorno &lt; dataEnvio</code> → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
+    <tr><td>10</td><td>Baixa por perda por <code>SECRETARIO</code> → 403 (3 camadas)</td><td>RN-EST-05</td><td>E2E</td></tr>
+    <tr><td>11</td><td>Baixa por perda por <code>PASTOR</code> → 403 (RN-EST-05)</td><td>RN-EST-05</td><td>E2E</td></tr>
+    <tr><td>12</td><td>Baixa por perda por <code>ADMIN</code> em item <code>DISPONIVEL</code> → 400</td><td>RN-EST-05</td><td>Unit</td></tr>
+    <tr><td>13</td><td>Baixa por perda por <code>ADMIN</code> sem <code>motivo</code> → 400</td><td>RN-EST-05</td><td>Unit</td></tr>
+    <tr><td>14</td><td>Item com patrimônio mesmo <code>numeroSerie</code> → 409 (unique)</td><td>RN-EST-01</td><td>Unit</td></tr>
+    <tr><td>15</td><td>Listagem filtra itens com <code>ativo = false</code> por padrão</td><td>RN-EST-01 (soft-delete)</td><td>Unit</td></tr>
+    <tr><td>16</td><td><code>DISCIPULADOR</code> tentando <code>/app/estoque/novo</code> → 403 em todas as 3 camadas</td><td>RBAC</td><td>E2E</td></tr>
+    <tr><td>17</td><td><code>FINANCEIRO</code> tentando criar movimentação de saída → 403 em todas as 3 camadas</td><td>RBAC</td><td>E2E</td></tr>
+    <tr><td>18</td><td>Item em manutenção há 31 dias sem prazo + sem alerta 24h → cria alerta 30 dias</td><td>RN-EST-04</td><td>Unit + Integração</td></tr>
+  </tbody>
+</table>
+
+<script type="application/json" data-prd-section="E.7">
+{"testes_borda":[{"id":1,"nome":"SAIDA nomeRetirante vazio","rn":"RN-EST-02","tipo":"unit+integracao"},{"id":2,"nome":"SAIDA estoque insuficiente","rn":"RN-EST-02","tipo":"unit (bloqueador)"},{"id":3,"nome":"ENTRADA sem justificativa","rn":"RN-EST-02","tipo":"unit"},{"id":4,"nome":"SAIDA sem justificativa","rn":"RN-EST-02","tipo":"unit"},{"id":5,"nome":"Manutencao em CONSUMO","rn":"RN-EST-03","tipo":"unit"},{"id":6,"nome":"Manutencao duplicada","rn":"RN-EST-03","tipo":"unit"},{"id":7,"nome":"Manutencao sem assistencia","rn":"RN-EST-03","tipo":"unit"},{"id":8,"nome":"Manutencao sem prazo","rn":"RN-EST-03+04","tipo":"unit"},{"id":9,"nome":"Retorno dataRetorno<dataEnvio","rn":"RN-EST-03","tipo":"unit"},{"id":10,"nome":"Baixa por SECRETARIO","rn":"RN-EST-05","tipo":"e2e"},{"id":11,"nome":"Baixa por PASTOR","rn":"RN-EST-05","tipo":"e2e"},{"id":12,"nome":"Baixa em DISPONIVEL","rn":"RN-EST-05","tipo":"unit"},{"id":13,"nome":"Baixa sem motivo","rn":"RN-EST-05","tipo":"unit"},{"id":14,"nome":"numeroSerie duplicado","rn":"RN-EST-01","tipo":"unit"},{"id":15,"nome":"Listagem filtra arquivados","rn":"RN-EST-01","tipo":"unit"},{"id":16,"nome":"DISCIPULADOR /estoque/novo","rn":"RBAC","tipo":"e2e"},{"id":17,"nome":"FINANCEIRO saida","rn":"RBAC","tipo":"e2e"},{"id":18,"nome":"Alerta 31 dias","rn":"RN-EST-04","tipo":"unit+integracao"}]}
+</script>
+
+<h2 id="c3-riscos">E.8 Riscos e mitigações</h2>
+<table>
+  <thead><tr><th>#</th><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Mitigação</th></tr></thead>
+  <tbody>
+    <tr><td>R-EST-01</td><td><strong>Estoque ficar negativo</strong> (RN-EST-02 violada por bug)</td><td>Média</td><td><span class="badge bad">Alto</span></td><td>Trava no <strong>service</strong> via <code>assertEstoquePositivo</code> + re-leitura anti-TOCTOU no <code>$transaction</code>. Teste de borda "saldo=0, saída=1" é bloqueador de sprint.</td></tr>
+    <tr><td>R-EST-02</td><td><strong>Patrimônio perdido sem paradeiro</strong> (sem foto, sem status)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Status obrigatório (DISPONIVEL/EM_MANUTENCAO/BAIXADO_PERDA). Histórico de movimentações/manutenções visível no detalhe. Foto é backlog.</td></tr>
+    <tr><td>R-EST-03</td><td><strong>Manutenção esquecida na assistência técnica</strong></td><td>Média</td><td>Médio</td><td>Alerta manual na consulta (RN-EST-04) com janelas 6 e 30 dias. Idempotência 24h. Cron real é backlog.</td></tr>
+    <tr><td>R-EST-04</td><td><strong>Baixa por perda feita por SECRETARIO</strong> (RN-EST-05 violada)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Defesa em 3 camadas: UI esconde botão "Dar baixa", loader lança 403, service <code>assertCanBaixarPerda</code> lança 403. E2E cobre bypass URL.</td></tr>
+    <tr><td>R-EST-05</td><td><strong>Movimentação parcial</strong> (insert sem update quantidade)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>2 mutações em 1 <code>$transaction</code>. Teste com mock valida rollback total.</td></tr>
+    <tr><td>R-EST-06</td><td><strong>nomeRetirante em log</strong> (LGPD Art. 46)</td><td>Baixa</td><td>Médio</td><td><code>safeLog</code> com allowlist. <code>nomeRetirante</code> e <code>motivo</code> proibidos em log. Code review recusa PR com <code>console.log</code> desses campos.</td></tr>
+    <tr><td>R-EST-07</td><td><strong>Item deletado fisicamente</strong> destrói histórico</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Soft-delete via <code>ativo = false</code>. <code>onDelete: Restrict</code> em <code>MovimentacaoEstoque.itemEstoque</code>. Histórico preservado.</td></tr>
+  </tbody>
+</table>
+
+<script type="application/json" data-prd-section="E.8">
+{"riscos":[{"id":"R-EST-01","titulo":"Estoque negativo","rns":["RN-EST-02"],"mitigacao":"assertEstoquePositivo no service + $transaction"},{"id":"R-EST-02","titulo":"Patrimonio sem paradeiro","rns":["RN-EST-01"],"mitigacao":"status obrigatorio + historico no detalhe"},{"id":"R-EST-03","titulo":"Manutencao esquecida","rns":["RN-EST-04"],"mitigacao":"alerta manual na consulta + idempotencia 24h"},{"id":"R-EST-04","titulo":"Baixa por SECRETARIO","rns":["RN-EST-05"],"mitigacao":"3 camadas de defesa + E2E bypass"},{"id":"R-EST-05","titulo":"Movimentacao parcial","rns":["RN-EST-02"],"mitigacao":"$transaction atomico"},{"id":"R-EST-06","titulo":"nomeRetirante em log","rns":["LGPD Art.46"],"mitigacao":"safeLog com allowlist"},{"id":"R-EST-07","titulo":"Item deletado","rns":["RN-EST-01"],"mitigacao":"soft-delete + Restrict"}]}
+</script>
+
+<h2 id="c3-fora">E.9 Fora do escopo (não-objetivos do ciclo 3)</h2>
+<p>12 itens explicitamente fora deste ciclo (brief §8). Registro para evitar scope creep. Podem virar ciclo futuro se a demanda surgir.</p>
+<ol>
+  <li>❌ <strong>Cron automático</strong> (RN-EST-04 scheduler real). Implementação manual via consulta. Sem <code>node-cron</code> neste ciclo.</li>
+  <li>❌ <strong>Upload de laudo técnico</strong> (RN-EST-05 anexos PDF/imagem). Campo <code>urlLaudoTecnico</code> permanece <code>null</code>. Sem S3/MinIO.</li>
+  <li>❌ <strong>Upload de fotos de patrimônio</strong> (cadeira.jpg, instrumento.jpg). Sem S3/MinIO. <code>localizacaoFisica</code> é texto.</li>
+  <li>❌ <strong>Sincronização automática Estoque ↔ Financeiro.</strong> Lançamento de despesa de <code>MANUTENCAO</code> ou <code>COMPRA_ESTOQUE</code> continua manual pelo <code>FINANCEIRO</code>. Integração automática fica para ciclo futuro.</li>
+  <li>❌ <strong>Códigos de barras / QR Code</strong> para patrimônio. Identificação por <code>numeroSerie</code> textual é suficiente.</li>
+  <li>❌ <strong>Relatórios avançados</strong> (curva ABC de consumo, tempo médio de manutenção, etc.).</li>
+  <li>❌ <strong>Inventário físico com checklist mobile.</strong> Sem app nativo.</li>
+  <li>❌ <strong>Notificações por e-mail/push</strong> para manutenção. Apenas in-app via Alertas.</li>
+  <li>❌ <strong>Multi-igreja / multi-tenant.</strong> Uma instância = uma igreja.</li>
+  <li>❌ <strong>Workflow de aprovação multi-nível</strong> para baixa por perda. Apenas <code>ADMIN</code> (single-approver).</li>
+  <li>❌ <strong>Reconciliação contábil</strong> automática com sistema externo.</li>
+  <li>❌ <strong>Etiquetas impressas</strong> de patrimônio. Fora de escopo digital.</li>
+</ol>
+
+<script type="application/json" data-prd-section="E.9">
+{"nao_objetivos":["cron_automatico_RN-EST-04","upload_laudo_tecnico","upload_foto_patrimonio","sync_automatica_estoque_financeiro","codigo_barras_qrcode","relatorios_avancados_abc","inventario_mobile","notificacao_email_push_manutencao","multi_igreja","aprovacao_multinivel_baixa","reconciliacao_contabil_automatica","etiquetas_impressas"],"racional":"Lista explicita do brief §8 para evitar scope creep. Itens podem entrar em ciclo futuro se a demanda surgir.","debitos_aceitos":[{"id":"CYCLE-3-DEBT-001","descricao":"MotivoPerda texto livre em vez de upload de laudo","origem":"brief §5.2"},{"id":"CYCLE-3-DEBT-002","descricao":"Alerta RN-EST-04 manual (consulta) nao cron","origem":"brief §5.1"}]}
+</script>
+
+<hr />
+
 <footer>
   <p>
-    Igreja Conect — PRD v0.2 (MVP + Módulo Financeiro ciclo 2). Mantido pelo <code>requirements</code> agent na Fase 2 do Harness v6.
-    Documentos relacionados: <a href="SPEC.html">SPEC.html</a> (especificação técnica, inclui Apêndice D do Financeiro), <code>docs/architecture/ARCH.md</code> §8 (arquitetura do Financeiro), <code>docs/REGRAS_DE_NEGOCIO.md</code> §2 (RN-FIN-01 a 05), <code>brief.md</code> (brief do ciclo 2), <code>.harness/RAG/</code> (14 RAGs, 4 do ciclo 2: <code>pattern-trava-saldo-service</code>, <code>pattern-transferencia-caixas</code>, <code>architecture-financeiro</code>, <code>decision-caixa-soft-delete</code>).
+    Igreja Conect — PRD v0.3 (MVP + Módulo Financeiro ciclo 2 + Módulo Estoque+Patrimônio ciclo 3). Mantido pelo <code>requirements</code> agent na Fase 2 do Harness v6.
+    Documentos relacionados: <a href="SPEC.html">SPEC.html</a> (especificação técnica, inclui Apêndices D e E), <code>docs/architecture/ARCH.md</code> §8/§12 (arquitetura), <code>docs/REGRAS_DE_NEGOCIO.md</code> §2/§3 (RN-FIN-01 a 05 + RN-EST-01 a 05), <code>brief.md</code> (brief do ciclo 3), <code>.harness/RAG/</code> (RAGs do ciclo 3: <code>architecture-estoque</code>, <code>pattern-movimentacao-estoque</code>, <code>pattern-manutencao-patrimonio</code>, <code>decision-itemEstoque-soft-delete</code>).
   </p>
 </footer>
 
