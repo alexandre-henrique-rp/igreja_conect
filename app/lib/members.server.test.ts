@@ -554,3 +554,36 @@ describe("members.server — promoverTipo (RN-MEM-06)", () => {
     expect((updated as any).senhaHash).toBeUndefined();
   });
 });
+
+// ==================== SEC-004: listarMembrosParaSelect coverage (S06-REWORK) ====================
+
+describe("members.server — listarMembrosParaSelect (SEC-004)", () => {
+  let listarMembrosParaSelect: typeof import("./members.server").listarMembrosParaSelect;
+
+  beforeAll(async () => {
+    vi.resetModules();
+    const mod = await import("./members.server");
+    listarMembrosParaSelect = mod.listarMembrosParaSelect;
+  });
+
+  it("ADMIN pode listar membros para select", async () => {
+    await prismaTest.membro.create({
+      data: { nome: "Maria", email: "maria@test.com", tipo: "MEMBRO_ATIVO" },
+    });
+    const result = await listarMembrosParaSelect(adminUser());
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toHaveProperty("id");
+    expect(result[0]).toHaveProperty("nome");
+  });
+
+  it("SECRETARIO pode listar membros para select (assertCanWriteLancamento)", async () => {
+    let caught: unknown = null;
+    try {
+      await listarMembrosParaSelect(secretarioUser());
+    } catch (e) {
+      caught = e;
+    }
+    // SECRETARIO is in FINANCIAL_MODULE_CARGOS, should NOT throw
+    expect(caught).toBeNull();
+  });
+});

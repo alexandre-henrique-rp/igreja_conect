@@ -1,3 +1,11 @@
+// SEC-003 (S06-REWORK): SESSION_SECRET validation — must be set and >= 32 chars in production
+if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET obrigatório em produção");
+}
+if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 32) {
+  throw new Error("SESSION_SECRET deve ter >= 32 caracteres");
+}
+
 import { prisma } from "~/db/prisma.server";
 import { createCookie } from "react-router";
 

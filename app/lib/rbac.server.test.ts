@@ -6,11 +6,19 @@
  * - assertCanWriteMembers: todos os 6 passam; null falha
  * - assertIsAdmin: só ADMIN passa
  * - assertCanManageConfiguracaoGeral: só ADMIN
+ *
+ * SEC-001/002 (S06-REWORK):
+ * - assertCanSeeFinancialModule: ADMIN, PASTOR, FINANCEIRO, SECRETARIO passam (4 perfis)
+ * - assertCanSeeDizimos: ADMIN, PASTOR, FINANCEIRO passam (3 perfis — dízimos vinculados a membro)
+ * - assertCanWriteLancamento: ADMIN, PASTOR, FINANCEIRO, SECRETARIO passam (4 perfis)
  */
 import { describe, it, expect } from "vitest";
 import {
   assertCanSeeFinancials,
+  assertCanSeeFinancialModule,
+  assertCanSeeDizimos,
   assertCanWriteMembers,
+  assertCanWriteLancamento,
   assertIsAdmin,
   assertCanManageConfiguracaoGeral,
 } from "./rbac.server";
@@ -18,7 +26,9 @@ import type { SessionUser } from "./session.server";
 
 const u = (cargo: SessionUser["cargo"]): SessionUser => ({ id: "u1", nome: "U", cargo });
 
-describe("rbac.server — assertCanSeeFinancials", () => {
+// ==================== assertCanSeeFinancials (legado, 3 perfis) ====================
+
+describe("rbac.server — assertCanSeeFinancials (legado)", () => {
   it.each(["ADMIN", "PASTOR", "FINANCEIRO"] as const)(
     "%s pode ver dados financeiros",
     (cargo) => {
@@ -40,6 +50,80 @@ describe("rbac.server — assertCanSeeFinancials", () => {
   );
 });
 
+// ==================== SEC-001/002: assertCanSeeFinancialModule (4 perfis) ====================
+
+describe("rbac.server — assertCanSeeFinancialModule (SEC-001/002)", () => {
+  it.each(["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"] as const)(
+    "%s pode ver módulo financeiro",
+    (cargo) => {
+      expect(() => assertCanSeeFinancialModule(u(cargo))).not.toThrow();
+    }
+  );
+
+  it.each(["DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+    "%s NÃO pode ver módulo financeiro (lança Response 403)",
+    (cargo) => {
+      try {
+        assertCanSeeFinancialModule(u(cargo));
+        expect.fail("deveria ter lançado");
+      } catch (e) {
+        expect(e).toBeInstanceOf(Response);
+        expect((e as Response).status).toBe(403);
+      }
+    }
+  );
+});
+
+// ==================== SEC-001/002: assertCanSeeDizimos (3 perfis) ====================
+
+describe("rbac.server — assertCanSeeDizimos (SEC-001/002)", () => {
+  it.each(["ADMIN", "PASTOR", "FINANCEIRO"] as const)(
+    "%s pode ver dízimos vinculados a membro (RN-MEM-03)",
+    (cargo) => {
+      expect(() => assertCanSeeDizimos(u(cargo))).not.toThrow();
+    }
+  );
+
+  it.each(["SECRETARIO", "DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+    "%s NÃO pode ver dízimos (lança Response 403)",
+    (cargo) => {
+      try {
+        assertCanSeeDizimos(u(cargo));
+        expect.fail("deveria ter lançado");
+      } catch (e) {
+        expect(e).toBeInstanceOf(Response);
+        expect((e as Response).status).toBe(403);
+      }
+    }
+  );
+});
+
+// ==================== SEC-005: assertCanWriteLancamento (4 perfis) ====================
+
+describe("rbac.server — assertCanWriteLancamento (SEC-005)", () => {
+  it.each(["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"] as const)(
+    "%s pode criar lançamentos",
+    (cargo) => {
+      expect(() => assertCanWriteLancamento(u(cargo))).not.toThrow();
+    }
+  );
+
+  it.each(["DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+    "%s NÃO pode criar lançamentos (lança Response 403)",
+    (cargo) => {
+      try {
+        assertCanWriteLancamento(u(cargo));
+        expect.fail("deveria ter lançado");
+      } catch (e) {
+        expect(e).toBeInstanceOf(Response);
+        expect((e as Response).status).toBe(403);
+      }
+    }
+  );
+});
+
+// ==================== assertCanWriteMembers ====================
+
 describe("rbac.server — assertCanWriteMembers", () => {
   it.each(["ADMIN", "PASTOR", "SECRETARIO", "DISCIPULADOR", "FINANCEIRO", "LIDER_MINISTERIO"] as const)(
     "%s pode escrever membros",
@@ -59,6 +143,8 @@ describe("rbac.server — assertCanWriteMembers", () => {
   });
 });
 
+// ==================== assertIsAdmin ====================
+
 describe("rbac.server — assertIsAdmin", () => {
   it("ADMIN pode", () => {
     expect(() => assertIsAdmin(u("ADMIN"))).not.toThrow();
@@ -77,6 +163,8 @@ describe("rbac.server — assertIsAdmin", () => {
     }
   );
 });
+
+// ==================== assertCanManageConfiguracaoGeral ====================
 
 describe("rbac.server — assertCanManageConfiguracaoGeral", () => {
   it("ADMIN pode gerenciar configurações gerais", () => {

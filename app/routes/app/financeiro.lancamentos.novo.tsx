@@ -2,7 +2,7 @@
  * Rota /app/financeiro/lancamentos/novo — Criar Lançamento Financeiro (S06-T13).
  *
  * **Loader:**
- * - `assertCanSeeFinancials(user)` — Camada 2 RBAC.
+ * - `assertCanSeeFinancialModule(user)` — Camada 2 RBAC.
  * - Busca caixas ativos e membros para os selects do formulário.
  * - Se `?caixaId=` na URL, pré-seleciona o caixa.
  *
@@ -18,14 +18,14 @@
 import { data, redirect, useActionData } from "react-router";
 import { ZodError } from "zod";
 import type { Route } from "./+types/financeiro.lancamentos.novo";
-import { prisma } from "~/db/prisma.server";
 import { userContext } from "~/lib/user-context";
-import { assertCanSeeFinancials } from "~/lib/rbac.server";
+import { assertCanSeeFinancialModule } from "~/lib/rbac.server";
 import { parseBRLToCents } from "~/lib/money-format";
 import { LancamentoCreateSchema } from "~/lib/schemas/lancamentos";
 import { criarLancamento } from "~/lib/lancamentos.server";
+import { listarCaixasParaSelect } from "~/lib/caixas.server";
+import { listarMembrosParaSelect } from "~/lib/members.server";
 import { FormLancamento } from "~/components/FormLancamento";
-import type { MembroOption } from "~/components/FormLancamento";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Novo Lançamento — Igreja Conect" }];
@@ -37,23 +37,15 @@ export function meta(_args: Route.MetaArgs) {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const user = context.get(userContext);
   if (!user) throw new Response("Não autenticado.", { status: 401 });
-  assertCanSeeFinancials(user);
+  assertCanSeeFinancialModule(user);
 
   const url = new URL(request.url);
 
-  // Caixas ativos
-  const caixas = await prisma.caixa.findMany({
-    where: { ativo: true },
-    select: { id: true, nome: true },
-    orderBy: { nome: "asc" },
-  });
+  // Caixas ativos via service (SEC-004)
+  const caixas = await listarCaixasParaSelect(user);
 
-  // Membros (apenas id e nome)
-  const membrosRaw = await prisma.membro.findMany({
-    select: { id: true, nome: true },
-    orderBy: { nome: "asc" },
-  });
-  const membros: MembroOption[] = membrosRaw.map((m) => ({ id: m.id, nome: m.nome }));
+  // Membros para select via service (SEC-004)
+  const membros = await listarMembrosParaSelect(user);
 
   // Se houver caixaId na query, pré-seleciona
   const caixaId = url.searchParams.get("caixaId") ?? "";
@@ -81,7 +73,7 @@ function zodErrorsToMap(errors: ZodError["issues"]): Record<string, string> {
 export async function action({ request, context }: Route.ActionArgs) {
   const user = context.get(userContext);
   if (!user) throw new Response("Não autenticado.", { status: 401 });
-  assertCanSeeFinancials(user);
+  assertCanSeeFinancialModule(user);
 
   const formData = await request.formData();
   const raw: Record<string, string> = {};

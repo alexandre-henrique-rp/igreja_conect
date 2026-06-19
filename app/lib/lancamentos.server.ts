@@ -13,8 +13,8 @@
  * (exclusiva do sistema de transferências — S07).
  *
  * **Camada 3 RBAC:**
- * - `criarLancamento` → `assertCanSeeFinancials` (ADMIN, PASTOR, FINANCEIRO, SECRETARIO)
- * - `listarPorCaixa` → `assertCanSeeFinancials`
+ * - `criarLancamento` → `assertCanWriteLancamento` (ADMIN, PASTOR, FINANCEIRO, SECRETARIO)
+ * - `listarPorCaixa` → `assertCanWriteLancamento`
  *
  * **GATE LGPD:** `safeLog` com allowlist (sem valorCentavos, descricao, membroId).
  *
@@ -25,6 +25,7 @@
 import { prisma } from "~/db/prisma.server";
 import { LancamentoCreateSchema } from "./schemas/lancamentos";
 import { assertSaldoSuficiente } from "./finance.server";
+import { assertCanWriteLancamento } from "./rbac.server";
 import { safeLog } from "./audit.server";
 import type { SessionUser } from "./session.types";
 import type { LancamentoCreateInput } from "./schemas/lancamentos";
@@ -34,7 +35,7 @@ import type { LancamentoCreateInput } from "./schemas/lancamentos";
 /**
  * Cria um lançamento financeiro (entrada ou saída).
  *
- * **Camada 3 RBAC PRIMEIRO:** `assertCanSeeFinancials(user)`.
+ * **Camada 3 RBAC PRIMEIRO:** `assertCanWriteLancamento(user)`.
  *
  * **Bloqueio TRANSFERENCIA:** categoria TRANSFERENCIA é exclusiva do sistema
  * de transferências (S07). Este service rejeita com 400.
@@ -66,16 +67,12 @@ import type { LancamentoCreateInput } from "./schemas/lancamentos";
  *     descricao: "Oferta do culto",
  *   }, adminUser);
  */
-// Nota: PERFIS_CRIAR_LANCAMENTO é usado inline abaixo (ADMIN, PASTOR, FINANCEIRO, SECRETARIO)
-// para manter o RBAC explícito. Array separado removido por ser dead code.
 export async function criarLancamento(
   input: LancamentoCreateInput,
   user: SessionUser
 ): Promise<unknown> {
-  // 1) CAMADA 3 — RBAC PRIMEIRO (4 perfis: ADMIN, PASTOR, FINANCEIRO, SECRETARIO)
-  if (!user.cargo || !(["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"] as readonly string[]).includes(user.cargo)) {
-    throw new Response("Acesso restrito a perfis financeiros.", { status: 403 });
-  }
+  // 1) CAMADA 3 — RBAC PRIMEIRO (SEC-005: assertCanWriteLancamento)
+  assertCanWriteLancamento(user);
 
   // 2) Bloqueio explícito: TRANSFERENCIA é exclusiva de transferirEntreCaixas
   if (input.categoria === "TRANSFERENCIA") {
@@ -180,10 +177,8 @@ export async function listarPorCaixa(
   }>;
   total: number; page: number; pageSize: number;
 } | null> {
-  // Camada 3 RBAC
-  if (!user.cargo || !(["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"] as readonly string[]).includes(user.cargo)) {
-    throw new Response("Acesso restrito a perfis financeiros.", { status: 403 });
-  }
+  // Camada 3 RBAC (SEC-005: assertCanWriteLancamento)
+  assertCanWriteLancamento(user);
 
   // Verifica se caixa existe
   const caixa = await prisma.caixa.findUnique({

@@ -129,3 +129,59 @@ describe("session.server — deleteSession", () => {
     await expect(deleteSession("nope")).resolves.not.toThrow();
   });
 });
+
+// ==================== SEC-003: SESSION_SECRET startup validation ====================
+
+describe("session.server — SESSION_SECRET startup validation (SEC-003)", () => {
+  it("deve jogar Error se NODE_ENV=production e SESSION_SECRET não está definido", async () => {
+    // Salva env original
+    const origNodeEnv = process.env.NODE_ENV;
+    const origSecret = process.env.SESSION_SECRET;
+    delete process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+
+    // Precisa re-importar o módulo para disparar a validação
+    vi.resetModules();
+    let threw = false;
+    let errorMsg = "";
+    try {
+      await import("./session.server");
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        threw = true;
+        errorMsg = e.message;
+      }
+    } finally {
+      process.env.NODE_ENV = origNodeEnv;
+      if (origSecret !== undefined) process.env.SESSION_SECRET = origSecret;
+    }
+
+    expect(threw).toBe(true);
+    expect(errorMsg).toMatch(/SESSION_SECRET.*obrigat/);
+  });
+
+  it("deve jogar Error se SESSION_SECRET tem menos de 32 caracteres", async () => {
+    const origNodeEnv = process.env.NODE_ENV;
+    const origSecret = process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+    process.env.SESSION_SECRET = "curto";
+
+    vi.resetModules();
+    let threw = false;
+    let errorMsg = "";
+    try {
+      await import("./session.server");
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        threw = true;
+        errorMsg = e.message;
+      }
+    } finally {
+      process.env.NODE_ENV = origNodeEnv;
+      if (origSecret !== undefined) process.env.SESSION_SECRET = origSecret;
+    }
+
+    expect(threw).toBe(true);
+    expect(errorMsg).toMatch(/32 caracteres/);
+  });
+});

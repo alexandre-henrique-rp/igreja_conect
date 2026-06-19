@@ -480,3 +480,26 @@ export async function promoverTipo(
  * (Re-exporta o tipo do service para a UI.)
  */
 export type { PrismaClient };
+
+// -------------------- SEC-004: listarMembrosParaSelect --------------------
+
+/**
+ * @description Retorna membros ativos para uso em selects (top 50, apenas id e nome).
+ *   Usado em formulários de lançamento financeiro.
+ * @param {SessionUser} user - Usuário autenticado (RBAC via assertCanSeeFinancialModule).
+ * @returns {Promise<Array<{id: string, nome: string}>>} Lista de membros.
+ * @throws {Response} 403 se cargo não está em FINANCIAL_MODULE_CARGOS.
+ */
+export async function listarMembrosParaSelect(
+  user: SessionUser
+): Promise<Array<{ id: string; nome: string }>> {
+  const { assertCanSeeFinancialModule } = await import("./rbac.server");
+  assertCanSeeFinancialModule(user);
+
+  return prisma.membro.findMany({
+    where: { tipo: { in: ["MEMBRO_ATIVO", "CONGREGADO"] } },
+    select: { id: true, nome: true },
+    orderBy: { nome: "asc" },
+    take: 50,
+  });
+}

@@ -2,7 +2,7 @@
  * Rota /app/financeiro/caixas/:id — Detalhe do Caixa com Extrato (S06-T12).
  *
  * **Loader:**
- * - `assertCanSeeFinancials(user)` — Camada 2 RBAC.
+ * - `assertCanSeeFinancialModule(user)` — Camada 2 RBAC.
  * - Delega para `getCaixaDetalhe()` (caixas.server.ts) que aplica RBAC Camada 3,
  *   filtros, paginação, e registra auditoria.
  * - SECRETARIO: `listarPorCaixa()` filtra DIZIMO na service layer.
@@ -16,7 +16,7 @@ import { Link } from "react-router";
 import { z } from "zod";
 import type { Route } from "./+types/financeiro.caixas.$id";
 import { userContext } from "~/lib/user-context";
-import { assertCanSeeFinancials } from "~/lib/rbac.server";
+import { assertCanSeeFinancialModule } from "~/lib/rbac.server";
 import { getCaixaDetalhe } from "~/lib/caixas.server";
 import { CaixaHeader } from "~/components/CaixaHeader";
 import { ExtratoFiltros } from "~/components/ExtratoFiltros";
@@ -56,7 +56,7 @@ const PERIOD_MAP: Record<string, string> = {
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const user = context.get(userContext);
   if (!user) throw new Response("Não autenticado.", { status: 401 });
-  assertCanSeeFinancials(user);
+  assertCanSeeFinancialModule(user);
 
   const caixaId = params.id;
   if (!caixaId) throw new Response("ID do caixa não informado.", { status: 400 });

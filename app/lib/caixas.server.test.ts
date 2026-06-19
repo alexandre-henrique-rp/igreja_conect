@@ -94,18 +94,11 @@ describe("caixas.server — listarCaixas (T02)", () => {
     expect(result.ativos[0].nome).toBe("Caixa Geral");
   });
 
-  it("SECRETARIO: assertCanSeeFinancials permite (SECRETARIO NÃO tem perfil financeiro)", async () => {
-    // SECRETARIO não passa no assertCanSeeFinancials
-    let caught: unknown = null;
-    try {
-      await listarCaixas({}, userWith("SECRETARIO"));
-    } catch (e) {
-      caught = e;
-    }
-    expect(caught).toBeInstanceOf(Response);
-    if (caught instanceof Response) {
-      expect(caught.status).toBe(403);
-    }
+  it("SECRETARIO: listarCaixas OK (assertCanSeeFinancialModule aceita 4 perfis)", async () => {
+    // Após SEC-001/SEC-002 (S06-REWORK): SECRETARIO pode listar caixas (não dízimos)
+    await makeCaixa({ nome: "Geral SECRETARIO", saldoCentavos: 0 });
+    const result = await listarCaixas({}, userWith("SECRETARIO"));
+    expect(result.ativos.length).toBeGreaterThanOrEqual(1);
   });
 
   it("DISCIPULADOR: 403 (assertCanSeeFinancials bloqueia)", async () => {
@@ -312,5 +305,59 @@ describe("caixas.server — reabrirCaixa (T04)", () => {
     if (caught instanceof Response) {
       expect(caught.status).toBe(404);
     }
+  });
+});
+
+// ==================== T08: getCaixaDetalhe coverage gaps (S06-REWORK) ====================
+
+describe("caixas.server — getCaixaDetalhe (T08 coverage gaps)", () => {
+  let getCaixaDetalhe: typeof import("./caixas.server").getCaixaDetalhe;
+
+  beforeAll(async () => {
+    vi.resetModules();
+    const mod = await import("./caixas.server");
+    getCaixaDetalhe = mod.getCaixaDetalhe;
+  });
+
+  it("Caixa inexistente → null (route retorna 404)", async () => {
+    const result = await getCaixaDetalhe(
+      "00000000-0000-0000-0000-000000000000",
+      {},
+      userWith("ADMIN")
+    );
+    expect(result).toBeNull();
+  });
+
+  it("getCaixaDetalhe com SECRETARIO → OK (assertCanSeeFinancialModule)", async () => {
+    // Após SEC-001/SEC-002: SECRETARIO pode ver detalhe de caixa (não dízimos)
+    const caixa = await makeCaixa({ nome: "Geral Detalhe SECRETARIO", saldoCentavos: 1000 });
+    const result = await getCaixaDetalhe(caixa.id, {}, userWith("SECRETARIO"));
+    expect(result).not.toBeNull();
+    expect(result!.caixa.nome).toBe("Geral Detalhe SECRETARIO");
+  });
+});
+
+// ==================== listarCaixas paraSelect coverage (S06-REWORK) ====================
+
+describe("caixas.server — listarCaixas para select (coverage)", () => {
+  let listarCaixasParaSelect: typeof import("./caixas.server").listarCaixasParaSelect;
+
+  beforeAll(async () => {
+    vi.resetModules();
+    const mod = await import("./caixas.server");
+    listarCaixasParaSelect = mod.listarCaixasParaSelect;
+  });
+
+  it("SECRETARIO pode usar listarCaixasParaSelect (4 perfis)", async () => {
+    const result = await listarCaixasParaSelect(userWith("SECRETARIO"));
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("listarCaixas com apenasAtivos=false retorna arquivados (cobertura)", async () => {
+    await makeCaixa({ nome: "Ativo", ativo: true });
+    await makeCaixa({ nome: "Arquivado", ativo: false });
+    const { listarCaixas } = await import("./caixas.server");
+    const result = await listarCaixas({ apenasAtivos: false }, userWith("ADMIN"));
+    expect(result.arquivados).toHaveLength(1);
   });
 });

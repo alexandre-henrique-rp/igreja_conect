@@ -2,7 +2,7 @@
  * Rota /app/financeiro/caixas — Listagem de Caixas (S06-T11).
  *
  * **Loaders:**
- * - `assertCanSeeFinancials(user)` — Camada 2 RBAC.
+ * - `assertCanSeeFinancialModule(user)` — Camada 2 RBAC.
  * - `listarCaixas({ apenasAtivos, q }, user)` — service layer.
  *
  * **Actions:**
@@ -10,7 +10,7 @@
  * - POST com `_action=reabrir` → `reabrirCaixa(id, user)`
  *
  * **RBAC:**
- * - Ver dados: ADMIN, PASTOR, FINANCEIRO (assertCanSeeFinancials).
+ * - Ver dados: ADMIN, PASTOR, FINANCEIRO, SECRETARIO (assertCanSeeFinancialModule).
  * - Arquivar/reabrir: ADMIN, PASTOR, FINANCEIRO (assertCanManageCaixa — validado no service).
  *
  * @see app/lib/caixas.server.ts
@@ -20,7 +20,7 @@ import { Link, useFetcher, useLoaderData, type ActionFunctionArgs, type LoaderFu
 import type { Route } from "./+types/financeiro.caixas._index";
 import { z } from "zod";
 import { userContext } from "~/lib/user-context";
-import { assertCanSeeFinancials } from "~/lib/rbac.server";
+import { assertCanSeeFinancialModule } from "~/lib/rbac.server";
 import { listarCaixas, arquivarCaixa, reabrirCaixa } from "~/lib/caixas.server";
 import { PageHeader } from "~/components/PageHeader";
 import { Can } from "~/components/Can";
@@ -39,7 +39,7 @@ export function meta(_args: Route.MetaArgs) {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const user = context.get(userContext);
   if (!user) throw new Response("Não autenticado.", { status: 401 });
-  assertCanSeeFinancials(user);
+  assertCanSeeFinancialModule(user);
 
   const url = new URL(request.url);
   const q = url.searchParams.get("q") ?? undefined;
@@ -60,7 +60,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export async function action({ request, context }: Route.ActionArgs) {
   const user = context.get(userContext);
   if (!user) throw new Response("Não autenticado.", { status: 401 });
-  assertCanSeeFinancials(user);
+  assertCanSeeFinancialModule(user);
 
   const formData = await request.formData();
   const _action = formData.get("_action")?.toString();

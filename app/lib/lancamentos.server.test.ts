@@ -248,3 +248,148 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     expect(res!.status).toBe(409);
   });
 });
+
+// ==================== T08: listarPorCaixa coverage (S06-REWORK) ====================
+
+describe("lancamentos.server — listarPorCaixa (T08)", () => {
+  // Import fresh to avoid vitest module cache issues
+  let listarPorCaixa: typeof import("./lancamentos.server").listarPorCaixa;
+
+  beforeAll(async () => {
+    vi.resetModules();
+    const mod = await import("./lancamentos.server");
+    listarPorCaixa = mod.listarPorCaixa;
+  });
+
+  it("ADMIN lista todos lançamentos do caixa (inclui DIZIMO)", async () => {
+    const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 0 });
+    const membro = await makeMembro();
+    await criarLancamento({
+      tipo: "ENTRADA",
+      categoria: "DIZIMO",
+      valorCentavos: 1000,
+      caixaId: caixa.id,
+      membroId: membro.id,
+      dataCompetencia: new Date("2026-06-01"),
+      descricao: "Dízimo",
+    }, userWith("ADMIN"));
+    await criarLancamento({
+      tipo: "ENTRADA",
+      categoria: "OFERTA",
+      valorCentavos: 500,
+      caixaId: caixa.id,
+      dataCompetencia: new Date("2026-06-02"),
+      descricao: "Oferta",
+    }, userWith("ADMIN"));
+
+    const result = await listarPorCaixa(caixa.id, {}, userWith("ADMIN"));
+
+    expect(result).not.toBeNull();
+    expect(result!.lancamentos).toHaveLength(2);
+    expect(result!.lancamentos.map(l => l.categoria)).toContain("DIZIMO");
+    expect(result!.lancamentos.map(l => l.categoria)).toContain("OFERTA");
+  });
+
+  it("SECRETARIO vê apenas OFERTA/SAIDA (não DIZIMO) — RN-MEM-03", async () => {
+    const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 0 });
+    const membro = await makeMembro();
+    await criarLancamento({
+      tipo: "ENTRADA",
+      categoria: "DIZIMO",
+      valorCentavos: 1000,
+      caixaId: caixa.id,
+      membroId: membro.id,
+      dataCompetencia: new Date("2026-06-01"),
+      descricao: "Dízimo",
+    }, userWith("ADMIN"));
+    await criarLancamento({
+      tipo: "ENTRADA",
+      categoria: "OFERTA",
+      valorCentavos: 500,
+      caixaId: caixa.id,
+      dataCompetencia: new Date("2026-06-02"),
+      descricao: "Oferta",
+    }, userWith("ADMIN"));
+
+    const result = await listarPorCaixa(caixa.id, {}, userWith("SECRETARIO"));
+
+    expect(result).not.toBeNull();
+    expect(result!.lancamentos).toHaveLength(1);
+    expect(result!.lancamentos[0].categoria).toBe("OFERTA");
+  });
+
+  it("Filtro por periodo: mes_atual retorna apenas lançamentos do mês", async () => {
+    const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 0 });
+    // Current month
+    const now = new Date();
+    await criarLancamento({
+      tipo: "ENTRADA",
+      categoria: "OFERTA",
+      valorCentavos: 100,
+      caixaId: caixa.id,
+      dataCompetencia: new Date(now.getFullYear(), now.getMonth(), 15),
+      descricao: "Este mês",
+    }, userWith("ADMIN"));
+
+    const result = await listarPorCaixa(caixa.id, { periodo: "mes_atual" }, userWith("ADMIN"));
+
+    expect(result).not.toBeNull();
+    expect(result!.lancamentos.length).toBeGreaterThan(0);
+  });
+
+  it("Filtro por categoria: retorna apenas lançamentos da categoria", async () => {
+    const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 0 });
+    await criarLancamento({
+      tipo: "ENTRADA",
+      categoria: "DIZIMO",
+      valorCentavos: 1000,
+      caixaId: caixa.id,
+      membroId: (await makeMembro()).id,
+      dataCompetencia: new Date("2026-06-01"),
+      descricao: "Dízimo",
+    }, userWith("ADMIN"));
+    await criarLancamento({
+      tipo: "ENTRADA",
+      categoria: "OFERTA",
+      valorCentavos: 500,
+      caixaId: caixa.id,
+      dataCompetencia: new Date("2026-06-02"),
+      descricao: "Oferta",
+    }, userWith("ADMIN"));
+
+    const result = await listarPorCaixa(caixa.id, { categoria: "OFERTA" }, userWith("ADMIN"));
+
+    expect(result).not.toBeNull();
+    expect(result!.lancamentos).toHaveLength(1);
+    expect(result!.lancamentos[0].categoria).toBe("OFERTA");
+  });
+
+  it("Lista vazia retorna []", async () => {
+    const caixa = await makeCaixa({ nome: "Vazio", saldoCentavos: 0 });
+
+    const result = await listarPorCaixa(caixa.id, {}, userWith("ADMIN"));
+
+    expect(result).not.toBeNull();
+    expect(result!.lancamentos).toHaveLength(0);
+    expect(result!.total).toBe(0);
+  });
+
+  it("Caixa inexistente retorna null", async () => {
+    const result = await listarPorCaixa("00000000-0000-0000-0000-000000000000", {}, userWith("ADMIN"));
+    expect(result).toBeNull();
+  });
+
+  it("DISCIPULADOR NÃO pode listar → 403", async () => {
+    const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 0 });
+    let caught: unknown = null;
+    try {
+      await listarPorCaixa(caixa.id, {}, userWith("DISCIPULADOR"));
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(Response);
+    if (caught instanceof Response) {
+      expect(caught.status).toBe(403);
+    }
+  });
+});

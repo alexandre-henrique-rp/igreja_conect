@@ -2,7 +2,7 @@
  * Rota /app/financeiro — Dashboard Financeiro (S06-T10).
  *
  * **Camadas (defense in depth):**
- * - Loader (camada 2): `assertCanSeeFinancials(user)` — RBAC service-side.
+ * - Loader (camada 2): `assertCanSeeFinancialModule(user)` — RBAC service-side.
  * - Service (camada 3): `getDashboardFinanceiro(user)` — agrega dados.
  * - UI (camada 1): `<KpiSaldoTotal>`, `<CardSaldoCaixa>`, `<UltimasMovimentacoes>`.
  *
@@ -11,12 +11,12 @@
  * - SECRETARIO não vê coluna Membro em lançamentos (filtro service-side).
  *
  * @see app/lib/finance.server.ts (getDashboardFinanceiro)
- * @see app/lib/rbac.server.ts (assertCanSeeFinancials)
+ * @see app/lib/rbac.server.ts (assertCanSeeFinancialModule)
  */
 import { Link } from "react-router";
 import type { Route } from "./+types/financeiro._index";
 import { userContext } from "~/lib/user-context";
-import { assertCanSeeFinancials } from "~/lib/rbac.server";
+import { assertCanSeeFinancialModule } from "~/lib/rbac.server";
 import { getDashboardFinanceiro } from "~/lib/finance.server";
 import { Can } from "~/components/Can";
 import { KpiSaldoTotal } from "~/components/KpiSaldoTotal";
@@ -33,7 +33,7 @@ export function meta(_args: Route.MetaArgs) {
  * Loader do Dashboard Financeiro.
  *
  * 1. Lê o user do context (injetado pelo _middleware).
- * 2. Aplica RBAC (assertCanSeeFinancials — lança 403 se não pode).
+ * 2. Aplica RBAC (assertCanSeeFinancialModule — lança 403 se não pode).
  * 3. Chama getDashboardFinanceiro (service layer).
  *
  * @param args - LoaderFunctionArgs.
@@ -47,7 +47,7 @@ export async function loader({ context }: Route.LoaderArgs) {
   }
 
   // Camada 2 (RBAC service-side) — assertCanSeeFinancials lança 403.
-  assertCanSeeFinancials(user);
+  assertCanSeeFinancialModule(user);
 
   // Camada 3 (dados) — getDashboardFinanceiro também aplica assertCanSeeFinancials
   // internamente (defense in depth), mas já validamos na camada 2.

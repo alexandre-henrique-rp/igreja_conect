@@ -6,13 +6,13 @@
  *   de validação — usada em lançamentos, NÃO aqui.
  *
  * **Camada 3 RBAC:**
- * - `listarCaixas` → `assertCanSeeFinancials` (ADMIN, PASTOR, FINANCEIRO)
+ * - `listarCaixas` → `assertCanSeeFinancialModule` (ADMIN, PASTOR, FINANCEIRO, SECRETARIO)
  * - `criarCaixa`, `arquivarCaixa`, `reabrirCaixa` → `assertCanManageCaixa` (ADMIN, PASTOR, FINANCEIRO)
  *
  * @see .harness/RAG/security-rbac-matrix.md §4
  */
 import { prisma } from "~/db/prisma.server";
-import { assertCanSeeFinancials, assertCanManageCaixa } from "./rbac.server";
+import { assertCanSeeFinancialModule, assertCanManageCaixa } from "./rbac.server";
 import { CaixaCreateSchema } from "./schemas/caixas";
 import { safeLog } from "./audit.server";
 import { listarPorCaixa } from "./lancamentos.server";
@@ -42,7 +42,7 @@ export type ListarCaixasResult = {
 /**
  * Lista caixas com suporte a filtros.
  *
- * **Camada 3 RBAC PRIMEIRO:** `assertCanSeeFinancials(user)`.
+ * **Camada 3 RBAC PRIMEIRO:** `assertCanSeeFinancialModule(user)`.
  *
  * @description Retorna caixas separados em ativos e arquivados.
  * @param {Object} options - Opções de filtro.
@@ -58,7 +58,7 @@ export async function listarCaixas(
   options: { apenasAtivos?: boolean; q?: string },
   user: SessionUser
 ): Promise<ListarCaixasResult> {
-  assertCanSeeFinancials(user);
+  assertCanSeeFinancialModule(user);
 
   const where: Prisma.CaixaWhereInput = {};
   if (options.apenasAtivos !== false) {
@@ -249,7 +249,7 @@ export async function reabrirCaixa(id: string, user: SessionUser): Promise<unkno
  * @throws {Response} 403 se perfil não autorizado.
  */
 export async function listarCaixasParaSelect(user: SessionUser): Promise<Array<{ id: string; nome: string }>> {
-  assertCanSeeFinancials(user);
+  assertCanSeeFinancialModule(user);
   return prisma.caixa.findMany({
     where: { ativo: true },
     select: { id: true, nome: true },
