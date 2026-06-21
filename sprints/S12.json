@@ -5,7 +5,7 @@
   "scope": "estoque+patrimonio",
   "name": "Movimentações + Manutenção + Baixa por Perda — RN-EST-02/03/05",
   "goal": "Implementar 3 services críticos do Módulo: `criarMovimentacao` (RN-EST-02 trava de quantidade + nomeRetirante obrigatório em saída), `enviarParaManutencao` + `retornarDeManutencao` (RN-EST-03 state machine patrimônio) e `baixaPorPerda` (RN-EST-05 ADMIN-only). 4 rotas novas (`/app/estoque/:id/movimentar`, `/app/estoque/:id/manutencao`, `/app/estoque/:id/retorno`, `/app/estoque/:id/baixa`). Cobre 5 endpoints do SPEC §E.4, 9 testes de borda, RN-EST-02/03/05. Métrica macro PARTE 2 (registrar saída + ADMIN vê histórico).",
-  "status": "pending",
+  "status": "completed",
   "estimatedDays": 8,
   "estimatedHours": 64,
   "dependsOn": [
@@ -93,8 +93,8 @@
         "JSDoc explicando convenção de sinal (positivo=entrada, negativo=saída) — RAG `pattern-estoque-trava-quantidade` §3",
         "Testes unit: 8 cenários (ENTRADA+com nomeRetirante OK, ENTRADA sem nomeRetirante OK, SAIDA+com nomeRetirante OK, SAIDA sem nomeRetirante fail path=nomeRetirante, quantidade 0 fail, quantidade float fail, quantidade >1000 OK, .strict() rejeita autorizadoPorId extra)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T02",
@@ -139,8 +139,8 @@
         "**NÃO decrementa quantidade aqui** — apenas valida. Decremento real é do service `criarMovimentacao`, dentro de `$transaction` (atomicidade)",
         "Testes integração: 6 cenários (happy path entrada, happy path saída, delta=0 fail, item inexistente 404, PATRIMONIO bloqueia 400, item arquivado 409, borda exata saldo=delta saída OK)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T03",
@@ -198,8 +198,8 @@
         "  - DISCIPULADOR → 403 (Camada 3); FINANCEIRO → 403",
         "  - SECRETARIO com saldo suficiente → OK (RN-EST-02)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T04",
@@ -263,8 +263,8 @@
         "  - 404 item inexistente",
         "  - Atômico: mock injeta erro em `tx.manutencaoAtivo.create` → rollback total (statusPatrimonio continua DISPONIVEL)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T05",
@@ -309,8 +309,8 @@
         "JSDoc completo",
         "Testes: 7 cenários (happy path, FINANCEIRO 403, SECRETARIO OK, manutenção inexistente 404, já retornou 409, dataRetorno < dataEnvio 400, item não-EM_MANUTENCAO 409)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T06",
@@ -368,8 +368,8 @@
         "  - ADMIN sem motivo → 400 Zod min(10)",
         "  - Atômico: mock erro em `tx.manutencaoAtivo.create` → rollback (statusPatrimonio continua DISPONIVEL)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T07",
@@ -415,8 +415,8 @@
         "JSDoc em cada componente",
         "Lighthouse Accessibility ≥ 95"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T08",
@@ -479,8 +479,8 @@
         "JSDoc em todos loaders e actions",
         "Testes integração: 8 cenários (métrica macro, SAIDA sem nomeRetirante, saldo insuficiente, PASTOR enviar manutenção OK, SECRETARIO enviar OK, FINANCEIRO 403 manutenção, SECRETARIO baixa 403 — BLOQUEADOR, ADMIN baixa OK com motivo ≥ 10)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T09",
@@ -529,8 +529,8 @@
         "JSDoc em todos components",
         "Testes integração: 4 cenários (admin vê movimentações CONSUMO, admin vê manutenções PATRIMONIO, FINANCEIRO vê read-only, SECRETARIO vê read-only sem botão arquivar)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T10",
@@ -580,8 +580,8 @@
         "  - **R-EST-02 verificado:** teste BLOQUEADOR #2 (saldo=0 + SAIDA 1 un. → 409) verde",
         "  - **R-EST-05 verificado:** teste BLOQUEADOR #11 (SECRETARIO 403 em baixaPorPerda) verde"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S12-T11",
@@ -634,8 +634,8 @@
         "Workaround `dbSettle(100)` em todas as chains (RAG `lesson-prisma-7-commit-settle-e2e`)",
         "Total: < 120s para rodar todos os 3 specs"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     }
   ],
   "workers": [
@@ -650,7 +650,7 @@
   "serviceCoverageTarget": 100,
   "gate": {
     "type": "all-of",
-    "expected": "pending"
+    "expected": "evaluated"
   },
   "testesBordaObrigatorios": [
     {
@@ -706,5 +706,5 @@
     "US-EST-002 (F2 RBAC fina)": "S12-T04, S12-T06, S12-T08, S12-T11 (5 helpers + 9 testes borda RBAC)"
   },
   "notes": "Sprint focada em RN-EST-02/03/05. Implementa 3 services críticos (criarMovimentacao, enviarParaManutencao, retornarDeManutencao, baixaPorPerda) + 1 helper canônico (assertSaldoQuantidade) + 1 schema Zod novo (MovimentacaoCreateSchema com superRefine nomeRetirante). Cobre 5/11 endpoints restantes do SPEC E.4, 9/18 testes de borda. RBAC fina única: Baixa por Perda é restrita a ADMIN (RN-EST-05), mesmo que SECRETARIO/PASTOR possam tudo o mais. Atomicidade em $transaction (MovimentacaoEstoque + ItemEstoque; ManutencaoAtivo + ItemEstoque). 64h estimadas (~8 dias × 1 dev). Próxima: S13 (Alertas + Dashboard final + cleanup).",
-  "lastUpdate": "2026-06-19T22:00:00Z"
+  "lastUpdate": "2026-06-20T22:30:00Z"
 }

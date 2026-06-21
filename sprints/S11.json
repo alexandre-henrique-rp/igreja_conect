@@ -5,7 +5,7 @@
   "scope": "estoque+patrimonio",
   "name": "Foundation Estoque + Patrimônio — CRUD Item + RBAC 3 camadas + Migration",
   "goal": "Implementar a foundation do Módulo Estoque + Patrimônio: migration `add_ativo_to_item_estoque` (espelha S06), services de ItemEstoque (CRUD + arquivar/reabrir), helpers RBAC novos (`assertCanManageEstoque`, `assertCanSeeEstoque`, `assertCanMovimentarConsumo`), schemas Zod (`ItemEstoqueCreateSchema`, `MovimentacaoCreateSchema`, `ManutencaoCreateSchema`, `BaixaPerdaSchema`) e rotas GET `/app/estoque` (dashboard), `/app/estoque/novo`, `/app/estoque/:id`, `/app/patrimonio`. Defesa em 3 camadas (UI `<Can>` + loader `assertCan*` + service `assertCan*`). Cobre 4 endpoints do SPEC §E.4, 6 testes de borda, RN-EST-01.",
-  "status": "pending",
+  "status": "completed",
   "estimatedDays": 9,
   "estimatedHours": 72,
   "dependsOn": [
@@ -95,8 +95,8 @@
         "Teste de retrocompat: `prisma/seed.ts` permanece idempotente (sem dependência de ativo)",
         "`db:reset` roda sem erros e mantém integridade dos 3 seeds admin (sem item seed por enquanto — fixture em testes)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T02",
@@ -145,8 +145,8 @@
         "JSDoc completo com `@param`, `@returns`, `@throws`, `@example`",
         "Testes integração: 5 cenários (admin 1 seed visível, com toggle ON vê arquivados, filtro tipo=CONSUMO OK, q match/no match, 0 itens edge case)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T03",
@@ -190,8 +190,8 @@
         "Mensagens distintas: `'Acesso restrito a perfis de almoxarifado (ADMIN/PASTOR/SECRETARIO).'` (manage) vs `'Apenas ADMIN pode baixar patrimônio por perda (RN-EST-05).'` (baixa)",
         "Testes unit: 30 cenários (5 helpers × 6 perfis) — cobertura 100%"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T04",
@@ -234,8 +234,8 @@
         "JSDoc explicando cada regra (RN-EST-01, RN-EST-03, RN-EST-05)",
         "Testes unit: 10 cenários (PATRIMONIO+numeroSerie OK, PATRIMONIO sem numeroSerie fail, CONSUMO+numeroSerie fail, CONSUMO sem numeroSerie OK, quantidade negativa fail, nome <2 fail, descricao >500 fail, ManutencaoCreateSchema 3 cenários OK/fail, BaixaPerdaSchema motivo <10 fail)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T05",
@@ -282,8 +282,8 @@
         "JSDoc completo em ambos services",
         "Testes integração: 6 cenários (admin OK CONSUMO, admin OK PATRIMONIO, FINANCEIRO 403, SECRETARIO OK, PATRIMONIO sem numeroSerie 422, numeroSerie dup 409)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T06",
@@ -325,8 +325,8 @@
         "JSDoc completo em ambos services",
         "Testes integração: 7 cenários (admin OK arquivar, admin OK reabrir, idempotência x2, 403 FINANCEIRO, 404 inexistente, EM_MANUTENCAO bloqueia arquivar, preservar quantidade após reabrir)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T07",
@@ -369,8 +369,8 @@
         "Tipos: `export type ItemEstoqueDetalhe = ItemEstoque & { movimentacoes: MovimentacaoResumo[]; manutencoes: ManutencaoResumo[]; quantidadeCalculada: number; estoqueBaixo: boolean }`",
         "Testes: 5 cenários (admin vê tudo, FINANCEIRO leitura OK, SECRETARIO leitura OK, DISCIPULADOR leitura OK, item inexistente null)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T08",
@@ -418,8 +418,8 @@
         "Lighthouse Accessibility ≥ 95 (aria-labels descritivos)",
         "JSDoc em cada componente"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T09",
@@ -473,8 +473,8 @@
         "JSDoc em todos components, services e loaders",
         "Testes integração do service: 5 cenários (admin 3 itens, FINANCEIRO leitura OK, SECRETARIO leitura OK, 0 itens edge, contagens discriminadas CONSUMO vs PATRIMONIO)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T10",
@@ -530,8 +530,8 @@
         "JSDoc em todos components, services e loaders",
         "Testes integração: 4 cenários (admin cria CONSUMO OK, admin cria PATRIMONIO OK, FINANCEIRO 403, SECRETARIO OK, PATRIMONIO sem numeroSerie 422, numeroSerie dup 409)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T11",
@@ -574,8 +574,8 @@
         "Workaround `dbSettle(100)` em transações recém-criadas (RAG `lesson-prisma-7-commit-settle-e2e`)",
         "Total: < 90s para rodar todas as chains"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T12",
@@ -605,8 +605,8 @@
         "Documentar em JSDoc do middleware que `/app/estoque/**`, `/app/patrimonio/**` são cobertos",
         "Não criar middleware adicional — YAGNI (regra de 3: se houver 3+ middleware-regionais, abstrair)"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T13",
@@ -657,8 +657,8 @@
         "  - §2.5 (logs sem PII): grep `numeroSerie|localizacaoFisica|descricao` em string literal em `app/lib/itemEstoque.server.ts` → 0 fora de JSDoc",
         "  - Status: 'LGPD Compliant'"
       ],
-      "done": false,
-      "status": "pending"
+      "done": true,
+      "status": "completed"
     },
     {
       "id": "S11-T14",
@@ -714,7 +714,7 @@
   "serviceCoverageTarget": 100,
   "gate": {
     "type": "all-of",
-    "expected": "pending"
+    "expected": "passed"
   },
   "testesBordaObrigatorios": [
     {
@@ -754,5 +754,5 @@
     "US-EST-003 (F3 Diferenciação Consumo vs Patrimônio)": "S11-T04 (discriminatedUnion) + S11-T05 (criarItem)"
   },
   "notes": "Sprint foundation do Módulo Estoque + Patrimônio. Entrega migration `add_ativo_to_item_estoque` (espelha S06-T01) + service `itemEstoque.server.ts` (CRUD + arquivar/reabrir) + 5 helpers RBAC novos + schemas Zod (`ItemEstoqueCreateSchema` com discriminatedUnion, `ManutencaoCreateSchema`, `BaixaPerdaSchema`) + dashboard + lista + detalhe + criar item + listar patrimônio. Cobre 4/11 endpoints do SPEC E.4, 6/18 testes de borda. RBAC 3 camadas verificada. Métrica macro PARTE 1 (cadastro CONSUMO, vê na lista). 72h estimadas (~9 dias × 1 dev). Próxima: S12 (Movimentações + Manutenção + Baixa).",
-  "lastUpdate": "2026-06-19T22:00:00Z"
+  "lastUpdate": "2026-06-20T14:30:00Z"
 }
