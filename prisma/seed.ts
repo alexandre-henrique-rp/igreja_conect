@@ -12,11 +12,14 @@ import { PrismaClient } from "../generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import bcrypt from "bcryptjs";
 
-const ADMIN_EMAIL = "admin@igreja.local";
+const ADMIN_EMAIL =
+  process.env.NODE_ENV === "production"
+    ? (process.env.ADMIN_EMAIL ?? "")
+    : (process.env.ADMIN_EMAIL ?? "admin@igreja.local");
 const ADMIN_PASSWORD =
   process.env.NODE_ENV === "production"
     ? (process.env.ADMIN_PASSWORD ?? "")
-    : "admin123"; // TROCAR EM PRODUÇÃO
+    : (process.env.ADMIN_PASSWORD ?? "admin123"); // TROCAR EM PRODUÇÃO
 const BCRYPT_COST = 10;
 
 /**
@@ -27,9 +30,9 @@ const BCRYPT_COST = 10;
  *   já esteja definido pelo chamador.
  */
 export async function runSeed(): Promise<void> {
-  if (process.env.NODE_ENV === "production" && !ADMIN_PASSWORD) {
+  if (process.env.NODE_ENV === "production" && (!ADMIN_EMAIL || !ADMIN_PASSWORD)) {
     throw new Error(
-      "ADMIN_PASSWORD é obrigatória em produção. Defina a variável de ambiente antes de rodar a seed.",
+      "ADMIN_EMAIL e ADMIN_PASSWORD são obrigatórias em produção. Defina as variáveis de ambiente antes de rodar a seed.",
     );
   }
 
