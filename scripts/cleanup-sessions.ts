@@ -6,15 +6,15 @@ const adapter = new PrismaBetterSqlite3({ url: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const now = new Date().toISOString();
+  const now = new Date();
 
-  // Remove sessões cujo expiresAt ou absoluteExpiresAt já passou
-  const result = await prisma.$executeRaw`
-    DELETE FROM "sessions"
-    WHERE "expiresAt" < ${now} OR "absoluteExpiresAt" < ${now}
-  `;
+  const result = await prisma.session.deleteMany({
+    where: {
+      OR: [{ expiresAt: { lt: now } }, { absoluteExpiresAt: { lt: now } }],
+    },
+  });
 
-  console.log(`Sessões expiradas removidas. Linhas afetadas: ${result}`);
+  console.log(`Sessões expiradas removidas: ${result.count}`);
 }
 
 main()
