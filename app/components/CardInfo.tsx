@@ -50,12 +50,13 @@ export type CardInfoProps = {
   tone: "available" | "planned";
   /** Descrição opcional exibida entre o título e a lista. */
   description?: string;
+  /** Variante visual — dark usa fundo escuro (landing). */
+  variant?: "light" | "dark";
 };
 
-/** Cor do bullet por tom (cyan-700 = ação ativa, slate-400 = futuro). */
 const BULLET_CLASSES = {
-  available: "text-cyan-700",
-  planned: "text-slate-400",
+  available: { light: "text-cyan-700", dark: "text-blue-400" },
+  planned: { light: "text-slate-400", dark: "text-slate-500" },
 } as const;
 
 /**
@@ -63,21 +64,44 @@ const BULLET_CLASSES = {
  * @param {CardInfoProps} props - Veja `CardInfoProps`.
  * @returns {JSX.Element} Elemento do card.
  */
-export function CardInfo({ title, items, tone, description }: CardInfoProps) {
+export function CardInfo({ title, items, tone, description, variant = "light" }: CardInfoProps) {
+  const isDark = variant === "dark";
+
   return (
-    <section className="border border-slate-200 rounded-lg p-4 sm:p-6 bg-white">
-      <h2 className="text-lg font-semibold text-slate-900 mb-2">{title}</h2>
-      {description && (
-        <p className="text-sm text-slate-600 mb-3">{description}</p>
+    <section
+      className={cn(
+        "rounded-xl p-5 sm:p-6",
+        isDark
+          ? "bg-[#121b2c]/70 backdrop-blur-sm border border-[#202f47]"
+          : "border border-slate-200 bg-white"
       )}
-      <ul className="space-y-1 text-sm text-slate-700">
+    >
+      <h2
+        className={cn(
+          "text-lg font-semibold mb-2",
+          isDark ? "text-white" : "text-slate-900"
+        )}
+      >
+        {title}
+      </h2>
+      {description && (
+        <p
+          className={cn(
+            "text-sm mb-3",
+            isDark ? "text-slate-400" : "text-slate-600"
+          )}
+        >
+          {description}
+        </p>
+      )}
+      <ul className={cn("space-y-1.5 text-sm", isDark ? "text-slate-300" : "text-slate-700")}>
         {items.map((item) => (
-          <li key={item} className="flex gap-2">
+          <li key={item} className="flex items-start gap-2.5">
             <span
-              className={cn("shrink-0 select-none", BULLET_CLASSES[tone])}
+              className={cn("shrink-0 select-none mt-0.5", BULLET_CLASSES[tone][variant])}
               aria-hidden="true"
             >
-              •
+              {isDark ? "✦" : "•"}
             </span>
             <span>{item}</span>
           </li>

@@ -142,6 +142,7 @@ export function Button({
   onClick,
   children,
   className,
+  form,
   ...rest
 }: ButtonProps) {
   const Component = (as ?? "button") as ElementType;
