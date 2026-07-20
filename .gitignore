@@ -9,6 +9,7 @@
 # Prisma
 /generated/prisma
 /prisma/dev.db
+/prisma/backups/
 /dev.db
 
 # Tests

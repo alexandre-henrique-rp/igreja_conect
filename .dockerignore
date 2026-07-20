@@ -5,6 +5,7 @@ README.md
 .env
 .env.development
 prisma/dev.db
+prisma/backups/
 dev.db
 generated
 coverage

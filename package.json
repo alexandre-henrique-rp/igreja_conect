@@ -12,7 +12,10 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "db:reset": "DATABASE_URL='file:./prisma/dev.db' sh -c 'rm -f prisma/dev.db && prisma migrate deploy && pnpm db:seed'",
-    "db:seed": "DATABASE_URL='file:./prisma/dev.db' tsx prisma/seed.ts"
+    "db:seed": "DATABASE_URL='file:./prisma/dev.db' tsx prisma/seed.ts",
+    "db:backup": "tsx scripts/backup-db.ts",
+    "db:cleanup-sessions": "tsx scripts/cleanup-sessions.ts",
+    "db:create-sessions-table": "tsx scripts/create_sessions_table.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
