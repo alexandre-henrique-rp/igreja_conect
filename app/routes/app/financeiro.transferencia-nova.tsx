@@ -24,18 +24,27 @@
  * @see app/lib/schemas/transferencias.ts (TransferenciaCreateSchema)
  * @see app/components/financeiro.transferencia.tsx (FormTransferencia)
  */
-import { redirect, type LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
+import { Link, redirect, useActionData, useLoaderData, useNavigation, type LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
+import { useEffect, useRef, useState } from "react";
 import { userContext } from "~/lib/user-context";
 import { assertCanTransferir } from "~/lib/rbac.server";
 import { listarCaixasParaTransferencia } from "~/lib/caixas.server";
 import { transferirEntreCaixas } from "~/lib/transferencias.server";
 import { parseBRLToCents } from "~/lib/money-format";
 import { Can } from "~/components/Can";
-import { PageHeader } from "~/components/PageHeader";
-import { FormTransferencia } from "~/components/financeiro.transferencia";
-import type { CaixaOption } from "~/components/financeiro.transferencia";
+import { Button } from "~/components/Button";
+import { Input } from "~/components/Input";
+import { MoneyInput } from "~/components/MoneyInput";
+import { Select } from "~/components/Select";
+import { formatBRLFromCents } from "~/lib/money-format";
 
 // Types for loader/action
+type CaixaOption = {
+  id: string;
+  nome: string;
+  saldoCentavos: number;
+};
+
 type LoaderData = {
   user: { id: string; nome: string; cargo: string | null };
   caixas: CaixaOption[];
@@ -194,36 +203,66 @@ export async function action({ request, context }: ActionFunctionArgs) {
   return redirect("/app/financeiro?transferencia=ok");
 }
 
+/** Resposta da action — mantém compatibilidade com action existente. */
+type ActionData = {
+  errors?: Record<string, string>;
+  formError?: string;
+  fields?: {
+    origemId?: string;
+    destinoId?: string;
+    valorCentavos?: string;
+    descricao?: string;
+    idempotencyKey?: string;
+  };
+};
+
 /**
- * Página de Nova Transferência.
+ * Página de Nova Transferência — layout alinhado ao Novo Lançamento.
  *
  * Mostra form apenas para ADMIN/PASTOR/FINANCEIRO.
- * SECRETARIO vê mensagem amigável (não 403 — Camada 1 pode掩藏).
+ * SECRETARIO vê mensagem amigável.
  */
-export default function NovaTransferencia({
-  loaderData,
-  actionData,
-}: {
-  loaderData: LoaderData;
-  actionData?: unknown;
-}) {
-  const { user, caixas } = loaderData;
+export default function NovaTransferencia() {
+  const { user, caixas } = useLoaderData<typeof loader>();
+  const actionData = useActionData<ActionData>();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+  const firstErrorRef = useRef<HTMLSelectElement | HTMLInputElement | null>(null);
+
+  // SEC-S07-003: idempotency key gerada no cliente
+  const [idempotencyKey] = useState<string>(
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : (actionData?.fields?.idempotencyKey ?? "")
+  );
+
+  const errors = actionData?.errors ?? {};
+  const formError = actionData?.formError;
+  const fields = actionData?.fields ?? {};
+
+  const caixaOptions = caixas.map((c) => ({
+    value: c.id,
+    label: `${c.nome} — ${formatBRLFromCents(c.saldoCentavos)}`,
+  }));
+
+  useEffect(() => {
+    if (!isSubmitting && firstErrorRef.current) {
+      firstErrorRef.current.focus();
+    }
+  }, [isSubmitting]);
+
+  const setOrigemRef = (el: HTMLSelectElement | null) => {
+    if (errors.origemId) firstErrorRef.current = el;
+  };
+  const setDestinoRef = (el: HTMLSelectElement | null) => {
+    if (errors.destinoId && !firstErrorRef.current) firstErrorRef.current = el;
+  };
+  const setValorRef = (el: HTMLInputElement | null) => {
+    if (errors.valorCentavos && !firstErrorRef.current) firstErrorRef.current = el;
+  };
 
   return (
-    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
-      <PageHeader
-        title="Nova Transferência"
-        breadcrumb={
-          <nav aria-label="Breadcrumb" className="text-sm text-slate-500">
-            <ol className="flex items-center gap-1">
-              <li><a href="/app/financeiro" className="hover:text-cyan-700">Financeiro</a></li>
-              <li aria-hidden="true">/</li>
-              <li aria-current="page">Nova Transferência</li>
-            </ol>
-          </nav>
-        }
-      />
-
+    <div className="p-6 max-w-4xl mx-auto">
       <Can
         user={user}
         allow={["ADMIN", "PASTOR", "FINANCEIRO"]}
@@ -232,30 +271,134 @@ export default function NovaTransferencia({
             <p className="text-slate-600">
               Você não tem permissão para realizar transferências entre caixas.
             </p>
-            <a
-              href="/app/financeiro"
+            <Link
+              to="/app/financeiro"
               className="mt-4 inline-flex items-center text-sm text-cyan-700 hover:text-cyan-800"
             >
               ← Voltar ao Financeiro
-            </a>
+            </Link>
           </div>
         }
       >
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <FormTransferencia
-            caixas={caixas}
-            actionData={actionData as Parameters<typeof FormTransferencia>[0]["actionData"]}
-          />
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Nova Transferência</h1>
+            <p className="text-slate-600 mt-1">Mova valores entre contas de forma segura e auditada.</p>
+          </div>
+          <Button as={Link} to="/app/financeiro" variant="secondary" size="sm">
+            Cancelar
+          </Button>
         </div>
 
-        <div className="mt-4 text-center">
-          <a
-            href="/app/financeiro"
-            className="text-sm text-slate-500 hover:text-cyan-700"
-          >
-            ← Voltar ao Financeiro
-          </a>
-        </div>
+        {caixas.length < 2 && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-6 mb-6">
+            <p className="text-sm text-amber-800">
+              É necessário ter <strong>pelo menos 2 caixas ativos</strong> para fazer uma transferência.
+            </p>
+            <Link
+              to="/app/financeiro/caixas/novo"
+              className="mt-3 inline-flex items-center rounded-md bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-200 transition-colors"
+            >
+              + Criar novo caixa
+            </Link>
+          </div>
+        )}
+
+        <form method="POST" noValidate className="space-y-6">
+          {formError && (
+            <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+              {formError}
+            </div>
+          )}
+
+          {/* SEC-S07-003: Idempotency key */}
+          <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+
+          {/* Informações Básicas */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+              <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4M12 8h.01" />
+              </svg>
+              <h2 className="font-semibold text-slate-900">Informações Básicas</h2>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div ref={setOrigemRef as never}>
+                  <Select
+                    name="origemId"
+                    label="Conta de Origem"
+                    placeholder="Selecione"
+                    options={caixaOptions}
+                    defaultValue={fields.origemId ?? ""}
+                    required
+                  />
+                  {errors.origemId && <p role="alert" className="text-sm text-red-700 mt-1">{errors.origemId}</p>}
+                </div>
+                <div ref={setDestinoRef as never}>
+                  <Select
+                    name="destinoId"
+                    label="Conta de Destino"
+                    placeholder="Selecione"
+                    options={caixaOptions}
+                    defaultValue={fields.destinoId ?? ""}
+                    required
+                  />
+                  {errors.destinoId && <p role="alert" className="text-sm text-red-700 mt-1">{errors.destinoId}</p>}
+                </div>
+              </div>
+
+              <div ref={setValorRef as never}>
+                <MoneyInput
+                  name="valorDisplay"
+                  label="Valor (R$)"
+                  defaultValue={
+                    fields.valorCentavos
+                      ? String(Number(fields.valorCentavos) / 100).replace(".", ",")
+                      : ""
+                  }
+                  error={errors.valorCentavos}
+                  required
+                />
+                {errors.valorCentavos && <p role="alert" className="text-sm text-red-700 mt-1">{errors.valorCentavos}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Observações */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+              <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <h2 className="font-semibold text-slate-900">Observações</h2>
+            </div>
+            <div className="p-6 space-y-5">
+              <Input
+                name="descricao"
+                label="Descrição (Opcional)"
+                type="text"
+                defaultValue={fields.descricao ?? ""}
+                error={errors.descricao}
+                hint="Máximo 200 caracteres"
+                maxLength={200}
+              />
+            </div>
+          </div>
+
+          {/* Ações */}
+          <div className="flex items-center gap-3">
+            <Button type="submit" loading={isSubmitting} className="flex-1">
+              {isSubmitting ? "Transferindo..." : "Transferir"}
+            </Button>
+            <Button as={Link} to="/app/financeiro" variant="secondary">
+              Cancelar
+            </Button>
+          </div>
+        </form>
       </Can>
     </div>
   );

@@ -59,6 +59,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     cidade: membro.cidade ?? "",
     estado: membro.estado ?? "",
     cep: membro.cep ?? "",
+    createdAt: membro.createdAt,
+    updatedAt: membro.updatedAt,
   };
 
   return { membro, defaultValues };
@@ -122,20 +124,17 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 }
 
-/**
- * Componente placeholder. Frontend S02-T05 substitui por
- * `<FormMembro isEdit={true} defaultValues={loaderData.defaultValues} />`.
- */
-export default function MembrosEditar({ loaderData }: Route.ComponentProps) {
+import { FormMembro } from "~/components/FormMembro";
+
+export default function MembrosEditar({ loaderData, actionData }: Route.ComponentProps) {
   return (
-    <main id="main-content" className="p-4 container mx-auto">
-      <h1 className="text-2xl font-bold">Editar membro</h1>
-      <p className="text-slate-600 mt-2">
-        Placeholder — UI do form virá em S02-T05.
-      </p>
-      <pre className="mt-4 text-xs text-slate-500">
-        {JSON.stringify(loaderData, null, 2)}
-      </pre>
-    </main>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <FormMembro
+        isEdit={true}
+        defaultValues={{ ...loaderData.defaultValues, id: loaderData.membro.id }}
+        formError={actionData?.formError}
+        fieldErrors={actionData?.fieldErrors}
+      />
+    </div>
   );
 }

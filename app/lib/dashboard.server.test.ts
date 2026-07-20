@@ -65,7 +65,7 @@ async function makeMembro(
 // ----------------- getDashboardData -----------------
 
 describe("dashboard.server — getDashboardData", () => {
-  it("ADMIN: retorna counts + últimos visitantes", async () => {
+  it("ADMIN: retorna counts + últimos visitantes + saldo total + alertas estoque + contribuições", async () => {
     // 2 membros ativos
     await makeMembro("Ativo 1", { tipo: "MEMBRO_ATIVO" });
     await makeMembro("Ativo 2", { tipo: "MEMBRO_ATIVO" });
@@ -84,6 +84,39 @@ describe("dashboard.server — getDashboardData", () => {
       },
     });
 
+    // Criar caixas ativos
+    const caixa = await prismaTest.caixa.create({
+      data: { nome: "Caixa Geral", saldoCentavos: 150000, ativo: true },
+    });
+    await prismaTest.caixa.create({
+      data: { nome: "Caixa Cantina", saldoCentavos: 50000, ativo: true },
+    });
+    // Caixa inativo (não deve contar)
+    await prismaTest.caixa.create({
+      data: { nome: "Caixa Antigo", saldoCentavos: 90000, ativo: false },
+    });
+
+    // Criar item estoque baixo (quantidade <= 5)
+    await prismaTest.itemEstoque.create({
+      data: { nome: "Papel", tipo: "CONSUMO", quantidade: 3 },
+    });
+    // Criar item estoque normal (não deve contar)
+    await prismaTest.itemEstoque.create({
+      data: { nome: "Copo", tipo: "CONSUMO", quantidade: 10 },
+    });
+
+    // Criar lançamentos (contribuições)
+    await prismaTest.lancamento.create({
+      data: {
+        tipo: "ENTRADA",
+        categoria: "DIZIMO",
+        valorCentavos: 10000,
+        descricao: "Dízimo Teste",
+        caixaId: caixa.id,
+        membroId: admin.id,
+      },
+    });
+
     const data = await getDashboardData({
       id: admin.id,
       nome: "Admin",
@@ -95,6 +128,14 @@ describe("dashboard.server — getDashboardData", () => {
     expect(data.alertasNaoLidos).toBe(1);
     expect(data.ultimosVisitantes).toHaveLength(1);
     expect(data.ultimosVisitantes[0].id).toBe(visitante.id);
+
+    // Novos campos
+    expect(data.saldoTotalCentavos).toBe(200000); // 150000 + 50000
+    expect(data.alertasEstoque).toBe(1); // Papel
+    expect(data.ultimasContribuicoes).toHaveLength(1);
+    expect(data.ultimasContribuicoes[0].valorCentavos).toBe(10000);
+    expect(data.ultimasContribuicoes[0].contribuinte).toBe("Admin");
+    expect(data.ultimasContribuicoes[0].tipo).toBe("DÍZIMO");
   });
 
   it("DISCIPULADOR: filtra membros por discipuladorId", async () => {

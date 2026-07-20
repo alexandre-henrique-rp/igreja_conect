@@ -63,3 +63,14 @@ export class NomeDuplicadoError extends Error {
     this.name = "NomeDuplicadoError";
   }
 }
+
+/**
+ * Conflito genérico (ex: vínculo duplicado, estado inválido). Status 409.
+ */
+export class ConflictError extends Error {
+  readonly statusCode = 409;
+  constructor(message = "Conflito de estado") {
+    super(message);
+    this.name = "ConflictError";
+  }
+}

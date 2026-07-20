@@ -37,6 +37,7 @@ export type AlertaItem = {
 export type AlertaCounts = {
   total: number;
   naoLidos: number;
+  resolvidos: number;
   naoResolvidos: number;
 };
 
@@ -76,7 +77,7 @@ export async function listAlertas(
     baseWhere.destinatarios = { some: { membroId: user.id, resolvido: true } };
   }
 
-  const [items, total, naoLidos, naoResolvidos] = await Promise.all([
+  const [items, total, naoLidos, resolvidos] = await Promise.all([
     prisma.alerta.findMany({
       where: baseWhere,
       orderBy: { createdAt: "desc" },
@@ -99,7 +100,7 @@ export async function listAlertas(
     }),
     prisma.alerta.count({
       where: {
-        destinatarios: { some: { membroId: user.id, resolvido: false } },
+        destinatarios: { some: { membroId: user.id, resolvido: true } },
       },
     }),
   ]);
@@ -117,7 +118,7 @@ export async function listAlertas(
         destinatario,
       };
     }),
-    counts: { total, naoLidos, naoResolvidos },
+    counts: { total, naoLidos, resolvidos, naoResolvidos: total - resolvidos },
     activeFilter: filter,
   };
 }

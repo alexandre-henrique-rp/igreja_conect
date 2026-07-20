@@ -204,3 +204,114 @@ export function assertCanTransferir(user: SessionUser): void {
     throw new Response("Você não tem permissão para realizar transferências entre caixas.", { status: 403 });
   }
 }
+
+/**
+ * Cargos com permissão para acessar o módulo de Relatórios Financeiros (S15, cycle 4).
+ * Mais restritivo que o módulo financeiro geral (que inclui SECRETARIO) —
+ * relatórios contêm dados consolidados e projeções que não fazem sentido
+ * para a operação diária do Secretário. Ver brief-relatorios.md §5.3.
+ */
+export const RELATORIOS_CARGOS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const;
+
+/**
+ * Assert que o usuário pode acessar o módulo de Relatórios Financeiros.
+ * Lança 403 (Response) se o cargo não está em RELATORIOS_CARGOS.
+ *
+ * Usado em 5 loaders + 1 action de /app/financeiro/relatorios/**.
+ * Camada 2 (RBAC service-side) do defense in depth.
+ */
+export function assertCanSeeRelatorios(user: SessionUser): void {
+  if (!RELATORIOS_CARGOS.includes(user.cargo as (typeof RELATORIOS_CARGOS)[number])) {
+    throw new Response(
+      "Acesso negado. Apenas ADMIN, PASTOR ou FINANCEIRO podem acessar Relatórios Financeiros.",
+      { status: 403 }
+    );
+  }
+}
+
+// ─── Estoque / Patrimônio (S11-T03) ─────────────────────────────────────────
+
+/** Cargos que podem visualizar o módulo de Estoque — todos os 6 perfis administrativos. */
+export const ESTOQUE_READ_CARGOS = [
+  "ADMIN",
+  "PASTOR",
+  "SECRETARIO",
+  "FINANCEIRO",
+  "LIDER_MINISTERIO",
+  "DISCIPULADOR",
+] as const;
+
+/**
+ * Lança Response(403) se o usuário não pode ver o módulo de Estoque.
+ *
+ * @description Todos os 6 perfis administrativos autenticados.
+ * @param {SessionUser} user - Usuário autenticado com `cargo`.
+ * @throws {Response} 403 se cargo é null ou não está em ESTOQUE_READ_CARGOS.
+ */
+export function assertCanSeeEstoque(user: SessionUser): void {
+  if (!user.cargo || !(ESTOQUE_READ_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Acesso ao estoque requer cargo administrativo.", { status: 403 });
+  }
+}
+
+/** Cargos que podem gerenciar Estoque (criar, editar, excluir itens) — 3 perfis. */
+export const ESTOQUE_MANAGE_CARGOS = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
+
+/**
+ * Lança Response(403) se o usuário não pode gerenciar itens de Estoque.
+ *
+ * @description 3 perfis: ADMIN, PASTOR, SECRETARIO.
+ * @param {SessionUser} user - Usuário autenticado com `cargo`.
+ * @throws {Response} 403 se cargo não está em ESTOQUE_MANAGE_CARGOS.
+ */
+export function assertCanManageEstoque(user: SessionUser): void {
+  if (!user.cargo || !(ESTOQUE_MANAGE_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Acesso restrito a perfis de almoxarifado (ADMIN/PASTOR/SECRETARIO).", { status: 403 });
+  }
+}
+
+/**
+ * Lança Response(403) se o usuário não pode registrar movimentações de consumo.
+ *
+ * @description Mesma lista de manage: ADMIN, PASTOR, SECRETARIO.
+ * @param {SessionUser} user - Usuário autenticado com `cargo`.
+ * @throws {Response} 403 se cargo não está em ESTOQUE_MANAGE_CARGOS.
+ */
+export function assertCanMovimentarConsumo(user: SessionUser): void {
+  if (!user.cargo || !(ESTOQUE_MANAGE_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Apenas ADMIN, PASTOR ou SECRETARIO podem registrar movimentações.", { status: 403 });
+  }
+}
+
+/** Cargos que podem enviar itens para manutenção — 3 perfis. */
+export const ESTOQUE_MAINTENANCE_CARGOS = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
+
+/**
+ * Lança Response(403) se o usuário não pode enviar itens para manutenção.
+ *
+ * @description 3 perfis: ADMIN, PASTOR, SECRETARIO.
+ * @param {SessionUser} user - Usuário autenticado com `cargo`.
+ * @throws {Response} 403 se cargo não está em ESTOQUE_MAINTENANCE_CARGOS.
+ */
+export function assertCanSendToMaintenance(user: SessionUser): void {
+  if (!user.cargo || !(ESTOQUE_MAINTENANCE_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Apenas ADMIN, PASTOR ou SECRETARIO podem enviar itens para manutenção.", { status: 403 });
+  }
+}
+
+/** Cargos que podem baixar patrimônio por perda — apenas ADMIN (RN-EST-05). */
+export const BAIXA_PERDA_CARGOS = ["ADMIN"] as const;
+
+/**
+ * Lança Response(403) se o usuário não pode baixar patrimônio por perda.
+ *
+ * @description Apenas ADMIN (RN-EST-05).
+ * @param {SessionUser} user - Usuário autenticado com `cargo`.
+ * @throws {Response} 403 se cargo não é ADMIN.
+ */
+export function assertCanBaixarPerda(user: SessionUser): void {
+  if (!user.cargo || !(BAIXA_PERDA_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Apenas ADMIN pode baixar patrimônio por perda (RN-EST-05).", { status: 403 });
+  }
+}
+

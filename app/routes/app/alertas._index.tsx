@@ -7,14 +7,13 @@
  * @see app/lib/alerts.server.ts (marcarLido, marcarResolvido)
  * @see app/lib/schemas/alertas.ts (MarcarLidoSchema, MarcarResolvidoSchema)
  */
-import type { Route } from "./+types/alertas._index";
 import { ZodError } from "zod";
-import type { Prisma } from "../../../generated/prisma/client";
 import { CardAlerta } from "~/components/CardAlerta";
 import { TabsFiltroAlertas } from "~/components/TabsFiltroAlertas";
-import { prisma } from "~/db/prisma.server";
 import { userContext } from "~/lib/user-context";
-import { marcarLido, marcarResolvido } from "~/lib/alerts.server";
+import { listAlertas, marcarLido, marcarResolvido } from "~/lib/alerts.server";
+import { assertIsAdmin } from "~/lib/rbac.server";
+import type { SessionUser } from "~/lib/session.types";
 import {
   MarcarLidoSchema,
   MarcarResolvidoSchema,
@@ -23,9 +22,21 @@ import {
 /** Filtro usado na URL e nos componentes frontend. */
 export type AlertaFilterFrontend = "todos" | "naoLidos" | "resolvidos";
 
-/** Filtro usado internamente no Prisma. */
-type AlertaFilterBackend = "todos" | "nao_lidos" | "resolvidos";
+type AlertaFilterBackend = Parameters<typeof listAlertas>[1];
+type RouteLoaderArgs = {
+  request: Request;
+  context: { get: <T>(key: unknown) => T };
+};
 
+type RouteActionArgs = RouteLoaderArgs;
+
+/** Dados carregados pela rota de Alertas. */
+export type AlertasLoaderData = {
+  items: Array<Awaited<ReturnType<typeof listAlertas>>["items"][number]>;
+  counts: AlertaCountsFrontend;
+  activeFilter: AlertaFilterFrontend;
+  canResolve: boolean;
+};
 /** Counts exibidos nas abas. */
 export type AlertaCountsFrontend = {
   todos: number;
@@ -33,60 +44,30 @@ export type AlertaCountsFrontend = {
   resolvidos: number;
 };
 
-const FILTER_QUERY_TO_BACKEND: Record<string, AlertaFilterBackend> = {
-  todos: "todos",
-  naoLidos: "nao_lidos",
-  nao_lidos: "nao_lidos",
-  resolvidos: "resolvidos",
-};
-
-export function meta(_args: Route.MetaArgs) {
+export function meta() {
   return [{ title: "Alertas — Igreja Conect" }];
 }
 
 /**
  * Loader: lista alertas por destinatário e lê ?filter=.
  */
-export async function loader({ request, context }: Route.LoaderArgs) {
-  const user = context.get(userContext);
+export async function loader({ request, context }: RouteLoaderArgs): Promise<AlertasLoaderData> {
+  const user = context.get<SessionUser | null>(userContext);
   if (!user) {
     throw new Response("Não autenticado.", { status: 401 });
   }
 
   const url = new URL(request.url);
   const activeFilter = normalizeAlertaFilter(url.searchParams.get("filter"));
-  const where = alertaWhere(user, activeFilter);
-
-  const [items, total, naoLidos, resolvidos] = await Promise.all([
-    prisma.alerta.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        titulo: true,
-        mensagem: true,
-        createdAt: true,
-        membroId: true,
-        destinatarios: {
-          where: { membroId: user.id },
-          select: { lido: true, resolvido: true },
-        },
-      },
-    }),
-    prisma.alerta.count({ where: baseAlertaWhere(user) }),
-    prisma.alerta.count({
-      where: { destinatarios: { some: { membroId: user.id, lido: false } } },
-    }),
-    prisma.alerta.count({
-      where: {
-        destinatarios: { some: { membroId: user.id, resolvido: true } },
-      },
-    }),
-  ]);
+  const { items, counts } = await listAlertas(user, toBackendFilter(activeFilter));
 
   return {
-    items: items.map(toAlertaItem),
-    counts: { todos: total, naoLidos, resolvidos },
+    items,
+    counts: {
+      todos: counts.total,
+      naoLidos: counts.naoLidos,
+      resolvidos: counts.resolvidos,
+    },
     activeFilter,
     canResolve: user.cargo === "ADMIN",
   };
@@ -95,8 +76,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 /**
  * Action: processa marcarLido e marcarResolvido.
  */
-export async function action({ request, context }: Route.ActionArgs) {
-  const user = context.get(userContext);
+export async function action({ request, context }: RouteActionArgs) {
+  const user = context.get<SessionUser | null>(userContext);
   if (!user) {
     throw new Response("Não autenticado.", { status: 401 });
   }
@@ -106,20 +87,11 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   try {
     if (actionType === "marcarLido") {
-      const raw: Record<string, string> = {};
-      for (const [k, v] of formData.entries()) {
-        if (k !== "_action" && typeof v === "string") raw[k] = v;
-      }
-      const { alertaId } = MarcarLidoSchema.parse(raw);
+      const { alertaId } = MarcarLidoSchema.parse(formDataToRecord(formData));
       await marcarLido(alertaId, user);
     } else if (actionType === "marcarResolvido") {
-      const { assertIsAdmin } = await import("~/lib/rbac.server");
       assertIsAdmin(user);
-      const raw: Record<string, string> = {};
-      for (const [k, v] of formData.entries()) {
-        if (k !== "_action" && typeof v === "string") raw[k] = v;
-      }
-      const { alertaId } = MarcarResolvidoSchema.parse(raw);
+      const { alertaId } = MarcarResolvidoSchema.parse(formDataToRecord(formData));
       await marcarResolvido(alertaId, user);
     } else {
       throw new Response(JSON.stringify({ error: "Ação inválida" }), {
@@ -157,7 +129,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 /**
  * Página de alertas com abas, cards e actions compatíveis com _action.
  */
-export default function AlertasPage({ loaderData }: Route.ComponentProps) {
+export default function AlertasPage({ loaderData }: { loaderData: AlertasLoaderData }) {
   const { items, counts, activeFilter, canResolve } = loaderData;
 
   return (
@@ -179,7 +151,6 @@ export default function AlertasPage({ loaderData }: Route.ComponentProps) {
                   createdAt: new Date(alerta.createdAt),
                   lido: alerta.lido,
                   resolvido: alerta.resolvido,
-                  membroId: alerta.membroId ?? undefined,
                 }}
                 canResolve={canResolve}
               />
@@ -191,55 +162,27 @@ export default function AlertasPage({ loaderData }: Route.ComponentProps) {
   );
 }
 
+function formDataToRecord(formData: FormData): Record<string, string> {
+  const raw: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key !== "_action" && typeof value === "string") {
+      raw[key] = value;
+    }
+  }
+  return raw;
+}
+
 /** Normaliza filtro da query para o formato frontend. */
 function normalizeAlertaFilter(value: string | null): AlertaFilterFrontend {
-  const backendFilter = FILTER_QUERY_TO_BACKEND[value ?? "todos"] ?? "todos";
-  return backendFilter === "nao_lidos" ? "naoLidos" : backendFilter;
-}
-
-/** Where base: usuário vê apenas alertas onde é destinatário. */
-function baseAlertaWhere(user: { id: string }): Prisma.AlertaWhereInput {
-  return { destinatarios: { some: { membroId: user.id } } };
-}
-
-/** Where por filtro de aba. */
-function alertaWhere(
-  user: { id: string },
-  filter: AlertaFilterFrontend
-): Prisma.AlertaWhereInput {
-  if (filter === "naoLidos") {
-    return { destinatarios: { some: { membroId: user.id, lido: false } } };
+  if (value === "nao_lidos") return "naoLidos";
+  if (value === "todos" || value === "naoLidos" || value === "resolvidos") {
+    return value;
   }
-  if (filter === "resolvidos") {
-    return { destinatarios: { some: { membroId: user.id, resolvido: true } } };
-  }
-  return baseAlertaWhere(user);
+  return "todos";
 }
 
-/** Converte linha Prisma para item do CardAlerta.
- *
- * O estado `lido`/`resolvido` vem do **AlertaDestinatario** (escopo por
- * destinatário), não do Alerta global. O Alerta global tem `lido`/`resolvido`
- * redundantes do schema, mas o estado de leitura é por destinatário (RN §3.2).
- */
-function toAlertaItem(alerta: {
-  id: string;
-  titulo: string;
-  mensagem: string;
-  createdAt: Date;
-  membroId: string | null;
-  destinatarios: Array<{ lido: boolean; resolvido: boolean }>;
-}) {
-  const destinatario = alerta.destinatarios[0];
-  return {
-    id: alerta.id,
-    titulo: alerta.titulo,
-    mensagem: alerta.mensagem,
-    lido: destinatario?.lido ?? false,
-    resolvido: destinatario?.resolvido ?? false,
-    createdAt: alerta.createdAt,
-    membroId: alerta.membroId ?? undefined,
-  };
+function toBackendFilter(filter: AlertaFilterFrontend): AlertaFilterBackend {
+  return filter === "naoLidos" ? "nao_lidos" : filter;
 }
 
 /** Texto de empty state contextual por filtro. */

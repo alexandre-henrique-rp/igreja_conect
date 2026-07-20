@@ -11,6 +11,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { renderToString } from "react-dom/server";
+import { createRoutesStub } from "react-router";
 import type { SessionUser } from "~/lib/session.types";
 
 /** Re-import dinâmico. */
@@ -19,18 +20,24 @@ async function loadIndexRoute() {
 }
 
 describe("app/_index — Dashboard placeholder (S02-T10)", () => {
+  function renderWithRouter(Component: any, loaderData: any) {
+    const Stub = createRoutesStub([
+      {
+        path: "/",
+        Component: () => <Component loaderData={loaderData} />,
+      },
+    ]);
+    return renderToString(<Stub initialEntries={["/"]} />);
+  }
+
   it("autenticado: renderiza <main id='main-content'> com saudação 'Olá, {nome}.'", async () => {
     const mod = await loadIndexRoute();
     const Component = mod.default as React.ComponentType<{
       loaderData: { user: SessionUser };
     }>;
-    const html = renderToString(
-      <Component
-        loaderData={{
-          user: { id: "u1", nome: "Maria de Teste", cargo: "ADMIN" },
-        }}
-      />
-    );
+    const html = renderWithRouter(Component, {
+      user: { id: "u1", nome: "Maria de Teste", cargo: "ADMIN" },
+    });
     expect(html).toContain("<main");
     expect(html).toContain('id="main-content"');
     // React 19 SSR injeta comentários <!-- --> entre texto e variável
@@ -40,19 +47,28 @@ describe("app/_index — Dashboard placeholder (S02-T10)", () => {
     expect(html).toContain("ADMIN");
   });
 
-  it("autenticado: mostra card 'Dashboard em construção'", async () => {
+  it("autenticado: mostra seções do dashboard principal", async () => {
     const mod = await loadIndexRoute();
     const Component = mod.default as React.ComponentType<{
-      loaderData: { user: SessionUser };
+      loaderData: { user: SessionUser; stats?: any };
     }>;
-    const html = renderToString(
-      <Component
-        loaderData={{ user: { id: "u1", nome: "João", cargo: "PASTOR" } }}
-      />
-    );
-    expect(html).toContain("Dashboard em construção");
-    expect(html).toContain("Membros (cadastrar");
-    expect(html).toContain("Ministérios");
+    const html = renderWithRouter(Component, {
+      user: { id: "u1", nome: "João", cargo: "PASTOR" },
+      stats: {
+        membrosAtivos: 10,
+        visitantesMes: 2,
+        alertasNaoLidos: 0,
+        saldoTotalCentavos: 12000,
+        alertasEstoque: 1,
+        ultimasContribuicoes: [],
+        ultimosVisitantes: [],
+      },
+    });
+    expect(html).toContain("Dashboard");
+    expect(html).toContain("Saldo Financeiro");
+    expect(html).toContain("Membros Ativos");
+    expect(html).toContain("Últimas Contribuições");
+    expect(html).toContain("Agenda &amp; Escalas");
   });
 
   it("usuário sem cargo (null) renderiza 'membro' em vez do cargo", async () => {
@@ -60,11 +76,9 @@ describe("app/_index — Dashboard placeholder (S02-T10)", () => {
     const Component = mod.default as React.ComponentType<{
       loaderData: { user: SessionUser };
     }>;
-    const html = renderToString(
-      <Component
-        loaderData={{ user: { id: "u1", nome: "Visitante", cargo: null } }}
-      />
-    );
+    const html = renderWithRouter(Component, {
+      user: { id: "u1", nome: "Visitante", cargo: null },
+    });
     expect(html).toContain("Visitante");
     expect(html).toContain("membro");
   });

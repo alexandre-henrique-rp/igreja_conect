@@ -160,7 +160,7 @@ async function createMember(input: {
 }
 
 async function resetConfig(): Promise<void> {
-  await prisma.configAcolhimento.deleteMany({ where: { id: "singleton" } });
+  await prisma.configuracaoGeral.deleteMany({ where: { id: "singleton" } });
 }
 
 async function cleanupSeed(): Promise<void> {

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Igreja Conect — Product Requirements Document (MVP + Módulo Financeiro + Estoque+Patrimônio)</title>
-<meta name="description" content="Product Requirements Document do Igreja Conect: MVP (Auth + Membros + Discipulado + Alertas + Acolhimento) + Módulo Financeiro (ciclo 2) + Módulo Estoque + Patrimônio (ciclo 3)." />
+<title>Igreja Conect — PRD — Ciclo 4: Relatórios Financeiros</title>
+<meta name="description" content="Product Requirements Document do ciclo 4 (Relatórios Financeiros) do Igreja Conect: Hub + DRE + Balancete + Fluxo de Caixa + Relatório Customizado + Export CSV. Camada read-only sobre o Módulo Financeiro (ciclo 2)." />
 <style>
   :root {
     --bg: #ffffff;
@@ -84,870 +84,436 @@
   .checklist li::before { content: "\2610"; position: absolute; left: 0; color: var(--muted); }
   .checklist li.done { color: var(--good); }
   .checklist li.done::before { content: "\2611"; color: var(--good); }
-  .cycle-marker { float: right; font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--accent-bg); color: var(--accent); }
   footer { margin-top: 64px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 16px; }
 </style>
 </head>
 <body>
 
-<h1>Igreja Conect — Product Requirements Document</h1>
+<h1>Igreja Conect — PRD — Ciclo 4: Relatórios Financeiros</h1>
 <p class="meta">
-  <strong>Versão:</strong> 0.3 (MVP + ciclo 2 + ciclo 3) &middot;
-  <strong>Data:</strong> 2026-06-19 &middot;
-  <strong>Status:</strong> Aguardando revisão do PRD-reviewer (ciclo 3) &middot;
-  <strong>Escopo:</strong> MVP (Auth + Membros) + <strong>Módulo Financeiro (ciclo 2)</strong> + <strong>Módulo Estoque + Patrimônio (ciclo 3)</strong>
+  <strong>Versão:</strong> 0.1 (ciclo 4) &middot;
+  <strong>Data:</strong> 2026-06-20 &middot;
+  <strong>Status:</strong> Aguardando revisão do <code>prd-reviewer</code> (Fase 2) &middot;
+  <strong>Escopo:</strong> Hub de Relatórios + DRE + Balancete Mensal + Fluxo de Caixa + Relatório Customizado + Export CSV
 </p>
 
 <nav class="toc" aria-label="Sumário">
   <strong>Neste documento</strong>
   <ol>
-    <li><a href="#sumario-executivo">Sumário executivo</a></li>
-    <li><a href="#personas">Personas e casos de uso</a></li>
-    <li><a href="#escopo-mvp">Escopo do MVP</a> — <a href="#escopo-auth">Auth</a> &middot; <a href="#escopo-membros">Membros</a> &middot; <a href="#escopo-alertas">Central de Alertas</a></li>
-    <li><a href="#fora-escopo">Fora do escopo</a></li>
-    <li><a href="#regras-negocio">Regras de negócio</a></li>
-    <li><a href="#privacidade">Privacidade e LGPD</a></li>
-    <li><a href="#aceitacao">Critérios de aceitação (DoD)</a></li>
-    <li><a href="#riscos">Riscos e mitigações</a></li>
-    <li><a href="#roadmap">Roadmap de alto nível</a></li>
-    <li><a href="#glossario">Glossário</a></li>
-    <li><a href="#aprovacoes">Aprovações e revisões</a></li>
-  </ol>
-  <strong style="display:block;margin-top:12px;">Apêndice D — Módulo Financeiro (ciclo 2, 2026-06-14)</strong>
-  <ol start="12">
-    <li><a href="#c2-sumario">D.1 Visão de produto do Financeiro</a></li>
-    <li><a href="#c2-personas">D.2 Personas × papel no Financeiro</a></li>
-    <li><a href="#c2-features">D.3 Features (8 entregáveis)</a></li>
-    <li><a href="#c2-aceitacao">D.4 Critérios de aceitação por feature</a></li>
-    <li><a href="#c2-fora">D.5 Fora do escopo (não-objetivos)</a></li>
-    <li><a href="#c2-riscos">D.6 Riscos e mitigações</a></li>
-    <li><a href="#c2-metricas">D.7 Métricas de sucesso</a></li>
-    <li><a href="#c2-glossario">D.8 Glossário do Financeiro (18 termos)</a></li>
-    <li><a href="#c2-decisao-pendente">D.9 Decisão pendente: <code>Caixa.ativo</code></a></li>
-  </ol>
-  <strong style="display:block;margin-top:12px;">Apêndice E — Módulo Estoque + Patrimônio (ciclo 3, 2026-06-19)</strong>
-  <ol start="21">
-    <li><a href="#c3-sumario">E.1 Visão de produto do Estoque+Patrimônio</a></li>
-    <li><a href="#c3-personas">E.2 Personas × papel no Estoque</a></li>
-    <li><a href="#c3-features">E.3 Features (8 entregáveis: F1-F8)</a></li>
-    <li><a href="#c3-aceitacao">E.4 Critérios de aceitação por feature</a></li>
-    <li><a href="#c3-rns">E.5 Regras de negócio (RN-EST-01 a 05)</a></li>
-    <li><a href="#c3-lgpd">E.6 LGPD aplicada (Art. 6, 7, 18, 46)</a></li>
-    <li><a href="#c3-testes-borda">E.7 Testes de borda (10+)</a></li>
-    <li><a href="#c3-riscos">E.8 Riscos e mitigações</a></li>
-    <li><a href="#c3-fora">E.9 Fora do escopo (não-objetivos)</a></li>
+    <li><a href="#sumario">Sumário executivo</a></li>
+    <li><a href="#personas">Personas e matriz RBAC</a></li>
+    <li><a href="#user-stories">User stories (5 páginas)</a> &middot;
+      <a href="#us-hub">Hub</a> &middot; <a href="#us-dre">DRE</a> &middot; <a href="#us-balancete">Balancete</a> &middot; <a href="#us-fluxo">Fluxo de Caixa</a> &middot; <a href="#us-custom">Customizado</a></li>
+    <li><a href="#rnf">Requisitos não-funcionais</a></li>
+    <li><a href="#aceitacao">Critérios de aceitação & métricas</a></li>
+    <li><a href="#fora">Fora do escopo (não-objetivos)</a></li>
+    <li><a href="#anexos">Anexos e cross-refs</a></li>
   </ol>
 </nav>
 
-<h2 id="sumario-executivo">1. Sumário executivo</h2>
+<h2 id="sumario">1. Sumário executivo</h2>
 
 <p>
-A <strong>Igreja Conect</strong> é uma plataforma web interna (Single Page + SSR) que centraliza a gestão eclesiástica de uma única igreja local. Este PRD cobre o <strong>MVP</strong> (ciclo 1) e o <strong>Módulo Financeiro</strong> (ciclo 2). O MVP entrega autenticação, gestão de membros, discipulado, acolhimento de visitantes e central de alertas. O ciclo 2 adiciona controle financeiro por caixas internos, lançamentos, dízimos, transferências e trava de saldo — com privacidade financeira desde o dia 1.
+O ciclo 4 do Igreja Conect entrega <strong>5 relatórios financeiros estruturados</strong> em <code>/app/financeiro/relatorios/**</code>: Hub, DRE, Balancete Mensal, Fluxo de Caixa e Relatório Customizado, mais <strong>exportação CSV</strong> no Customizado. É uma camada <strong>read-only</strong> sobre o Módulo Financeiro do ciclo 2 — <strong>sem migration</strong>, sem novos models Prisma e sem novas regras de negócio. As 5 RNs já existentes (<code>RN-FIN-01</code> a <code>RN-FIN-05</code>) são suficientes; este ciclo <strong>lê</strong> o que já foi escrito.
 </p>
 
 <p><strong>TL;DR em 6 bullets:</strong></p>
 <ul>
-  <li><span class="badge blue">Membros</span> CRUD completo de pessoas (membros ativos, congregados, visitantes), com filtros e busca textual.</li>
-  <li><span class="badge blue">Discipulado</span> Vínculo de cada membro a 1 discipulador, com trava rígida de <strong>máximo 12 discípulos por líder</strong>.</li>
-  <li><span class="badge blue">Acolhimento</span> Ao cadastrar um visitante, o sistema gera automaticamente um alerta para o responsável configurado pelo <em>Admin</em>.</li>
-  <li><span class="badge good">Privacidade</span> Histórico de dízimos visível <strong>apenas</strong> para Admin, Pastor e Financeiro — bloqueado em 3 camadas (UI, loader, service).</li>
-  <li><span class="badge blue">Financeiro (ciclo 2)</span> Caixas internos (Geral, Cantina, Missões), lançamentos (dízimos, ofertas, despesas), transferências entre caixas com trava de saldo automática.</li>
-  <li><span class="badge gray">LGPD</span> Sem CPF, sem dados fiscais; senhas com hash bcrypt; cookies httpOnly; prontos para auditoria.</li>
+  <li><span class="badge blue">5 páginas</span> Hub + DRE + Balancete + Fluxo de Caixa + Relatório Customizado em <code>/app/financeiro/relatorios/**</code>.</li>
+  <li><span class="badge blue">5 services</span> em <code>app/lib/relatorios.server.ts</code> usando <code>prisma.lancamento.groupBy</code> + <code>_sum.valorCentavos</code> (soma em <code>Int</code> centavos).</li>
+  <li><span class="badge blue">1 export CSV</span> em <code>app/lib/relatorios-csv.server.ts</code> (RFC 4180 + BOM UTF-8 + separador <code>;</code> + <code>Cache-Control: no-store</code>).</li>
+  <li><span class="badge good">RBAC fina</span> via <code>RELATORIOS_CARGOS = ["ADMIN","PASTOR","FINANCEIRO"]</code> &middot; <strong>SECRETARIO BLOQUEADO</strong> (defesa em 3 camadas).</li>
+  <li><span class="badge blue">2 componentes</span> compartilhados: <code>&lt;FiltrosPeriodo /&gt;</code> e <code>&lt;KpiCard /&gt;</code> + ~25 ícones SVG inline em <code>app/components/icons/FinanceIcons.tsx</code>.</li>
+  <li><span class="badge gray">LGPD</span> dado financeiro sob demanda, sem cache, <code>valorCentavos</code> proibido em log de auditoria.</li>
 </ul>
 
 <p>
-A aceitação final do ciclo 1: o próprio <em>Admin</em> rodando o cenário de 50 membros + discipulado + acolhimento em ambiente local. A aceitação final do ciclo 2 (métrica macro): um <em>FINANCEIRO</em> lança um dízimo de Membro X no Caixa Geral em menos de 2 minutos, e o <em>PASTOR</em> vê o dízimo na aba Fidelidade Financeira do Membro X.
+<strong>Métrica macro do ciclo (brief §7.1):</strong> <em>"um <code>FINANCEIRO</code> consegue, em menos de 2 minutos, gerar o DRE do mês corrente, ver o total de entradas (verde), o total de saídas (vermelho) e o resultado líquido (azul), clicar em uma categoria para abrir o drill-down, e exportar a tabela do Relatório Customizado em CSV."</em>
 </p>
 
-<div class="kpi-grid" aria-label="Métricas-alvo consolidadas">
-  <div class="kpi"><div class="num">85%</div><div class="lbl">Cobertura mínima de testes</div></div>
-  <div class="kpi"><div class="num">100%</div><div class="lbl">Cobertura em services de regra de negócio</div></div>
-  <div class="kpi"><div class="num">0</div><div class="lbl">Vuln critical/high</div></div>
-  <div class="kpi"><div class="num">6</div><div class="lbl">Perfis administrativos (RBAC)</div></div>
-  <div class="kpi"><div class="num">12</div><div class="lbl">Máx. discípulos por discipulador</div></div>
-  <div class="kpi"><div class="num">5</div><div class="lbl">RNs do Módulo Financeiro (ciclo 2)</div></div>
+<div class="kpi-grid" aria-label="Métricas-alvo do ciclo 4">
+  <div class="kpi"><div class="num">5</div><div class="lbl">Páginas de relatório</div></div>
+  <div class="kpi"><div class="num">5</div><div class="lbl">Services de agregação (read-only)</div></div>
+  <div class="kpi"><div class="num">1</div><div class="lbl">Export CSV (RFC 4180)</div></div>
+  <div class="kpi"><div class="num">3</div><div class="lbl">Perfis RBAC (ADMIN/PASTOR/FINANCEIRO)</div></div>
+  <div class="kpi"><div class="num">0</div><div class="lbl">Migrations (cobre 100% sem migration)</div></div>
+  <div class="kpi"><div class="num">13</div><div class="lbl">Testes de borda obrigatórios (brief §7.3)</div></div>
+  <div class="kpi"><div class="num">100%</div><div class="lbl">Cobertura em <code>relatorios.server.ts</code></div></div>
+  <div class="kpi"><div class="num">&lt; 2 min</div><div class="lbl">Métrica macro (métrica de aceitação)</div></div>
 </div>
 
-<h2 id="personas">2. Personas e casos de uso</h2>
+<script type="application/json" data-prd-section="1">
+{"ciclo":4,"escopo":["Hub de Relatorios","DRE","Balancete Mensal","Fluxo de Caixa","Relatorio Customizado","Export CSV"],"cobre_100_pct_sem_migration":true,"rbac_cargos":["ADMIN","PASTOR","FINANCEIRO"],"rbac_bloqueado":["SECRETARIO","DISCIPULADOR","LIDER_MINISTERIO"],"metrica_macro":"FINANCEIRO gera DRE do mes corrente, ve entradas/saidas/resultado, faz drill-down e exporta CSV em < 2 min","nao_objetivos":["PDF","projecao real","status lancamento","multi-moeda","multi-tenant","gateway pagamento"],"fontes":["brief-relatorios.md §4-8","agents/AGENTS.md §Modulo Relatorios","docs/architecture/ARCH.md §10",".harness/RAG/pattern-relatorios-aggregations",".harness/RAG/convention-relatorios-csv-export"]}
+</script>
+
+<h2 id="personas">2. Personas e matriz RBAC</h2>
 
 <p>
-A Igreja Conect reconhece 6 perfis administrativos. <strong>Todos os 6 perfis já existem</strong> no sistema desde o MVP (o <code>enum Cargo</code> no banco já está preparado). No ciclo 1, apenas as colunas relativas a <em>Membros</em> têm UI funcional; no ciclo 2, adiciona-se a coluna <em>Financeiro</em> para 4 dos 6 perfis.
+O ciclo 4 <strong>endurece</strong> a matriz RBAC do ciclo 2: <code>SECRETARIO</code>, mesmo podendo acessar o módulo financeiro operacional (caixas, lançamentos), <strong>NÃO</strong> tem acesso aos relatórios estruturados. Decisão de produto confirmada no discovery (brief §3.1, §5.3) — <strong>não</strong> é falha de segurança.
 </p>
 
 <table>
   <thead>
     <tr>
-      <th>#</th><th>Perfil (enum)</th><th>Persona</th>
-      <th>No MVP (Membros)</th>
-      <th>No ciclo 2 (Financeiro)</th>
+      <th>#</th><th>Persona</th><th>Perfil (enum)</th>
+      <th>Acesso a Relatórios (ciclo 4)</th><th>Justificativa</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>1</td><td><code>ADMIN</code></td><td>Pastor-presidente / TI da igreja</td>
-      <td>CRUD total + configurações gerais</td><td>CRUD total + auditoria (cria/arquiva caixas)</td>
-    </tr>
-    <tr>
-      <td>2</td><td><code>PASTOR</code></td><td>Pastor titular</td>
-      <td>CRUD total + visualiza dízimos</td><td>CRUD total (cria/arquiva caixas, vê dízimos)</td>
-    </tr>
-    <tr>
-      <td>3</td><td><code>SECRETARIO</code></td><td>Secretário(a) administrativo(a)</td>
-      <td>CRUD total</td><td>Lança despesas e transferências (com trava de saldo, RN-FIN-03). <strong>NÃO</strong> vê dízimos.</td>
-    </tr>
-    <tr>
-      <td>4</td><td><code>DISCIPULADOR</code></td><td>Líder de célula / discipulador</td>
-      <td>CRUD de membros (apenas seus discípulos)</td><td><strong>BLOQUEADO</strong> (RN-MEM-03 + RN-FIN-*)</td>
-    </tr>
-    <tr>
-      <td>5</td><td><code>LIDER_MINISTERIO</code></td><td>Líder de ministério (louvor, infantil…)</td>
-      <td>CRUD de membros do seu ministério</td><td><strong>BLOQUEADO</strong> (RN-MEM-03 + RN-FIN-*)</td>
-    </tr>
-    <tr>
-      <td>6</td><td><code>FINANCEIRO</code></td><td>Tesoureiro(a)</td>
-      <td>CRUD total + visualiza dízimos</td><td>Operador dia-a-dia (cria/arquiva caixas, lança dízimos/ofertas/despesas, transfere)</td>
-    </tr>
+    <tr><td>P-001</td><td><strong>Tesoureiro(a)</strong></td><td><code>FINANCEIRO</code></td><td>✅ Hub + DRE + Balancete + Fluxo + Customizado + CSV</td><td>Operador que precisa de visão consolidada para fechamento mensal e prestação de contas ao pastor.</td></tr>
+    <tr><td>P-002</td><td><strong>Pastor</strong></td><td><code>PASTOR</code></td><td>✅ Todos os 5 relatórios + CSV</td><td>Visão pastoral estratégica: DRE para aconselhamento, Balancete para conselho.</td></tr>
+    <tr><td>P-003</td><td><strong>Administrador</strong></td><td><code>ADMIN</code></td><td>✅ Todos os 5 relatórios + CSV</td><td>Auditoria, configuração, relatórios anuais para assembleia.</td></tr>
+    <tr><td>P-004</td><td><strong>Secretário(a)</strong></td><td><code>SECRETARIO</code></td><td><span class="badge bad">BLOQUEADO</span> em todas as 5 rotas</td><td>Acesso ao módulo financeiro operacional preservado; relatórios estruturados são responsabilidade pastoral-administrativa (LGPD Art. 6°, III — princípio da necessidade).</td></tr>
+    <tr><td>P-005</td><td><strong>Discipulador</strong></td><td><code>DISCIPULADOR</code></td><td><span class="badge bad">BLOQUEADO</span> em todas as 5 rotas</td><td>RN-MEM-03: nunca toca dados financeiros.</td></tr>
+    <tr><td>P-006</td><td><strong>Líder de Ministério</strong></td><td><code>LIDER_MINISTERIO</code></td><td><span class="badge bad">BLOQUEADO</span> em todas as 5 rotas</td><td>RN-MEM-03: nunca toca dados financeiros.</td></tr>
   </tbody>
 </table>
 
-<p>
-<strong>Observação crítica:</strong> os perfis 1, 2 e 6 (Admin, Pastor, Financeiro) são os únicos que podem visualizar a aba <em>"Fidelidade Financeira"</em> no perfil do membro. No ciclo 2 esta aba passa a exibir dados reais.
-</p>
+<h3>2.1 Justificativa do bloqueio de SECRETARIO</h3>
+<ol>
+  <li><strong>Princípio da necessidade (LGPD Art. 6°, III):</strong> relatórios consolidados (DRE, Balancete) revelam tendências financeiras agregadas que <code>SECRETARIO</code> não precisa para sua função operacional.</li>
+  <li><strong>Decisão eclesiástica:</strong> prestação de contas ao conselho é responsabilidade pastoral (<code>PASTOR</code>) e tesouraria (<code>FINANCEIRO</code>). <code>SECRETARIO</code> opera dentro dos caixas existentes.</li>
+  <li><strong>Defesa em profundidade:</strong> Camada 1 (item "Relatórios" some do menu lateral) + Camada 2 (loader chama <code>assertCanSeeRelatorios</code> → 403) + Camada 3 (service revalida).</li>
+</ol>
 
-<h3>2.1 Casos de uso principais do MVP</h3>
-<ul>
-  <li><strong>UC-01 — Login:</strong> Pastor digita email e senha, sistema valida hash bcrypt, abre sessão, redireciona para o painel autenticado.</li>
-  <li><strong>UC-02 — Listar e filtrar membros:</strong> Secretário consulta a lista de membros, aplica filtros (tipo, ministério, discipulador) e busca por nome.</li>
-  <li><strong>UC-03 — Cadastrar visitante:</strong> Qualquer perfil autenticado cadastra uma pessoa como <code>VISITANTE</code>. Sistema gera alerta automático para o responsável configurado pelo Admin.</li>
-  <li><strong>UC-04 — Vincular discípulo:</strong> Discipulador associa um membro a si mesmo. Sistema bloqueia o 13º discípulo com mensagem clara.</li>
-  <li><strong>UC-05 — Configurar acolhimento:</strong> Admin define um Membro ou Ministério como responsável padrão pelo acolhimento de novos visitantes.</li>
-  <li><strong>UC-06 — Marcar alerta como lido:</strong> Responsável pelo acolhimento acessa a Central de Alertas e marca o alerta do novo visitante como lido/resolvido.</li>
-</ul>
-
-<h3>2.2 Casos de uso do Módulo Financeiro (ciclo 2)</h3>
-<ul>
-  <li><strong>UC-07 — Lançar dízimo:</strong> FINANCEIRO abre o Caixa Geral, registra dízimo de Membro X com valor R$ 50,00. Saldo do caixa atualiza. Membro X aparece com o dízimo na aba Fidelidade Financeira (visível a ADMIN/PASTOR/FINANCEIRO).</li>
-  <li><strong>UC-08 — Transferir entre caixas:</strong> SECRETARIO transfere R$ 100 do Caixa Geral para Caixa Cantina. Saldos refletem imediatamente (origem -100, destino +100). Registro imutável <code>TransferenciaCaixa</code> + 2 lançamentos espelho criados atomicamente.</li>
-  <li><strong>UC-09 — Bloqueio por saldo insuficiente:</strong> SECRETARIO tenta SAIDA de R$ 0,01 com saldo zero. Sistema bloqueia com 409 e mensagem clara: <em>"Saldo insuficiente no caixa de origem."</em></li>
-  <li><strong>UC-10 — Arquivar caixa:</strong> ADMIN arquiva Caixa Cantina após fim de campanha. Caixa some da listagem padrão mas mantém histórico. <code>Caixa.ativo = false</code>.</li>
-  <li><strong>UC-11 — Ver aba Fidelidade (métrica macro):</strong> PASTOR abre perfil de Membro X na aba Fidelidade Financeira, vê tabela de dízimos em ordem decrescente, com totais do mês e do ano.</li>
-</ul>
-
-<h2 id="escopo-mvp">3. Escopo do MVP</h2>
-
-<p>O MVP entrega 3 blocos: autenticação, módulo de membros e central de alertas. Tudo o que <strong>não</strong> está listado abaixo é explicitamente fora de escopo do MVP (ver <a href="#fora-escopo">§4</a>).</p>
-
-<h3 id="escopo-auth">3.1 Autenticação</h3>
-<ul>
-  <li><strong>Login</strong> com <code>email</code> + <code>senha</code>. Senha armazenada como hash bcrypt em <code>Membro.senhaHash</code>.</li>
-  <li><strong>Sessão via cookie httpOnly</strong> assinado, sem JWT e sem <code>localStorage</code>.</li>
-  <li><strong>Logout</strong> invalida a sessão no servidor (registro removido) e limpa o cookie.</li>
-  <li><strong>Middleware de proteção</strong> nas rotas autenticadas: anônimos são redirecionados para <code>/login</code>.</li>
-  <li><strong>Seed do primeiro Admin</strong> via Prisma, idempotente.</li>
-  <li>Senhas <strong>nunca</strong> trafegam em logs, nunca retornam em payloads de API, nunca aparecem na hidratação SSR.</li>
-</ul>
-
-<h3 id="escopo-membros">3.2 Módulo de Membros</h3>
-
-<p>O módulo entrega a ficha cadastral unificada, segmentação por tipo, vínculo de discipulado, gestão de ministérios, aba de fidelidade financeira (bloqueada por perfil) e configuração de acolhimento de visitantes.</p>
-
-<h4>3.2.1 Sub-funcionalidades</h4>
-<ul>
-  <li><strong>CRUD completo</strong> de membros (RN-MEM-01: qualquer perfil autenticado pode escrever).</li>
-  <li><strong>Ficha cadastral</strong> com dados pessoais + eclesiásticos + endereço. <strong>Sem CPF</strong> (RN-MEM-02).</li>
-  <li><strong>Segmentação por tipo:</strong> <code>MEMBRO_ATIVO</code>, <code>CONGREGADO</code>, <code>VISITANTE</code> (RN-MEM-06: transição 100% manual).</li>
-  <li><strong>Listagem com filtros</strong>: por tipo, por ministério, por discipulador, e busca textual por nome.</li>
-  <li><strong>Vínculo de discipulado</strong> com 2 travas rígidas: 1 discípulo → 1 discipulador; 1 discipulador → <strong>máximo 12</strong> (RN-MEM-04).</li>
-  <li><strong>Vinculação a ministérios</strong> (relação N:N).</li>
-  <li><strong>Configuração de destino de visitantes</strong> (somente Admin, RN-MEM-05).</li>
-  <li><strong>Aba "Fidelidade Financeira"</strong> presente no perfil do membro, <strong>bloqueada/oculta</strong> para perfis sem permissão (RN-MEM-03).</li>
-</ul>
-
-<h4>3.2.2 Tipos de membro (transição manual)</h4>
+<h3>2.2 Matriz RBAC fina (perfil × página)</h3>
 <table>
-  <thead><tr><th>Tipo</th><th>Significado</th><th>Quem registra</th><th>Como se move</th></tr></thead>
+  <thead><tr><th>Operação \ Perfil</th><th>ADMIN</th><th>PASTOR</th><th>SECRETARIO</th><th>FINANCEIRO</th><th>LIDER_MIN.</th><th>DISCIPULADOR</th></tr></thead>
   <tbody>
-    <tr><td><code>VISITANTE</code></td><td>Primeira visita, ainda sem vínculo</td><td>Qualquer perfil autenticado</td><td>Manual → <code>CONGREGADO</code></td></tr>
-    <tr><td><code>CONGREGADO</code></td><td>Frequenta mas ainda não é membro pleno</td><td>Líder / Secretário</td><td>Manual → <code>MEMBRO_ATIVO</code></td></tr>
-    <tr><td><code>MEMBRO_ATIVO</code></td><td>Vínculo eclesiástico pleno</td><td>Pastor / Admin</td><td>Permanece</td></tr>
+    <tr><td>Ver item "Relatórios" no Sidebar</td><td>✅</td><td>✅</td><td>🚫</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
+    <tr><td>Acessar Hub (<code>/app/financeiro/relatorios</code>)</td><td>✅</td><td>✅</td><td>🚫</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
+    <tr><td>DRE (<code>/app/financeiro/relatorios/dre</code>)</td><td>✅</td><td>✅</td><td>🚫</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
+    <tr><td>Balancete (<code>/app/financeiro/relatorios/balancete</code>)</td><td>✅</td><td>✅</td><td>🚫</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
+    <tr><td>Fluxo de Caixa (<code>/app/financeiro/relatorios/fluxo-caixa</code>)</td><td>✅</td><td>✅</td><td>🚫</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
+    <tr><td>Customizado (<code>/app/financeiro/relatorios/customizado</code>)</td><td>✅</td><td>✅</td><td>🚫</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
+    <tr><td>Export CSV (<code>?export=csv</code>)</td><td>✅</td><td>✅</td><td>🚫</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
+    <tr><td>Drill-down (clicar categoria)</td><td>✅</td><td>✅</td><td>n/a</td><td>✅</td><td>n/a</td><td>n/a</td></tr>
   </tbody>
 </table>
-
-<h4>3.2.3 Gerenciador de Vínculo de Discipulado (RN-MEM-04)</h4>
-<ul>
-  <li>1 discípulo → exatamente 1 discipulador.</li>
-  <li>1 discipulador → até <strong>12 discípulos</strong>. Tentar o 13º é <strong>bloqueado</strong>.</li>
-  <li>Auto-vínculo bloqueado. Loop bloqueado (anti-ciclo).</li>
-</ul>
-
-<h3 id="escopo-alertas">3.3 Central de Alertas</h3>
-<ul>
-  <li><strong>Tela única</strong> que lista os alertas do usuário logado.</li>
-  <li>No MVP, o <strong>único gatilho</strong> é "novo visitante cadastrado" (RN-MEM-05).</li>
-  <li>Ações: marcar como <em>lido</em> e marcar como <em>resolvido</em>.</li>
-</ul>
-
-<h2 id="fora-escopo">4. Fora do escopo (explícito)</h2>
-
-<table>
-  <thead><tr><th>Item</th><th>Status</th><th>Por que está fora</th></tr></thead>
-  <tbody>
-    <tr><td>Módulo Financeiro (MVP)</td><td><span class="badge gray">Schema apenas</span></td><td>Adiado para o ciclo 2 (ver <a href="#c2-sumario">Apêndice D</a>)</td></tr>
-    <tr><td>Módulo de Estoque</td><td><span class="badge gray">Schema apenas</span></td><td>Ciclo 3+</td></tr>
-    <tr><td>Manutenção de Ativos + Cron de Alertas</td><td><span class="badge gray">Schema apenas</span></td><td>Exige scheduler; ciclo 4+</td></tr>
-    <tr><td>Recuperação de senha por e-mail</td><td><span class="badge bad">Não incluso</span></td><td>Sem SMTP no MVP</td></tr>
-    <tr><td>2FA / MFA</td><td><span class="badge bad">Não incluso</span></td><td>Sistema interno</td></tr>
-    <tr><td>Auditoria de leitura (LGPD art. 37)</td><td><span class="badge bad">Não incluso</span></td><td>Backlog (ciclo 2+)</td></tr>
-    <tr><td>Notificações por e-mail, push ou WhatsApp</td><td><span class="badge bad">Não incluso</span></td><td>Sem provedor configurado</td></tr>
-    <tr><td>App mobile nativo</td><td><span class="badge bad">Não incluso</span></td><td>Web responsivo é suficiente</td></tr>
-    <tr><td>Gateway de pagamento (Pix, cartão)</td><td><span class="badge bad">Não incluso</span></td><td>Sistema opera por "caixas internos"</td></tr>
-    <tr><td>Multi-tenant / multi-igreja</td><td><span class="badge bad">Não incluso</span></td><td>Assume 1 única igreja local</td></tr>
-    <tr><td>Exportação de relatórios (PDF / Excel)</td><td><span class="badge bad">Não incluso</span></td><td>Sem demanda concreta</td></tr>
-    <tr><td>Upload de arquivos (laudos, fotos)</td><td><span class="badge bad">Não incluso</span></td><td>Sem S3/MinIO configurado</td></tr>
-  </tbody>
-</table>
-
-<h2 id="regras-negocio">5. Regras de Negócio</h2>
-
-<p>As regras catalogadas em <code>docs/REGRAS_DE_NEGOCIO.md</code> estão agrupadas abaixo por módulo. O MVP implementa e testa <strong>RN-MEM-01 a 06</strong>. O ciclo 2 implementa <strong>RN-FIN-01 a 05</strong>. Demais ficam como referência para sprints futuras.</p>
-
-<h3>5.1 Membros e Alertas (implementadas no MVP)</h3>
-<table>
-  <thead><tr><th>Código</th><th>Título</th><th>Resumo</th></tr></thead>
-  <tbody>
-    <tr><td><code>RN-MEM-01</code></td><td>Perfis de operação (escrita)</td><td>Qualquer um dos 6 perfis autenticados pode cadastrar/editar membros.</td></tr>
-    <tr><td><code>RN-MEM-02</code></td><td>Restrição de dados sensíveis e LGPD</td><td>Sem CPF/RG/dados fiscais. <code>profissao</code> e <code>estadoCivil</code> opcionais.</td></tr>
-    <tr><td><code>RN-MEM-03</code></td><td>Privacidade estrita de dízimos</td><td>Apenas Admin, Pastor e Financeiro veem a aba de Fidelidade Financeira. Bloqueio em 3 camadas.</td></tr>
-    <tr><td><code>RN-MEM-04</code></td><td>Limitações da árvore de discipulado</td><td>1 discípulo → 1 discipulador; 1 discipulador → no máximo 12 discípulos ativos.</td></tr>
-    <tr><td><code>RN-MEM-05</code></td><td>Configuração de acolhimento a visitantes</td><td>Admin define Membro/Ministério responsável; cadastrar visitante gera alerta automático.</td></tr>
-    <tr><td><code>RN-MEM-06</code></td><td>Transição manual de status</td><td>Sem job que promova Visitante → Congregado → Membro Ativo automaticamente.</td></tr>
-  </tbody>
-</table>
-
-<h3>5.2 Financeiro e Fluxo de Caixa (implementadas no ciclo 2)</h3>
-<table>
-  <thead><tr><th>Código</th><th>Título</th><th>Resumo</th></tr></thead>
-  <tbody>
-    <tr><td><code>RN-FIN-01</code></td><td>Controle por Caixas Flutuantes</td><td>Sistema opera baseado em Caixas apartados. Inicia com "Caixa Geral" como padrão.</td></tr>
-    <tr><td><code>RN-FIN-02</code></td><td>Rastreabilidade de transferências</td><td>Toda transferência registrada de forma imutável: valor, data/hora, operador.</td></tr>
-    <tr><td><code>RN-FIN-03</code></td><td>Autonomia baseada em saldo real</td><td>FINANCEIRO e SECRETARIO aprovam saídas se houver saldo (sem aval do PASTOR/ADMIN).</td></tr>
-    <tr><td><code>RN-FIN-04</code></td><td>Trava abrangente de saldo insuficiente</td><td>Bloqueio sumário se Caixa não tem saldo. Saldos negativos proibidos.</td></tr>
-    <tr><td><code>RN-FIN-05</code></td><td>Ofertas anônimas permitidas</td><td>DIZIMO sempre vinculado a membro; OFERTA pode ser anônima.</td></tr>
-  </tbody>
-</table>
-
-<h3>5.3 Estoque e Manutenção (implementadas no ciclo 3)</h3>
-<table>
-  <thead><tr><th>Código</th><th>Título</th><th>Resumo</th></tr></thead>
-  <tbody>
-    <tr><td><code>RN-EST-01</code></td><td>Escopo dual (Consumo vs. Patrimônio)</td><td>Modelagem <code>ItemEstoque.tipo</code> separa lógica; UI mostra campos diferentes por tipo.</td></tr>
-    <tr><td><code>RN-EST-02</code></td><td>Restrição de baixa de consumo (com nomeRetirante)</td><td>Saída exige <code>nomeRetirante</code> textual não-vazio e <code>justificativa</code>. Trava: estoque ≥ 0.</td></tr>
-    <tr><td><code>RN-EST-03</code></td><td>Manutenção externa (assistência, OS, prazo)</td><td>Item PATRIMONIO + status DISPONIVEL → <code>ManutencaoAtivo</code> + status EM_MANUTENCAO em <code>$transaction</code>.</td></tr>
-    <tr><td><code>RN-EST-04</code></td><td>Alerta de manutenção sem prazo (&gt;30 dias)</td><td>Versão simplificada: alerta manual disparado na consulta do item (sem cron). Idempotência 24h.</td></tr>
-    <tr><td><code>RN-EST-05</code></td><td>Baixa por perda total (motivo textual)</td><td>Apenas ADMIN. <code>motivo</code> textual substitui upload de laudo (S3 fora de escopo). Soft-delete via <code>ativo = false</code>.</td></tr>
-  </tbody>
-</table>
-
-<h2 id="privacidade">6. Privacidade e LGPD</h2>
-
-<p>
-A Igreja Conect trata dados pessoais de membros e dízimos. Por isso, segue a <strong>Lei 13.709/2018 (LGPD)</strong> com medidas técnicas verificáveis — não apenas promessas.
-</p>
-
-<h3>6.1 O que <strong>não</strong> coletamos <span class="badge good">LGPD art. 6°</span></h3>
-<ul>
-  <li><strong>CPF, RG, CNPJ, título de eleitor, PIS, cartão SUS</strong> — não existem no sistema.</li>
-  <li><strong>Dados fiscais, salário, capacidade financeira</strong>.</li>
-  <li><strong>Geolocalização, fingerprinting, analytics de terceiros</strong>.</li>
-</ul>
-
-<h3>6.2 O que coletamos (e como protegemos)</h3>
-<ul>
-  <li><strong>Identificação:</strong> nome, data de conversão, data de batismo, tipo (membro, congregado, visitante).</li>
-  <li><strong>Contato:</strong> email (único), telefone.</li>
-  <li><strong>Endereço residencial:</strong> logradouro, número, bairro, cidade, estado, CEP.</li>
-  <li><strong>Opcionais:</strong> profissão, estado civil.</li>
-</ul>
-
-<h3>6.3 Senhas e sessão</h3>
-<ul>
-  <li>Senhas armazenadas <strong>apenas como hash bcrypt</strong> (cost 10).</li>
-  <li>Cookie de sessão: <code>httpOnly</code>, <code>sameSite=lax</code>, <code>secure</code> em produção.</li>
-  <li>TTL sugerido de 7 dias com renovação sliding, teto de 30 dias absolutos.</li>
-</ul>
-
-<h3>6.4 Dízimos (regra de ouro)</h3>
-<p>
-O histórico financeiro de dízimos é considerado <strong>informação estritamente confidencial</strong>. Apenas 3 perfis veem: <code>ADMIN</code>, <code>PASTOR</code>, <code>FINANCEIRO</code>. Para os demais, a aba <em>simplesmente não existe na interface</em> — e se algum desavisado tentar acessar via URL direta, recebe 403 do servidor.
-</p>
 
 <blockquote>
-<strong>Por que essa rigidez?</strong> Um vazamento de histórico de dízimos destrói a confiança da congregação e infringe a LGPD. Por isso, o bloqueio acontece em 3 camadas independentes: a UI esconde o controle, o loader da rota checa o perfil, o service revalida o perfil.
+<strong>Decisão registrada (brief §5.3):</strong> <code>RELATORIOS_CARGOS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const</code>. SECRETARIO bloqueado em defesa de 3 camadas. Teste de borda E2E: <code>SECRETARIO</code> logado digitando <code>/app/financeiro/relatorios</code> direto na URL → 403.
 </blockquote>
 
-<h3>6.5 Direitos do titular (LGPD art. 18)</h3>
+<script type="application/json" data-prd-section="2">
+{"personas":[{"id":"P-001","nome":"Tesoureiro(a)","cargo":"FINANCEIRO","acesso":"todos_5_relatorios+CSV","justificativa":"operador fechamento mensal"},{"id":"P-002","nome":"Pastor","cargo":"PASTOR","acesso":"todos_5_relatorios+CSV","justificativa":"visao pastoral estrategica"},{"id":"P-003","nome":"Administrador","cargo":"ADMIN","acesso":"todos_5_relatorios+CSV","justificativa":"auditoria e assembleia"},{"id":"P-004","nome":"Secretario(a)","cargo":"SECRETARIO","acesso":"BLOQUEADO","justificativa":"LGPD Art 6 III + decisao eclesiastica"},{"id":"P-005","nome":"Discipulador","cargo":"DISCIPULADOR","acesso":"BLOQUEADO","justificativa":"RN-MEM-03"},{"id":"P-006","nome":"Lider Ministerio","cargo":"LIDER_MINISTERIO","acesso":"BLOQUEADO","justificativa":"RN-MEM-03"}],"rbac_matriz":{"ADMIN":["hub","dre","balancete","fluxo","customizado","csv","drilldown","sidebar"],"PASTOR":["hub","dre","balancete","fluxo","customizado","csv","drilldown","sidebar"],"SECRETARIO":[],"FINANCEIRO":["hub","dre","balancete","fluxo","customizado","csv","drilldown","sidebar"],"LIDER_MINISTERIO":[],"DISCIPULADOR":[]},"constantes":{"RELATORIOS_CARGOS":["ADMIN","PASTOR","FINANCEIRO"],"camadas_defesa":["UI <Can>","loader assertCanSeeRelatorios","service assertCanSeeRelatorios"]}}
+</script>
+
+<h2 id="user-stories">3. User stories por página</h2>
+
 <p>
-No MVP, pedidos de acesso, correção ou eliminação de dados são atendidos <strong>manualmente</strong> pelo Admin.
+21 user stories (<code>US-REL-*</code>), agrupadas em 5 sub-seções (uma por página). Cada story referencia critérios de aceite verificáveis que serão detalhados em <a href="SPEC.html">SPEC.html</a>. Detalhamento de contratos em <a href="SPEC.html#user-stories">SPEC §3</a>.
 </p>
 
-<h2 id="aceitacao">7. Critérios de aceitação (Definition of Done)</h2>
+<h3 id="us-hub">3.1 Hub de Relatórios — <code>/app/financeiro/relatorios</code></h3>
 
-<p>O PRD é considerado <strong>pronto por ciclo</strong> quando os itens abaixo forem verdadeiros.</p>
-
-<h3>7.1 Funcional — MVP (ciclo 1) <span class="badge good">Fechado 2026-06-13</span></h3>
-<ul class="checklist">
-  <li class="done"><code>pnpm build && pnpm start</code> sobe o app, executa migrations e o seed cria 1 Admin inicial.</li>
-  <li class="done">Login funciona. Lista de membros renderiza.</li>
-  <li class="done">CRUD de membros completo (criar, listar, editar, excluir).</li>
-  <li class="done">12 discípulos: passa. 13º: bloqueia com mensagem clara.</li>
-  <li class="done">Cadastrar visitante gera alerta na Central do responsável.</li>
-  <li class="done">Aba "Fidelidade Financeira" some da UI para perfis sem permissão e retorna 403 via URL direta.</li>
-</ul>
-
-<h3>7.2 Funcional — Módulo Financeiro (ciclo 2) <span class="badge warn">Pendente</span></h3>
-<ul class="checklist">
-  <li>FINANCEIRO lança dízimo de Membro X no Caixa Geral em &lt; 2 min; PASTOR vê na aba Fidelidade em &lt; 2 min (métrica macro, brief §7.1).</li>
-  <li>CRUD de Caixas funciona (criar, listar, editar, arquivar, reabrir).</li>
-  <li>CRUD de Lançamentos funciona (criar, listar com filtros, editar descritivo; valor/tipo imutáveis).</li>
-  <li>Transferência entre caixas atômica: 1 <code>TransferenciaCaixa</code> + 2 <code>Lancamento</code> espelho em <code>$transaction</code>.</li>
-  <li>Trava de saldo bloqueia SAIDA / transferência se saldo &lt; valor (RN-FIN-04).</li>
-  <li>DIZIMO exige membro; OFERTA aceita anônimo (RN-FIN-05).</li>
-  <li>RBAC fina: SECRETARIO não vê dízimos; DISCIPULADOR/LIDER_MINISTERIO totalmente bloqueados.</li>
-</ul>
-
-<h3>7.3 Qualidade (gate do phase 5) <span class="badge good">Gate</span></h3>
-<ul class="checklist">
-  <li>Cobertura de testes <strong>≥ 85%</strong> global, <strong>100%</strong> em services de regra de negócio.</li>
-  <li><strong>0 vulnerabilidades critical/high</strong>.</li>
-  <li><code>planning-reviewer</code> score <strong>≥ 70</strong>.</li>
-  <li><strong>LGPD compliant</strong>: sem coleta de CPF, senha hasheada, cookie httpOnly, dízimos restritos por perfil.</li>
-  <li>Todas as funções públicas com JSDoc completo.</li>
-  <li>Nenhum teste skipped sem justificativa.</li>
-  <li>12 testes de borda do brief §7.3 <strong>todos verdes</strong>.</li>
-</ul>
-
-<h2 id="riscos">8. Riscos e mitigações</h2>
-
-<table>
-  <thead><tr><th>#</th><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Mitigação</th></tr></thead>
-  <tbody>
-    <tr><td>R1</td><td><strong>Vazamento de dados de dízimos</strong> (RN-MEM-03)</td><td>Média</td><td><span class="badge bad">Alto</span></td><td>Bloqueio em <strong>3 camadas</strong>: UI, loader, service. E2E cobre bypass.</td></tr>
-    <tr><td>R2</td><td><strong>RBAC mal implementado</strong></td><td>Média</td><td><span class="badge bad">Alto</span></td><td>Middleware em todo action/loader, com testes por perfil × endpoint × operação.</td></tr>
-    <tr><td>R3</td><td><strong>Migration do Prisma destrutiva</strong></td><td>Alta</td><td>Baixo (dev)</td><td>Seed idempotente + <code>pnpm db:reset</code> documentado.</td></tr>
-    <tr><td>R4</td><td><strong>Vínculo de discipulado em loop</strong></td><td>Baixa</td><td>Médio</td><td>Validação no service: anti-ciclo + auto-vínculo bloqueado.</td></tr>
-    <tr><td>R5</td><td><strong>Cookie de sessão não expirando</strong></td><td>Média</td><td>Médio</td><td>TTL de 7 dias + sliding renewal + logout server-side.</td></tr>
-    <tr><td>R6</td><td><strong>SSR expõe dados sensíveis</strong></td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Loaders filtram explicitamente. Nunca retornar <code>senhaHash</code> em payload.</td></tr>
-    <tr><td>R7</td><td><strong>Saída autorizada sem saldo</strong> (RN-FIN-04)</td><td>Média</td><td><span class="badge bad">Alto</span></td><td>Trava no service (<code>assertSaldoSuficiente</code>) + re-leitura anti-TOCTOU no <code>$transaction</code>.</td></tr>
-    <tr><td>R8</td><td><strong>Transferência parcial</strong> (RN-FIN-02)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>5 mutações em 1 <code>$transaction</code>. Teste com mock valida rollback total.</td></tr>
-  </tbody>
-</table>
-
-<h2 id="roadmap">9. Roadmap de alto nível</h2>
-
-<ol>
-  <li><strong>S00–S05 (MVP — ciclo 1, FECHADO 2026-06-13):</strong> Auth + Módulo de Membros + Central de Alertas. 905 testes, 88,21% cobertura.</li>
-  <li><strong>S06 (ciclo 2, sprint 1):</strong> Financeiro — Caixa + Lançamento + dashboard + RAG <code>pattern-trava-saldo-service</code>.</li>
-  <li><strong>S07 (ciclo 2, sprint 2):</strong> Financeiro — Transferência + trava saldo em SAIDA + RAG <code>pattern-transferencia-caixas</code>.</li>
-  <li><strong>S08 (ciclo 2, sprint 3):</strong> Financeiro — Fidelidade Financeira + RBAC fina + E2E de bypass.</li>
-  <li><strong>S09+ (backlog):</strong> Reconciliação semanal, relatórios, multi-moeda, gateway de pagamento, Estoque.</li>
-</ol>
-
-<h2 id="glossario">10. Glossário</h2>
-
-<table>
-  <thead><tr><th>Termo</th><th>Significado</th></tr></thead>
-  <tbody>
-    <tr><td><strong>Membro</strong></td><td>Pessoa cadastrada. Diferenciada por <code>tipo</code>.</td></tr>
-    <tr><td><strong>Discipulador</strong></td><td>Membro com <code>Cargo.DISCIPULADOR</code>. Limite de 12 discípulos (RN-MEM-04).</td></tr>
-    <tr><td><strong>Ministério</strong></td><td>Grupo/equipe da igreja. Vínculo N:N.</td></tr>
-    <tr><td><strong>Caixa</strong></td><td>Saldo financeiro apartado (Geral, Cantina, Missões). Saldo em <strong>centavos</strong> (<code>Int</code>) — ciclo 2.</td></tr>
-    <tr><td><strong>Lançamento</strong></td><td>Entrada ou saída de um caixa. Pode ser dízimo (vinculado) ou oferta anônima (RN-FIN-05) — ciclo 2.</td></tr>
-    <tr><td><strong>Trava de Saldo</strong></td><td>Bloqueio automático se caixa não tem saldo (RN-FIN-04) — ciclo 2.</td></tr>
-    <tr><td><strong>Alerta</strong></td><td>Notificação in-app.</td></tr>
-    <tr><td><strong>Aba "Fidelidade Financeira"</strong></td><td>Lista dízimos do membro. <strong>Bloqueada</strong> para perfis sem permissão (RN-MEM-03).</td></tr>
-    <tr><td><strong>Seed</strong></td><td>Bootstrap do banco: cria primeiro Admin via Prisma (idempotente).</td></tr>
-    <tr><td><strong>Session Cookie</strong></td><td>Cookie httpOnly assinado com <code>SESSION_SECRET</code>. Sem JWT, sem localStorage.</td></tr>
-    <tr><td><strong>Cargo</strong></td><td>Enum com 6 perfis. <code>Membro.cargo</code> nullable = membro comum sem acesso.</td></tr>
-    <tr><td><strong>RBAC</strong></td><td>Role-Based Access Control. Verificado em 3 camadas (UI, loader, service).</td></tr>
-  </tbody>
-</table>
-
-<h2 id="aprovacoes">11. Aprovações e revisões</h2>
+<p>Replicação fiel do Stitch <code>hub_de_relat_rios_igrejaconnect/code.html</code>: grid 2×2 com 4 cards grandes (DRE azul, Balancete verde, Fluxo de Caixa índigo, Customizado laranja) + bloco secundário "Relatório de Transparência 2024" (apenas visual, sem ação). Cada card tem ícone SVG colorido e botão "Gerar Relatório" que navega para a sub-rota.</p>
 
 <ul>
-  <li><strong>PRD-reviewer</strong> (gate <code>score-threshold ≥ 80</code>): valida completude, clareza, cobertura de regras de negócio.</li>
-  <li><strong>Pastor/Admin</strong> (gate <code>user-approval</code>): aprovação do escopo antes do início da Fase 3 (Design).</li>
-  <li><strong>planning-reviewer</strong> (gate <code>score-threshold ≥ 70</code>): valida viabilidade técnica do SPEC.</li>
+  <li><strong>US-REL-001 (Hub — listar 4 cards de relatório):</strong> FINANCEIRO acessa <code>/app/financeiro/relatorios</code> e vê 4 cards (DRE, Balancete, Fluxo, Customizado) com ícone + descrição + botão "Gerar Relatório". Card "Transparência 2024" abaixo, sem ação.</li>
+  <li><strong>US-REL-002 (Hub — navegação para sub-rota):</strong> clicar em "Gerar Relatório" do card DRE navega para <code>/app/financeiro/relatorios/dre</code>. Demais cards: mesmo padrão.</li>
+  <li><strong>US-REL-003 (Hub — item "Relatórios" some do menu para SECRETARIO):</strong> SECRETARIO logado NÃO vê o item "Relatórios" no <code>Sidebar.tsx</code>. Camada 1 (UI) comprovada por teste E2E com login helper trocando <code>user.cargo</code>.</li>
+  <li><strong>US-REL-004 (Hub — bypass URL):</strong> SECRETARIO digita <code>/app/financeiro/relatorios</code> direto na URL → recebe <code>Response(403)</code> da Camada 2. Camada 3 (helper) também rejeita.</li>
 </ul>
 
-<h3>11.1 Changelog</h3>
+<h3 id="us-dre">3.2 DRE — <code>/app/financeiro/relatorios/dre</code></h3>
+
+<p>Replicação do Stitch <code>dre_igrejaconnect/code.html</code>. 3 KPIs (Entradas verde, Saídas vermelho, Resultado azul com badge "Lucro" / "Déficit"). Grid 12-col: Entradas por Tipo (barras) + Saídas por Categoria (tabela com impacto + percentual).</p>
+
+<ul>
+  <li><strong>US-REL-005 (DRE — gerar DRE do mês corrente):</strong> FINANCEIRO acessa <code>/app/financeiro/relatorios/dre</code> e vê DRE do mês corrente (default). 3 KPIs e 2 listas por categoria renderizam em &lt; 2s.</li>
+  <li><strong>US-REL-006 (DRE — filtrar por período personalizado):</strong> clicar em "Personalizado" abre 2 inputs <code>&lt;input type="date"&gt;</code>. Após submeter, loader recebe <code>?inicio=...&amp;fim=...</code>, valida com Zod, e refaz a query.</li>
+  <li><strong>US-REL-007 (DRE — drill-down em categoria):</strong> clicar em uma linha de "Saídas por Categoria" gera <code>&lt;Link&gt;</code> para <code>/app/financeiro/lancamentos?categoria=X&amp;periodo=...</code> (decisão na Fase 3 sobre rota).</li>
+  <li><strong>US-REL-008 (DRE — período sem lançamentos):</strong> DRE de mês vazio renderiza zeros, listas vazias, sem crash. Sem null/undefined na UI.</li>
+</ul>
+
+<h3 id="us-balancete">3.3 Balancete Mensal — <code>/app/financeiro/relatorios/balancete</code></h3>
+
+<p>Replicação do Stitch <code>balancete_mensal_igrejaconnect/code.html</code>. Header com <code>&lt;input type="month"&gt;</code> + botão "Imprimir Balancete" (<code>window.print()</code>). 4 KPIs (Saldo Anterior cinza, Entradas verde, Saídas vermelho, Saldo Atual azul). Tabela "Resumo por Categoria" + side card donut "Distribuição de Saídas".</p>
+
+<ul>
+  <li><strong>US-REL-009 (Balancete — selecionar mês):</strong> input <code>&lt;input type="month"&gt;</code> default = mês corrente. Ao mudar, loader recebe <code>?ano=YYYY&amp;mes=MM</code> e busca o balancete daquele mês.</li>
+  <li><strong>US-REL-010 (Balancete — 4 KPIs e tabela):</strong> 4 KPIs (Saldo Anterior / Entradas / Saídas / Saldo Atual) renderizam com formatação BRL. Tabela "Resumo por Categoria" com colunas Categoria | Entradas | Saídas | Saldo.</li>
+  <li><strong>US-REL-011 (Balancete — Imprimir):</strong> botão "Imprimir Balancete" aciona <code>window.print()</code> com CSS print mínimo. Sem PDF real (decisão §5.2).</li>
+  <li><strong>US-REL-012 (Balancete — placeholder de Projeção):</strong> card "Projeção Próximo Mês" renderiza placeholder cinza com texto "Disponível em ciclo futuro — depende de módulo Contas a Pagar". Decisão YAGNI (brief §5.6).</li>
+</ul>
+
+<h3 id="us-fluxo">3.4 Fluxo de Caixa — <code>/app/financeiro/relatorios/fluxo-caixa</code></h3>
+
+<p>Replicação do Stitch <code>fluxo_de_caixa_igrejaconnect/code.html</code>. Tabs Dia/Semana/Mês (apenas Mês implementado). 4 KPIs (Entradas / Saídas / Saldo Acumulado / Contas a Pagar placeholder). Card principal com SVG line chart inline (Entradas verde, Saídas vermelho, Saldo azul tracejado).</p>
+
+<ul>
+  <li><strong>US-REL-013 (Fluxo de Caixa — série temporal de 12 meses):</strong> FINANCEIRO acessa rota e vê 4 KPIs + série temporal com 12 pontos (ano corrente, default).</li>
+  <li><strong>US-REL-014 (Fluxo de Caixa — tabs Dia/Semana/Mês):</strong> tabs Dia/Semana renderizam label "Em breve" (desabilitadas). Apenas Mês está implementado (decisão YAGNI).</li>
+  <li><strong>US-REL-015 (Fluxo de Caixa — SVG line chart inline):</strong> gráfico renderiza 3 séries (Entradas verde, Saídas vermelho, Saldo azul tracejado) com path Bezier. Sem <code>recharts</code> ou <code>d3</code> (YAGNI).</li>
+  <li><strong>US-REL-016 (Fluxo de Caixa — placeholder Projeção 30 dias):</strong> side card "Projeção Próximos 30 dias" renderiza placeholder cinza (decisão §5.6).</li>
+</ul>
+
+<h3 id="us-custom">3.5 Relatório Customizado — <code>/app/financeiro/relatorios/customizado</code></h3>
+
+<p>Replicação do Stitch <code>relat_rio_customizado_igrejaconnect/code.html</code>. Bento grid: card 8-col "Filtros Avançados" (6 selects) + card 4-col com 2 KPIs. Tabela "Lançamentos Consolidados" paginada. Botão "Exportar CSV" chama action <code>?export=csv</code>.</p>
+
+<ul>
+  <li><strong>US-REL-017 (Customizado — aplicar filtros):</strong> FINANCEIRO ajusta 6 selects (Período, Tipo, Categoria, Membro, Caixa, Status-placeholder) e clica "Aplicar Filtros". Search params são validados por Zod, service filtra <code>prisma.lancamento.findMany</code>.</li>
+  <li><strong>US-REL-018 (Customizado — KPIs e tabela paginada):</strong> 2 KPIs (Total Entradas verde, Total Saídas vermelho) + Saldo Consolidado + tabela com 50 lançamentos/página. Paginação via <code>?page=N</code>.</li>
+  <li><strong>US-REL-019 (Customizado — Export CSV):</strong> botão "Exportar CSV" chama action <code>?export=csv</code>. Response: <code>text/csv; charset=utf-8</code>, <code>Content-Disposition: attachment</code>, <code>Cache-Control: no-store</code>.</li>
+  <li><strong>US-REL-020 (Customizado — filtro Status é placeholder):</strong> select "Status" renderiza desabilitado com label "Em breve — depende de refactor de schema" (decisão §5.7, YAGNI).</li>
+  <li><strong>US-REL-021 (Customizado — 0 resultados):</strong> filtros sem resultado mostram tabela vazia com mensagem "Nenhum lançamento encontrado" + KPIs zerados (sem null).</li>
+</ul>
+
+<script type="application/json" data-prd-section="3">
+{"user_stories":[
+{"id":"US-REL-001","pagina":"hub","titulo":"Listar 4 cards de relatorio","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-002","pagina":"hub","titulo":"Navegacao para sub-rota","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-003","pagina":"hub","titulo":"Item Relatorios some do menu para SECRETARIO","rns":[],"rbac":["camada1_UI"]},
+{"id":"US-REL-004","pagina":"hub","titulo":"Bypass URL para SECRETARIO","rns":[],"rbac":["camada2_loader+camada3_service"]},
+{"id":"US-REL-005","pagina":"dre","titulo":"Gerar DRE do mes corrente","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-006","pagina":"dre","titulo":"Filtrar por periodo personalizado","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-007","pagina":"dre","titulo":"Drill-down em categoria","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-008","pagina":"dre","titulo":"Periodo sem lancamentos renderiza zeros","rns":[],"rbac":["qualquer autenticado em /dre"]},
+{"id":"US-REL-009","pagina":"balancete","titulo":"Selecionar mes","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-010","pagina":"balancete","titulo":"4 KPIs e tabela Resumo por Categoria","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-011","pagina":"balancete","titulo":"Botao Imprimir aciona window.print()","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-012","pagina":"balancete","titulo":"Placeholder Proximo Mes","rns":[],"rbac":["qualquer autenticado em /balancete"]},
+{"id":"US-REL-013","pagina":"fluxo","titulo":"Serie temporal 12 meses","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-014","pagina":"fluxo","titulo":"Tabs Dia/Semana/Mes (apenas Mes implementado)","rns":[],"rbac":["qualquer autenticado em /fluxo-caixa"]},
+{"id":"US-REL-015","pagina":"fluxo","titulo":"SVG line chart inline 3 series","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-016","pagina":"fluxo","titulo":"Placeholder Projecao 30 dias","rns":[],"rbac":["qualquer autenticado em /fluxo-caixa"]},
+{"id":"US-REL-017","pagina":"custom","titulo":"Aplicar 6 filtros (Zod)","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-018","pagina":"custom","titulo":"KPIs e tabela paginada 50/pagina","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-019","pagina":"custom","titulo":"Export CSV (RFC 4180 + BOM + Cache-Control no-store)","rns":[],"rbac":["ADMIN","PASTOR","FINANCEIRO"]},
+{"id":"US-REL-020","pagina":"custom","titulo":"Filtro Status desabilitado (placeholder YAGNI)","rns":[],"rbac":["qualquer autenticado em /customizado"]},
+{"id":"US-REL-021","pagina":"custom","titulo":"0 resultados renderiza mensagem + KPIs zerados","rns":[],"rbac":["qualquer autenticado em /customizado"]}
+],"total":21,"detalhamento_contratos":"SPEC.html §3"}
+</script>
+
+<h2 id="rnf">4. Requisitos não-funcionais</h2>
+
+<h3>4.1 Performance</h3>
+<ul>
+  <li><strong>Tempo de resposta DRE / Balancete / Fluxo de Caixa:</strong> &lt; 2s para 1 ano típico (~5.000 lançamentos, ~7 categorias). Suficiente para 5 perfis logados simultaneamente (SQLite single-writer, latência aceitável).</li>
+  <li><strong>Export CSV 1.280 registros:</strong> &lt; 500ms (teste de performance, brief §7.3). Geração on-demand, sem cache.</li>
+  <li><strong>2 queries em paralelo (DRE):</strong> <code>Promise.all([groupBy ENTRADA, groupBy SAIDA])</code> reduz latência ~70% vs. sequencial.</li>
+  <li><strong>Fluxo de Caixa limita 24 meses:</strong> <code>findMany + Map</code> em memória é viável até ~60k linhas (12 meses × 5k). Acima disso, UI trava slider em 24 meses. <code>prisma.$queryRaw</code> com <code>strftime</code> é backlog (ciclo 6+).</li>
+</ul>
+
+<h3>4.2 Segurança (defense in depth em 3 camadas)</h3>
 <table>
-  <thead><tr><th>Versão</th><th>Data</th><th>Autor</th><th>Mudança</th></tr></thead>
+  <thead><tr><th>Camada</th><th>Onde</th><th>O que verifica</th><th>Falha →</th></tr></thead>
   <tbody>
-    <tr><td>0.1</td><td>2026-06-12</td><td><code>requirements</code> agent</td><td>Versão inicial (MVP): Auth + Membros + Central de Alertas.</td></tr>
-    <tr><td>0.2</td><td>2026-06-14</td><td><code>requirements</code> agent (ciclo 2)</td><td>Adicionado Apêndice D — Módulo Financeiro: 9 sub-seções, 5 RNs, 8 features, 12 testes de borda, decisão pendente <code>Caixa.ativo</code>.</td></tr>
-  <tr><td>0.3</td><td>2026-06-19</td><td><code>requirements</code> agent (ciclo 3)</td><td>Adicionado Apêndice E — Módulo Estoque + Patrimônio: 9 sub-seções, 5 RNs (RN-EST-01 a 05), 8 features (F1-F8), 10+ testes de borda, RBAC fina 6 perfis × 9 operações, LGPD Art. 6/7/18/46. Seção 5.3 promovida de "referência" para "implementado".</td></tr>
+    <tr><td><strong>1 — UI</strong></td><td><code>app/components/Sidebar.tsx</code> + <code>app/components/Can.tsx</code></td><td>Item "Relatórios" com <code>roles: ["ADMIN","PASTOR","FINANCEIRO"]</code>; <code>&lt;Can allow={[...]}&gt;</code> nos sub-componentes</td><td>Esconde item do menu (UX, não segurança)</td></tr>
+    <tr><td><strong>2 — Loader/Action</strong></td><td><code>app/routes/app/financeiro/relatorios/**.tsx</code> (5 loaders + 1 action)</td><td><code>assertCanSeeRelatorios(user)</code> como 1ª linha antes de I/O</td><td><code>Response(403)</code> → ErrorBoundary 403</td></tr>
+    <tr><td><strong>3 — Service</strong></td><td><code>app/lib/relatorios.server.ts</code> + <code>app/lib/relatorios-csv.server.ts</code></td><td><code>assertCanSeeRelatorios(user)</code> PRIMEIRO no service; revalida em qualquer chamada programática</td><td>Lança <code>Response(403)</code></td></tr>
   </tbody>
 </table>
 
-<hr />
+<p><strong>Princípio:</strong> Camada 3 é a única segurança real. Camadas 1 e 2 são UX. Se um dev novo escrever uma action sem RBAC, a Camada 3 do service chamado <strong>ainda protege</strong> (RAG <code>pattern-3-layer-rbac</code>).</p>
 
-<!-- ===================================================== -->
-<!-- APÊNDICE D — MÓDULO FINANCEIRO (CICLO 2)              -->
-<!-- ===================================================== -->
-<h1 id="c2-apendice">Apêndice D — Módulo Financeiro (ciclo 2)</h1>
-<p class="meta">
-  <strong>Adicionado em:</strong> 2026-06-14 (Fase 2, ciclo 2) &middot;
-  <strong>Escopo:</strong> Caixas + Lançamentos + Dízimos + Transferências + Trava de Saldo
-</p>
+<h3>4.3 LGPD (Lei 13.709/2018)</h3>
+<ul>
+  <li><strong>Art. 6° (necessidade):</strong> relatórios consolidados acessíveis apenas a perfis com função pastoral/tesouraria/administrativa. SECRETARIO bloqueado por princípio da necessidade.</li>
+  <li><strong>Art. 18 (direitos do titular):</strong> pedidos de acesso/eliminação aplicam-se a logs de auditoria, não a dados de relatórios. <code>lgpd-officer</code> audita o ciclo 4.</li>
+  <li><strong>Art. 46 (segurança):</strong> <code>safeLog</code> com allowlist. <strong>Proibido em log:</strong> <code>valorCentavos</code>, <code>descricao</code>, <code>membro.nome</code> (em CSV). Logs de geração de relatório registram apenas <code>userId</code> + <code>action</code> + <code>resource</code> + <code>result</code>.</li>
+  <li><strong>Dado sob demanda:</strong> nenhuma query é cacheada. <code>Cache-Control: no-store</code> em todas as respostas (incluindo export CSV).</li>
+  <li><strong>CSV &amp; LGPD:</strong> SECRETARIO bloqueado em Camada 2 (camada única — não há risco de dízimo em CSV porque SECRETARIO nem chega ao download). ADMIN/PASTOR/FINANCEIRO <strong>podem</strong> ver dízimos (decisão do ciclo 2).</li>
+</ul>
 
-<nav class="toc" aria-label="Sumário do Apêndice D">
-  <strong>Apêndice D — Módulo Financeiro (ciclo 2)</strong>
-  <ol>
-    <li><a href="#c2-sumario">D.1 Visão de produto do Financeiro</a></li>
-    <li><a href="#c2-personas">D.2 Personas × papel no Financeiro</a></li>
-    <li><a href="#c2-features">D.3 Features (8 entregáveis)</a></li>
-    <li><a href="#c2-aceitacao">D.4 Critérios de aceitação por feature</a></li>
-    <li><a href="#c2-fora">D.5 Fora do escopo (não-objetivos)</a></li>
-    <li><a href="#c2-riscos">D.6 Riscos e mitigações</a></li>
-    <li><a href="#c2-metricas">D.7 Métricas de sucesso</a></li>
-    <li><a href="#c2-glossario">D.8 Glossário do Financeiro (18 termos)</a></li>
-    <li><a href="#c2-decisao-pendente">D.9 Decisão pendente: <code>Caixa.ativo</code></a></li>
-  </ol>
-</nav>
+<h3>4.4 OWASP Top 10 (checklist aplicado ao ciclo 4)</h3>
+<ul>
+  <li><strong>A01 (Broken Access Control):</strong> mitigado por defesa em 3 camadas (item 4.2). Cobertura: 100% das 5 rotas + 1 action testadas em E2E bypass URL.</li>
+  <li><strong>A02 (Cryptographic Failures):</strong> sem dados sensíveis em payload (apenas agregados). CSV não trafega criptografado em prod (HSTS obrigatório, fora do escopo do PRD).</li>
+  <li><strong>A03 (Injection):</strong> Prisma ORM com prepared statements; <code>escapeCsvField</code> conforme RFC 4180 impede CSV injection.</li>
+  <li><strong>A04 (Insecure Design):</strong> read-only, sem mutação. <code>getRelatorioCustomizado</code> nunca faz <code>prisma.$transaction</code> de escrita.</li>
+  <li><strong>A05 (Security Misconfiguration):</strong> <code>Cache-Control: no-store</code> em todas as respostas financeiras.</li>
+  <li><strong>A06 (Vulnerable Components):</strong> zero dependências novas (decisão §5.2, §5.5).</li>
+  <li><strong>A07 (Auth Failures):</strong> middleware de auth (ciclo 1) protege todas as rotas <code>/app/**</code>. 401 se anônimo.</li>
+  <li><strong>A08 (Software &amp; Data Integrity):</strong> filtros validados por Zod strict antes de chegar ao service.</li>
+  <li><strong>A09 (Logging Failures):</strong> <code>safeLog</code> estruturado, sem PII. Auditoria confirma geração de relatório.</li>
+  <li><strong>A10 (SSRF):</strong> ciclo 4 não faz requests externos. Sem upload S3. N/A.</li>
+</ul>
 
-<h2 id="c2-sumario">D.1 Visão de produto do Módulo Financeiro</h2>
+<h3>4.5 Acessibilidade e UX</h3>
+<ul>
+  <li>Responsivo (mobile + desktop). Tailwind 4 breakpoints <code>sm/md/lg/xl</code>.</li>
+  <li>Contraste mínimo AA (WCAG 2.1): verde (#047857) e vermelho (#b91c1c) atendem.</li>
+  <li>Ícones SVG inline com <code>aria-label</code> descritivo.</li>
+  <li>KPIs com <code>role="status"</code> para leitores de tela.</li>
+</ul>
 
-<p>
-O <strong>Módulo Financeiro</strong> é o escopo único do <strong>ciclo 2</strong>. Centraliza o controle de <strong>caixas internos</strong> (Geral, Cantina, Missões), <strong>lançamentos</strong> (dízimos, ofertas, despesas, transferências) e <strong>trava de saldo</strong> — com privacidade financeira desde o dia 1. O propósito é <strong>executar o que a Fase 0 já planejou</strong>: schema Prisma, 5 regras de negócio e RBAC fina já estão definidos; o ciclo 2 implementa services, rotas e UI em S06-S08.
-</p>
-
-<p>
-A <strong>métrica macro</strong> do ciclo (brief §7.1): <em>"um FINANCEIRO registra um dízimo de Membro X no Caixa Geral, vê o saldo refletir a entrada, e o PASTOR abre a aba Fidelidade Financeira do Membro X e vê o dízimo — em menos de 2 minutos."</em>
-</p>
-
-<script type="application/json" data-prd-section="D.1">
-{"visao":{"modulo":"Financeiro","ciclo":2,"substitui":"planilhas, cadernos, memória do tesoureiro","entrega":"5 RNs + 8 features + defesa em 3 camadas em 100% da matriz","metricamacro":"FINANCEIRO lança dízimo do Membro X; PASTOR vê na aba Fidelidade em < 2 min","esquecido_este_ciclo":["Pix/cartão","multi-moeda","multi-igreja","PDF/Excel","S3","auditoria de leitura (LGPD art. 37)"]}}
+<script type="application/json" data-prd-section="4">
+{"performance":{"dre_balancete_fcaixa_ms":2000,"csv_1280_registros_ms":500,"queries_paralelas_dre":2,"fluxo_caixa_max_meses":24,"latencia_5_users_simultaneos":"< 2s (SQLite single-writer)"},"seguranca":{"camadas":["UI <Can>","loader assertCanSeeRelatorios","service assertCanSeeRelatorios"],"e2e_bypass_url_cobertura":"100%"},"lgpd":{"artigos_aplicaveis":["6 (necessidade)","18 (direitos titular)","46 (seguranca)"],"proibido_em_log":["valorCentavos","descricao","membro.nome"],"cache_control":"no-store (todas respostas)"},"owasp_top10":{"A01":"defesa 3 camadas","A02":"HSTS prod (fora PRD)","A03":"Prisma + RFC 4180","A04":"read-only puro","A05":"Cache-Control no-store","A06":"zero deps novas","A07":"middleware auth (ciclo 1)","A08":"Zod strict","A09":"safeLog sem PII","A10":"sem requests externos"}}
 </script>
 
-<h2 id="c2-personas">D.2 Personas × papel no Financeiro</h2>
+<h2 id="aceitacao">5. Critérios de aceitação e métricas</h2>
 
-<p>Os 6 perfis administrativos do MVP ganham <strong>papel específico</strong> no módulo Financeiro. As 2 primeiras personas operam o módulo no dia-a-dia; as 4 últimas decidem estrutura ou são bloqueadas.</p>
-
-<table>
-  <thead><tr><th>Persona</th><th>Perfil RBAC</th><th>Papel no Financeiro</th><th>Frequência</th></tr></thead>
-  <tbody>
-    <tr><td><strong>Tesoureiro(a)</strong></td><td><code>FINANCEIRO</code></td><td>Operador dia-a-dia: dízimos, ofertas, despesas, transferências, consulta saldos. Cria e arquiva caixas.</td><td>Diária</td></tr>
-    <tr><td><strong>Secretário(a)</strong></td><td><code>SECRETARIO</code></td><td>Lança despesas e transferências (com trava de saldo, RN-FIN-03/04). <strong>NÃO</strong> vê dízimos (RN-MEM-03). <strong>NÃO</strong> gerencia estrutura de caixas.</td><td>Diária</td></tr>
-    <tr><td><strong>Pastor</strong></td><td><code>PASTOR</code></td><td>Visão pastoral eclesiástica. Acompanha dízimos de membros. CRUD total + auditoria.</td><td>Semanal</td></tr>
-    <tr><td><strong>Administrador</strong></td><td><code>ADMIN</code></td><td>Configura estrutura: cria/arquiva caixas, ajusta regras. Visão total.</td><td>Sob demanda</td></tr>
-    <tr><td><strong>Discipulador</strong></td><td><code>DISCIPULADOR</code></td><td><strong>BLOQUEADO</strong> em todo o módulo (RN-MEM-03).</td><td>—</td></tr>
-    <tr><td><strong>Líder de Ministério</strong></td><td><code>LIDER_MINISTERIO</code></td><td><strong>BLOQUEADO</strong> em todo o módulo (RN-MEM-03).</td><td>—</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-prd-section="D.2">
-{"personas":[{"id":"P-FIN-01","persona":"Tesoureiro(a)","perfil":"FINANCEIRO","papel":"Operador dia-a-dia","frequencia":"Diária"},{"id":"P-FIN-02","persona":"Secretário(a)","perfil":"SECRETARIO","papel":"Lança despesas/transferências (com trava)","frequencia":"Diária"},{"id":"P-FIN-03","persona":"Pastor","perfil":"PASTOR","papel":"Visão pastoral + CRUD","frequencia":"Semanal"},{"id":"P-FIN-04","persona":"Administrador","perfil":"ADMIN","papel":"Estrutura + auditoria","frequencia":"Sob demanda"},{"id":"P-FIN-05","persona":"Discipulador","perfil":"DISCIPULADOR","papel":"BLOQUEADO","frequencia":"—"},{"id":"P-FIN-06","persona":"Líder de Ministério","perfil":"LIDER_MINISTERIO","papel":"BLOQUEADO","frequencia":"—"}]}
-</script>
-
-<h2 id="c2-features">D.3 Features (8 entregáveis)</h2>
-
-<ol>
-  <li><strong>F1 — CRUD de Caixas (RN-FIN-01):</strong> criar, listar, editar nome, arquivar (soft-delete via <code>ativo</code>), reabrir. Seed idempotente do Caixa Geral.</li>
-  <li><strong>F2 — CRUD de Lançamentos (RN-FIN-01, 04, 05):</strong> criar (ENTRADA/SAIDA × 7 categorias), listar por caixa com filtros, editar <em>somente descritivo</em> (valor/tipo imutáveis — auditoria).</li>
-  <li><strong>F3 — Dízimos vinculados a Membro (RN-FIN-05):</strong> DIZIMO exige <code>membroId</code>; OFERTA aceita anônimo; outras categorias exigem <code>membroId = null</code>. Validação no Zod + service.</li>
-  <li><strong>F4 — Transferências entre Caixas (RN-FIN-02):</strong> 1 <code>TransferenciaCaixa</code> (imutável, carimbo operador) + 2 <code>Lancamento</code> espelho em <code>prisma.$transaction</code> atômico. Origem ≠ destino, valor &gt; 0.</li>
-  <li><strong>F5 — Trava de Saldo no service (RN-FIN-04):</strong> <code>assertSaldoSuficiente</code> chamado ANTES do I/O. Bloqueia <code>SAIDA</code> e transferência se saldo &lt; valor. Helper canônico em <code>app/lib/finance.server.ts</code>.</li>
-  <li><strong>F6 — Aba "Fidelidade Financeira" integrada:</strong> substituir placeholder do <code>TabFidelidadeFinanceira</code> por tabela de dízimos + card de resumo (mês/ano). Service <code>getDizimosByMembro</code> já tem Camada 3 (RN-MEM-03).</li>
-  <li><strong>F7 — Dashboard de saldos (raiz do módulo):</strong> <code>/app/financeiro</code> com card por caixa + indicador agregado + ações rápidas. RBAC: <code>canSeeFinancials</code> (4 perfis).</li>
-  <li><strong>F8 — RBAC fina (matriz completa):</strong> 6 perfis × 8 operações. Defesa em 3 camadas obrigatória. Helper novo <code>assertCanManageCaixa</code> (ADMIN, PASTOR, FINANCEIRO).</li>
-</ol>
-
-<script type="application/json" data-prd-section="D.3">
-{"features":[{"id":"F1","titulo":"CRUD de Caixas","rns":["RN-FIN-01"],"donoperfil":"ADMIN, PASTOR, FINANCEIRO"},{"id":"F2","titulo":"CRUD de Lançamentos","rns":["RN-FIN-01","RN-FIN-04","RN-FIN-05"],"donoperfil":"ADMIN, PASTOR, FINANCEIRO, SECRETARIO"},{"id":"F3","titulo":"Dízimos vinculados a Membro","rns":["RN-FIN-05"],"donoperfil":"ADMIN, PASTOR, FINANCEIRO, SECRETARIO"},{"id":"F4","titulo":"Transferências entre Caixas","rns":["RN-FIN-02"],"donoperfil":"ADMIN, PASTOR, FINANCEIRO, SECRETARIO"},{"id":"F5","titulo":"Trava de Saldo no service","rns":["RN-FIN-04"],"donoperfil":"todos que mutam saldo"},{"id":"F6","titulo":"Aba Fidelidade Financeira","rns":["RN-MEM-03"],"donoperfil":"ADMIN, PASTOR, FINANCEIRO"},{"id":"F7","titulo":"Dashboard de saldos","rns":["RN-FIN-01"],"donoperfil":"ADMIN, PASTOR, FINANCEIRO, SECRETARIO"},{"id":"F8","titulo":"RBAC fina (3 camadas)","rns":["RN-MEM-03","RN-FIN-03"],"donoperfil":"todas as features"}]}
-</script>
-
-<h2 id="c2-aceitacao">D.4 Critérios de aceitação por feature</h2>
-
-<table>
-  <thead><tr><th>Feature</th><th>Critério de aceitação (verificável)</th></tr></thead>
-  <tbody>
-    <tr><td>F1 — Caixas</td><td><code>prisma/seed.ts</code> cria <em>Caixa Geral</em> idempotente via <code>upsert</code>. <code>criarCaixa</code> exige <code>assertCanManageCaixa</code> (ADMIN/PASTOR/FINANCEIRO). <code>SECRETARIO</code> recebe 403 ao criar. <code>nome @unique</code>: criar duplicado → 409.</td></tr>
-    <tr><td>F2 — Lançamentos</td><td><code>criarLancamento</code> com <code>tipo: SAIDA</code> e <code>saldo &lt; valor</code> → 409 <em>"Saldo insuficiente"</em>. <code>valorCentavos: 0</code> ou negativo → 400 (Zod <code>.int().positive()</code>). Editar preserva imutabilidade de <code>valorCentavos</code>/<code>tipo</code>/<code>categoria</code>/<code>caixaId</code>.</td></tr>
-    <tr><td>F3 — Dízimos</td><td><code>DIZIMO</code> sem <code>membroId</code> → 400 (Zod <code>superRefine</code> RN-FIN-05). <code>OFERTA</code> sem <code>membroId</code> → OK, anônimo. <code>DESPESA</code> com <code>membroId</code> → 400.</td></tr>
-    <tr><td>F4 — Transferência</td><td>origem = destino → 400. valor = 0 → 400. valor negativo → 400. saldo origem &lt; valor → 409. Sucesso: 1 <code>TransferenciaCaixa</code> + 2 <code>Lancamento</code> espelho, em <code>$transaction</code>. <code>categoria: TRANSFERENCIA</code> exclusiva do espelho (teste estático).</td></tr>
-    <tr><td>F5 — Trava</td><td>Teste de borda "saldo = 0, SAIDA de 1 centavo → 409" é <strong>bloqueador de sprint</strong>. Re-leitura anti-TOCTOU dentro do <code>$transaction</code>. Helper é a única porta de entrada para mutação de saldo.</td></tr>
-    <tr><td>F6 — Fidelidade</td><td>Aba some da UI para SECRETARIO/DISCIPULADOR/LIDER_MINISTERIO. <code>?tab=fidelidade</code> direto na URL com perfil inadequado → loader redireciona para <code>?tab=dados</code>. <code>getDizimosByMembro</code> lança 403 (Camada 3). Tabela mostra data, valor BRL, descrição em ordem decrescente.</td></tr>
-    <tr><td>F7 — Dashboard</td><td>Cards 1 por caixa (nome + saldo BRL). Indicador agregado = soma de todos os caixas ativos. <code>DISCIPULADOR</code>/<code>LIDER_MINISTERIO</code> recebem 403 em <code>/app/financeiro</code>.</td></tr>
-    <tr><td>F8 — RBAC fina</td><td>100% das células da matriz (brief §4.8) cobertas por teste. <code>assertCanManageCaixa</code> é helper novo. UI esconde, loader checa, service barra — bypass via URL direta é bloqueado na Camada 2 e 3.</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-prd-section="D.4">
-{"aceitacao":[{"feature":"F1","criterio_chave":"SECRETARIO criando caixa → 403"},{"feature":"F2","criterio_chave":"saldo=0 + SAIDA 1 centavo → 409"},{"feature":"F3","criterio_chave":"DIZIMO sem membro → 400"},{"feature":"F4","criterio_chave":"atomicidade: 1+2 em $transaction"},{"feature":"F5","criterio_chave":"trava no service (Camada 3)"},{"feature":"F6","criterio_chave":"DISCIPULADOR bypass URL → 403"},{"feature":"F7","criterio_chave":"DISCIPULADOR em /app/financeiro → 403"},{"feature":"F8","criterio_chave":"100% matriz coberta por teste"}]}
-</script>
-
-<h2 id="c2-fora">D.5 Fora do escopo (não-objetivos do ciclo 2)</h2>
-
-<p>12 itens explicitamente fora deste ciclo (brief §8). Registro para evitar scope creep. Podem virar ciclo futuro se a demanda surgir.</p>
-
-<ol>
-  <li>❌ <strong>Gateway de pagamento</strong> (Pix, cartão, boleto) — sem integração com bancos ou PSPs.</li>
-  <li>❌ <strong>Conciliação bancária automática</strong> — caixas são internos, sem extrato bancário para reconciliar.</li>
-  <li>❌ <strong>Relatórios PDF/Excel</strong> — exportação manual via UI. CSV/Excel em ciclo futuro.</li>
-  <li>❌ <strong>Multi-igreja / multi-tenant</strong> — 1 instância = 1 igreja.</li>
-  <li>❌ <strong>Multi-moeda</strong> — apenas BRL. <code>Int</code> cobre até R$ 21M por caixa.</li>
-  <li>❌ <strong>Recibo físico ou envio por e-mail</strong> — sem SMTP neste ciclo.</li>
-  <li>❌ <strong>Notificações de saldo baixo</strong> — sem cron jobs.</li>
-  <li>❌ <strong>Aprovação multi-nível para saídas grandes</strong> — RN-FIN-03 já é autonomia por saldo real.</li>
-  <li>❌ <strong>Upload de comprovantes</strong> — sem S3/MinIO. Campo <code>descricao</code> basta.</li>
-  <li>❌ <strong>Módulo de Estoque (ciclo futuro)</strong> — schema tem <code>ItemEstoque</code> etc., UI/service é ciclo 3+.</li>
-  <li>❌ <strong>Criar/editar regras de negócio via UI</strong> — RN-FIN-* são fixas no código.</li>
-  <li>❌ <strong>Camada extra de "auditor" como perfil RBAC</strong> — 6 perfis ficam como estão.</li>
-</ol>
-
-<script type="application/json" data-prd-section="D.5">
-{"nao_objetivos":["gateway_pagamento","conciliacao_bancaria","relatorios_pdf_excel","multi_igreja","multi_moeda","recibo_email","notificacao_saldo_baixo","aprovacao_multinivel","upload_comprovantes","modulo_estoque","regras_via_ui","perfil_auditor"],"racional":"Lista explícita do brief §8 para evitar scope creep. Itens podem entrar em ciclo futuro se a demanda surgir."}
-</script>
-
-<h2 id="c2-riscos">D.6 Riscos e mitigações do Módulo Financeiro</h2>
-
-<table>
-  <thead><tr><th>#</th><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Mitigação</th></tr></thead>
-  <tbody>
-    <tr><td>R-FIN-01</td><td><strong>Saída autorizada sem saldo</strong> (RN-FIN-04 violada por bug)</td><td>Média</td><td><span class="badge bad">Alto</span></td><td>Trava no <strong>service</strong> via <code>assertSaldoSuficiente</code> + re-leitura anti-TOCTOU no <code>$transaction</code>. Teste de borda "saldo=0 + 1¢" é bloqueador de sprint.</td></tr>
-    <tr><td>R-FIN-02</td><td><strong>Transferência parcial</strong> (origem debitada, destino não creditada)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td><strong>5 mutações em 1 <code>$transaction</code></strong>. Teste com mock valida rollback total.</td></tr>
-    <tr><td>R-FIN-03</td><td><strong>Vazamento de dízimos</strong> (RN-MEM-03) por bypass de URL</td><td>Média</td><td><span class="badge bad">Alto</span></td><td>Defesa em 3 camadas: UI esconde, loader redireciona, service lança 403. E2E cobre bypass via URL direta.</td></tr>
-    <tr><td>R-FIN-04</td><td><strong>SECRETARIO vê dízimos</strong> por falha na Camada 1 ou 2</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td><code>getDizimosByMembro</code> chama <code>assertCanSeeFinancials</code> PRIMEIRO. E2E valida 3 caminhos (UI ausente, URL 403, service lança).</td></tr>
-    <tr><td>R-FIN-05</td><td><strong>Float para dinheiro</strong> introduz bugs de arredondamento</td><td>Média</td><td>Médio</td><td><code>Int</code> em centavos é convenção. Helpers <code>formatBRLFromCents</code>/<code>parseBRLToCents</code>. Zod <code>.int().positive()</code>.</td></tr>
-    <tr><td>R-FIN-06</td><td><strong><code>valorCentavos</code> em log de auditoria</strong> (RN-MEM-03)</td><td>Baixa</td><td>Médio</td><td><code>safeLog</code> com allowlist. Code review recusa PR com <code>console.log</code> monetário.</td></tr>
-    <tr><td>R-FIN-07</td><td><strong>Dízimo órfão com membro deletado</strong> perde identificação</td><td>Média</td><td>Baixo</td><td><code>Lancamento.membro</code> é <code>SetNull</code> no delete. Dízimo órfão permanece no extrato (RN-FIN-05 + LGPD).</td></tr>
-    <tr><td>R-FIN-08</td><td><strong>Caixa deletado fisicamente</strong> destrói histórico</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td><code>onDelete: Restrict</code> em <code>Caixa.lancamentos</code> e transferências. Soft-delete (<code>ativo: false</code>) é a única forma de "fechar" caixa.</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-prd-section="D.6">
-{"riscos":[{"id":"R-FIN-01","titulo":"Saída sem saldo","rns":["RN-FIN-04"],"mitigacao":"assertSaldoSuficiente no service"},{"id":"R-FIN-02","titulo":"Transferência parcial","rns":["RN-FIN-02"],"mitigacao":"$transaction atômico"},{"id":"R-FIN-03","titulo":"Vazamento dízimos (bypass URL)","rns":["RN-MEM-03"],"mitigacao":"3 camadas de defesa"},{"id":"R-FIN-04","titulo":"SECRETARIO vê dízimos","rns":["RN-MEM-03"],"mitigacao":"service lança 403"},{"id":"R-FIN-05","titulo":"Float para dinheiro","rns":[],"mitigacao":"Int em centavos"},{"id":"R-FIN-06","titulo":"valorCentavos em log","rns":["RN-MEM-03"],"mitigacao":"safeLog com allowlist"},{"id":"R-FIN-07","titulo":"Dízimo órfão","rns":["RN-FIN-05"],"mitigacao":"SetNull no delete"},{"id":"R-FIN-08","titulo":"Caixa deletado","rns":["RN-FIN-01"],"mitigacao":"Restrict + soft-delete"}]}
-</script>
-
-<h2 id="c2-metricas">D.7 Métricas de sucesso do ciclo 2</h2>
-
-<h3>D.7.1 Métrica macro (única)</h3>
+<h3>5.1 Métrica macro (única)</h3>
 <blockquote>
-"O ciclo 2 é bem-sucedido quando um <code>FINANCEIRO</code> consegue, em menos de 2 minutos, registrar um dízimo de Membro X no Caixa Geral, ver o saldo do caixa refletir a entrada, e o PASTOR consegue abrir a aba Fidelidade Financeira do Membro X e ver o dízimo recém-lançado." — <em>brief §7.1</em>
+"O ciclo 4 é considerado bem-sucedido quando um <code>FINANCEIRO</code> consegue, em menos de 2 minutos, gerar o DRE do mês corrente, ver o total de entradas (verde), o total de saídas (vermelho) e o resultado líquido (azul), clicar em uma categoria para abrir o drill-down, e exportar a tabela do Relatório Customizado em CSV."
 </blockquote>
 
-<h3>D.7.2 Métricas de qualidade (gate do phase 5)</h3>
-<ul>
-  <li>Cobertura de testes: <strong>≥ 85%</strong> global, <strong>100%</strong> em <code>caixas.server.ts</code>, <code>lancamentos.server.ts</code>, <code>transferencias.server.ts</code>.</li>
-  <li>Vulnerabilidades: <strong>0 critical, 0 high</strong>.</li>
-  <li><code>planning-reviewer</code> score: <strong>≥ 70</strong>.</li>
-  <li>LGPD: <code>lgpd-officer</code> status ≥ <code>warning</code>, 0 critical, 0 high em Art. 18/48.</li>
-  <li>Defesa em 3 camadas comprovada: 100% das células da matriz §4.8 do brief cobertas por testes E2E.</li>
+<h3>5.2 Métricas de qualidade (gate do phase 5)</h3>
+<table>
+  <thead><tr><th>Métrica</th><th>Threshold</th><th>Como medir</th></tr></thead>
+  <tbody>
+    <tr><td>Cobertura global</td><td>≥ 85%</td><td><code>pnpm test:coverage</code> + <code>coverage-analyzer</code></td></tr>
+    <tr><td>Cobertura em <code>app/lib/relatorios.server.ts</code></td><td>100% (todos branches)</td><td>mesmo</td></tr>
+    <tr><td>Cobertura em <code>app/lib/relatorios-csv.server.ts</code></td><td>100% (todos branches)</td><td>mesmo</td></tr>
+    <tr><td>Vuln critical</td><td>0</td><td><code>security-scanner</code></td></tr>
+    <tr><td>Vuln high</td><td>0</td><td>mesmo</td></tr>
+    <tr><td><code>planning-reviewer</code> score</td><td>≥ 70</td><td>avaliação automática</td></tr>
+    <tr><td>LGPD status</td><td>≥ <code>warning</code>, 0 critical em Art. 6°/18/46</td><td><code>lgpd-officer</code></td></tr>
+    <tr><td>Defesa 3 camadas comprovada</td><td>100% das 5 rotas + 1 action com E2E bypass URL</td><td>Playwright <code>relatorios-rbac-secretario-bloqueado.spec.ts</code></td></tr>
+  </tbody>
+</table>
+
+<h3>5.3 Testes de borda obrigatórios (13 do brief §7.3 — TDD antes do service)</h3>
+<table>
+  <thead><tr><th>#</th><th>Teste</th><th>Camada</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>SECRETARIO acessando <code>/app/financeiro/relatorios</code> → 403 (Camada 2 + Camada 3)</td><td>RBAC</td><td>E2E</td></tr>
+    <tr><td>2</td><td>SECRETARIO digitando <code>/app/financeiro/relatorios/dre</code> direto → 403 (não há fallback)</td><td>RBAC</td><td>E2E</td></tr>
+    <tr><td>3</td><td>DISCIPULADOR / LIDER_MINISTERIO → 403 em todas as 5 rotas</td><td>RBAC</td><td>E2E</td></tr>
+    <tr><td>4</td><td>DRE de mês sem lançamentos renderiza zeros + listas vazias (sem null)</td><td>negócio</td><td>Unit</td></tr>
+    <tr><td>5</td><td>Balancete de mês sem categorias com movimento: tabela oculta linhas vazias + totais zerados</td><td>negócio</td><td>Unit</td></tr>
+    <tr><td>6</td><td>Customizado com 0 resultados: "Nenhum lançamento encontrado" + KPIs zerados</td><td>negócio</td><td>Unit</td></tr>
+    <tr><td>7</td><td>Filtro <code>categoria=BURRO</code> → 400 (Zod strict)</td><td>validação</td><td>Unit</td></tr>
+    <tr><td>8</td><td>Filtro <code>periodo</code> com <code>inicio &gt; fim</code> → 400 (assertPeriodoValido)</td><td>validação</td><td>Unit</td></tr>
+    <tr><td>9</td><td>Caixa arquivado no DRE: lançamentos <strong>continuam aparecendo</strong> (regra do ciclo 2)</td><td>negócio</td><td>Unit</td></tr>
+    <tr><td>10</td><td>CSV com 1.280 registros: geração completa em &lt; 500ms</td><td>performance</td><td>Unit</td></tr>
+    <tr><td>11</td><td>CSV com caracteres especiais: <code>"São Paulo &amp; Cia."</code> → escape RFC 4180</td><td>RFC 4180</td><td>Unit</td></tr>
+    <tr><td>12</td><td>5 perfis logados simultaneamente gerando relatórios: sem contenção (&lt; 2s latência)</td><td>concorrência</td><td>Integração</td></tr>
+    <tr><td>13</td><td>CSV sem BOM: Excel pt-BR reconhece UTF-8 se BOM presente (3 primeiros bytes <code>EF BB BF</code>)</td><td>encoding</td><td>Unit</td></tr>
+  </tbody>
+</table>
+
+<h3>5.4 Critérios por página (resumo)</h3>
+<ul class="checklist">
+  <li>Hub renderiza 4 cards com ícones SVG coloridos (DRE azul, Balancete verde, Fluxo índigo, Customizado laranja).</li>
+  <li>DRE: 3 KPIs (Entradas verde, Saídas vermelho, Resultado azul com badge "Lucro"/"Déficit").</li>
+  <li>Balancete: 4 KPIs + tabela "Resumo por Categoria" (Categoria | Entradas | Saídas | Saldo).</li>
+  <li>Fluxo de Caixa: 4 KPIs + SVG line chart com 3 séries (Entradas verde sólido, Saídas vermelho sólido, Saldo azul tracejado).</li>
+  <li>Customizado: 2 KPIs + tabela paginada 50/página + ação <code>?export=csv</code> funcional.</li>
+  <li>Item "Relatórios" some do menu para SECRETARIO (Camada 1).</li>
+  <li>SECRETARIO digitando URL direta recebe 403 (Camada 2 + Camada 3).</li>
+  <li>Drill-down funcional: clicar em categoria gera navegação para <code>/app/financeiro/lancamentos?categoria=X&amp;periodo=...</code> (rota pendente — decisão Fase 3).</li>
+  <li>CSV gerado com BOM UTF-8, separador <code>;</code>, CRLF, escape RFC 4180, valor <code>1234.56</code> (sem R$), SAÍDA com sinal negativo, <code>Cache-Control: no-store</code>.</li>
+  <li>~25 SVGs em <code>app/components/icons/FinanceIcons.tsx</code>, sem dependência externa (sem <code>lucide-react</code>).</li>
+  <li>Placeholders cinza para "Projeção Próximo Mês" e "Projeção 30 dias" (YAGNI, decisão §5.6).</li>
+  <li>Filtro "Status" no Customizado: <code>&lt;select disabled&gt;</code> com 4 opções placeholder (YAGNI, decisão §5.7).</li>
 </ul>
 
-<h3>D.7.3 12 testes de borda obrigatórios (brief §7.3)</h3>
-<ol>
-  <li>12 discípulos: passa (regressão do ciclo 1).</li>
-  <li>13º discípulo: bloqueia com mensagem clara.</li>
-  <li><strong>Saldo = 0, SAIDA de R$ 0,01: bloqueia com 409</strong> (RN-FIN-04).</li>
-  <li><strong>DIZIMO sem membro: bloqueia com 400</strong> (RN-FIN-05).</li>
-  <li><strong>OFERTA sem membro: passa, anônimo</strong> (RN-FIN-05).</li>
-  <li><strong>Transferência origem = destino: bloqueia com 400</strong>.</li>
-  <li><strong>Transferência valor = 0: bloqueia com 400</strong>.</li>
-  <li><strong>Transferência valor negativo: bloqueia com 400</strong>.</li>
-  <li>SECRETARIO acessando <code>/app/financeiro</code>: recebe 403.</li>
-  <li>SECRETARIO acessando <code>/app/membros/:id?tab=fidelidade</code>: aba não renderiza, <code>getDizimosByMembro</code> retorna 403.</li>
-  <li>DISCIPULADOR tentando qualquer rota <code>/app/financeiro/**</code>: recebe 403 em todas as camadas.</li>
-  <li><strong>Caixa arquivado (<code>ativo: false</code>) rejeita movimentação</strong> (depende de D.9).</li>
-</ol>
-
-<script type="application/json" data-prd-section="D.7">
-{"metricas":{"macro":"FINANCEIRO lança dízimo; PASTOR vê na aba em < 2 min","cobertura_min_global":85,"cobertura_min_services_negocio":100,"vuln_max_critical":0,"vuln_max_high":0,"review_score_min":70,"lgpd_min_status":"warning","testes_borda_obrigatorios":12,"celulas_matriz_cobertas":"100%"}}
+<script type="application/json" data-prd-section="5">
+{"metrica_macro":"FINANCEIRO gera DRE do mes corrente, ve entradas/saidas/resultado, faz drill-down e exporta CSV em < 2 min","gate_phase_5":{"cobertura_global_min":85,"cobertura_relatorios_server_min":100,"cobertura_relatorios_csv_min":100,"vuln_critical_max":0,"vuln_high_max":0,"review_score_min":70,"lgpd_min_status":"warning","defesa_3_camadas_e2e":"100%"},"testes_borda_total":13,"detalhamento_testes":"SPEC.html §9","criterios_por_pagina":{"hub":"4 cards SVG + bloco Transparencia placeholder","dre":"3 KPIs + 2 listas por categoria + drill-down","balancete":"4 KPIs + tabela + donut + placeholder Proxima Mes","fluxo_caixa":"4 KPIs + SVG line chart 3 series + placeholder Projecao 30d","customizado":"6 filtros + 2 KPIs + tabela paginada + action CSV + placeholder Status"}}
 </script>
 
-<h2 id="c2-glossario">D.8 Glossário do Módulo Financeiro (18 termos)</h2>
+<h2 id="fora">6. Fora do escopo (não-objetivos)</h2>
+
+<p>Lista derivada do <a href="brief-relatorios.md">brief §8</a> para evitar <strong>scope creep</strong>. Podem virar ciclo futuro se a demanda surgir.</p>
 
 <table>
-  <thead><tr><th>Termo</th><th>Significado</th></tr></thead>
+  <thead><tr><th>Item</th><th>Status</th><th>Por que está fora / decisão</th></tr></thead>
   <tbody>
-    <tr><td><strong>Caixa</strong></td><td>Saldo apartado (Geral, Cantina, Missões). Saldo em <code>Int</code> em centavos.</td></tr>
-    <tr><td><strong>Caixa Geral</strong></td><td>Caixa seed (criado no <code>prisma/seed.ts</code> via <code>upsert</code> idempotente).</td></tr>
-    <tr><td><strong>Lançamento</strong></td><td>Entrada/saída de caixa. Pode ser vinculado a membro (DIZIMO) ou anônimo (OFERTA, RN-FIN-05).</td></tr>
-    <tr><td><strong>Categoria de Lançamento</strong></td><td>Enum com 7 valores: <code>DIZIMO, OFERTA, CAMPANHA, DESPESA_OPERACIONAL, COMPRA_ESTOQUE, MANUTENCAO, TRANSFERENCIA</code>.</td></tr>
-    <tr><td><strong>Tipo de Lançamento</strong></td><td>Enum <code>TipoLancamento</code>: <code>ENTRADA</code> (soma) ou <code>SAIDA</code> (subtrai, com trava).</td></tr>
-    <tr><td><strong>Dízimo</strong></td><td>Lançamento <code>ENTRADA / DIZIMO</code> com <code>membroId</code> <strong>obrigatório</strong> (RN-FIN-05).</td></tr>
-    <tr><td><strong>Oferta</strong></td><td>Lançamento <code>ENTRADA / OFERTA</code> com <code>membroId</code> <strong>opcional</strong> (anônimo, RN-FIN-05).</td></tr>
-    <tr><td><strong>Transferência entre Caixas</strong></td><td>Movimentação imutável entre 2 caixas (1 <code>TransferenciaCaixa</code> + 2 <code>Lancamento</code> espelho em <code>$transaction</code>, RN-FIN-02).</td></tr>
-    <tr><td><strong>Trava de Saldo</strong></td><td>Bloqueio automático se caixa não tem saldo suficiente (RN-FIN-04). Helper <code>assertSaldoSuficiente</code> no service.</td></tr>
-    <tr><td><strong>Autonomia por Saldo Real</strong></td><td><code>FINANCEIRO</code> e <code>SECRETARIO</code> aprovam saídas <strong>se</strong> houver saldo (RN-FIN-03).</td></tr>
-    <tr><td><strong>Lançamento Espelho</strong></td><td>1 dos 2 <code>Lancamento</code> gerados por <code>transferirEntreCaixas</code>. <code>categoria: TRANSFERENCIA</code> é <strong>exclusiva</strong> do espelho.</td></tr>
-    <tr><td><strong>Reconciliação de Caixa</strong></td><td>Verificação de que <code>SUM(Lancamento WHERE caixaId = X) == Caixa.saldoCentavos</code>. <strong>Feature futura</strong> (ciclo 3+).</td></tr>
-    <tr><td><strong>Caixa Arquivado</strong></td><td>Caixa com <code>ativo = false</code> (proposta pendente — D.9). Some da listagem padrão, não aceita movimentações, mantém histórico.</td></tr>
-    <tr><td><strong>Aba "Fidelidade Financeira"</strong></td><td>Componente do perfil que lista dízimos. <strong>Bloqueada</strong> para perfis sem permissão (RN-MEM-03).</td></tr>
-    <tr><td><strong><code>assertSaldoSuficiente</code></strong></td><td>Helper canônico em <code>app/lib/finance.server.ts</code>. Lança <code>Response(409)</code> se caixa não tem saldo. PRIMEIRO no service.</td></tr>
-    <tr><td><strong><code>assertCanSeeFinancials</code></strong></td><td>Helper canônico em <code>app/lib/rbac.server.ts</code>. Lança <code>Response(403)</code> se user sem perfil financeiro.</td></tr>
-    <tr><td><strong><code>assertCanManageCaixa</code></strong></td><td>Helper <strong>proposto</strong> (a criar no ciclo 2). Lança <code>Response(403)</code> se user não tem permissão de criar/arquivar Caixa (ADMIN, PASTOR, FINANCEIRO).</td></tr>
-    <tr><td><strong>Helper <code>money.server.ts</code></strong></td><td><code>formatBRLFromCents</code>, <code>parseBRLToCents</code>, <code>assertNonNegative</code>.</td></tr>
+    <tr><td><span class="badge bad">Exportação PDF</span></td><td>Diferido (ciclo 6+)</td><td>Depende de <code>pdfkit</code>/<code>puppeteer</code> ~250MB. CSV cobre o caso de uso real (Excel/Sheets pivot). Decisão §5.2.</td></tr>
+    <tr><td><span class="badge bad">Envio de relatório por e-mail</span></td><td>Não incluso</td><td>Sem SMTP no projeto. Alinhado com <code>brief-mvp-financeiro.md §8</code>.</td></tr>
+    <tr><td><span class="badge bad">Agendamento de relatórios (cron)</span></td><td>Não incluso</td><td>Sem jobs no projeto. <code>node-cron</code> é backlog.</td></tr>
+    <tr><td><span class="badge bad">Projeção financeira real</span></td><td>Placeholder cinza</td><td>Depende de módulo <code>ContaPagar</code> que não existe no schema. Implementar "fake" seria mentir. Decisão §5.6.</td></tr>
+    <tr><td><span class="badge bad">Status de lançamento</span></td><td>Placeholder (select disabled)</td><td>Schema <code>Lancamento</code> não tem campo <code>status</code>. Adicionar requer migration + decisão de produto. Decisão §5.7.</td></tr>
+    <tr><td><span class="badge bad">Conciliação bancária</span></td><td>Não incluso</td><td>Caixas são internos (RN-FIN-01). Sem extrato bancário para reconciliar.</td></tr>
+    <tr><td><span class="badge bad">Multi-igreja / multi-tenant</span></td><td>Não incluso</td><td>Uma instância = uma igreja.</td></tr>
+    <tr><td><span class="badge bad">Multi-moeda</span></td><td>Não incluso</td><td>Apenas BRL. <code>Int</code> cobre até R$ 21 milhões por caixa.</td></tr>
+    <tr><td><span class="badge bad">Cache de relatório</span></td><td>Não incluso</td><td>Toda geração on-demand. Sem Redis.</td></tr>
+    <tr><td><span class="badge bad">Filtros por centro de custo</span></td><td>Não incluso</td><td>Não há modelagem de centro de custo no schema.</td></tr>
+    <tr><td><span class="badge bad">Drill-down em gráficos SVG</span></td><td>Não incluso</td><td>Apenas clique em linhas de tabela é navegável. Decisão §5.4.</td></tr>
+    <tr><td><span class="badge bad">Impressão formatada (CSS print + page-break)</span></td><td>Mínimo</td><td>Botão "Imprimir Balancete" usa <code>window.print()</code> com CSS mínimo.</td></tr>
+    <tr><td><span class="badge bad">Comparativo YoY automático</span></td><td>Não incluso</td><td>Pode entrar via filtro manual de período.</td></tr>
+    <tr><td><span class="badge bad">Auditoria visual de quem gerou</span></td><td>Não incluso</td><td>Sem <code>RelatorioGerado</code> neste ciclo. Logs de auditoria cobrem.</td></tr>
+    <tr><td><span class="badge warn">Tabs Dia/Semana no Fluxo de Caixa</span></td><td>"Em breve"</td><td>Apenas Mês implementado. Dia/Semana requerem agregação temporal diferente.</td></tr>
   </tbody>
 </table>
 
-<script type="application/json" data-prd-section="D.8">
-{"glossario":["Caixa","Caixa Geral","Lançamento","Categoria de Lançamento","Tipo de Lançamento","Dízimo","Oferta","Transferência entre Caixas","Trava de Saldo","Autonomia por Saldo Real","Lançamento Espelho","Reconciliação de Caixa","Caixa Arquivado","Aba Fidelidade Financeira","assertSaldoSuficiente","assertCanSeeFinancials","assertCanManageCaixa","money.server.ts"]}
+<script type="application/json" data-prd-section="6">
+{"fora_escopo":["PDF","email_relatorio","agendamento_cron","projecao_real","status_lancamento","conciliacao_bancaria","multi_igreja","multi_moeda","cache_relatorio","centro_custo","drill_down_grafico","impressao_formatada","comparativo_yoy","auditoria_visual_quem_gerou","tabs_dia_semana_fluxo_caixa"],"racional":"Lista explicita do brief §8 para evitar scope creep. Podem entrar em ciclo futuro se demanda surgir.","yagni_decisoes":["projecao_fake (depende ContaPagar)","status_fake (depende migration schema)","tabs_dia_semana (YAGNI, ~80% das consultas sao mensais)"]}
 </script>
 
-<h2 id="c2-decisao-pendente">D.9 Decisão pendente: <code>Caixa.ativo</code> (proposta para validação do <code>prd-reviewer</code>)</h2>
+<h2 id="anexos">7. Anexos e cross-refs</h2>
 
-<p>
-O discovery do ciclo 2 propôs (brief §5.4) adicionar campo <code>ativo: Boolean @default(true)</code> ao model <code>Caixa</code> para suportar <strong>soft-delete (arquivamento)</strong>. Esta é a <strong>única decisão de modelagem pendente</strong> do ciclo 2. O RAG <code>decision-caixa-soft-delete.md</code> (status: <code>pending</code>) é o subsídio técnico.
-</p>
-
-<h3>D.9.1 Proposta</h3>
-<p>Adicionar <code>ativo: Boolean @default(true)</code> ao model <code>Caixa</code> + índice <code>@@index([ativo])</code>. Caixas arquivados (<code>ativo = false</code>):</p>
+<h3>7.1 Brief canônico (fonte da verdade)</h3>
 <ul>
-  <li>Somem da listagem padrão (<code>listarCaixas({ apenasAtivos: true })</code>).</li>
-  <li>Não aceitam novas movimentações — <code>assertSaldoSuficiente</code> e <code>transferirEntreCaixas</code> <strong>já antecipam</strong> a checagem.</li>
-  <li>Podem ser reabertos (<code>reabrirCaixa</code> — mesmo RBAC de criar).</li>
-  <li>Mantêm histórico de saldo e lançamentos (integridade contábil preservada).</li>
+  <li><a href="brief-relatorios.md"><code>brief-relatorios.md</code></a> (489 linhas, 9 seções) — aprovado pelo usuário em 2026-06-20T15:35Z.</li>
 </ul>
 
-<h3>D.9.2 Alternativas rejeitadas</h3>
+<h3>7.2 Documentos do projeto (do ciclo 1 — Fase 1)</h3>
 <ul>
-  <li><strong>Apenas <code>onDelete: Restrict</code></strong> (status quo): funcional mas perde semântica de "arquivado".</li>
-  <li><strong><code>Caixa.status: CaixaStatus</code> (enum)</strong>: YAGNI. Flag binário cobre 100% do caso.</li>
-  <li><strong><code>Caixa.arquivadoEm: DateTime?</code></strong>: redundância inútil. Auditoria temporal pertence a <code>AuditLog</code> (backlog).</li>
-  <li><strong><code>onDelete: Cascade</code></strong>: destrói histórico financeiro. Inaceitável.</li>
+  <li><a href="brief-mvp-financeiro.md"><code>brief-mvp-financeiro.md</code></a> — ciclo 2 (Módulo Financeiro: Caixas + Lançamentos + Transferências + Fidelidade). <strong>Este brief depende daquele.</strong></li>
+  <li><a href="brief-mvp.md"><code>brief-mvp.md</code></a> — ciclo 1 (MVP: Auth + Membros + Discipulado + Alertas).</li>
+  <li><a href="agents/AGENTS.md"><code>agents/AGENTS.md</code></a> §Módulo Relatórios Financeiros — 16 sub-tópicos, comandos de verificação, padrões críticos.</li>
+  <li><a href="docs/architecture/ARCH.md"><code>docs/architecture/ARCH.md</code></a> §10 — Relatórios Financeiros: 10 sub-seções + 4 diagramas mermaid.</li>
+  <li><a href="prisma/schema.prisma"><code>prisma/schema.prisma</code></a> — model <code>Lancamento</code> + enums <code>TipoLancamento</code>, <code>CategoriaLancamento</code>. Cobre 100% dos requisitos sem migration.</li>
+  <li><a href="docs/REGRAS_DE_NEGOCIO.md"><code>docs/REGRAS_DE_NEGOCIO.md</code></a> — RN-FIN-01 a 05 (herdadas do ciclo 2).</li>
+  <li><a href="PRD.html"><code>PRD.html</code></a> — PRD do ciclo 2 (template de estrutura, base cumulativa).</li>
+  <li><a href="SPEC.html"><code>SPEC.html</code></a> — SPEC do ciclo 2 (template, contratos de API detalhados).</li>
 </ul>
 
-<h3>D.9.3 Critérios para mover de <code>pending</code> → <code>approved</code></h3>
-<ol>
-  <li><strong><code>prd-reviewer</code> valida a decisão</strong> nesta Fase 2 (gate <code>score-threshold</code> ≥ 80).</li>
-  <li>PRD do Módulo Financeiro menciona explicitamente o campo <code>ativo</code> e o fluxo arquivar/reabrir.</li>
-  <li>Designer (Fase 3) wireframa a tela de gerenciamento com toggle "Mostrar arquivados" + ação "Reabrir" no ADMIN.</li>
-  <li>Migration gerada e validada (Fase 5): <code>prisma migrate dev --name add_ativo_to_caixa</code> sem erros.</li>
-  <li>4 testes de borda verdes: (1) caixa arquivado rejeita criarLancamento → 409; (2) caixa arquivado rejeita transferência (origem ou destino) → 409; (3) <code>listarCaixas</code> padrão esconde arquivados; (4) <code>reabrirCaixa</code> restaura acesso.</li>
-</ol>
-
-<blockquote>
-<strong>Pergunta explícita ao <code>prd-reviewer</code>:</strong> a proposta <code>Caixa.ativo: Boolean @default(true)</code> atende ao pedido do usuário (brief §5.4) sem introduzir complexidade desnecessária? <strong>Aprovar</strong> (gera migration na Fase 5) ou <strong>rejeitar</strong> (documentar alternativa)?
-</blockquote>
-
-<script type="application/json" data-prd-section="D.9">
-{"decisao_pendente":{"id":"DEC-CX-ATIVO","proponente":"discovery ciclo 2 (brief §5.4)","status_rag":"pending","proposta":{"campo":"Caixa.ativo","tipo":"Boolean @default(true)","indice_adicional":"@@index([ativo])","efeitos":["soft-delete (arquivamento) sem perder histórico","some da listagem padrão","não aceita movimentações","reversível (reabrir)"]},"alternativas_rejeitadas":["onDelete: Restrict puro (sem semântica de arquivado)","Caixa.status enum (YAGNI)","Caixa.arquivadoEm DateTime (redundância)","onDelete: Cascade (destrói histórico)"],"helpers_que_antecipam":["assertSaldoSuficiente (cheque de ativo já presente, null-safe)","transferirEntreCaixas (cheque de ativo de ambos os caixas)"],"criterios_aprovacao":["prd-reviewer valida nesta Fase 2 (gate ≥ 80)","PRD menciona explicitamente campo + fluxos","Designer wireframa UI (Fase 3)","Migration gerada sem erros (Fase 5)","4 testes de borda verdes"],"pergunta_reviewer":"Aprovar Caixa.ativo ou rejeitar (documentar alternativa)?"}}
-</script>
-
-<hr />
-
-<!-- ===================================================== -->
-<!-- APÊNDICE E — MÓDULO ESTOQUE + PATRIMÔNIO (CICLO 3)    -->
-<!-- ===================================================== -->
-<h1 id="c3-apendice">Apêndice E — Módulo Estoque + Patrimônio (ciclo 3)</h1>
-<p class="meta">
-  <strong>Adicionado em:</strong> 2026-06-19 (Fase 2, ciclo 3) &middot;
-  <strong>Escopo:</strong> Estoque (Consumo) + Patrimônio (Manutenção externa + Baixa por perda) &middot;
-  <strong>Brief:</strong> <a href="brief.md">brief.md</a> (ciclo 3, 344 linhas)
-</p>
-
-<nav class="toc" aria-label="Apêndice E — Módulo Estoque + Patrimônio">
-  <strong>Apêndice E — Módulo Estoque + Patrimônio (ciclo 3)</strong>
-  <ol>
-    <li><a href="#c3-sumario">E.1 Visão de produto</a></li>
-    <li><a href="#c3-personas">E.2 Personas × papel</a></li>
-    <li><a href="#c3-features">E.3 Features (8 entregáveis F1-F8)</a></li>
-    <li><a href="#c3-aceitacao">E.4 Critérios de aceitação por feature</a></li>
-    <li><a href="#c3-rns">E.5 Regras de negócio (RN-EST-01 a 05)</a></li>
-    <li><a href="#c3-lgpd">E.6 LGPD aplicada (Art. 6, 7, 18, 46)</a></li>
-    <li><a href="#c3-testes-borda">E.7 Testes de borda (10+)</a></li>
-    <li><a href="#c3-riscos">E.8 Riscos e mitigações</a></li>
-    <li><a href="#c3-fora">E.9 Fora do escopo (não-objetivos)</a></li>
-  </ol>
-</nav>
-
-<h2 id="c3-sumario">E.1 Visão de produto do Módulo Estoque + Patrimônio</h2>
-<p>
-O <strong>Módulo de Estoque (Consumo) + Patrimônio</strong> é o escopo único do <strong>ciclo 3</strong>. Resolve 3 problemas clássicos da gestão eclesiástica: <strong>rastreabilidade de onde está cada bem</strong>, <strong>histórico de manutenções externas</strong>, e <strong>controle de perdas com justificativa formal</strong>. O schema Prisma já tem os 3 models (<code>ItemEstoque</code>, <code>MovimentacaoEstoque</code>, <code>ManutencaoAtivo</code>) e 2 enums (<code>TipoItemEstoque</code>, <code>StatusItemPatrimonio</code>) desde o ciclo 1. As 5 regras de negócio (<code>RN-EST-01</code> a <code>RN-EST-05</code>) já estão formalizadas em <code>docs/REGRAS_DE_NEGOCIO.md §3</code>. O ciclo 3 implementa services, UI e testes, sem nova decisão arquitetural.
-</p>
-
-<p>
-<strong>Métrica macro do ciclo (brief §7.1):</strong> <em>"um SECRETARIO consegue, em menos de 2 minutos, cadastrar 5 pacotes de papel A4 no estoque de Consumo, registrar uma saída de 2 pacotes informando o nome do retirante, ver o saldo atualizar para 3 pacotes, e o ADMIN consegue abrir o detalhe do item e ver o histórico completo de movimentações com nome do autorizador e do retirante."</em>
-</p>
-
-<script type="application/json" data-prd-section="E.1">
-{"visao":{"modulo":"Estoque + Patrimonio","ciclo":3,"substitui":"caderno de almoxarife + planilha de patrimonio sem foto","entrega":"5 RNs + 8 features + defesa em 3 camadas em 100% da matriz RBAC","metricamacro":"SECRETARIO cadastra 5 pacotes, registra saida de 2 com nome do retirante, saldo=3; ADMIN ve historico completo em < 2 min","esquecido_este_ciclo":["cron automatico RN-EST-04 (alerta manual na consulta)","upload de laudo tecnico (motivo textual)","upload de fotos de patrimonio","codigo de barras / QR code","integracao automatica Estoque <-> Financeiro"]}}
-</script>
-
-<h2 id="c3-personas">E.2 Personas × papel no Estoque + Patrimônio</h2>
-<p>Os 6 perfis administrativos do MVP ganham <strong>papel específico</strong> no módulo. <strong>4 dos 6 perfis são somente leitura</strong> — convergência operacional que simplifica a matriz.</p>
-
-<table>
-  <thead><tr><th>Persona</th><th>Perfil RBAC</th><th>Papel no módulo</th><th>Frequência</th></tr></thead>
-  <tbody>
-    <tr><td><strong>Almoxarife / Secretário(a)</strong></td><td><code>SECRETARIO</code></td><td>Operador dia-a-dia: cadastra Consumo, registra entradas/saídas com nome do retirante, consulta Patrimônio.</td><td>Diária</td></tr>
-    <tr><td><strong>Pastor / Administrador</strong></td><td><code>ADMIN</code></td><td>CRUD total. <strong>Único</strong> que pode fazer baixa por perda (RN-EST-05).</td><td>Semanal</td></tr>
-    <tr><td><strong>Pastor</strong></td><td><code>PASTOR</code></td><td>CRUD total + leitura. Pode enviar patrimônio para manutenção externa.</td><td>Semanal</td></tr>
-    <tr><td><strong>Líder de Ministério</strong></td><td><code>LIDER_MINISTERIO</code></td><td><strong>Somente leitura</strong> (consulta para "onde está o microfone do louvor?").</td><td>Sob demanda</td></tr>
-    <tr><td><strong>Discipulador / Tesoureiro</strong></td><td><code>DISCIPULADOR</code> / <code>FINANCEIRO</code></td><td><strong>Somente leitura</strong> em ambos os tipos.</td><td>Sob demanda</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-prd-section="E.2">
-{"personas":[{"id":"P-EST-01","persona":"Almoxarife/Secretario","perfil":"SECRETARIO","papel":"Operador dia-a-dia","frequencia":"Diaria"},{"id":"P-EST-02","persona":"Pastor/Administrador","perfil":"ADMIN","papel":"CRUD total + baixa por perda","frequencia":"Semanal"},{"id":"P-EST-03","persona":"Pastor","perfil":"PASTOR","papel":"CRUD + manutencao","frequencia":"Semanal"},{"id":"P-EST-04","persona":"Lider Ministerio","perfil":"LIDER_MINISTERIO","papel":"Somente leitura","frequencia":"Sob demanda"},{"id":"P-EST-05","persona":"Discipulador/Tesoureiro","perfil":"DISCIPULADOR ou FINANCEIRO","papel":"Somente leitura","frequencia":"Sob demanda"}]}
-</script>
-
-<h2 id="c3-features">E.3 Features (8 entregáveis F1-F8)</h2>
-<ol>
-  <li><strong>F1 — CRUD ItemEstoque (Consumo, RN-EST-01):</strong> criar, listar com filtros (tipo, status, busca textual), editar, arquivar (soft-delete via <code>ativo</code>). RBAC: ADMIN, PASTOR, SECRETARIO.</li>
-  <li><strong>F2 — Movimentação Estoque com trava (RN-EST-02):</strong> ENTRADA/SAIDA em <code>prisma.$transaction</code> (insert + update <code>quantidade</code>). <code>nomeRetirante</code> obrigatório em SAIDA. Estoque ≥ 0 (BusinessRuleError 409). <code>justificativa</code> obrigatória em SAIDA, opcional em ENTRADA.</li>
-  <li><strong>F3 — CRUD Patrimônio (RN-EST-01):</strong> PATRIMONIO tem <code>numeroSerie</code> único e obrigatório, <code>localizacaoFisica</code> textual, <code>statusPatrimonio</code> (default DISPONIVEL). Mesma rota de F1 com campos condicionais.</li>
-  <li><strong>F4 — Manutenção externa (RN-EST-03):</strong> PATRIMONIO + DISPONIVEL → <code>ManutencaoAtivo</code> + status EM_MANUTENCAO em <code>$transaction</code>. <code>assistenciaTecnica</code> + <code>enderecoAssistencia</code> obrigatórios. <code>numeroOs</code> + <code>prazoTermino</code> opcionais.</li>
-  <li><strong>F5 — Baixa por perda total (RN-EST-05):</strong> ADMIN only. Item em EM_MANUTENCAO → status BAIXADO_PERDA + soft-delete (<code>ativo = false</code>). <code>motivo</code> textual obrigatório (substitui upload de laudo).</li>
-  <li><strong>F6 — Alerta manual de manutenção sem prazo (RN-EST-04):</strong> disparado na <strong>consulta</strong> do detalhe do item (sem cron). Se <code>prazoTermino IS NULL</code> e <code>dataEnvio &lt; now() - 30 dias</strong> → alerta "todos" com mensagem. Idempotência 24h. Mitigação: checagem também na rota <code>/app/alertas</code>.</li>
-  <li><strong>F7 — Dashboard Estoque (alertas críticos):</strong> rota <code>/app/estoque</code> lista com cards: "Em manutenção há &gt; 30 dias sem prazo" + "Estoque baixo" (quantidade ≤ 5). Visível a todos os perfis autenticados.</li>
-  <li><strong>F8 — RBAC fina 3 camadas:</strong> matriz 6 perfis × 9 operações. Defesa obrigatória: UI <code>&lt;Can&gt;</code>, loader <code>assertCanManageEstoque</code>, service <code>assertCanBaixarPerda</code> (ADMIN only). Helpers em <code>app/lib/rbac.server.ts</code>.</li>
-</ol>
-
-<script type="application/json" data-prd-section="E.3">
-{"features":[{"id":"F1","titulo":"CRUD ItemEstoque (Consumo)","rns":["RN-EST-01"],"rbac":["ADMIN","PASTOR","SECRETARIO"]},{"id":"F2","titulo":"Movimentacao Estoque com trava","rns":["RN-EST-02"],"rbac":["ADMIN","PASTOR","SECRETARIO"]},{"id":"F3","titulo":"CRUD Patrimonio","rns":["RN-EST-01"],"rbac":["ADMIN","PASTOR","SECRETARIO"]},{"id":"F4","titulo":"Manutencao externa","rns":["RN-EST-03"],"rbac":["ADMIN","PASTOR","SECRETARIO"]},{"id":"F5","titulo":"Baixa por perda total","rns":["RN-EST-05"],"rbac":["ADMIN"]},{"id":"F6","titulo":"Alerta manual manutencao >30 dias","rns":["RN-EST-04"],"rbac":["interno service"]},{"id":"F7","titulo":"Dashboard Estoque","rns":["RN-EST-01","RN-EST-04"],"rbac":["todos autenticados"]},{"id":"F8","titulo":"RBAC fina 3 camadas","rns":["todas"],"rbac":["todas as features"]}]}
-</script>
-
-<h2 id="c3-aceitacao">E.4 Critérios de aceitação por feature</h2>
-<table>
-  <thead><tr><th>Feature</th><th>Critério de aceitação (verificável)</th></tr></thead>
-  <tbody>
-    <tr><td>F1 — ItemEstoque</td><td><code>ItemEstoqueCreateSchema</code> valida <code>tipo</code> enum + <code>quantidade: int().min(0)</code>. <code>numeroSerie @unique</code>: duplicado → 409. Listagem padrão <code>ativo = true</code>. Soft-delete preserva histórico.</td></tr>
-    <tr><td>F2 — Movimentação</td><td>SAIDA com <code>nomeRetirante</code> vazio → 400. SAIDA que deixa <code>quantidade &lt; 0</code> → 409 "Estoque insuficiente". <code>autorizadoPorId = user.id</code> (carimbo imutável). ENTRADA com <code>justificativa</code> opcional.</td></tr>
-    <tr><td>F3 — Patrimônio</td><td><code>tipo: PATRIMONIO</code> exige <code>numeroSerie</code> (string não vazia, único) e <code>localizacaoFisica</code>. <code>statusPatrimonio</code> default DISPONIVEL. Editar não muda tipo (trava de tipo).</td></tr>
-    <tr><td>F4 — Manutenção</td><td>Item <code>tipo = CONSUMO</code> → 400. Item já EM_MANUTENCAO → 400. <code>assistenciaTecnica</code> + <code>enderecoAssistencia</code> obrigatórios. <code>prazoTermino</code> opcional. Atomicidade: 2 mutações em <code>$transaction</code>.</td></tr>
-    <tr><td>F5 — Baixa</td><td>SECRETARIO/PASTOR/DISCIPULADOR → 403 (3 camadas). Item DISPONIVEL → 400 (precisa estar EM_MANUTENCAO). <code>motivo</code> vazio → 400. <code>ativo = false</code> + <code>statusPatrimonio = BAIXADO_PERDA</code>.</td></tr>
-    <tr><td>F6 — Alerta</td><td>Loader de <code>/app/estoque/:id</code> checa ManutencaoAtivo ativa. Se &gt;30 dias sem prazo E nenhum alerta nas últimas 24h → cria 1 alerta "todos". Se &gt;6 dias sem prazo → cria alerta 6 dias.</td></tr>
-    <tr><td>F7 — Dashboard</td><td>Cards "Em manutenção &gt;30 dias" (count) + "Estoque baixo" (count &lt;= 5). Link para lista filtrada. Visível a todos os 6 perfis autenticados.</td></tr>
-    <tr><td>F8 — RBAC fina</td><td>100% das células da matriz (E.5) cobertas por teste E2E ou integração. Helpers <code>assertCanManageEstoque</code>, <code>assertCanMovimentarConsumo</code>, <code>assertCanBaixarPerda</code> em <code>app/lib/rbac.server.ts</code>.</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-prd-section="E.4">
-{"aceitacao":[{"feature":"F1","criterio_chave":"numeroSerie duplicado -> 409"},{"feature":"F2","criterio_chave":"SAIDA deixando quantidade<0 -> 409"},{"feature":"F3","criterio_chave":"PATRIMONIO exige numeroSerie + localizacao"},{"feature":"F4","criterio_chave":"CONSUMO -> 400; EM_MANUTENCAO -> 400; $transaction atomico"},{"feature":"F5","criterio_chave":"SECRETARIO/PASTOR -> 403 (3 camadas)"},{"feature":"F6","criterio_chave":">30 dias sem prazo + idempotencia 24h"},{"feature":"F7","criterio_chave":"todos perfis veem alertas criticos"},{"feature":"F8","criterio_chave":"100% matriz coberta por teste"}]}
-</script>
-
-<h2 id="c3-rns">E.5 Regras de negócio (RN-EST-01 a 05)</h2>
-<p>As 5 regras abaixo são a <strong>fonte de verdade</strong> do módulo, derivadas de <code>docs/REGRAS_DE_NEGOCIO.md §3</code> e do <code>brief.md</code> do ciclo 3.</p>
-
-<table>
-  <thead><tr><th>Código</th><th>Título</th><th>Resumo</th><th>Teste obrigatório</th></tr></thead>
-  <tbody>
-    <tr><td><code>RN-EST-01</code></td><td>Escopo dual Consumo vs. Patrimônio</td><td><code>ItemEstoque.tipo: TipoItemEstoque</code> separa lógica. UI mostra campos diferentes por tipo. PATRIMONIO exige <code>numeroSerie</code> + <code>localizacaoFisica</code>.</td><td>PATRIMONIO sem numeroSerie → 400.</td></tr>
-    <tr><td><code>RN-EST-02</code></td><td>Movimentação com trava de estoque</td><td>ENTRADA/SAIDA em <code>$transaction</code>. <code>nomeRetirante</code> obrigatório em SAIDA. <code>justificativa</code> obrigatória em SAIDA. Estoque ≥ 0.</td><td>SAIDA com estoque insuficiente → 409.</td></tr>
-    <tr><td><code>RN-EST-03</code></td><td>Manutenção externa</td><td>PATRIMONIO + DISPONIVEL → <code>ManutencaoAtivo</code> + status EM_MANUTENCAO. <code>assistenciaTecnica</code> + <code>enderecoAssistencia</code> obrigatórios. <code>prazoTermino</code> opcional.</td><td>CONSUMO tentando manutenção → 400.</td></tr>
-    <tr><td><code>RN-EST-04</code></td><td>Alerta de manutenção sem prazo</td><td>Versão simplificada: alerta manual disparado na consulta do item (sem cron). Janelas: 6 dias (aviso) e 30 dias (urgente). Idempotência 24h.</td><td>Item 31 dias sem prazo + sem alerta nas últimas 24h → cria alerta.</td></tr>
-    <tr><td><code>RN-EST-05</code></td><td>Baixa por perda total</td><td>ADMIN only. Item em EM_MANUTENCAO → status BAIXADO_PERDA + <code>ativo = false</code>. <code>motivo</code> textual obrigatório (substitui upload de laudo — S3 fora de escopo).</td><td>SECRETARIO tentando baixa → 403.</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-prd-section="E.5">
-{"rns":[{"id":"RN-EST-01","titulo":"Escopo dual","fonte":"docs/REGRAS_DE_NEGOCIO.md §3","teste":"PATRIMONIO sem numeroSerie -> 400"},{"id":"RN-EST-02","titulo":"Trava de estoque","fonte":"docs/REGRAS_DE_NEGOCIO.md §3","teste":"SAIDA insuficiente -> 409"},{"id":"RN-EST-03","titulo":"Manutencao externa","fonte":"docs/REGRAS_DE_NEGOCIO.md §3","teste":"CONSUMO em manutencao -> 400"},{"id":"RN-EST-04","titulo":"Alerta sem prazo","fonte":"brief.md §4.6","teste":"31 dias + idempotencia 24h"},{"id":"RN-EST-05","titulo":"Baixa por perda","fonte":"docs/REGRAS_DE_NEGOCIO.md §3","teste":"SECRETARIO -> 403"}]}
-</script>
-
-<h2 id="c3-lgpd">E.6 LGPD aplicada (Art. 6, 7, 18, 46)</h2>
-<p>O módulo Estoque é o que tem <strong>menor superfície LGPD</strong> do sistema, por design: <strong>nenhum dado pessoal identificável</strong> é persistido. Esta seção documenta o tratamento.</p>
-
-<h3>E.6.1 Princípios</h3>
+<h3>7.3 RAGs específicos do ciclo 4 (novos na Fase 1)</h3>
 <ul>
-  <li><strong>Art. 6° (necessidade):</strong> o módulo <strong>não coleta</strong> CPF, RG, endereço residencial, telefone, e-mail. Os campos de <code>ItemEstoque</code> são apenas textuais: nome, descrição, número de série (identificador de fabricante), localização física.</li>
-  <li><strong>Art. 7° (legítimo interesse):</strong> base legal é <em>legítimo interesse da Igreja</em> para gestão patrimonial eclesiástica (Art. 7°, VI). <code>nomeRetirante</code> é texto livre sem vinculação a <code>Membro</code>, eliminando necessidade de tratar PII de pessoas externas.</li>
-  <li><strong>Art. 18 (direitos do titular):</strong> como não há dados pessoais, pedidos de acesso/eliminação de Estoque se aplicam apenas a logs de auditoria estruturados (não a dados de negócio). O <code>lgpd-officer</code> auditará.</li>
-  <li><strong>Art. 46 (segurança e responsabilidade):</strong> <code>safeLog</code> com allowlist. <strong>Proibido em logs:</strong> <code>nomeRetirante</code>, <code>motivo</code> (perda), <code>descricao</code> textual livre. Apenas IDs e ações.</li>
+  <li><a href=".harness/RAG/pattern-relatorios-aggregations.md"><code>.harness/RAG/pattern-relatorios-aggregations.md</code></a> (391 linhas) — padrão canônico dos 5 services <code>groupBy</code> + soma em Int cents + edge cases.</li>
+  <li><a href=".harness/RAG/convention-relatorios-csv-export.md"><code>.harness/RAG/convention-relatorios-csv-export.md</code></a> (429 linhas) — RFC 4180 + BOM UTF-8 + <code>;</code> + escape + <code>Cache-Control: no-store</code>.</li>
+  <li><a href=".harness/RAG/convention-monetary-values.md"><code>.harness/RAG/convention-monetary-values.md</code></a> (208 linhas) — <code>Int</code> em centavos, helpers <code>formatBRLFromCents</code> / <code>parseBRLToCents</code> / <code>assertNonNegative</code>.</li>
+  <li><a href=".harness/RAG/security-rbac-matrix.md"><code>.harness/RAG/security-rbac-matrix.md</code></a> (169 linhas) — matriz 6 perfis × 5 domínios, padrão de 3 camadas.</li>
+  <li><a href=".harness/RAG/pattern-3-layer-rbac.md"><code>.harness/RAG/pattern-3-layer-rbac.md</code></a> (275 linhas) — defense in depth em 3 camadas (UI / Loader / Service).</li>
 </ul>
 
-<h3>E.6.2 Decisão consciente: <code>nomeRetirante</code> como texto livre</h3>
-<p>
-A decisão de <strong>não</strong> vincular <code>MovimentacaoEstoque.nomeRetirante</code> a <code>Membro.id</code> é <strong>consciente e aprovada</strong> (brief §6.2). Justificativas:
-</p>
+<h3>7.4 Código existente (a estender)</h3>
+<ul>
+  <li><a href="app/lib/finance.server.ts"><code>app/lib/finance.server.ts</code></a> — <code>getDashboardFinanceiro</code>, <code>assertSaldoSuficiente</code>, <code>getDizimosByMembro</code>. Padrão de service + Camada 3.</li>
+  <li><a href="app/lib/rbac.server.ts"><code>app/lib/rbac.server.ts</code></a> — <code>FINANCIAL_MODULE_CARGOS</code>, <code>DIZIMO_CARGOS</code>, <code>assertCanSeeFinancials</code>. <strong>Estender</strong> com <code>RELATORIOS_CARGOS</code> + <code>assertCanSeeRelatorios</code>.</li>
+  <li><a href="app/lib/money.server.ts"><code>app/lib/money.server.ts</code></a> — <code>formatBRLFromCents</code>, <code>parseBRLToCents</code>, <code>assertNonNegative</code>. Reusar em todas as agregações.</li>
+  <li><a href="app/components/Sidebar.tsx"><code>app/components/Sidebar.tsx</code></a> — adicionar item "Relatórios" com <code>roles: ["ADMIN", "PASTOR", "FINANCEIRO"]</code>.</li>
+  <li><a href="app/routes/app/financeiro._index.tsx"><code>app/routes/app/financeiro._index.tsx</code></a> — dashboard financeiro. Ponto de entrada conceitual para os relatórios.</li>
+</ul>
+
+<h3>7.5 Pendências para a Fase 3 (Design)</h3>
 <ol>
-  <li>Reduz atrito operacional (ex: "João da limpeza", "Maria visitante" não precisam de cadastro).</li>
-  <li>Elimina necessidade de tratar LGPD para pessoas físicas externas.</li>
-  <li>O carimbo de quem <strong>autorizou</strong> a saída (<code>autorizadoPorId</code>) é o <code>user.id</code> do sistema, com auditoria completa.</li>
+  <li><strong>Rota <code>/app/financeiro/lancamentos</code> (listagem geral) não existe hoje.</strong> Drill-down (decisão §5.4) depende dessa rota. Fase 3 deve decidir:
+    <ul>
+      <li><strong>Opção A:</strong> criar <code>/app/financeiro/lancamentos</code> nova rota → S13 condicional.</li>
+      <li><strong>Opção B:</strong> redirecionar drill-down para <code>/app/financeiro/caixas/:id</code> com query params adicionais (mais barato, mas UX perde filtros entre caixas).</li>
+    </ul>
+  </li>
+  <li><strong>Workaround de <code>state.json</code>:</strong> tools <code>harness_status</code>/<code>harness_advance</code> quebradas — orchestrator continua usando edição direta via Python (workaround herdado do ciclo 2).</li>
+  <li><strong>Débitos técnicos pré-existentes:</strong> 74 testes falhando (<code>MVP-DEBT-001</code>) + 107 typecheck errors (<code>MVP-DEBT-003</code>). Não-bloqueadores para ciclo 4. <code>tester</code> agent deve isolar falhas pré-existentes vs. introduzidas.</li>
 </ol>
 
-<script type="application/json" data-prd-section="E.6">
-{"lgpd":{"artigos":{"6":"necessidade (sem CPF/RG/endereco/telefone/email)","7":"legitimo interesse gestao patrimonial (Art. 7 VI)","18":"direitos titular aplicam-se apenas a logs de auditoria","46":"seguranca: safeLog com allowlist (sem nomeRetirante/motivo/descricao)"},"decisao_chave":"nomeRetirante como texto livre (sem FK para Membro) por decisao consciente (brief §6.2)","risco_residual":"minimo por design; sem dados pessoais identificaveis"}}
-</script>
-
-<h2 id="c3-testes-borda">E.7 Testes de borda obrigatórios (10+)</h2>
-<p>Lista derivada do <code>brief.md §7.3</code> (12 testes) + 6 testes de RBAC = 18 totais. Cada teste é <strong>bloqueador da sprint</strong> que o entrega. TDD antes do service.</p>
-
+<h3>7.6 Referências visuais (Stitch)</h3>
+<p>5 HTMLs do Stitch em <code>/home/kingdev/Downloads/stitch_igrejaconnect/</code> são <strong>referência visual</strong>, não código-fonte. O ciclo 4 replica o layout mas converte Material Symbols → SVG inline (decisão §5.5).</p>
 <table>
-  <thead><tr><th>#</th><th>Teste</th><th>RN</th><th>Tipo</th></tr></thead>
+  <thead><tr><th>Página</th><th>Stitch base</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>SAIDA com <code>nomeRetirante</code> vazio → 400</td><td>RN-EST-02</td><td>Unit + Integração</td></tr>
-    <tr><td>2</td><td>SAIDA que deixa estoque negativo → 409</td><td>RN-EST-02 + trava</td><td>Unit (bloqueador)</td></tr>
-    <tr><td>3</td><td>ENTRADA sem <code>justificativa</code> → passa (opcional)</td><td>RN-EST-02</td><td>Unit</td></tr>
-    <tr><td>4</td><td>SAIDA sem <code>justificativa</code> → 400 (obrigatória)</td><td>RN-EST-02</td><td>Unit</td></tr>
-    <tr><td>5</td><td>Enviar para manutenção item <code>CONSUMO</code> → 400 (trava de tipo)</td><td>RN-EST-03</td><td>Unit</td></tr>
-    <tr><td>6</td><td>Enviar para manutenção item já em manutenção → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
-    <tr><td>7</td><td>Manutenção sem <code>assistenciaTecnica</code> ou sem <code>enderecoAssistencia</code> → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
-    <tr><td>8</td><td>Manutenção sem <code>prazoTermino</code> → passa (opcional, dispara alerta)</td><td>RN-EST-03 + RN-EST-04</td><td>Unit</td></tr>
-    <tr><td>9</td><td>Retorno de manutenção com <code>dataRetorno &lt; dataEnvio</code> → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
-    <tr><td>10</td><td>Baixa por perda por <code>SECRETARIO</code> → 403 (3 camadas)</td><td>RN-EST-05</td><td>E2E</td></tr>
-    <tr><td>11</td><td>Baixa por perda por <code>PASTOR</code> → 403 (RN-EST-05)</td><td>RN-EST-05</td><td>E2E</td></tr>
-    <tr><td>12</td><td>Baixa por perda por <code>ADMIN</code> em item <code>DISPONIVEL</code> → 400</td><td>RN-EST-05</td><td>Unit</td></tr>
-    <tr><td>13</td><td>Baixa por perda por <code>ADMIN</code> sem <code>motivo</code> → 400</td><td>RN-EST-05</td><td>Unit</td></tr>
-    <tr><td>14</td><td>Item com patrimônio mesmo <code>numeroSerie</code> → 409 (unique)</td><td>RN-EST-01</td><td>Unit</td></tr>
-    <tr><td>15</td><td>Listagem filtra itens com <code>ativo = false</code> por padrão</td><td>RN-EST-01 (soft-delete)</td><td>Unit</td></tr>
-    <tr><td>16</td><td><code>DISCIPULADOR</code> tentando <code>/app/estoque/novo</code> → 403 em todas as 3 camadas</td><td>RBAC</td><td>E2E</td></tr>
-    <tr><td>17</td><td><code>FINANCEIRO</code> tentando criar movimentação de saída → 403 em todas as 3 camadas</td><td>RBAC</td><td>E2E</td></tr>
-    <tr><td>18</td><td>Item em manutenção há 31 dias sem prazo + sem alerta 24h → cria alerta 30 dias</td><td>RN-EST-04</td><td>Unit + Integração</td></tr>
+    <tr><td>Hub de Relatórios</td><td><code>hub_de_relat_rios_igrejaconnect/code.html</code></td></tr>
+    <tr><td>Balancete Mensal</td><td><code>balancete_mensal_igrejaconnect/code.html</code></td></tr>
+    <tr><td>DRE</td><td><code>dre_igrejaconnect/code.html</code></td></tr>
+    <tr><td>Fluxo de Caixa</td><td><code>fluxo_de_caixa_igrejaconnect/code.html</code></td></tr>
+    <tr><td>Relatório Customizado</td><td><code>relat_rio_customizado_igrejaconnect/code.html</code></td></tr>
   </tbody>
 </table>
 
-<script type="application/json" data-prd-section="E.7">
-{"testes_borda":[{"id":1,"nome":"SAIDA nomeRetirante vazio","rn":"RN-EST-02","tipo":"unit+integracao"},{"id":2,"nome":"SAIDA estoque insuficiente","rn":"RN-EST-02","tipo":"unit (bloqueador)"},{"id":3,"nome":"ENTRADA sem justificativa","rn":"RN-EST-02","tipo":"unit"},{"id":4,"nome":"SAIDA sem justificativa","rn":"RN-EST-02","tipo":"unit"},{"id":5,"nome":"Manutencao em CONSUMO","rn":"RN-EST-03","tipo":"unit"},{"id":6,"nome":"Manutencao duplicada","rn":"RN-EST-03","tipo":"unit"},{"id":7,"nome":"Manutencao sem assistencia","rn":"RN-EST-03","tipo":"unit"},{"id":8,"nome":"Manutencao sem prazo","rn":"RN-EST-03+04","tipo":"unit"},{"id":9,"nome":"Retorno dataRetorno<dataEnvio","rn":"RN-EST-03","tipo":"unit"},{"id":10,"nome":"Baixa por SECRETARIO","rn":"RN-EST-05","tipo":"e2e"},{"id":11,"nome":"Baixa por PASTOR","rn":"RN-EST-05","tipo":"e2e"},{"id":12,"nome":"Baixa em DISPONIVEL","rn":"RN-EST-05","tipo":"unit"},{"id":13,"nome":"Baixa sem motivo","rn":"RN-EST-05","tipo":"unit"},{"id":14,"nome":"numeroSerie duplicado","rn":"RN-EST-01","tipo":"unit"},{"id":15,"nome":"Listagem filtra arquivados","rn":"RN-EST-01","tipo":"unit"},{"id":16,"nome":"DISCIPULADOR /estoque/novo","rn":"RBAC","tipo":"e2e"},{"id":17,"nome":"FINANCEIRO saida","rn":"RBAC","tipo":"e2e"},{"id":18,"nome":"Alerta 31 dias","rn":"RN-EST-04","tipo":"unit+integracao"}]}
-</script>
-
-<h2 id="c3-riscos">E.8 Riscos e mitigações</h2>
-<table>
-  <thead><tr><th>#</th><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Mitigação</th></tr></thead>
-  <tbody>
-    <tr><td>R-EST-01</td><td><strong>Estoque ficar negativo</strong> (RN-EST-02 violada por bug)</td><td>Média</td><td><span class="badge bad">Alto</span></td><td>Trava no <strong>service</strong> via <code>assertEstoquePositivo</code> + re-leitura anti-TOCTOU no <code>$transaction</code>. Teste de borda "saldo=0, saída=1" é bloqueador de sprint.</td></tr>
-    <tr><td>R-EST-02</td><td><strong>Patrimônio perdido sem paradeiro</strong> (sem foto, sem status)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Status obrigatório (DISPONIVEL/EM_MANUTENCAO/BAIXADO_PERDA). Histórico de movimentações/manutenções visível no detalhe. Foto é backlog.</td></tr>
-    <tr><td>R-EST-03</td><td><strong>Manutenção esquecida na assistência técnica</strong></td><td>Média</td><td>Médio</td><td>Alerta manual na consulta (RN-EST-04) com janelas 6 e 30 dias. Idempotência 24h. Cron real é backlog.</td></tr>
-    <tr><td>R-EST-04</td><td><strong>Baixa por perda feita por SECRETARIO</strong> (RN-EST-05 violada)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Defesa em 3 camadas: UI esconde botão "Dar baixa", loader lança 403, service <code>assertCanBaixarPerda</code> lança 403. E2E cobre bypass URL.</td></tr>
-    <tr><td>R-EST-05</td><td><strong>Movimentação parcial</strong> (insert sem update quantidade)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>2 mutações em 1 <code>$transaction</code>. Teste com mock valida rollback total.</td></tr>
-    <tr><td>R-EST-06</td><td><strong>nomeRetirante em log</strong> (LGPD Art. 46)</td><td>Baixa</td><td>Médio</td><td><code>safeLog</code> com allowlist. <code>nomeRetirante</code> e <code>motivo</code> proibidos em log. Code review recusa PR com <code>console.log</code> desses campos.</td></tr>
-    <tr><td>R-EST-07</td><td><strong>Item deletado fisicamente</strong> destrói histórico</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Soft-delete via <code>ativo = false</code>. <code>onDelete: Restrict</code> em <code>MovimentacaoEstoque.itemEstoque</code>. Histórico preservado.</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-prd-section="E.8">
-{"riscos":[{"id":"R-EST-01","titulo":"Estoque negativo","rns":["RN-EST-02"],"mitigacao":"assertEstoquePositivo no service + $transaction"},{"id":"R-EST-02","titulo":"Patrimonio sem paradeiro","rns":["RN-EST-01"],"mitigacao":"status obrigatorio + historico no detalhe"},{"id":"R-EST-03","titulo":"Manutencao esquecida","rns":["RN-EST-04"],"mitigacao":"alerta manual na consulta + idempotencia 24h"},{"id":"R-EST-04","titulo":"Baixa por SECRETARIO","rns":["RN-EST-05"],"mitigacao":"3 camadas de defesa + E2E bypass"},{"id":"R-EST-05","titulo":"Movimentacao parcial","rns":["RN-EST-02"],"mitigacao":"$transaction atomico"},{"id":"R-EST-06","titulo":"nomeRetirante em log","rns":["LGPD Art.46"],"mitigacao":"safeLog com allowlist"},{"id":"R-EST-07","titulo":"Item deletado","rns":["RN-EST-01"],"mitigacao":"soft-delete + Restrict"}]}
-</script>
-
-<h2 id="c3-fora">E.9 Fora do escopo (não-objetivos do ciclo 3)</h2>
-<p>12 itens explicitamente fora deste ciclo (brief §8). Registro para evitar scope creep. Podem virar ciclo futuro se a demanda surgir.</p>
+<h3>7.7 Próximos passos (após aprovação do <code>prd-reviewer</code>)</h3>
 <ol>
-  <li>❌ <strong>Cron automático</strong> (RN-EST-04 scheduler real). Implementação manual via consulta. Sem <code>node-cron</code> neste ciclo.</li>
-  <li>❌ <strong>Upload de laudo técnico</strong> (RN-EST-05 anexos PDF/imagem). Campo <code>urlLaudoTecnico</code> permanece <code>null</code>. Sem S3/MinIO.</li>
-  <li>❌ <strong>Upload de fotos de patrimônio</strong> (cadeira.jpg, instrumento.jpg). Sem S3/MinIO. <code>localizacaoFisica</code> é texto.</li>
-  <li>❌ <strong>Sincronização automática Estoque ↔ Financeiro.</strong> Lançamento de despesa de <code>MANUTENCAO</code> ou <code>COMPRA_ESTOQUE</code> continua manual pelo <code>FINANCEIRO</code>. Integração automática fica para ciclo futuro.</li>
-  <li>❌ <strong>Códigos de barras / QR Code</strong> para patrimônio. Identificação por <code>numeroSerie</code> textual é suficiente.</li>
-  <li>❌ <strong>Relatórios avançados</strong> (curva ABC de consumo, tempo médio de manutenção, etc.).</li>
-  <li>❌ <strong>Inventário físico com checklist mobile.</strong> Sem app nativo.</li>
-  <li>❌ <strong>Notificações por e-mail/push</strong> para manutenção. Apenas in-app via Alertas.</li>
-  <li>❌ <strong>Multi-igreja / multi-tenant.</strong> Uma instância = uma igreja.</li>
-  <li>❌ <strong>Workflow de aprovação multi-nível</strong> para baixa por perda. Apenas <code>ADMIN</code> (single-approver).</li>
-  <li>❌ <strong>Reconciliação contábil</strong> automática com sistema externo.</li>
-  <li>❌ <strong>Etiquetas impressas</strong> de patrimônio. Fora de escopo digital.</li>
+  <li><strong>Fase 3 (Design):</strong> wireframes + decisão sobre rota <code>/app/financeiro/lancamentos</code> + diagrama de sequência final.</li>
+  <li><strong>Fase 4 (Planejamento):</strong> 2 sprints (S11 + S12) + 1 sprint condicional (S13) se drill-down exigir nova rota.</li>
+  <li><strong>Fase 5 (Build):</strong> 5 workers em paralelo (<code>backend</code>, <code>frontend</code>, <code>tester</code>, <code>security</code>, <code>lgpd-officer</code>) + gate <code>all-of</code>.</li>
 </ol>
 
-<script type="application/json" data-prd-section="E.9">
-{"nao_objetivos":["cron_automatico_RN-EST-04","upload_laudo_tecnico","upload_foto_patrimonio","sync_automatica_estoque_financeiro","codigo_barras_qrcode","relatorios_avancados_abc","inventario_mobile","notificacao_email_push_manutencao","multi_igreja","aprovacao_multinivel_baixa","reconciliacao_contabil_automatica","etiquetas_impressas"],"racional":"Lista explicita do brief §8 para evitar scope creep. Itens podem entrar em ciclo futuro se a demanda surgir.","debitos_aceitos":[{"id":"CYCLE-3-DEBT-001","descricao":"MotivoPerda texto livre em vez de upload de laudo","origem":"brief §5.2"},{"id":"CYCLE-3-DEBT-002","descricao":"Alerta RN-EST-04 manual (consulta) nao cron","origem":"brief §5.1"}]}
+<script type="application/json" data-prd-section="7">
+{"anexos":{"brief_canonico":"brief-relatorios.md (489 linhas, aprovado 2026-06-20T15:35Z)","docs_ciclo_1":["brief-mvp-financeiro.md","brief-mvp.md","agents/AGENTS.md","docs/architecture/ARCH.md","prisma/schema.prisma","docs/REGRAS_DE_NEGOCIO.md","PRD.html","SPEC.html"],"rags_ciclo_4":["pattern-relatorios-aggregations","convention-relatorios-csv-export","convention-monetary-values","security-rbac-matrix","pattern-3-layer-rbac"],"codigo_estender":["app/lib/finance.server.ts","app/lib/rbac.server.ts","app/lib/money.server.ts","app/components/Sidebar.tsx","app/routes/app/financeiro._index.tsx"]},"pendencias_fase_3":[{"id":"PEND-DRILL-DOWN","titulo":"Rota /app/financeiro/lancamentos nao existe","opcoes":["A: criar nova rota (S13 condicional)","B: redirecionar para /caixas/:id com query params"],"decisao_esperada":"Fase 3 Design"},{"id":"PEND-WORKAROUND-STATE","titulo":"tools harness_status/harness_advance quebradas","mitigacao":"workaround Python em uso"},{"id":"PEND-DEBT-001","titulo":"74 testes pre-existentes falhando (MVP-DEBT-001)","nao_bloqueador":true},{"id":"PEND-DEBT-003","titulo":"107 typecheck errors pre-existentes (MVP-DEBT-003)","nao_bloqueador":true}],"referencias_visuais_stitch":["hub_de_relat_rios_igrejaconnect/code.html","balancete_mensal_igrejaconnect/code.html","dre_igrejaconnect/code.html","fluxo_de_caixa_igrejaconnect/code.html","relat_rio_customizado_igrejaconnect/code.html"]}
 </script>
 
 <hr />
 
 <footer>
   <p>
-    Igreja Conect — PRD v0.3 (MVP + Módulo Financeiro ciclo 2 + Módulo Estoque+Patrimônio ciclo 3). Mantido pelo <code>requirements</code> agent na Fase 2 do Harness v6.
-    Documentos relacionados: <a href="SPEC.html">SPEC.html</a> (especificação técnica, inclui Apêndices D e E), <code>docs/architecture/ARCH.md</code> §8/§12 (arquitetura), <code>docs/REGRAS_DE_NEGOCIO.md</code> §2/§3 (RN-FIN-01 a 05 + RN-EST-01 a 05), <code>brief.md</code> (brief do ciclo 3), <code>.harness/RAG/</code> (RAGs do ciclo 3: <code>architecture-estoque</code>, <code>pattern-movimentacao-estoque</code>, <code>pattern-manutencao-patrimonio</code>, <code>decision-itemEstoque-soft-delete</code>).
+    Igreja Conect — PRD v0.1 (Ciclo 4: Relatórios Financeiros). Mantido pelo <code>requirements</code> agent na Fase 2 do Harness v6.
+    Documento irmão: <a href="SPEC.html">SPEC.html</a>. Brief canônico: <a href="brief-relatorios.md">brief-relatorios.md</a>. Pendências: <a href="#anexos">§7.5</a>. Critérios de aceitação: <a href="#aceitacao">§5</a>.
   </p>
 </footer>
 

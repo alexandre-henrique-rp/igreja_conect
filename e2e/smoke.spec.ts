@@ -268,7 +268,7 @@ async function createTestMember(input: {
  * Reseta config de acolhimento (deleta o singleton).
  */
 async function resetConfigAcolhimento(): Promise<void> {
-  await prisma.configAcolhimento.deleteMany({ where: { id: "singleton" } });
+  await prisma.configuracaoGeral.deleteMany({ where: { id: "singleton" } });
 }
 
 /**
@@ -281,12 +281,10 @@ async function cleanupChainData(input: {
 }): Promise<void> {
   const memberIds = input.membroIds ?? [];
   if (memberIds.length > 0) {
-    // Deleta alertas onde o membro é destinatário OU é o "dono" (membroId)
+    // Deleta alertas onde o membro é destinatário
     await prisma.alerta.deleteMany({
       where: {
-        OR: [
-          { membroId: { in: memberIds } },
-          { destinatarios: { some: { membroId: { in: memberIds } } } },
+        OR: [{ destinatarios: { some: { membroId: { in: memberIds } } } },
         ],
       },
     });
@@ -346,9 +344,7 @@ test.afterAll(async () => {
     if (createdIds.membros.length > 0) {
       await prisma.alerta.deleteMany({
         where: {
-          OR: [
-            { membroId: { in: createdIds.membros } },
-            { destinatarios: { some: { membroId: { in: createdIds.membros } } } },
+          OR: [{ destinatarios: { some: { membroId: { in: createdIds.membros } } } },
           ],
         },
       });
@@ -587,9 +583,7 @@ test("Chain 2: ADMIN configura acolhimento (Membro X) + visitante 2 → alerta a
     // Pequeno delay para garantir que a transação foi commitada.
     await new Promise((resolve) => setTimeout(resolve, 100));
     const alertas = await prisma.alerta.findMany({
-      where: {
-        membroId: visitanteId,
-        destinatarios: { some: { membroId: responsavelId } },
+      where: { destinatarios: { some: { membroId: responsavelId } },
       },
       select: { id: true, titulo: true, mensagem: true },
     });
@@ -667,7 +661,7 @@ test("Chain 3: Responsável vê alerta do visitante 2 e marca como lido", async 
       withPassword: true,
     });
     chainMemberIds.push(responsavelId);
-    await prisma.configAcolhimento.upsert({
+    await prisma.configuracaoGeral.upsert({
       where: { id: "singleton" },
       update: {
         responsavelVisitanteTipo: "MEMBRO",
@@ -713,9 +707,7 @@ test("Chain 3: Responsável vê alerta do visitante 2 e marca como lido", async 
     // Captura alertaId para assert
     await new Promise((resolve) => setTimeout(resolve, 100));
     const alertas = await prisma.alerta.findMany({
-      where: {
-        membroId: visitanteId,
-        destinatarios: { some: { membroId: responsavelId } },
+      where: { destinatarios: { some: { membroId: responsavelId } },
       },
       select: { id: true, titulo: true, mensagem: true },
     });
@@ -983,7 +975,7 @@ test("Chain 5: Cross-module — visitante 4 aparece em /membros e (se config) /a
       withPassword: false, // não precisa logar — só receber alerta
     });
     chainMemberIds.push(responsavelId);
-    await prisma.configAcolhimento.upsert({
+    await prisma.configuracaoGeral.upsert({
       where: { id: "singleton" },
       update: {
         responsavelVisitanteTipo: "MEMBRO",
@@ -1058,9 +1050,7 @@ test("Chain 5: Cross-module — visitante 4 aparece em /membros e (se config) /a
     failedAtStep = 5;
     await new Promise((resolve) => setTimeout(resolve, 100));
     const alertas = await prisma.alerta.findMany({
-      where: {
-        membroId: visitanteId,
-        destinatarios: { some: { membroId: responsavelId } },
+      where: { destinatarios: { some: { membroId: responsavelId } },
       },
       select: { id: true, mensagem: true },
     });

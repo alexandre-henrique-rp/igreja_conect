@@ -79,7 +79,7 @@ export function TopbarAutenticada({
           sr-only focus:not-sr-only
           focus:fixed focus:top-2 focus:left-2 focus:z-50
           focus:px-3 focus:py-2 focus:rounded-md
-          focus:bg-cyan-700 focus:text-white focus:text-sm focus:font-medium
+          focus:bg-blue-600 focus:text-white focus:text-sm focus:font-medium
           focus:shadow-lg
         "
       >
@@ -87,11 +87,11 @@ export function TopbarAutenticada({
       </a>
 
       <header className="sticky top-0 z-20 bg-white border-b border-slate-200">
-        <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+        <div className="flex h-14 items-center justify-between lg:justify-end px-4 sm:px-6">
           <Link
             to="/app"
             aria-label="Ir para o dashboard"
-            className="font-semibold text-slate-900 hover:text-cyan-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded"
+            className="lg:hidden font-semibold text-slate-900 hover:text-blue-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
           >
             Igreja Conect
           </Link>
@@ -105,7 +105,7 @@ export function TopbarAutenticada({
                   ? `Alertas (${alertasNaoLidos} não lidos)`
                   : "Alertas"
               }
-              className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+              className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -124,31 +124,31 @@ export function TopbarAutenticada({
               {alertasNaoLidos > 0 && (
                 <span
                   aria-hidden="true"
-                  className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-xs font-bold text-white bg-amber-600"
+                  className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-bold text-white bg-amber-600 border border-white"
                 >
-                  {alertasNaoLidos > 99 ? "99+" : alertasNaoLidos}
+                  {alertasNaoLidos}
                 </span>
               )}
             </Link>
 
+            {/* Divider */}
+            <div className="hidden sm:block border-l border-slate-200 h-6 mx-1"></div>
+
             {/* Avatar + nome + cargo */}
             <div
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
               data-testid="user-menu"
             >
-              <span
-                aria-hidden="true"
-                className="inline-flex items-center justify-center h-9 w-9 rounded-full bg-cyan-700 text-white text-sm font-semibold"
-              >
-                {iniciais(user.nome)}
-              </span>
               <div className="hidden sm:flex flex-col text-right leading-tight">
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm font-semibold text-slate-900">
                   {user.nome}
                 </span>
-                <span className="text-xs text-slate-500">
-                  {user.cargo ?? "Membro"}
+                <span className="text-xs text-slate-500 font-medium">
+                  {user.cargo === "ADMIN" ? "Administrador" : (user.cargo ?? "Membro")}
                 </span>
+              </div>
+              <div className="relative h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-blue-600 text-white text-sm font-bold shadow-sm border border-blue-700 select-none">
+                {iniciais(user.nome)}
               </div>
             </div>
           </div>

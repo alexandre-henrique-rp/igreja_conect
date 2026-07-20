@@ -25,7 +25,6 @@ type LoaderData = {
     lido: boolean;
     resolvido: boolean;
     createdAt: string;
-    membroId?: string;
   }>;
   counts: {
     todos: number;
@@ -103,7 +102,6 @@ function args(
 }
 
 async function createAlerta(
-  criadoPorId: string,
   titulo: string,
   destinatarioIds: string[]
 ) {
@@ -111,7 +109,6 @@ async function createAlerta(
     data: {
       titulo,
       mensagem: `Mensagem: ${titulo}`,
-      membroId: criadoPorId,
       destinatarios: {
         create: destinatarioIds.map((membroId) => ({ membroId })),
       },
@@ -125,8 +122,8 @@ describe("alertas._index — loader (S04-T08)", () => {
   it("ADMIN: vê apenas alertas onde é destinatário", async () => {
     const user = await makeAuthUser("ADMIN");
     const outro = await makeAuthUser("PASTOR", "Outro");
-    const a1 = await createAlerta(user.id, "Alerta do user", [user.id]);
-    await createAlerta(outro.id, "Alerta do outro", [outro.id]);
+    const a1 = await createAlerta("Alerta do user", [user.id]);
+    await createAlerta("Alerta do outro", [outro.id]);
 
     const result = await loader(
       args(makeGetRequest("http://localhost/app/alertas"), user)
@@ -140,9 +137,9 @@ describe("alertas._index — loader (S04-T08)", () => {
   it("MEMBRO (sem cargo): vê apenas alertas onde é destinatário", async () => {
     const user = await makeAuthUser(null, "MembroComum");
     const outro = await makeAuthUser(null, "Outro");
-    await createAlerta(user.id, "Alerta do user", [user.id]);
-    await createAlerta(outro.id, "Alerta do outro", [outro.id]);
-    await createAlerta(user.id, "Alerta compartilhado", [user.id, outro.id]);
+    await createAlerta("Alerta do user", [user.id]);
+    await createAlerta("Alerta do outro", [outro.id]);
+    await createAlerta("Alerta compartilhado", [user.id, outro.id]);
 
     const result = await loader(
       args(makeGetRequest("http://localhost/app/alertas"), user)
@@ -155,8 +152,8 @@ describe("alertas._index — loader (S04-T08)", () => {
 
   it("filtro naoLidos: lê ?filter=naoLidos", async () => {
     const user = await makeAuthUser(null, "MembroComum");
-    const lido = await createAlerta(user.id, "Já lido", [user.id]);
-    await createAlerta(user.id, "Não lido", [user.id]);
+    const lido = await createAlerta("Já lido", [user.id]);
+    await createAlerta("Não lido", [user.id]);
 
     await prismaTest.alertaDestinatario.updateMany({
       where: { alertaId: lido.id, membroId: user.id },
@@ -174,12 +171,8 @@ describe("alertas._index — loader (S04-T08)", () => {
 
   it("filtro resolvidos: lê ?filter=resolvidos", async () => {
     const user = await makeAuthUser(null, "MembroComum");
-    await createAlerta(user.id, "Aberto", [user.id]);
-    const resolvido = await createAlerta(user.id, "Resolvido", [user.id]);
-    await prismaTest.alerta.update({
-      where: { id: resolvido.id },
-      data: { resolvido: true },
-    });
+    await createAlerta("Aberto", [user.id]);
+    const resolvido = await createAlerta("Resolvido", [user.id]);
     await prismaTest.alertaDestinatario.updateMany({
       where: { alertaId: resolvido.id, membroId: user.id },
       data: { resolvido: true, lido: true },
@@ -206,7 +199,7 @@ describe("alertas._index — loader (S04-T08)", () => {
 describe("alertas._index — action (S04-T08)", () => {
   it("ADMIN: marcarLido → 302 e atualiza somente destinatário", async () => {
     const user = await makeAuthUser("ADMIN");
-    const alerta = await createAlerta(user.id, "Teste", [user.id]);
+    const alerta = await createAlerta("Teste", [user.id]);
 
     const res = await action(
       args(
@@ -227,13 +220,12 @@ describe("alertas._index — action (S04-T08)", () => {
     const updatedDestinatario = await prismaTest.alertaDestinatario.findFirst({
       where: { alertaId: alerta.id, membroId: user.id },
     });
-    expect(updatedAlerta?.lido).toBe(false);
     expect(updatedDestinatario?.lido).toBe(true);
   });
 
   it("ADMIN: marcarResolvido → 302 e atualiza somente destinatário", async () => {
     const user = await makeAuthUser("ADMIN");
-    const alerta = await createAlerta(user.id, "Resolvível", [user.id]);
+    const alerta = await createAlerta("Resolvível", [user.id]);
 
     const res = await action(
       args(
@@ -261,7 +253,7 @@ describe("alertas._index — action (S04-T08)", () => {
 
   it("MEMBRO (sem cargo): marcarResolvido → 403", async () => {
     const user = await makeAuthUser(null, "Comum");
-    const alerta = await createAlerta(user.id, "Bloqueado", [user.id]);
+    const alerta = await createAlerta("Bloqueado", [user.id]);
 
     await expect(
       action(
@@ -315,7 +307,6 @@ describe("alertas._index — render (S04-T08)", () => {
                   lido: false,
                   resolvido: false,
                   createdAt: "2026-01-01T00:00:00.000Z",
-                  membroId: "m1",
                 },
               ],
               counts: { todos: 1, naoLidos: 1, resolvidos: 0 },
@@ -337,6 +328,5 @@ describe("alertas._index — render (S04-T08)", () => {
     expect(html).toContain('name="_action"');
     expect(html).toContain('value="marcarLido"');
     expect(html).toContain("Marcar lido");
-    expect(html).toContain("Ver membro");
   });
 });

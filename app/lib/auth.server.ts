@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "~/db/prisma.server";
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "../../generated/prisma/client";
 import type { SessionUser } from "./session.types";
 
 /**

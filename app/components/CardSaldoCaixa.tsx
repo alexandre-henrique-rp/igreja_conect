@@ -84,7 +84,7 @@ export function CardSaldoCaixa({
           <Link
             to={`/app/financeiro/lancamentos/novo?caixaId=${caixa.id}`}
             className="inline-flex items-center justify-center h-8 px-3 rounded-md text-sm font-medium bg-cyan-700 text-white hover:bg-cyan-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
-            aria-label={`Lançar movimentação em ${caixa.nome}`}
+            aria-label={`+ Lançar movimentação em ${caixa.nome}`}
           >
             + Lançar
           </Link>

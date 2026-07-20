@@ -1,13 +1,13 @@
 {
   "_type": "harness-rag-index-v6",
-  "generatedAt": "2026-06-19T12:00:00Z",
-  "generatedBy": "documenter (cycle 3 — phase 1) + rag-curator delegation",
-  "cycle": 3,
-  "cycleScope": "Módulo Estoque + Patrimônio (Consumo + Manutenção Externa + Baixa por Perda)",
-  "totalDocs": 18,
+  "generatedAt": "2026-06-20T18:31:24Z",
+  "generatedBy": "documenter (cycle 4 — phase 1) + rag-curator delegation",
+  "cycle": 4,
+  "cycleScope": "Relatórios Financeiros (Hub + DRE + Balancete + Fluxo de Caixa + Customizado)",
+  "totalDocs": 20,
   "byCategory": {
-    "convention": 3,
-    "pattern": 6,
+    "convention": 4,
+    "pattern": 7,
     "antipattern": 1,
     "workflow": 0,
     "architecture": 2,
@@ -20,12 +20,12 @@
   },
   "byPriority": {
     "critical": 5,
-    "high": 9,
+    "high": 11,
     "medium": 4,
     "low": 0
   },
   "byStatus": {
-    "approved": 18,
+    "approved": 20,
     "pending": 0
   },
   "docs": [
@@ -34,14 +34,7 @@
       "title": "Arquitetura — Monólito Modular no React Router 7 SSR",
       "description": "Estrutura de pastas, fronteiras de import, e limite de quebra do monólito (5.000 membros ativos).",
       "category": "architecture",
-      "tags": [
-        "architecture",
-        "react-router",
-        "ssr",
-        "monolith",
-        "modularity",
-        "prisma"
-      ],
+      "tags": ["architecture", "react-router", "ssr", "monolith", "modularity", "prisma"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-12T17:30:00Z"
@@ -51,14 +44,7 @@
       "title": "RBAC — Matriz de Perfis × Módulos × Operações",
       "description": "Defense in depth em 3 camadas (UI/loader/service), matriz canônica dos 6 perfis, e helpers assertCan*.",
       "category": "security",
-      "tags": [
-        "rbac",
-        "security",
-        "owasp-a01",
-        "owasp-a03",
-        "authorization",
-        "defense-in-depth"
-      ],
+      "tags": ["rbac", "security", "owasp-a01", "owasp-a03", "authorization", "defense-in-depth"],
       "priority": "critical",
       "status": "approved",
       "updatedAt": "2026-06-12T17:30:00Z"
@@ -68,15 +54,7 @@
       "title": "LGPD — Aplicação no Igreja Conect (Lei 13.709/2018)",
       "description": "6 decisões técnicas inegociáveis (sem CPF, dízimos restritos, bcrypt, cookie flags, logs sem PII, matriz por perfil).",
       "category": "law",
-      "tags": [
-        "lgpd",
-        "gdpr",
-        "privacy",
-        "security",
-        "law",
-        "consent",
-        "data-minimization"
-      ],
+      "tags": ["lgpd", "gdpr", "privacy", "security", "law", "consent", "data-minimization"],
       "priority": "critical",
       "status": "approved",
       "updatedAt": "2026-06-12T17:30:00Z"
@@ -86,14 +64,7 @@
       "title": "Convenção — Valores Monetários em Centavos (Int)",
       "description": "Int em cents (não Float) com helpers formatBRLFromCents, parseBRLToCents, assertNonNegative; mapa de aplicação por model.",
       "category": "convention",
-      "tags": [
-        "convention",
-        "money",
-        "typescript",
-        "prisma",
-        "decimal",
-        "centavos"
-      ],
+      "tags": ["convention", "money", "typescript", "prisma", "decimal", "centavos"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-12T17:30:00Z"
@@ -103,14 +74,7 @@
       "title": "Convenção — Prisma 7 + SQLite (gotchas e padrões)",
       "description": "Singleton do client, gotchas de enum/Json/DateTime, workflow de migration, onDelete Restrict, e seed idempotente.",
       "category": "convention",
-      "tags": [
-        "convention",
-        "prisma",
-        "sqlite",
-        "migration",
-        "typescript",
-        "persistence"
-      ],
+      "tags": ["convention", "prisma", "sqlite", "migration", "typescript", "persistence"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-12T17:30:00Z"
@@ -120,17 +84,7 @@
       "title": "Lição — Prisma 7.8 + Vite 8 SSR são incompatíveis em dev (use build de produção)",
       "description": "Bug conhecido: Vite ModuleRunner fecha após startup, Prisma WASM QueryCompiler falha em SSR. Workaround: pnpm build && pnpm start em vez de pnpm dev.",
       "category": "lesson",
-      "tags": [
-        "lesson",
-        "prisma",
-        "vite",
-        "ssr",
-        "dev-server",
-        "runtime",
-        "incompatibility",
-        "prisma-7",
-        "vite-8"
-      ],
+      "tags": ["lesson", "prisma", "vite", "ssr", "dev-server", "runtime", "incompatibility", "prisma-7", "vite-8"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-13T22:45:00Z"
@@ -140,16 +94,7 @@
       "title": "Pattern — RBAC em 3 Camadas (UI / Loader / Service) — Defense in Depth",
       "description": "Materializa o padrão UI<Can> + loader+action assertCan* + service assertCan* PRIMEIRO. Aplica-se a Fidelidade, Config Acolhimento, Ministerios, Alertas, Discipulado, Auth.",
       "category": "pattern",
-      "tags": [
-        "pattern",
-        "rbac",
-        "security",
-        "owasp-a01",
-        "defense-in-depth",
-        "ui-loader-service",
-        "authorization",
-        "refactor"
-      ],
+      "tags": ["pattern", "rbac", "security", "owasp-a01", "defense-in-depth", "ui-loader-service", "authorization", "refactor"],
       "priority": "critical",
       "status": "approved",
       "updatedAt": "2026-06-13T23:40:00Z"
@@ -159,21 +104,7 @@
       "title": "Law — LGPD — Bases Legais por Campo (Mapeamento Art. 7º × Igreja Conect)",
       "description": "Mapeamento campo-a-campo de cada coleta pessoal (Membro, Lancamento, Alerta) à hipótese do Art. 7º/11º da LGPD. Inclui padrão de documentação no schema (YAML inline) e tabela por operação.",
       "category": "law",
-      "tags": [
-        "law",
-        "lgpd",
-        "gdpr",
-        "privacy",
-        "bases-legais",
-        "art-7",
-        "art-11",
-        "art-18",
-        "art-37",
-        "dados-sensiveis",
-        "convenio-igreja",
-        "dado-religioso",
-        "dizimo"
-      ],
+      "tags": ["law", "lgpd", "gdpr", "privacy", "bases-legais", "art-7", "art-11", "art-18", "art-37", "dados-sensiveis", "convenio-igreja", "dado-religioso", "dizimo"],
       "priority": "critical",
       "status": "approved",
       "updatedAt": "2026-06-13T23:40:00Z"
@@ -183,17 +114,7 @@
       "title": "Antipattern — Rota Usando prisma.* Direto em vez do Service (Service Bypass)",
       "description": "Caso real (S05 DEB-MIN-1): ministerios._index.tsx ignora service testado. Consequências: duplicação, bypass de Camada 3 RBAC, bypass de LGPD, cobertura falsa. Remédio: delegar SEMPRE que existir *.server.ts.",
       "category": "antipattern",
-      "tags": [
-        "antipattern",
-        "refactor",
-        "prisma",
-        "service-layer",
-        "code-review",
-        "kiss",
-        "s06-plus",
-        "service-bypass",
-        "duplication"
-      ],
+      "tags": ["antipattern", "refactor", "prisma", "service-layer", "code-review", "kiss", "s06-plus", "service-bypass", "duplication"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-13T23:40:00Z"
@@ -203,19 +124,7 @@
       "title": "Lesson — Prisma $transaction Commit Assíncrono em Smoke E2E (Timing Flaky Tests)",
       "description": "S05 descobriu: alerta criado em $transaction pode não estar visível para page.goto subsequente. Workaround: dbSettle(100). Fix S06+: waitForAlertInDb com polling.",
       "category": "lesson",
-      "tags": [
-        "lesson",
-        "prisma",
-        "transaction",
-        "e2e",
-        "flaky-test",
-        "timing",
-        "race-condition",
-        "smoke",
-        "s05",
-        "workaround",
-        "future-fix"
-      ],
+      "tags": ["lesson", "prisma", "transaction", "e2e", "flaky-test", "timing", "race-condition", "smoke", "s05", "workaround", "future-fix"],
       "priority": "medium",
       "status": "approved",
       "updatedAt": "2026-06-13T23:40:00Z"
@@ -225,23 +134,7 @@
       "title": "Arquitetura — Módulo Financeiro (Caixas + Lançamentos + Transferências) — Camadas, Fluxos e Lifecycles",
       "description": "Visão macro do Módulo Financeiro do ciclo 2: 5 camadas, 5 services, 4 fluxos críticos end-to-end (dízimo, transferência, trava de saldo, Fidelidade), lifecycles de Caixa/Lancamento/Membro, matriz RBAC completa, decisões macro e limites conhecidos.",
       "category": "architecture",
-      "tags": [
-        "architecture",
-        "finance",
-        "caixas",
-        "lancamentos",
-        "transferencias",
-        "dizimo",
-        "oferta",
-        "lifecycles",
-        "defense-in-depth",
-        "rnf-fin-01",
-        "rnf-fin-02",
-        "rnf-fin-03",
-        "rnf-fin-04",
-        "rnf-fin-05",
-        "ciclo-2"
-      ],
+      "tags": ["architecture", "finance", "caixas", "lancamentos", "transferencias", "dizimo", "oferta", "lifecycles", "defense-in-depth", "rnf-fin-01", "rnf-fin-02", "rnf-fin-03", "rnf-fin-04", "rnf-fin-05", "ciclo-2"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-14T12:00:00Z"
@@ -251,19 +144,7 @@
       "title": "Pattern — Trava de Saldo no Service (RN-FIN-04) — assertSaldoSuficiente Antes do I/O",
       "description": "Helper canônico assertSaldoSuficiente em app/lib/finance.server.ts. Ordem inegociável: assertCan* (RBAC) → assertSaldoSuficiente (RN-FIN-04) → $transaction. Cobre criarLancamento SAIDA, transferirEntreCaixas, e (futuramente) Caixa arquivado. Anti-TOCTOU: re-leitura do saldo dentro do $transaction.",
       "category": "pattern",
-      "tags": [
-        "pattern",
-        "finance",
-        "saldo",
-        "trava",
-        "rnf-fin-04",
-        "rnf-fin-03",
-        "prisma",
-        "transaction",
-        "defense-in-depth",
-        "centavos",
-        "ciclo-2"
-      ],
+      "tags": ["pattern", "finance", "saldo", "trava", "rnf-fin-04", "rnf-fin-03", "prisma", "transaction", "defense-in-depth", "centavos", "ciclo-2"],
       "priority": "critical",
       "status": "approved",
       "updatedAt": "2026-06-14T12:00:00Z"
@@ -273,18 +154,7 @@
       "title": "Pattern — Transferência entre Caixas (RN-FIN-02) — 1 Registro Imutável + 2 Lançamentos Espelho em $transaction",
       "description": "Modelagem híbrida confirmada no discovery: 1 TransferenciaCaixa (imutável, auditoria, carimbo) + 2 Lancamento espelho (extrato, reconciliação). 5 mutações atômicas em $transaction. categoria: TRANSFERENCIA exclusiva do service, jamais em criarLancamento.",
       "category": "pattern",
-      "tags": [
-        "pattern",
-        "finance",
-        "transferencia",
-        "rnf-fin-02",
-        "atomicidade",
-        "transaction",
-        "prisma",
-        "espelho",
-        "auditoria",
-        "ciclo-2"
-      ],
+      "tags": ["pattern", "finance", "transferencia", "rnf-fin-02", "atomicidade", "transaction", "prisma", "espelho", "auditoria", "ciclo-2"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-14T12:00:00Z"
@@ -294,20 +164,7 @@
       "title": "Decisão — Soft-Delete de Caixa via Campo `ativo` (Proposta do Discovery, Formalização Fase 2)",
       "description": "Proposta aprovada no discovery (brief §5.4): adicionar Caixa.ativo: Boolean @default(true) para arquivamento. Aguarda validação do prd-reviewer na Fase 2 antes de virar migration. Helpers assertSaldoSuficiente e transferirEntreCaixas já antecipam a checagem.",
       "category": "decision",
-      "tags": [
-        "decision",
-        "caixa",
-        "soft-delete",
-        "archive",
-        "modelagem",
-        "prisma",
-        "schema",
-        "migration",
-        "rnf-fin-01",
-        "pending",
-        "fase-2",
-        "ciclo-2"
-      ],
+      "tags": ["decision", "caixa", "soft-delete", "archive", "modelagem", "prisma", "schema", "migration", "rnf-fin-01", "pending", "fase-2", "ciclo-2"],
       "priority": "medium",
       "status": "approved",
       "updatedAt": "2026-06-14T12:00:00Z",
@@ -319,19 +176,7 @@
       "title": "Pattern — Trava de Quantidade no Estoque (RN-EST-02) — assertSaldoQuantidade Antes do I/O + $transaction",
       "description": "Helper canônico assertSaldoQuantidade em app/lib/estoque.server.ts. Ordem inegociável: assertCan* (RBAC) → assertSaldoQuantidade (RN-EST-02) → $transaction. Cobre criarMovimentacao saída, valida trava de tipo (PATRIMONIO rejeitado), nomeRetirante obrigatório para delta<0. Anti-TOCTOU: re-leitura da quantidade dentro do $transaction.",
       "category": "pattern",
-      "tags": [
-        "pattern",
-        "estoque",
-        "quantidade",
-        "trava",
-        "rn-est-02",
-        "rn-est-03",
-        "prisma",
-        "transaction",
-        "defense-in-depth",
-        "atomicidade",
-        "ciclo-3"
-      ],
+      "tags": ["pattern", "estoque", "quantidade", "trava", "rn-est-02", "rn-est-03", "prisma", "transaction", "defense-in-depth", "atomicidade", "ciclo-3"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-19T12:00:00Z"
@@ -341,19 +186,7 @@
       "title": "Pattern — State Machine de Status de Patrimônio (RN-EST-01/03/05) — Transições Válidas e RBAC por Estado",
       "description": "Helper canônico assertTransicaoPatrimonioValida em app/lib/patrimonio.server.ts. Matriz de 6 transições (DISPONIVEL ↔ EM_MANUTENCAO ↔ DISPONIVEL, BAIXADO_PERDA terminal). Baixa por Perda é única operação restrita a ADMIN (RN-EST-05). Atômica em $transaction: ManutencaoAtivo.foiPerdaTotal + ItemEstoque.statusPatrimonio + ativo=false.",
       "category": "pattern",
-      "tags": [
-        "pattern",
-        "patrimonio",
-        "state-machine",
-        "status",
-        "rn-est-01",
-        "rn-est-03",
-        "rn-est-05",
-        "rbac",
-        "manutencao",
-        "baixa",
-        "ciclo-3"
-      ],
+      "tags": ["pattern", "patrimonio", "state-machine", "status", "rn-est-01", "rn-est-03", "rn-est-05", "rbac", "manutencao", "baixa", "ciclo-3"],
       "priority": "high",
       "status": "approved",
       "updatedAt": "2026-06-19T12:00:00Z"
@@ -363,17 +196,7 @@
       "title": "Pattern — Alerta Manual para Manutenção sem Prazo (RN-EST-04) — Gatilho On-Consulta Sem Cron",
       "description": "Helper verificarAlertaManutencaoSemPrazo em app/lib/manutencao.server.ts. Decisão do brief §5.1: sem cron job no MVP. Gatilho on-consulta em loaders de /app/estoque/$id e /app/alertas. Idempotência 24h. Escalonamento: 6 dias (aviso) / 30 dias (urgente). Trade-off aceito: se ninguém consultar a rota, alerta não dispara.",
       "category": "pattern",
-      "tags": [
-        "pattern",
-        "manutencao",
-        "alerta",
-        "rn-est-04",
-        "on-consulta",
-        "idempotencia",
-        "sem-cron",
-        "escalonamento",
-        "ciclo-3"
-      ],
+      "tags": ["pattern", "manutencao", "alerta", "rn-est-04", "on-consulta", "idempotencia", "sem-cron", "escalonamento", "ciclo-3"],
       "priority": "medium",
       "status": "approved",
       "updatedAt": "2026-06-19T12:00:00Z"
@@ -383,32 +206,45 @@
       "title": "Convenção — Tipos de Item de Estoque (CONSUMO vs PATRIMONIO) — Diferenciação Semântica",
       "description": "Convenção canônica de quando usar TipoItemEstoque.CONSUMO vs PATRIMONIO. DiscriminatedUnion Zod (ItemConsumoCreateSchema vs ItemPatrimonioCreateSchema). Helpers assertItemIsConsumo e assertItemIsPatrimonio. numeroSerie único obrigatório para PATRIMONIO; localizacaoFisica recomendada; statusPatrimonio default DISPONIVEL na criação.",
       "category": "convention",
-      "tags": [
-        "convention",
-        "estoque",
-        "consumo",
-        "patrimonio",
-        "tipo",
-        "rn-est-01",
-        "semantica",
-        "modelagem",
-        "discriminated-union",
-        "ciclo-3"
-      ],
+      "tags": ["convention", "estoque", "consumo", "patrimonio", "tipo", "rn-est-01", "semantica", "modelagem", "discriminated-union", "ciclo-3"],
       "priority": "medium",
       "status": "approved",
       "updatedAt": "2026-06-19T12:00:00Z"
+    },
+    {
+      "id": "pattern-relatorios-aggregations",
+      "title": "Pattern — Agregações de Lançamento em Relatórios (groupBy + soma em centavos)",
+      "description": "Padrão canônico dos 5 services de agregação do ciclo 4 (getDRE, getBalanceteMensal, getFluxoCaixa, getRelatorioCustomizado, exportarLancamentosCSV): prisma.lancamento.groupBy({ by: ['categoria'], where: { dataCompetencia: { gte, lt } }, _sum, _count }) com soma em Int cents, filtros semi-abertos, edge cases (período vazio, categoria inválida, caixa arquivado). Estende pattern-trava-saldo-service para escopo read-only.",
+      "category": "pattern",
+      "tags": ["pattern", "relatorios", "finance", "prisma", "groupBy", "agregacao", "centavos", "ciclo-4"],
+      "priority": "high",
+      "status": "approved",
+      "updatedAt": "2026-06-20T18:31:24Z"
+    },
+    {
+      "id": "convention-relatorios-csv-export",
+      "title": "Convenção — Exportação CSV de Relatórios Financeiros (RFC 4180 + BOM)",
+      "description": "Convenção canônica para exportação CSV em /app/financeiro/relatorios/customizado?export=csv: UTF-8 com BOM (EF BB BF), separador ; (não ,), escape RFC 4180 (aspas duplicadas), CRLF entre linhas, valor numérico puro (1234.56 — sem R$ nem vírgula de milhar), SAÍDA com sinal negativo, Cache-Control no-store. Helpers escapeCsvField, formatValorCsv, montarCabecalhoCsv em relatorios-csv.server.ts.",
+      "category": "convention",
+      "tags": ["convention", "csv", "rfc-4180", "relatorios", "export", "excel", "pt-br", "ciclo-4"],
+      "priority": "high",
+      "status": "approved",
+      "updatedAt": "2026-06-20T18:31:24Z"
     }
   ],
   "cycle1Preserved": true,
+  "cycle2Preserved": true,
+  "cycle3Preserved": true,
   "removedDocs": [],
   "notes": [
     "Ciclo 1 (10 docs) preservado integralmente — nenhum doc removido.",
     "Ciclo 2 adiciona 4 docs: 1 architecture (high), 2 pattern (1 critical + 1 high), 1 decision (medium, agora approved).",
-    "Ciclo 3 adiciona 4 docs: 3 pattern (2 high + 1 medium) + 1 convention (medium).",
-    "Total: 18 docs (todos approved). decision-caixa-soft-delete foi aprovado pelo prd-reviewer em 2026-06-14 (ciclo 2 Fase 2).",
+    "Ciclo 3 adiciona 4 docs: 3 pattern (2 high + 1 medium) + 1 convention (medium). Planning completo; build deferred.",
+    "Ciclo 4 adiciona 2 docs: 1 pattern (high — pattern-relatorios-aggregations) + 1 convention (high — convention-relatorios-csv-export). YAGNI aplicado: relatorios-rbac NÃO foi criado (já coberto por security-rbac-matrix + pattern-3-layer-rbac).",
+    "Total: 20 docs (todos approved). decision-caixa-soft-delete foi aprovado pelo prd-reviewer em 2026-06-14 (ciclo 2 Fase 2).",
     "Helpers assertSaldoQuantidade (pattern-estoque-trava-quantidade) e assertTransicaoPatrimonioValida (pattern-patrimonio-status-state-machine) já antecipam o campo ItemEstoque.ativo (proposta pendente decisão de Fase 2 do ciclo 3 — espelha Caixa.ativo do ciclo 2).",
+    "Ciclo 4 NÃO cria novo helper assertSaldoSuficiente (já existe no ciclo 2). Relatórios é read-only: apenas assertCanSeeRelatorios + groupBy/findMany. Sem assertSaldoSuficiente porque não há mutação de saldo.",
     "VerificarAlertaManutencaoSemPrazo (pattern-manutencao-alerta-manual) implementa RN-EST-04 com gatilho on-consulta (sem cron job) — decisão consciente do brief §5.1 + constraint de stack (sem Redis, sem node-cron).",
-    "A skill MCP do rag-curator não está fisicamente disponível neste ambiente; a criação dos 4 RAGs novos foi feita pelo documenter seguindo o template dos 10 RAGs existentes do ciclo 1+2 (YAML frontmatter + 7 seções obrigatórias: Contexto, Decisão/Regra, Consequências, Exemplos, Anti-exemplos, Cross-refs, Notas de aplicação/Audit trail)."
+    "A skill MCP do rag-curator não está fisicamente disponível neste ambiente; a criação dos 4 RAGs novos foi feita pelo documenter seguindo o template dos 14 RAGs existentes (YAML frontmatter + 7 seções obrigatórias: Contexto, Decisão/Regra, Consequências, Exemplos, Anti-exemplos, Cross-refs, Notas de aplicação/Audit trail)."
   ]
 }

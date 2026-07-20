@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Igreja Conect — Especificação Técnica (MVP + Financeiro + Estoque+Patrimônio)</title>
-<meta name="description" content="Especificação técnica do Igreja Conect: stack, arquitetura, modelo de dados, fluxos de auth, RBAC, contratos de API, testes (MVP + Módulo Financeiro ciclo 2 + Módulo Estoque+Patrimônio ciclo 3)." />
+<title>Igreja Conect — SPEC — Ciclo 4: Relatórios Financeiros</title>
+<meta name="description" content="Especificação técnica do ciclo 4 (Relatórios Financeiros): 5 services de agregação, 1 service CSV, 5 rotas, 2 componentes compartilhados, RBAC fina em 3 camadas, defesa contra prompt injection, LGPD." />
 <style>
   :root {
     --bg: #ffffff; --fg: #1f2937; --muted: #6b7280; --line: #e5e7eb; --line-strong: #d1d5db;
@@ -30,7 +30,7 @@
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
   code, kbd, pre, samp { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
-  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; color: #be185d; }
+  code { background: var(--code-bg); padding: 0 5px; border-radius: 4px; color: #be185d; }
   pre { background: var(--code-block-bg); color: #e2e8f0; padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.5; }
   pre code { background: transparent; padding: 0; color: #e2e8f0; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
@@ -78,12 +78,12 @@
 </head>
 <body>
 
-<h1>Igreja Conect — Especificação Técnica</h1>
+<h1>Igreja Conect — SPEC — Ciclo 4: Relatórios Financeiros</h1>
 <p class="meta">
-  <strong>Versão:</strong> 0.3 (MVP + ciclo 2 + ciclo 3) &middot;
-  <strong>Data:</strong> 2026-06-19 &middot;
-  <strong>Status:</strong> Aguardando revisão do <code>spec-reviewer</code> (ciclo 3) &middot;
-  <strong>Escopo:</strong> MVP + <strong>Módulo Financeiro (ciclo 2)</strong> + <strong>Módulo Estoque + Patrimônio (ciclo 3)</strong>
+  <strong>Versão:</strong> 0.1 (ciclo 4) &middot;
+  <strong>Data:</strong> 2026-06-20 &middot;
+  <strong>Status:</strong> Aguardando revisão do <code>spec-reviewer</code> (Fase 2) &middot;
+  <strong>Escopo:</strong> 5 services de agregação (read-only) + 1 service CSV + 5 rotas + 2 componentes compartilhados
 </p>
 
 <nav class="toc" aria-label="Sumário">
@@ -91,1365 +91,932 @@
   <ol>
     <li><a href="#objetivo">Objetivo</a></li>
     <li><a href="#stack">Stack e versões</a></li>
+    <li><a href="#user-stories">Personas &amp; user stories (detalhado)</a></li>
     <li><a href="#arquitetura">Arquitetura</a></li>
-    <li><a href="#modelo-dados">Modelo de dados</a></li>
-    <li><a href="#auth">Fluxo de autenticação</a></li>
-    <li><a href="#membros">Fluxo de Membros (user stories)</a></li>
-    <li><a href="#rbac">RBAC (defense in depth)</a></li>
-    <li><a href="#privacidade">Privacidade e filtro de payload</a></li>
-    <li><a href="#validacao">Validação de payload</a></li>
-    <li><a href="#endpoints">Endpoints do MVP (contratos)</a></li>
-    <li><a href="#testes">Testes do MVP</a></li>
-    <li><a href="#pendencias">Pendências de design</a></li>
-    <li><a href="#pronto-fase-5">Critérios de pronto (Fase 5)</a></li>
-    <li><a href="#referencias">Referências</a></li>
-  </ol>
-  <strong style="display:block;margin-top:12px;">Apêndice D — Módulo Financeiro (ciclo 2, 2026-06-14)</strong>
-  <ol start="15">
-    <li><a href="#c2-models">D.1 Models do Financeiro</a></li>
-    <li><a href="#c2-migrations">D.2 Migrations necessárias</a></li>
-    <li><a href="#c2-camadas">D.3 Camadas do módulo (5 services + 7 rotas)</a></li>
-    <li><a href="#c2-endpoints">D.4 Endpoints da API</a></li>
-    <li><a href="#c2-rbac">D.5 RBAC fina (matriz)</a></li>
-    <li><a href="#c2-auditoria">D.6 Trilha de auditoria (LGPD + financeiro)</a></li>
-    <li><a href="#c2-schema">D.7 Schema do Postgres/SQLite (gotchas)</a></li>
-    <li><a href="#c2-helpers">D.8 Helpers canônicos</a></li>
-    <li><a href="#c2-testes-borda">D.9 Testes de borda obrigatórios (12)</a></li>
-    <li><a href="#c2-limites">D.10 Limites conhecidos e dependências externas</a></li>
-  </ol>
-  <strong style="display:block;margin-top:12px;">Apêndice E — Módulo Estoque + Patrimônio (ciclo 3, 2026-06-19)</strong>
-  <ol start="25">
-    <li><a href="#c3-models">E.1 Models do Estoque+Patrimônio</a></li>
-    <li><a href="#c3-migrations">E.2 Migrations necessárias (soft-delete)</a></li>
-    <li><a href="#c3-camadas">E.3 Camadas (4 services + 11 rotas)</a></li>
-    <li><a href="#c3-endpoints">E.4 Endpoints da API (11 rotas)</a></li>
-    <li><a href="#c3-schemas">E.5 Schemas Zod (4 schemas)</a></li>
-    <li><a href="#c3-rbac">E.6 RBAC fina (matriz 6×9)</a></li>
-    <li><a href="#c3-lgpd">E.7 LGPD aplicada (Art. 6, 7, 18, 46)</a></li>
-    <li><a href="#c3-testes">E.8 Testes (12 borda + 3 e2eChains + crossModuleHints)</a></li>
-    <li><a href="#c3-helpers">E.9 Helpers canônicos</a></li>
-    <li><a href="#c3-limites">E.10 Limites e dependências</a></li>
+    <li><a href="#endpoints">Contratos de API (5 rotas + 1 action)</a></li>
+    <li><a href="#regras-negocio">Regras de negócio (extensão read-only)</a></li>
+    <li><a href="#componentes">Componentes / módulos</a></li>
+    <li><a href="#seguranca">Segurança (OWASP + LGPD)</a></li>
+    <li><a href="#testes">Testes (cobertura + e2eChains + crossModuleHints)</a></li>
+    <li><a href="#riscos">Riscos</a></li>
+    <li><a href="#performance">Performance e limites</a></li>
+    <li><a href="#pendencias">Pendências e cross-refs</a></li>
   </ol>
 </nav>
 
 <h2 id="objetivo">1. Objetivo</h2>
 
 <p>
-Esta especificação é a <strong>fonte de verdade para implementação</strong> do <a href="PRD.html">Igreja Conect</a>. Cobre o MVP (ciclo 1) e o Módulo Financeiro (ciclo 2) — com todos os contratos de payload, regras de negócio, edge cases e testes obrigatórios.
+Esta especificação é a <strong>fonte de verdade para implementação</strong> do ciclo 4 (<a href="PRD.html">PRD</a>). Cobre as 5 páginas de leitura agregada em <code>/app/financeiro/relatorios/**</code> (Hub + DRE + Balancete + Fluxo de Caixa + Customizado) e a exportação CSV — tudo <strong>read-only</strong> sobre o Módulo Financeiro do ciclo 2. <strong>Sem migration</strong>, sem novos models Prisma, sem novas regras de negócio.
 </p>
+
 <p>
-<strong>Não-escopo explícito do MVP:</strong> módulos Estoque, Manutenção, Cron, e qualquer feature listada em <a href="PRD.html#fora-escopo">PRD §4</a>. Suas tabelas já existem no schema para evitar migração em sprints futuras, mas <strong>nenhum service, loader ou action é entregue no MVP</strong>.
+<strong>Escopo do ciclo 4:</strong> 5 services de agregação em <code>app/lib/relatorios.server.ts</code> + 1 service CSV em <code>app/lib/relatorios-csv.server.ts</code> + 5 rotas em <code>app/routes/app/financeiro/relatorios/**</code> + 2 componentes compartilhados (<code>&lt;FiltrosPeriodo /&gt;</code>, <code>&lt;KpiCard /&gt;</code>) + ~25 ícones SVG inline em <code>app/components/icons/FinanceIcons.tsx</code> + item "Relatórios" no <code>Sidebar.tsx</code>.
 </p>
+
 <p>
-<strong>Escopo do ciclo 2 (Apêndice D):</strong> implementação do Módulo Financeiro, com 5 RNs (RN-FIN-01 a 05), 8 features, 12 testes de borda e decisão pendente de <code>Caixa.ativo</code>.
+<strong>Decisões herdadas dos ciclos 1–3 (imutáveis):</strong> monólito modular React Router 7, Prisma 7 + SQLite, Tailwind 4, Vite 8, TypeScript 5.9 strict, Zod 4, bcryptjs. <strong>Decisões específicas do ciclo 4:</strong> CSV (não PDF, decisão §5.2), SVG inline (não lib externa, decisão §5.5), placeholders visuais para "Projeção" e "Status" (decisões §5.6 e §5.7).
 </p>
 
 <script type="application/json" data-spec-section="1">
-{"objetivo":"Fonte de verdade para implementação do Igreja Conect (MVP + Módulo Financeiro ciclo 2)","escopo_mvp":"Auth + Membros + Discipulado + Alertas + Acolhimento","escopo_ciclo_2":"Caixas + Lançamentos + Dízimos + Transferências + Trava de Saldo + Fidelidade Financeira","nao_escopo":"Estoque, Manutenção, Cron, multi-tenant, multi-moeda, gateway de pagamento, S3, PDF/Excel"}
+{"objetivo":"Fonte de verdade tecnica do ciclo 4 (Relatorios Financeiros) - read-only sobre Lancamento existente","escopo":["5 services de agregacao em app/lib/relatorios.server.ts","1 service CSV em app/lib/relatorios-csv.server.ts","5 rotas em app/routes/app/financeiro/relatorios/**","2 componentes compartilhados (FiltrosPeriodo, KpiCard)","~25 icones SVG inline em app/components/icons/FinanceIcons.tsx","item Relatorios no Sidebar.tsx"],"nao_escopo":["migration","novos models Prisma","novas regras de negocio","PDF","projecao real","status lancamento","multi-moeda","multi-tenant","gateway pagamento","SMTP","S3","cron","recharts/lucide-react/d3"],"decisoes_herdadas":["monolito modular React Router 7","Prisma 7 + SQLite","Tailwind 4","Vite 8","TypeScript 5.9 strict","Zod 4","bcryptjs"],"decisoes_ciclo_4":{"§5.2":"CSV em vez de PDF","§5.5":"SVG inline em vez de lib externa","§5.6":"Placeholder Projecao em vez de fake","§5.7":"Placeholder Status em vez de fake"}}
 </script>
 
 <h2 id="stack">2. Stack e versões</h2>
 
-<p>Versões fixadas em <code>package.json</code>. Major version não pode ser atualizado sem aprovação do usuário (constraint 5.1 do brief).</p>
+<p>Versões fixadas em <code>package.json</code>. Major version não pode ser atualizado sem aprovação do usuário (constraint herdada do ciclo 1). <strong>Nenhuma dependência nova neste ciclo.</strong></p>
 
 <table>
-  <thead><tr><th>Camada</th><th>Tecnologia</th><th>Versão</th></tr></thead>
+  <thead><tr><th>Camada</th><th>Tecnologia</th><th>Versão</th><th>Origem</th></tr></thead>
   <tbody>
-    <tr><td>Framework web (SSR)</td><td><code>react-router</code></td><td><code>7.17.0</code></td></tr>
-    <tr><td>Runtime / Dev</td><td><code>@react-router/node</code>, <code>@react-router/serve</code>, <code>@react-router/dev</code></td><td><code>7.17.0</code></td></tr>
-    <tr><td>UI runtime</td><td><code>react</code> + <code>react-dom</code></td><td><code>^19.2.6</code></td></tr>
-    <tr><td>Linguagem</td><td>TypeScript (strict)</td><td><code>^5.9.3</code></td></tr>
-    <tr><td>Bundler / Dev server</td><td><code>vite</code></td><td><code>^8.0.16</code></td></tr>
-    <tr><td>Estilização</td><td><code>tailwindcss</code> + <code>@tailwindcss/vite</code></td><td><code>^4.2.2</code></td></tr>
-    <tr><td>ORM</td><td><code>prisma</code> + <code>@prisma/client</code></td><td><code>^7.8.0</code></td></tr>
-    <tr><td>Driver SQLite</td><td><code>@prisma/adapter-better-sqlite3</code></td><td><code>^7.8.0</code></td></tr>
-    <tr><td>Hash de senha</td><td><code>bcryptjs</code> (compat SSR)</td><td><code>3.0.x</code></td></tr>
-    <tr><td>Validação de payload</td><td><code>zod</code></td><td><code>4.4.3</code></td></tr>
-    <tr><td>Runtime</td><td>Node.js</td><td>22 LTS</td></tr>
-    <tr><td>Gerenciador de pacotes</td><td>pnpm</td><td>11.6.0</td></tr>
-    <tr><td>Testes unit</td><td>Vitest</td><td>4.1.8</td></tr>
-    <tr><td>Testes E2E</td><td>Playwright (via MCP)</td><td>1.60+</td></tr>
+    <tr><td>Framework web (SSR)</td><td><code>react-router</code></td><td><code>7.17.0</code></td><td>herdado ciclo 1</td></tr>
+    <tr><td>Runtime / Dev</td><td><code>@react-router/node</code>, <code>@react-router/serve</code>, <code>@react-router/dev</code></td><td><code>7.17.0</code></td><td>herdado</td></tr>
+    <tr><td>UI runtime</td><td><code>react</code> + <code>react-dom</code></td><td><code>^19.2.6</code></td><td>herdado</td></tr>
+    <tr><td>Linguagem</td><td>TypeScript (strict)</td><td><code>^5.9.3</code></td><td>herdado</td></tr>
+    <tr><td>Bundler / Dev server</td><td><code>vite</code></td><td><code>^8.0.16</code></td><td>herdado</td></tr>
+    <tr><td>Estilização</td><td><code>tailwindcss</code> + <code>@tailwindcss/vite</code></td><td><code>^4.2.2</code></td><td>herdado</td></tr>
+    <tr><td>ORM</td><td><code>prisma</code> + <code>@prisma/client</code></td><td><code>^7.8.0</code></td><td>herdado</td></tr>
+    <tr><td>Driver SQLite</td><td><code>@prisma/adapter-better-sqlite3</code></td><td><code>^7.8.0</code></td><td>herdado</td></tr>
+    <tr><td>Validação de payload</td><td><code>zod</code></td><td><code>4.4.3</code></td><td>herdado</td></tr>
+    <tr><td>Runtime</td><td>Node.js</td><td>22 LTS</td><td>herdado</td></tr>
+    <tr><td>Gerenciador de pacotes</td><td>pnpm</td><td>11.6.0</td><td>herdado</td></tr>
+    <tr><td>Testes unit</td><td>Vitest</td><td>4.1.8</td><td>herdado</td></tr>
+    <tr><td>Testes E2E</td><td>Playwright (via MCP)</td><td>1.60+</td><td>herdado</td></tr>
   </tbody>
 </table>
 
+<p><strong>Dependências rejeitadas neste ciclo (decisões YAGNI explícitas):</strong></p>
+<ul>
+  <li>❌ <code>pdfkit</code>, <code>puppeteer</code>, <code>jspdf</code> — PDF diferido (decisão §5.2).</li>
+  <li>❌ <code>lucide-react</code>, <code>react-icons</code> — ícones SVG inline (decisão §5.5).</li>
+  <li>❌ <code>recharts</code>, <code>d3</code>, <code>chart.js</code> — SVG inline para Fluxo de Caixa.</li>
+  <li>❌ <code>papaparse</code>, <code>csv-stringify</code> — helpers de ~30 linhas bastam (RAG <code>convention-relatorios-csv-export</code>).</li>
+  <li>❌ <code>node-cron</code>, <code>bull</code> — sem jobs no projeto.</li>
+</ul>
+
 <script type="application/json" data-spec-section="2">
-{"stack":{"framework":"react-router@7.17.0","bundler":"vite@^8.0.16","language":"TypeScript@^5.9.3 strict","styling":"tailwindcss@^4.2.2","orm":"prisma@^7.8.0 + @prisma/adapter-better-sqlite3","hash":"bcryptjs@3.0.x","validation":"zod@4.4.3","runtime":"Node 22 LTS","package_manager":"pnpm@11.6.0","test_unit":"vitest@4.1.8","test_e2e":"playwright@1.60+"},"constraint":"Versões major fixadas (brief §5.1). Mudança requer aprovação do usuário."}
+{"stack":{"framework":"react-router@7.17.0","bundler":"vite@^8.0.16","language":"TypeScript@^5.9.3 strict","styling":"tailwindcss@^4.2.2","orm":"prisma@^7.8.0 + @prisma/adapter-better-sqlite3","validation":"zod@4.4.3","runtime":"Node 22 LTS","package_manager":"pnpm@11.6.0","test_unit":"vitest@4.1.8","test_e2e":"playwright@1.60+"},"constraint":"Versoes major fixadas (herdado do ciclo 1). Mudanca requer aprovacao do usuario.","novas_dependencias":[],"deps_rejeitadas":["pdfkit","puppeteer","jspdf","lucide-react","react-icons","recharts","d3","chart.js","papaparse","csv-stringify","node-cron","bull"]}
 </script>
 
-<h2 id="arquitetura">3. Arquitetura</h2>
+<h2 id="user-stories">3. Personas &amp; user stories (detalhado)</h2>
 
-<p>
-Monólito modular React Router 7 com SSR. Estrutura canônica de pastas (RAG <code>architecture-monolith-modular.md</code>):
-</p>
+<p>21 user stories com critérios de aceite verificáveis. Resumo executivo em <a href="PRD.html#user-stories">PRD §3</a>. Detalhamento de <strong>contratos</strong> em <a href="#endpoints">§5</a>.</p>
 
-<pre><code>app/
-├── root.tsx                  # Layout HTML raiz, ErrorBoundary
-├── routes.ts                 # Config declarativa de rotas
-├── app.css                   # Tailwind 4 entrypoint
-├── routes/
-│   ├── public/               # /, /login (sem auth)
-│   └── app/                  # /app/** (com auth, layout autenticado)
-├── api/                      # Endpoints não-página (server-only)
-├── lib/                      # Services + helpers puros (sufixo .server.ts)
-│   ├── auth.server.ts        # requireUser, requireRole, verifyCredentials
-│   ├── session.server.ts     # create/get/delete/renew
-│   ├── rbac.server.ts        # assertCanSeeFinancials, assertCanWriteMembers, ...
-│   ├── members.server.ts     # CRUD de Membro + transição de tipo
-│   ├── discipleship.server.ts # assign + trava 12
-│   ├── alerts.server.ts      # criação e listagem
-│   ├── finance.server.ts     # getDizimosByMembro (Camada 3 já pronta)
-│   ├── money.server.ts       # formatBRLFromCents / parseBRLToCents (ciclo 2)
-│   ├── caixas.server.ts      # CRUD Caixa (ciclo 2)
-│   ├── lancamentos.server.ts # CRUD Lancamento (ciclo 2)
-│   ├── transferencias.server.ts # transferirEntreCaixas (ciclo 2)
-│   └── schemas/              # Zod schemas (membros, auth, ...)
-├── db/prisma.server.ts       # Singleton do Prisma Client
-└── components/               # Componentes React puros
-</code></pre>
+<h3>3.1 Personas (ciclo 4)</h3>
+<table>
+  <thead><tr><th>ID</th><th>Persona</th><th>Cargo</th><th>Permissão</th></tr></thead>
+  <tbody>
+    <tr><td>P-001</td><td>Tesoureiro(a)</td><td><code>FINANCEIRO</code></td><td>Hub + DRE + Balancete + Fluxo + Customizado + CSV</td></tr>
+    <tr><td>P-002</td><td>Pastor</td><td><code>PASTOR</code></td><td>Hub + DRE + Balancete + Fluxo + Customizado + CSV</td></tr>
+    <tr><td>P-003</td><td>Administrador</td><td><code>ADMIN</code></td><td>Hub + DRE + Balancete + Fluxo + Customizado + CSV</td></tr>
+    <tr><td>P-004</td><td>Secretário(a)</td><td><code>SECRETARIO</code></td><td><span class="badge bad">BLOQUEADO</span> em todas as 5 rotas</td></tr>
+    <tr><td>P-005</td><td>Discipulador</td><td><code>DISCIPULADOR</code></td><td><span class="badge bad">BLOQUEADO</span></td></tr>
+    <tr><td>P-006</td><td>Líder de Ministério</td><td><code>LIDER_MINISTERIO</code></td><td><span class="badge bad">BLOQUEADO</span></td></tr>
+  </tbody>
+</table>
 
-<h3>3.1 Regras de dependência (não negociáveis)</h3>
-<ol>
-  <li><code>routes/</code> pode importar de <code>lib/</code> e <code>db/</code>. Nunca o contrário.</li>
-  <li><code>lib/</code> pode importar de <code>db/</code>. <strong>Não</strong> importa de <code>routes/</code> ou <code>components/</code>.</li>
-  <li><code>db/</code> é o único lugar que importa o <code>PrismaClient</code>.</li>
-  <li><code>components/</code> não acessa <code>db/</code>. Recebe dados via props ou loader.</li>
-  <li>Sufixo <code>.server.ts</code> em todo arquivo que toca <code>db</code>, <code>process.env</code>, <code>bcrypt</code>, <code>cookie</code> ou <code>fs</code>.</li>
-</ol>
+<h3>3.2 User stories (21, com acceptanceCriteria)</h3>
+<p>Formato: <code>US-REL-NNN</code>. Critérios de aceite verificáveis (TDD antes do código).</p>
 
-<h3>3.2 Decisões arquiteturais (referência)</h3>
+<h4>3.2.1 Hub de Relatórios</h4>
+<p><strong>US-REL-001 — Listar 4 cards</strong></p>
 <ul>
-  <li><strong>ADR-001</strong> — Session cookie httpOnly em vez de JWT (logout server-side, seguro contra XSS).</li>
-  <li><strong>ADR-002</strong> — <code>bcryptjs</code> em vez de <code>bcrypt</code> nativo (compat SSR, sem binários).</li>
-  <li><strong>ADR-003</strong> — <code>zod</code> para validação (ecossistema maduro, <code>z.infer&lt;&gt;</code>).</li>
-  <li><strong>ADR-004</strong> — Monólito modular em vez de microsserviços.</li>
-  <li><strong>ADR-005</strong> — Singleton do Prisma Client via <code>globalThis</code>.</li>
-  <li><strong>ADR-006</strong> (ciclo 2) — Modelagem de transferência híbrida (1 <code>TransferenciaCaixa</code> + 2 <code>Lancamento</code> espelho em <code>$transaction</code>).</li>
-  <li><strong>ADR-007</strong> (ciclo 2) — Trava de saldo exclusivamente no service (Camada 3 — única segurança real).</li>
+  <li><strong>Como</strong> <code>FINANCEIRO</code> <strong>quero</strong> ver 4 cards grandes (DRE, Balancete, Fluxo, Customizado) <strong>para</strong> escolher qual relatório gerar.</li>
+  <li><strong>Acceptance:</strong> GET <code>/app/financeiro/relatorios</code> (autenticado) → 200 + renderiza 4 cards com ícone SVG colorido, título, descrição e botão "Gerar Relatório". Camada 2 OK. Camada 3 OK.</li>
+</ul>
+
+<p><strong>US-REL-002 — Navegação para sub-rota</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> clicar em "Gerar Relatório" do card DRE navega para <code>/app/financeiro/relatorios/dre</code> (mesma janela). Demais cards: padrão análogo.</li>
+</ul>
+
+<p><strong>US-REL-003 — Sidebar esconde item para SECRETARIO (Camada 1)</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> SECRETARIO logado NÃO vê o item "Relatórios" no <code>Sidebar.tsx</code>. E2E: <code>playwright_browser_snapshot()</code> em <code>/app</code> com login SECRETARIO → menu não contém "Relatórios".</li>
+</ul>
+
+<p><strong>US-REL-004 — Bypass URL bloqueado (Camada 2 + 3)</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> SECRETARIO logado digita <code>/app/financeiro/relatorios</code> direto → 403 (ErrorBoundary). E2E: <code>playwright_browser_navigate</code> + expect 403.</li>
+</ul>
+
+<h4>3.2.2 DRE</h4>
+<p><strong>US-REL-005 — DRE do mês corrente</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> GET <code>/app/financeiro/relatorios/dre</code> sem params → DRE do mês corrente. 3 KPIs renderizam com <code>formatBRLFromCents</code>. Listas <code>entradasPorCategoria</code> e <code>saidasPorCategoria</code> ordenadas por valor decrescente. Latência &lt; 2s.</li>
+</ul>
+
+<p><strong>US-REL-006 — Filtro personalizado</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> query <code>?inicio=2026-01-01&amp;fim=2026-04-01</code> → DRE do Q1 2026. Zod <code>RelatorioPeriodoSchema</code> valida ISO date. <code>inicio &gt;= fim</code> → 400. Loader chama <code>getDRE({ inicio, fim }, user)</code>.</li>
+</ul>
+
+<p><strong>US-REL-007 — Drill-down em categoria</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> clicar em linha de "Saídas por Categoria" gera <code>&lt;Link&gt;</code> para <code>/app/financeiro/lancamentos?categoria=X&amp;periodo=inicio..fim</code>. Rota pendente (decisão §5.4) — placeholder enquanto S13 não entrega.</li>
+</ul>
+
+<p><strong>US-REL-008 — Período sem lançamentos</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> mês vazio → <code>{ totalEntradasCentavos: 0, totalSaidasCentavos: 0, resultadoLiquidoCentavos: 0, entradasPorCategoria: [], saidasPorCategoria: [] }</code>. UI renderiza "R$ 0,00" + tabelas com mensagem "Nenhuma movimentação no período". Sem null/undefined.</li>
+</ul>
+
+<h4>3.2.3 Balancete</h4>
+<p><strong>US-REL-009 — Selecionar mês</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> input <code>&lt;input type="month"&gt;</code> default = mês corrente. Submit → <code>?ano=YYYY&amp;mes=MM</code>. Loader chama <code>getBalanceteMensal({ ano, mes }, user)</code>. Mês inválido (ex: 13) → 400.</li>
+</ul>
+
+<p><strong>US-REL-010 — 4 KPIs + tabela</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> 4 KPIs (Saldo Anterior / Entradas / Saídas / Saldo Atual) com formatação BRL. Tabela "Resumo por Categoria" (Categoria | Entradas | Saídas | Saldo) ordenada por Saldo decrescente. <code>saldoAnteriorCentavos</code> = soma de todos os lançamentos anteriores ao mês.</li>
+</ul>
+
+<p><strong>US-REL-011 — Imprimir (window.print)</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> botão "Imprimir Balancete" aciona <code>window.print()</code>. CSS print mínimo. Sem PDF real. Sem dependência externa.</li>
+</ul>
+
+<p><strong>US-REL-012 — Placeholder Projeção</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> card "Projeção Próximo Mês" renderiza placeholder cinza com texto "Disponível em ciclo futuro — depende de módulo Contas a Pagar". Sem lógica de cálculo (decisão §5.6).</li>
+</ul>
+
+<h4>3.2.4 Fluxo de Caixa</h4>
+<p><strong>US-REL-013 — Série temporal 12 meses</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> GET <code>/app/financeiro/relatorios/fluxo-caixa</code> sem params → 4 KPIs + série temporal com 12 pontos (ano corrente, default). Cada ponto: <code>{ mes, entradasCentavos, saidasCentavos, saldoCentavos }</code>. Saldo acumulado = running total.</li>
+</ul>
+
+<p><strong>US-REL-014 — Tabs Dia/Semana (placeholder)</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> tabs Dia e Semana renderizam label "Em breve" (desabilitadas). Apenas Mês funciona. Decisão YAGNI (brief §4.2.4).</li>
+</ul>
+
+<p><strong>US-REL-015 — SVG line chart 3 séries</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> card principal renderiza SVG line chart inline com 3 séries: Entradas (verde sólido), Saídas (vermelho sólido), Saldo (azul tracejado). Path Bezier. Sem <code>recharts</code>/<code>d3</code>.</li>
+</ul>
+
+<p><strong>US-REL-016 — Placeholder Projeção 30 dias</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> side card "Projeção Próximos 30 dias" renderiza placeholder cinza (decisão §5.6).</li>
+</ul>
+
+<h4>3.2.5 Customizado</h4>
+<p><strong>US-REL-017 — Aplicar 6 filtros</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> FINANCEIRO ajusta 6 selects (Período, Tipo, Categoria, Membro, Caixa, Status-placeholder) e clica "Aplicar Filtros". Search params validados por Zod <code>RelatorioCustomizadoFiltrosSchema</code> (strict). Loader chama <code>getRelatorioCustomizado(filtros, user)</code>. Filtro inválido → 400.</li>
+</ul>
+
+<p><strong>US-REL-018 — KPIs e tabela paginada</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> 2 KPIs (Total Entradas verde, Total Saídas vermelho) + Saldo Consolidado. Tabela com 50 lançamentos/página. Paginação via <code>?page=N</code> (&lt;= 50, default 1).</li>
+</ul>
+
+<p><strong>US-REL-019 — Export CSV</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> botão "Exportar CSV" chama action <code>?export=csv&amp;...</code>. Response: <code>200 text/csv; charset=utf-8</code> + <code>Content-Disposition: attachment; filename="igreja-conect-relatorio-YYYY-MM-DD.csv"</code> + <code>Cache-Control: no-store</code>. 1.280 registros &lt; 500ms.</li>
+</ul>
+
+<p><strong>US-REL-020 — Filtro Status desabilitado</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> select "Status" renderiza <code>&lt;select disabled&gt;</code> com 4 opções placeholder visíveis mas não clicáveis. Decisão §5.7 (YAGNI).</li>
+</ul>
+
+<p><strong>US-REL-021 — 0 resultados</strong></p>
+<ul>
+  <li><strong>Acceptance:</strong> filtros sem resultado → tabela mostra mensagem "Nenhum lançamento encontrado" + KPIs zerados (R$ 0,00). Sem null.</li>
 </ul>
 
 <script type="application/json" data-spec-section="3">
-{"arquitetura":"Monolito modular React Router 7 + Prisma 7 + SQLite + Tailwind 4","regras":["routes importa lib/db","lib importa db","db importa PrismaClient","components recebe dados via props","*.server.ts para código server-only"],"adrs":["ADR-001 session cookie httpOnly","ADR-002 bcryptjs (SSR)","ADR-003 zod validation","ADR-004 monolito modular","ADR-005 prisma singleton","ADR-006 transferencia hibrida 1+2","ADR-007 trava de saldo no service"]}
+{"personas":[{"id":"P-001","cargo":"FINANCEIRO","acesso":"todos"},{"id":"P-002","cargo":"PASTOR","acesso":"todos"},{"id":"P-003","cargo":"ADMIN","acesso":"todos"},{"id":"P-004","cargo":"SECRETARIO","acesso":"BLOQUEADO"},{"id":"P-005","cargo":"DISCIPULADOR","acesso":"BLOQUEADO"},{"id":"P-006","cargo":"LIDER_MINISTERIO","acesso":"BLOQUEADO"}],"user_stories":[
+{"id":"US-REL-001","pagina":"hub","acceptance":"GET /app/financeiro/relatorios → 4 cards"},
+{"id":"US-REL-002","pagina":"hub","acceptance":"Link de cada card navega para sub-rota"},
+{"id":"US-REL-003","pagina":"hub","acceptance":"SECRETARIO nao ve item Relatorios no Sidebar (camada 1)"},
+{"id":"US-REL-004","pagina":"hub","acceptance":"SECRETARIO bypass URL → 403 (camada 2+3)"},
+{"id":"US-REL-005","pagina":"dre","acceptance":"DRE mes corrente 3 KPIs < 2s"},
+{"id":"US-REL-006","pagina":"dre","acceptance":"Filtro personalizado Zod; inicio>=fim → 400"},
+{"id":"US-REL-007","pagina":"dre","acceptance":"Drill-down <Link> para /lancamentos?categoria=X&periodo=..."},
+{"id":"US-REL-008","pagina":"dre","acceptance":"Mes vazio: zeros + listas vazias sem null"},
+{"id":"US-REL-009","pagina":"balancete","acceptance":"<input type=month> default mes corrente"},
+{"id":"US-REL-010","pagina":"balancete","acceptance":"4 KPIs + tabela Resumo por Categoria"},
+{"id":"US-REL-011","pagina":"balancete","acceptance":"Botao Imprimir aciona window.print()"},
+{"id":"US-REL-012","pagina":"balancete","acceptance":"Placeholder Proximo Mes (YAGNI)"},
+{"id":"US-REL-013","pagina":"fluxo","acceptance":"Serie temporal 12 meses, 4 KPIs"},
+{"id":"US-REL-014","pagina":"fluxo","acceptance":"Tabs Dia/Semana placeholder"},
+{"id":"US-REL-015","pagina":"fluxo","acceptance":"SVG line chart 3 series (sem recharts)"},
+{"id":"US-REL-016","pagina":"fluxo","acceptance":"Placeholder Projecao 30d (YAGNI)"},
+{"id":"US-REL-017","pagina":"custom","acceptance":"6 filtros Zod strict + getRelatorioCustomizado"},
+{"id":"US-REL-018","pagina":"custom","acceptance":"2 KPIs + tabela 50/pagina"},
+{"id":"US-REL-019","pagina":"custom","acceptance":"Export CSV: text/csv + Cache-Control no-store + 1280 reg < 500ms"},
+{"id":"US-REL-020","pagina":"custom","acceptance":"Filtro Status <select disabled>"},
+{"id":"US-REL-021","pagina":"custom","acceptance":"0 resultados: mensagem + KPIs zerados"}
+],"total":21}
 </script>
 
-<h2 id="modelo-dados">4. Modelo de dados</h2>
+<h2 id="arquitetura">4. Arquitetura</h2>
 
-<p>
-Fonte de verdade: <code>prisma/schema.prisma</code>. Resumo operacional.
-</p>
+<p>Monólito modular React Router 7 com SSR. Mesma estrutura canônica dos ciclos 1–3 (RAG <code>architecture-monolith-modular</code>), com fronteira estrita Apresentação → Aplicação → Domínio → Infra → Dados.</p>
 
-<h3>4.1 Models por módulo</h3>
-<table>
-  <thead><tr><th>Módulo</th><th>Models</th><th>Estado MVP</th><th>Estado ciclo 2</th></tr></thead>
-  <tbody>
-    <tr><td><strong>Membros</strong></td><td><code>Membro</code>, <code>Ministerio</code>, <code>MinisterioMembro</code></td><td>✅ UI + service</td><td>—</td></tr>
-    <tr><td><strong>Auth</strong></td><td><code>Membro.senhaHash</code>, <code>cargo</code>, <code>email</code> + <code>Session</code></td><td>✅ Endpoints</td><td>—</td></tr>
-    <tr><td><strong>Alertas</strong></td><td><code>Alerta</code>, <code>AlertaDestinatario</code></td><td>✅ UI + service</td><td>—</td></tr>
-    <tr><td><strong>Configuração</strong></td><td><code>ConfiguracaoGeral</code></td><td>✅ 1 tela Admin</td><td>—</td></tr>
-    <tr><td><strong>Financeiro</strong></td><td><code>Caixa</code>, <code>TransferenciaCaixa</code>, <code>Lancamento</code></td><td>Schema apenas</td><td>✅ UI + service em S06-S08</td></tr>
-    <tr><td><strong>Estoque</strong></td><td><code>ItemEstoque</code>, <code>MovimentacaoEstoque</code>, <code>ManutencaoAtivo</code></td><td>Schema apenas</td><td>— (ciclo 3+)</td></tr>
-  </tbody>
-</table>
+<pre><code>app/
+├── root.tsx
+├── routes.ts
+├── app.css
+├── routes/
+│   ├── public/                # /, /login
+│   └── app/
+│       └── financeiro/
+│           ├── _index.tsx     # dashboard (ciclo 2)
+│           ├── caixas/        # ciclo 2
+│           ├── lancamentos/   # ciclo 2 (form /novo)
+│           └── relatorios/    # CICLO 4 (novo)
+│               ├── _index.tsx                       # Hub
+│               ├── dre.tsx
+│               ├── balancete.tsx
+│               ├── fluxo-caixa.tsx
+│               └── customizado.tsx
+├── lib/                       # *.server.ts
+│   ├── finance.server.ts      # ciclo 2
+│   ├── money.server.ts        # ciclo 2 (centavos)
+│   ├── rbac.server.ts         # ciclo 2 + ESTENDER (RELATORIOS_CARGOS + assertCanSeeRelatorios)
+│   ├── relatorios.server.ts   # CICLO 4 (5 services read-only)
+│   ├── relatorios-helpers.server.ts # CICLO 4 (assertPeriodoValido, mapCategorias)
+│   └── relatorios-csv.server.ts # CICLO 4 (export CSV)
+└── components/
+    ├── FiltrosPeriodo.tsx     # CICLO 4 (compartilhado)
+    ├── KpiCard.tsx            # CICLO 4 (compartilhado)
+    ├── Sidebar.tsx            # ESTENDER (item Relatorios)
+    ├── Can.tsx                # ciclo 1 (RBAC UI)
+    └── icons/
+        └── FinanceIcons.tsx   # CICLO 4 (~25 SVGs)
+</code></pre>
 
-<h3>4.2 Enums (resumo)</h3>
-<table>
-  <thead><tr><th>Enum</th><th>Valores</th><th>Onde se aplica</th></tr></thead>
-  <tbody>
-    <tr><td><code>Cargo</code></td><td><code>ADMIN, PASTOR, SECRETARIO, DISCIPULADOR, FINANCEIRO, LIDER_MINISTERIO</code></td><td>RBAC. <code>Membro.cargo</code></td></tr>
-    <tr><td><code>TipoMembro</code></td><td><code>MEMBRO_ATIVO, CONGREGADO, VISITANTE</code></td><td>Segmentação pastoral</td></tr>
-    <tr><td><code>TipoLancamento</code></td><td><code>ENTRADA, SAIDA</code></td><td>Financeiro (ciclo 2)</td></tr>
-    <tr><td><code>CategoriaLancamento</code></td><td><code>DIZIMO, OFERTA, CAMPANHA, DESPESA_OPERACIONAL, COMPRA_ESTOQUE, MANUTENCAO, TRANSFERENCIA</code></td><td>Financeiro (ciclo 2)</td></tr>
-    <tr><td><code>TipoItemEstoque</code></td><td><code>CONSUMO, PATRIMONIO</code></td><td>Estoque (ciclo 3+)</td></tr>
-    <tr><td><code>StatusItemPatrimonio</code></td><td><code>DISPONIVEL, EM_MANUTENCAO, BAIXADO_PERDA</code></td><td>Estoque (ciclo 3+)</td></tr>
-  </tbody>
-</table>
-
-<h3>4.3 Decisões de modelagem</h3>
-<ul>
-  <li><code>output = "../generated/prisma"</code> (não em <code>node_modules</code>), gitignored.</li>
-  <li><code>onDelete: Restrict</code> em <code>Membro.discipulador</code> e em todo campo financeiro/auditoria.</li>
-  <li><code>onDelete: SetNull</code> em <code>Lancamento.membro</code> (RN-FIN-05: dízimo órfão vira histórico sem identificação).</li>
-  <li><code>onDelete: Cascade</code> permitido em junção pura (<code>MinisterioMembro</code>, <code>AlertaDestinatario</code>).</li>
-  <li>Convenção monetária: <code>Int</code> em centavos (RAG <code>convention-monetary-values</code>).</li>
-</ul>
-
-<script type="application/json" data-spec-section="4">
-{"models_por_modulo":{"Membros":["Membro","Ministerio","MinisterioMembro"],"Auth":["Session"],"Alertas":["Alerta","AlertaDestinatario"],"Configuracao":["ConfiguracaoGeral"],"Financeiro":["Caixa","TransferenciaCaixa","Lancamento"],"Estoque":["ItemEstoque","MovimentacaoEstoque","ManutencaoAtivo"]},"enums":["Cargo","TipoMembro","TipoLancamento","CategoriaLancamento","TipoItemEstoque","StatusItemPatrimonio"],"convencoes":["output=../generated/prisma","onDelete: Restrict em auditoria","onDelete: SetNull em Lancamento.membro (RN-FIN-05)","Int em centavos"]}
-</script>
-
-<h2 id="auth">5. Fluxo de autenticação</h2>
-
-<h3>5.1 Login — sequência</h3>
+<h3>4.1 Diagrama de fluxo (defense in depth 3 camadas)</h3>
 
 <pre class="mermaid">
 sequenceDiagram
   autonumber
-  actor U as Pastor
-  participant FE as Login form
-  participant RR as React Router (action)
-  participant SVC as lib/auth.server.ts
-  participant BCRYPT as bcryptjs
-  participant SESS as lib/session.server.ts
-  participant DB as Prisma + SQLite
-  U->>FE: preenche email + senha
-  U->>FE: submit
-  FE->>RR: POST /login (form-data)
-  RR->>SVC: verifyCredentials(email, senha)
-  SVC->>DB: membro.findUnique({ email })
-  alt não encontrado
-    SVC-->>RR: null
-    RR-->>FE: 401 + formError "Credenciais inválidas"
-  else encontrado
-    SVC->>BCRYPT: compare(senhaPlain, membro.senhaHash)
-    alt hash diverge
-      BCRYPT-->>SVC: false
-      SVC-->>RR: null
-      RR-->>FE: 401 + formError "Credenciais inválidas"
-    else hash confere
-      BCRYPT-->>SVC: true
-      SVC->>SESS: createSession(membro.id)
-      SESS->>DB: session.create({ membroId, expiresAt, absoluteExpiresAt })
-      SESS-->>SVC: sessionId
-      SVC-->>RR: { user: { id, nome, cargo } }
-      RR-->>FE: 302 Set-Cookie sid=...; Location=/app
-    end
+  actor U as Tesoureiro (FINANCEIRO)
+  participant FE as Relatorios UI
+  participant SC as Sidebar (Can)
+  participant LD as loader da rota
+  participant RBAC as rbac.server (Camada 2)
+  participant SVC as relatorios.server (Camada 3)
+  participant DB as Prisma/SQLite
+
+  U->>SC: login -> ve item "Relatorios" no menu (Camada 1)
+  U->>FE: clica em "DRE"
+  FE->>LD: GET /app/financeiro/relatorios/dre
+  LD->>RBAC: assertCanSeeRelatorios(user)
+  alt SECRETARIO / DISCIPULADOR / LIDER
+    RBAC-->>LD: throw Response(403)
+    LD-->>FE: ErrorBoundary 403
+  else ADMIN / PASTOR / FINANCEIRO
+    RBAC-->>LD: ok
+    LD->>SVC: getDRE(periodo, user)
+    SVC->>RBAC: assertCanSeeRelatorios(user) - CAMADA 3
+    RBAC-->>SVC: ok
+    SVC->>DB: prisma.lancamento.groupBy({ by: ['categoria'], where: { ... } })
+    DB-->>SVC: Array&lt;{ categoria, _sum, _count }&gt;
+    SVC->>SVC: mapCategorias + soma em Int cents
+    SVC-->>LD: DREData
+    LD-->>FE: { dre }
+    FE-->>U: render KPIs + tabelas + drill-down links
   end
 </pre>
 
-<p><strong>Contrato do action <code>/login</code>:</strong></p>
+<h3>4.2 Decisões arquiteturais (referência)</h3>
 <ul>
-  <li><strong>Request:</strong> form-data <code>email: string</code>, <code>senha: string</code>.</li>
-  <li><strong>Validação (Zod):</strong> <code>email</code> válido; <code>senha</code> string não vazia, máx 200 chars.</li>
-  <li><strong>Resposta sucesso:</strong> 302 para <code>/app</code> (ou <code>?next=</code>), cookie <code>sid</code> httpOnly.</li>
-  <li><strong>Resposta falha:</strong> 401 com <code>{ formError: "Credenciais inválidas" }</code>.</li>
-  <li><strong>Efeito colateral:</strong> <code>safeLog({ userId, action: "login_attempt", result: "ok"|"fail" })</code> (sem PII).</li>
+  <li><strong>ADR-001</strong> a <strong>ADR-007</strong> herdadas dos ciclos 1–3 (sessão, bcryptjs, Zod, monolito, singleton Prisma, transferência híbrida, trava de saldo no service).</li>
+  <li><strong>ADR-008 (ciclo 4):</strong> 5 services de relatório <strong>read-only</strong> — sem <code>$transaction</code> de escrita, sem mutação. Ordem canônica: <code>assertCanSeeRelatorios → assertPeriodoValido → groupBy/findMany</code>.</li>
+  <li><strong>ADR-009 (ciclo 4):</strong> soma sempre em <code>Int</code> cents, formatação BRL só na borda UI (estende <code>convention-monetary-values</code>).</li>
+  <li><strong>ADR-010 (ciclo 4):</strong> filtros de data sempre semi-abertos <code>[gte, lt)</code> (estende <code>pattern-relatorios-aggregations</code>).</li>
+  <li><strong>ADR-011 (ciclo 4):</strong> separação de responsabilidade: <code>relatorios-csv.server.ts</code> é separado de <code>relatorios.server.ts</code> (formato de export ≠ regra de negócio). Helpers reutilizáveis em futuros exports (PDF, JSON).</li>
+  <li><strong>ADR-012 (ciclo 4):</strong> export CSV via <code>action</code> (não <code>loader</code>), com <code>Cache-Control: no-store</code> (LGPD).</li>
 </ul>
 
-<h3>5.2 Logout e Middleware</h3>
-<p>Logout: <code>POST /logout</code> → 302 para <code>/login</code> com cookie expirado (<code>Max-Age=0</code>).</p>
-<p>Middleware em <code>app/routes/app/_middleware.tsx</code>: anônimo em rota privada → 302 para <code>/login?next=…</code>. Autenticado → injeta <code>{ user }</code> em <code>context</code>.</p>
-
-<h3>5.3 Seed admin (idempotente)</h3>
-<p>
-Localização: <code>prisma/seed.ts</code>. Idempotência via <code>upsert</code> no <code>email</code> do Admin. Cria o <code>Caixa Geral</code> (ciclo 2) com <code>upsert</code> por <code>nome</code>.
-</p>
-
-<script type="application/json" data-spec-section="5">
-{"login":{"request":"form-data email + senha","validation":"zod (.strict())","success":"302 → /app + Set-Cookie sid httpOnly","fail":"401 + formError (não diferencia email inexistente de senha errada)","log":"safeLog (sem PII, sem valorCentavos)"},"middleware":{"localizacao":"app/routes/app/_middleware.tsx","anonimo":"302 → /login?next=...","autenticado":"injeta { user } em context"},"seed":{"localizacao":"prisma/seed.ts","idempotencia":"upsert por email","cria_caixa_geral":"upsert por nome (ciclo 2)"}}
+<script type="application/json" data-spec-section="4">
+{"arquitetura":"Monolito modular React Router 7 + Prisma 7 + SQLite + Tailwind 4","regras":["routes importa lib/db","lib importa db","db importa PrismaClient","components recebe dados via props","*.server.ts para codigo server-only","soma em Int cents (nunca Float)","filtros dataCompetencia semi-abertos [gte, lt)"],"adrs_ciclo_4":[{"id":"ADR-008","titulo":"Services read-only","regra":"assertCanSeeRelatorios → assertPeriodoValido → groupBy/findMany (sem $transaction de escrita)"},{"id":"ADR-009","titulo":"Int cents sempre","regra":"soma em Int, formatBRLFromCents na borda UI"},{"id":"ADR-010","titulo":"Filtros semi-abertos","regra":"dataCompetencia: { gte, lt } (nunca lte)"},{"id":"ADR-011","titulo":"SRP CSV","regra":"relatorios-csv.server.ts separado de relatorios.server.ts"},{"id":"ADR-012","titulo":"Export via action + no-store","regra":"action (nao loader) + Cache-Control: no-store"}]}
 </script>
 
-<h2 id="membros">6. Fluxo de Membros (user stories)</h2>
+<h2 id="endpoints">5. Contratos de API (5 rotas + 1 action)</h2>
 
-<p>6 user stories derivadas do PRD §2, cada uma com critérios de aceite verificáveis. Numeração <code>US-*</code> segue prefixo do módulo.</p>
+<p>Todas as rotas vivem em <code>app/routes/app/financeiro/relatorios/**</code> e seguem o padrão RR7 (loader/action em <code>app/routes/**</code>). Nenhuma rota <code>app/api/**</code> nova (decisão §6.4).</p>
 
-<h3>US-AUTH-001 — Login com email e senha</h3>
-<ul>
-  <li><strong>Acceptance:</strong> POST <code>/login</code> com credenciais válidas → 302 + cookie httpOnly. Senha incorreta → 401. TTL 7d sliding, teto 30d abs.</li>
-</ul>
-
-<h3>US-AUTH-002 — Logout invalida a sessão</h3>
-<ul>
-  <li><strong>Acceptance:</strong> POST <code>/logout</code> remove registro <code>Session</code> + limpa cookie. Requisições subsequentes com mesmo <code>sid</code> → 302 <code>/login</code>.</li>
-</ul>
-
-<h3>US-MEM-001 — Cadastrar visitante gera alerta (RN-MEM-05)</h3>
-<ul>
-  <li><strong>Acceptance:</strong> POST <code>/app/membros</code> com <code>tipo: "VISITANTE"</code> → 302 para <code>/app/membros/:id</code>. Atomically, um <code>Alerta</code> é criado para o responsável. Se alerta falhar, visitante NÃO é persistido (rollback).</li>
-</ul>
-
-<h3>US-MEM-002 — Vincular 12 discípulos (RN-MEM-04)</h3>
-<ul>
-  <li><strong>Acceptance:</strong> 1º ao 12º discípulo → OK. 13º → 422 com mensagem clara. Auto-vínculo → 400. Loop A→B→A → 422.</li>
-</ul>
-
-<h3>US-MEM-003 — Listar membros com filtros</h3>
-<ul>
-  <li><strong>Acceptance:</strong> GET <code>/app/membros?tipo=VISITANTE&amp;q=maria</code> → apenas visitantes com nome contendo "maria". Para DISCIPULADOR, escopo é automaticamente os discípulos. Paginação <code>?page=2&amp;pageSize=25</code>. Payload NUNCA inclui <code>senhaHash</code>.</li>
-</ul>
-
-<h3>US-MEM-004 — Admin configura acolhimento (RN-MEM-05)</h3>
-<ul>
-  <li><strong>Acceptance:</strong> GET <code>/app/config/acolhimento</code> (lê, todos). PUT só Admin. Payload <code>{ responsavelVisitanteTipo, responsavelId }</code>. Próximo visitante gera alerta para o novo responsável.</li>
-</ul>
-
-<h3>US-MEM-005 — Aba "Fidelidade Financeira" bloqueada (RN-MEM-03)</h3>
-<ul>
-  <li><strong>Acceptance:</strong> UI: aba NÃO aparece para SECRETARIO/DISCIPULADOR/LIDER_MINISTERIO. URL <code>?tab=fidelidade</code> direta com perfil inadequado → 403. Service <code>getDizimosByMembro</code> lança <code>ForbiddenError</code>. <strong>3 caminhos cobertos por E2E.</strong></li>
-</ul>
-
-<script type="application/json" data-spec-section="6">
-{"user_stories":[{"id":"US-AUTH-001","titulo":"Login","criterio_chave":"TTL 7d sliding + 401 em falha"},{"id":"US-AUTH-002","titulo":"Logout","criterio_chave":"sessão removida + cookie expirado"},{"id":"US-MEM-001","titulo":"Visitante + alerta","criterio_chave":"transação atômica visitante + alerta"},{"id":"US-MEM-002","titulo":"12 discípulos","criterio_chave":"13º bloqueia, anti-loop, anti-self"},{"id":"US-MEM-003","titulo":"Lista com filtros","criterio_chave":"filtros + paginação + sem senhaHash"},{"id":"US-MEM-004","titulo":"Acolhimento","criterio_chave":"PUT só Admin (RN-MEM-05)"},{"id":"US-MEM-005","titulo":"Fidelidade bloqueada","criterio_chave":"3 camadas + E2E bypass URL"}]}
-</script>
-
-<h2 id="rbac">7. RBAC (defense in depth)</h2>
-
-<p>Toda decisão de acesso passa por <strong>3 camadas independentes</strong> (RAG <code>security-rbac-matrix.md</code>).</p>
-
-<table>
-  <thead><tr><th>Camada</th><th>Onde</th><th>O que verifica</th><th>Falha →</th></tr></thead>
-  <tbody>
-    <tr><td><strong>1. UI</strong></td><td><code>app/components/**</code></td><td>Render condicional por <code>user.cargo</code></td><td>Esconde controle (UX, não segurança)</td></tr>
-    <tr><td><strong>2. Loader/Action</strong></td><td><code>app/routes/**/loader.ts</code>, <code>action.ts</code></td><td><code>assertCan(user, action, resource)</code> antes de I/O</td><td>Lança <code>Response(403)</code></td></tr>
-    <tr><td><strong>3. Service</strong></td><td><code>app/lib/**.server.ts</code></td><td><code>assertCanSeeFinancials</code> revalida</td><td>Lança <code>ForbiddenError</code></td></tr>
-  </tbody>
-</table>
-
-<h3>7.1 Helpers canônicos em <code>app/lib/rbac.server.ts</code></h3>
-
-<p>Helpers principais: <code>assertCanSeeFinancials</code>, <code>assertCanWriteMembers</code>, <code>assertIsAdmin</code>, <code>assertCanManageConfiguracaoGeral</code>, <code>assertCanManageMinisterios</code>. Helper <strong>proposto no ciclo 2</strong>: <code>assertCanManageCaixa</code> (ADMIN, PASTOR, FINANCEIRO).</p>
-
-<h3>7.2 Matriz RBAC MVP (resumo)</h3>
-
-<table>
-  <thead><tr><th>Perfil \ Operação</th><th>Membros CRUD</th><th>Vê Dízimos (RN-MEM-03)</th><th>Vincula Discípulo</th><th>Recebe Alerta</th></tr></thead>
-  <tbody>
-    <tr><td><code>ADMIN</code></td><td>✅ Total</td><td>✅</td><td>✅</td><td>✅</td></tr>
-    <tr><td><code>PASTOR</code></td><td>✅ Total</td><td>✅</td><td>✅</td><td>✅</td></tr>
-    <tr><td><code>SECRETARIO</code></td><td>✅ Total</td><td>❌ BLOQUEADO</td><td>✅</td><td>✅</td></tr>
-    <tr><td><code>DISCIPULADOR</code></td><td>✅ (escopo)</td><td>❌ BLOQUEADO</td><td>✅</td><td>✅</td></tr>
-    <tr><td><code>LIDER_MINISTERIO</code></td><td>✅ (escopo)</td><td>❌ BLOQUEADO</td><td>✅ (limitado)</td><td>✅</td></tr>
-    <tr><td><code>FINANCEIRO</code></td><td>✅ Total</td><td>✅</td><td>✅</td><td>✅</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-spec-section="7">
-{"rbac":{"camadas":[{"id":1,"nome":"UI","verifica":"render condicional"},{"id":2,"nome":"Loader/Action","verifica":"assertCan* antes de I/O"},{"id":3,"nome":"Service","verifica":"revalida com assertCan*"}]},"helpers_canonicos":["assertCanSeeFinancials","assertCanWriteMembers","assertIsAdmin","assertCanManageConfiguracaoGeral","assertCanManageMinisterios","assertCanManageCaixa (proposto ciclo 2)"]}
-</script>
-
-<h2 id="privacidade">8. Privacidade e filtro de payload</h2>
-
-<h3>8.1 O que <strong>nunca</strong> é persistido</h3>
-<ul>
-  <li>CPF, RG, CNPJ, título de eleitor, PIS, cartão SUS (RN-MEM-02).</li>
-  <li>Dados fiscais, salário, capacidade financeira.</li>
-  <li>Geolocalização, fingerprinting, analytics de terceiros.</li>
-</ul>
-
-<h3>8.2 O que <strong>nunca</strong> é retornado em API / loader</h3>
-<ul>
-  <li><code>Membro.senhaHash</code> — sempre omitido via <code>select</code> explícito.</li>
-  <li><code>Lancamento.valorCentavos</code> para perfis sem permissão (camada 3 + UI).</li>
-  <li>Endereço completo para perfis que não precisam.</li>
-</ul>
-
-<h3>8.3 Logger seguro (LGPD art. 18, 31, 37)</h3>
-<p><code>safeLog</code> com allowlist: <code>userId, action, resource, result, timestamp, ip</code>. <strong>Proibido em logs:</strong> <code>senha</code>, <code>Membro.email</code>, <code>Membro.telefone</code>, <code>Membro.endereço</code>, <code>Lancamento.valorCentavos</code>.</p>
-
-<h3>8.4 Checklist OWASP Top 10 (avaliação do <code>security</code>)</h3>
-
-<table>
-  <thead><tr><th>ID</th><th>Risco</th><th>Status MVP</th></tr></thead>
-  <tbody>
-    <tr><td>A01</td><td>Broken Access Control</td><td><span class="badge good">Mitigado</span> (RBAC 3 camadas)</td></tr>
-    <tr><td>A02</td><td>Cryptographic Failures</td><td><span class="badge good">Mitigado</span> (bcrypt + httpOnly + sem CPF)</td></tr>
-    <tr><td>A03</td><td>Injection</td><td><span class="badge good">Mitigado</span> (Prisma + Zod)</td></tr>
-    <tr><td>A04</td><td>Insecure Design</td><td><span class="badge good">Mitigado</span> (defense in depth + ADRs)</td></tr>
-    <tr><td>A05</td><td>Security Misconfiguration</td><td><span class="badge good">Mitigado</span> (sem debug em prod)</td></tr>
-    <tr><td>A06</td><td>Vulnerable Components</td><td><span class="badge warn">A validar</span> (pnpm audit)</td></tr>
-    <tr><td>A07</td><td>Auth Failures</td><td><span class="badge warn">A confirmar</span> (TTL + sliding)</td></tr>
-    <tr><td>A08</td><td>Data Integrity</td><td><span class="badge good">Mitigado</span> (migrations + $transaction)</td></tr>
-    <tr><td>A09</td><td>Logging Failures</td><td><span class="badge good">Mitigado</span> (safeLog + allowlist)</td></tr>
-    <tr><td>A10</td><td>SSRF</td><td><span class="badge good">N/A MVP</span> (sem gateway)</td></tr>
-  </tbody>
-</table>
-
-<h3>8.5 LGPD aplicada ao Financeiro (ciclo 2)</h3>
-<ul>
-  <li><strong>Art. 6° (necessidade):</strong> apenas <code>nome</code> e <code>valorCentavos</code> em recibo de dízimo (RN-MEM-02).</li>
-  <li><strong>Art. 18 (direitos do titular):</strong> anonimização de dízimo órfão (<code>SetNull</code> em <code>Lancamento.membro</code>).</li>
-  <li><strong>Art. 31 (segurança):</strong> trava de saldo no service, logs sem PII, RBAC em 3 camadas.</li>
-  <li><strong>Art. 37 (auditoria de leitura):</strong> <strong>backlog</strong> (não ciclo 2). Sem registro de quem viu o quê.</li>
-  <li><strong>Art. 46 (responsabilidade):</strong> <code>safeLog</code> estruturado, sem <code>valorCentavos</code>.</li>
-  <li><strong>Art. 48 (comunicação de incidente):</strong> processo manual (Admin notifica).</li>
-</ul>
-
-<script type="application/json" data-spec-section="8">
-{"privacidade":{"nao_persiste":["CPF","RG","CNPJ","titulo_eleitor","PIS","cartao_SUS","dados_fiscais","geolocalizacao","fingerprinting"],"nao_retorna":["senhaHash","valorCentavos para perfis sem permissao","endereco completo para DISCIPULADOR"],"logger":"safeLog com allowlist userId/action/resource/result/timestamp/ip","proibido_em_log":["senha","email","telefone","endereco","valorCentavos"]},"lgpd_artigos":{"6":"necessidade (só nome+valorCentavos)","18":"anonimizacao dízimo orfao","31":"seguranca (trava+RBAC+logs)","37":"auditoria leitura (backlog)","46":"responsabilidade (safeLog)","48":"comunicacao incidente (manual)"},"owasp":{"A01":"mitigado","A02":"mitigado","A03":"mitigado","A04":"mitigado","A05":"mitigado","A06":"a_validar","A07":"a_confirmar","A08":"mitigado","A09":"mitigado","A10":"N/A MVP"}}
-</script>
-
-<h2 id="validacao">9. Validação de payload</h2>
-
-<h3>9.1 Padrão de uso (Zod)</h3>
-<ul>
-  <li>Schemas em <code>app/lib/schemas/*.ts</code> (um arquivo por domínio).</li>
-  <li>Exporta <code>Schema</code> (Zod) + <code>Input</code> (<code>z.infer&lt;typeof Schema&gt;</code>).</li>
-  <li>Action consome com <code>Schema.safeParse()</code>; em falha, retorna <code>{ fieldErrors, formErrors }</code>.</li>
-  <li>Loader <strong>não</strong> valida (só lê). Validation é da borda de input (form → action).</li>
-  <li><strong>Sempre</strong> <code>.strict()</code> em input externo (rejeita campos extras).</li>
-</ul>
-
-<h3>9.2 Mensagens de erro padronizadas</h3>
-
-<table>
-  <thead><tr><th>Status</th><th>Quando</th><th>Resposta</th></tr></thead>
-  <tbody>
-    <tr><td><code>400 Bad Request</code></td><td>Payload malformado (JSON inválido, tipo errado)</td><td><code>{ formError: "Requisição inválida." }</code></td></tr>
-    <tr><td><code>401 Unauthorized</code></td><td>Sem sessão ou sessão inválida</td><td>302 <code>/login?next=...</code></td></tr>
-    <tr><td><code>403 Forbidden</code></td><td>Autenticado, mas sem permissão</td><td><code>{ formError: "Você não tem permissão..." }</code></td></tr>
-    <tr><td><code>404 Not Found</code></td><td>Recurso inexistente</td><td><code>{ formError: "... não encontrado." }</code></td></tr>
-    <tr><td><code>409 Conflict</code></td><td>Violação de regra de negócio (trava 12, saldo)</td><td><code>{ formError: "..." }</code></td></tr>
-    <tr><td><code>422 Unprocessable Entity</code></td><td>Validação semântica falhou</td><td><code>{ fieldErrors: { ... } }</code></td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-spec-section="9">
-{"validacao":{"lib":"zod","padrao":[".strict() em input externo","schemas em app/lib/schemas/*.ts","loader nao valida","action usa safeParse()"],"erros":{"400":"Payload malformado","401":"Sessao invalida","403":"Sem permissao","404":"Nao encontrado","409":"Violacao de RN","422":"Validacao semantica"}}}
-</script>
-
-<h2 id="endpoints">10. Endpoints do MVP (contratos)</h2>
-
-<p>Endpoints do MVP (Auth + Membros + Alertas + Acolhimento). Os endpoints do Módulo Financeiro estão no <a href="#c2-endpoints">Apêndice D.4</a>.</p>
-
+<h3>5.1 Resumo dos endpoints</h3>
 <table class="endpoint-table">
   <thead><tr><th>Método</th><th>Path</th><th>Permissão</th><th>Erros</th></tr></thead>
   <tbody>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/login</code></td><td>Anônimo</td><td>—</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/login</code></td><td>Anônimo</td><td>401, 422</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/logout</code></td><td>Autenticado</td><td>—</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app</code></td><td>Autenticado</td><td>401</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/membros</code></td><td>Autenticado (RBAC fina)</td><td>401, 403</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/membros</code></td><td>Autenticado (RN-MEM-01)</td><td>401, 422</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/membros/:id</code></td><td>Autenticado (RBAC fina)</td><td>401, 403, 404</td></tr>
-    <tr><td><span class="badge method-PUT">PUT</span></td><td class="path"><code>/app/membros/:id</code></td><td>Autenticado (RN-MEM-01)</td><td>401, 403, 404, 422</td></tr>
-    <tr><td><span class="badge method-PATCH">PATCH</span></td><td class="path"><code>/app/membros/:id/tipo</code></td><td>Autenticado (RN-MEM-06)</td><td>401, 403, 404, 422</td></tr>
-    <tr><td><span class="badge method-DELETE">DELETE</span></td><td class="path"><code>/app/membros/:id</code></td><td>Admin / Pastor</td><td>401, 403, 404, 409</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/membros/:id/discipulador</code></td><td>Autenticado (RN-MEM-04)</td><td>401, 422 (auto, 13, loop)</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/alertas</code></td><td>Autenticado (escopo: próprios)</td><td>401</td></tr>
-    <tr><td><span class="badge method-PATCH">PATCH</span></td><td class="path"><code>/app/alertas/:id/lido</code></td><td>Próprio destinatário</td><td>401, 403, 404</td></tr>
-    <tr><td><span class="badge method-PATCH">PATCH</span></td><td class="path"><code>/app/alertas/:id/resolver</code></td><td>Próprio destinatário</td><td>401, 403, 404</td></tr>
-    <tr><td><span class="badge method-PUT">PUT</span></td><td class="path"><code>/app/config/acolhimento</code></td><td><strong>Admin</strong> (RN-MEM-05)</td><td>401, 403, 404, 422</td></tr>
+    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/relatorios</code></td><td><code>assertCanSeeRelatorios</code></td><td>401, 403</td></tr>
+    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/relatorios/dre</code></td><td><code>assertCanSeeRelatorios</code></td><td>400, 401, 403</td></tr>
+    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/relatorios/balancete</code></td><td><code>assertCanSeeRelatorios</code></td><td>400, 401, 403</td></tr>
+    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/relatorios/fluxo-caixa</code></td><td><code>assertCanSeeRelatorios</code></td><td>400, 401, 403</td></tr>
+    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/relatorios/customizado</code></td><td><code>assertCanSeeRelatorios</code></td><td>400, 401, 403, 422</td></tr>
+    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/relatorios/customizado?export=csv&amp;...</code></td><td><code>assertCanSeeRelatorios</code></td><td>400, 401, 403, 422, 500</td></tr>
+  </tbody>
+</table>
+
+<h3>5.2 EP-001 — DRE</h3>
+<ul>
+  <li><strong>Método:</strong> <code>GET</code></li>
+  <li><strong>Path:</strong> <code>/app/financeiro/relatorios/dre</code></li>
+  <li><strong>Auth:</strong> session cookie httpOnly (ciclo 1).</li>
+  <li><strong>RBAC:</strong> <code>RELATORIOS_CARGOS = ["ADMIN","PASTOR","FINANCEIRO"]</code>. SECRETARIO → 403.</li>
+  <li><strong>Rate limit:</strong> 60 req/min/user (herdado ciclo 1).</li>
+  <li><strong>Query params (Zod <code>RelatorioPeriodoSchema</code>):</strong>
+    <ul>
+      <li><code>inicio</code>: <code>z.coerce.date()</code> (ISO date <code>YYYY-MM-DD</code>). Opcional (default: 1º dia do mês corrente).</li>
+      <li><code>fim</code>: <code>z.coerce.date()</code>. Opcional (default: 1º dia do próximo mês).</li>
+    </ul>
+  </li>
+  <li><strong>Response 200 — DREData:</strong>
+    <pre><code>{
+  periodo: { inicio: "2026-06-01T00:00:00.000Z", fim: "2026-07-01T00:00:00.000Z" },
+  totalEntradasCentavos: 1250000,
+  totalSaidasCentavos: 875400,
+  resultadoLiquidoCentavos: 374600,
+  entradasPorCategoria: [
+    { categoria: "DIZIMO", totalCentavos: 800000, transacoes: 12, percentual: 64.00 },
+    { categoria: "OFERTA", totalCentavos: 350000, transacoes: 8, percentual: 28.00 },
+    { categoria: "CAMPANHA", totalCentavos: 100000, transacoes: 2, percentual: 8.00 }
+  ],
+  saidasPorCategoria: [
+    { categoria: "DESPESA_OPERACIONAL", totalCentavos: 600000, transacoes: 5, percentual: 68.55 },
+    { categoria: "MANUTENCAO", totalCentavos: 200400, transacoes: 1, percentual: 22.90 },
+    { categoria: "COMPRA_ESTOQUE", totalCentavos: 75000, transacoes: 2, percentual: 8.55 }
+  ]
+}</code></pre>
+  </li>
+  <li><strong>Erros:</strong>
+    <ul>
+      <li><code>400</code> Período inválido (<code>inicio &gt;= fim</code> ou data inválida).</li>
+      <li><code>401</code> Anônimo.</li>
+      <li><code>403</code> SECRETARIO / DISCIPULADOR / LIDER_MINISTERIO.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>5.3 EP-002 — Balancete Mensal</h3>
+<ul>
+  <li><strong>Método:</strong> <code>GET</code></li>
+  <li><strong>Path:</strong> <code>/app/financeiro/relatorios/balancete</code></li>
+  <li><strong>RBAC:</strong> <code>RELATORIOS_CARGOS</code>.</li>
+  <li><strong>Query params (Zod <code>BalanceteMesSchema</code>):</strong>
+    <ul>
+      <li><code>ano</code>: <code>z.coerce.number().int().min(2000).max(2100)</code>. Opcional (default: ano corrente).</li>
+      <li><code>mes</code>: <code>z.coerce.number().int().min(1).max(12)</code>. Opcional (default: mês corrente).</li>
+    </ul>
+  </li>
+  <li><strong>Response 200 — BalanceteData:</strong>
+    <pre><code>{
+  periodo: { ano: 2026, mes: 6, inicio: "2026-06-01T00:00:00.000Z", fim: "2026-07-01T00:00:00.000Z" },
+  kpis: {
+    saldoAnteriorCentavos: 500000,
+    totalEntradasCentavos: 1250000,
+    totalSaidasCentavos: 875400,
+    saldoAtualCentavos: 874600
+  },
+  resumoPorCategoria: [
+    { categoria: "DIZIMO", entradasCentavos: 800000, saidasCentavos: 0, saldoCentavos: 800000 },
+    { categoria: "DESPESA_OPERACIONAL", entradasCentavos: 0, saidasCentavos: 600000, saldoCentavos: -600000 }
+  ]
+}</code></pre>
+  </li>
+  <li><strong>Erros:</strong> 400 (ano/mes inválido), 401, 403.</li>
+</ul>
+
+<h3>5.4 EP-003 — Fluxo de Caixa</h3>
+<ul>
+  <li><strong>Método:</strong> <code>GET</code></li>
+  <li><strong>Path:</strong> <code>/app/financeiro/relatorios/fluxo-caixa</code></li>
+  <li><strong>RBAC:</strong> <code>RELATORIOS_CARGOS</code>.</li>
+  <li><strong>Query params (Zod <code>FluxoCaixaPeriodoSchema</code>):</strong>
+    <ul>
+      <li><code>inicio</code>: <code>z.coerce.date()</code>. Opcional (default: 1º dia do ano corrente).</li>
+      <li><code>fim</code>: <code>z.coerce.date()</code>. Opcional (default: 1º dia do próximo ano).</li>
+      <li>UI limita a 24 meses (decisão de performance).</li>
+    </ul>
+  </li>
+  <li><strong>Response 200 — FluxoCaixaData:</strong>
+    <pre><code>{
+  periodo: { inicio: "2026-01-01T00:00:00.000Z", fim: "2027-01-01T00:00:00.000Z" },
+  kpis: {
+    totalEntradasCentavos: 12500000,
+    totalSaidasCentavos: 9875400,
+    saldoAcumuladoCentavos: 2624600,
+    contasAPagarCentavos: null // placeholder
+  },
+  serie: [
+    { mes: "2026-01", entradasCentavos: 1100000, saidasCentavos: 800000, saldoCentavos: 300000 },
+    { mes: "2026-02", entradasCentavos: 950000, saidasCentavos: 750000, saldoCentavos: 500000 }
+  ]
+}</code></pre>
+  </li>
+  <li><strong>Erros:</strong> 400, 401, 403.</li>
+</ul>
+
+<h3>5.5 EP-004 — Relatório Customizado</h3>
+<ul>
+  <li><strong>Método:</strong> <code>GET</code></li>
+  <li><strong>Path:</strong> <code>/app/financeiro/relatorios/customizado</code></li>
+  <li><strong>RBAC:</strong> <code>RELATORIOS_CARGOS</code>.</li>
+  <li><strong>Query params (Zod <code>RelatorioCustomizadoFiltrosSchema</code>, strict):</strong>
+    <ul>
+      <li><code>inicio</code>: <code>z.coerce.date()</code>. Opcional (default: 1º dia do mês corrente).</li>
+      <li><code>fim</code>: <code>z.coerce.date()</code>. Opcional (default: 1º dia do próximo mês).</li>
+      <li><code>tipo</code>: <code>z.enum(["ENTRADA","SAIDA"])</code>. Opcional.</li>
+      <li><code>categoria</code>: <code>z.enum(["DIZIMO","OFERTA","CAMPANHA","DESPESA_OPERACIONAL","COMPRA_ESTOQUE","MANUTENCAO","TRANSFERENCIA"])</code>. Opcional.</li>
+      <li><code>membroId</code>: <code>z.string().uuid()</code>. Opcional.</li>
+      <li><code>caixaId</code>: <code>z.string().uuid()</code>. Opcional.</li>
+      <li><code>page</code>: <code>z.coerce.number().int().min(1).max(1000)</code>. Opcional (default: 1).</li>
+      <li><code>pageSize</code>: <code>z.coerce.number().int().min(1).max(200)</code>. Opcional (default: 50).</li>
+      <li>Status: <strong>NÃO</strong> implementado (placeholder §5.7).</li>
+    </ul>
+  </li>
+  <li><strong>Response 200 — RelatorioCustomizadoData:</strong>
+    <pre><code>{
+  filtros: { ... },
+  kpis: { totalEntradasCentavos: 1250000, totalSaidasCentavos: 875400, saldoConsolidadoCentavos: 374600 },
+  lancamentos: [
+    { id, dataCompetencia, descricao, categoria, tipo, caixa: { id, nome }, membro: { id, nome } | null, valorCentavos, valorFormatado }
+  ],
+  paginacao: { page: 1, pageSize: 50, totalItens: 1234, totalPaginas: 25 }
+}</code></pre>
+  </li>
+  <li><strong>Erros:</strong> 400, 401, 403, 422 (Zod strict).</li>
+</ul>
+
+<h3>5.6 EP-005 — Export CSV</h3>
+<ul>
+  <li><strong>Método:</strong> <code>GET</code> (action route, mesmo padrão RR7).</li>
+  <li><strong>Path:</strong> <code>/app/financeiro/relatorios/customizado?export=csv&amp;...</code></li>
+  <li><strong>RBAC:</strong> <code>RELATORIOS_CARGOS</code>.</li>
+  <li><strong>Query params:</strong> mesmos do EP-004 + <code>export=csv</code>.</li>
+  <li><strong>Response 200 — text/csv:</strong>
+    <pre><code>Data;Descricao;Categoria;Tipo;Caixa;Valor (R$);Membro
+2026-06-15;Dízimo mensal;OFERTA;ENTRADA;Caixa Geral;500.00;Maria Silva
+2026-06-15;Dízimo ""Maria"" (recorrente);DIZIMO;ENTRADA;Caixa Geral;350.00;Maria Silva</code></pre>
+  </li>
+  <li><strong>Headers obrigatórios:</strong>
+    <ul>
+      <li><code>Content-Type: text/csv; charset=utf-8</code></li>
+      <li><code>Content-Disposition: attachment; filename="igreja-conect-relatorio-YYYY-MM-DD.csv"</code></li>
+      <li><code>Cache-Control: no-store</code> (LGPD)</li>
+    </ul>
+  </li>
+  <li><strong>Erros:</strong> 400, 401, 403, 422, 500 (geração).</li>
+</ul>
+
+<h3>5.7 Detecção de prompt injection</h3>
+<p>Os 5 endpoints tratam <strong>todos os inputs</strong> (query params) como DADOS. Mesmo padrão do ciclo 1. Zod <code>.strict()</code> rejeita campos extras. Descrições textuais em CSV passam por <code>escapeCsvField</code> (RFC 4180) que previne CSV injection.</p>
+
+<script type="application/json" data-spec-section="5">
+{"endpoints":[
+{"id":"EP-001","metodo":"GET","path":"/app/financeiro/relatorios","rbac":"assertCanSeeRelatorios","rateLimit":"60/min/user","querySchema":"RelatorioPeriodoSchema (Zod)","responseSchema":"DREData (periodo + totais + listas por categoria)","erros":[400,401,403]},
+{"id":"EP-002","metodo":"GET","path":"/app/financeiro/relatorios/balancete","rbac":"assertCanSeeRelatorios","querySchema":"BalanceteMesSchema","responseSchema":"BalanceteData (kpis + resumoPorCategoria)","erros":[400,401,403]},
+{"id":"EP-003","metodo":"GET","path":"/app/financeiro/relatorios/fluxo-caixa","rbac":"assertCanSeeRelatorios","querySchema":"FluxoCaixaPeriodoSchema (max 24 meses UI)","responseSchema":"FluxoCaixaData (kpis + serie temporal)","erros":[400,401,403]},
+{"id":"EP-004","metodo":"GET","path":"/app/financeiro/relatorios/customizado","rbac":"assertCanSeeRelatorios","querySchema":"RelatorioCustomizadoFiltrosSchema (Zod strict)","responseSchema":"RelatorioCustomizadoData (filtros + kpis + lancamentos[] + paginacao)","erros":[400,401,403,422]},
+{"id":"EP-005","metodo":"GET","path":"/app/financeiro/relatorios/customizado?export=csv","rbac":"assertCanSeeRelatorios","querySchema":"RelatorioCustomizadoFiltrosSchema + export=csv","responseSchema":"text/csv (RFC 4180 + BOM + ; + CRLF)","headers_obrigatorios":["Content-Type: text/csv; charset=utf-8","Content-Disposition: attachment","Cache-Control: no-store"],"erros":[400,401,403,422,500]}],"defesa_prompt_injection":"Zod .strict() + escapeCsvField (RFC 4180) + 3 camadas RBAC"}
+</script>
+
+<h2 id="regras-negocio">6. Regras de negócio (extensão read-only)</h2>
+
+<p>As 5 RNs do ciclo 2 (<code>RN-FIN-01</code> a <code>RN-FIN-05</code>) são suficientes. O ciclo 4 <strong>lê</strong> o que já foi escrito. Novas regras locais do ciclo 4 são apenas <strong>leitura</strong> + RBAC + performance. Cross-refs: <a href="docs/REGRAS_DE_NEGOCIO.md"><code>docs/REGRAS_DE_NEGOCIO.md</code></a>.</p>
+
+<table>
+  <thead><tr><th>Código</th><th>Título</th><th>Resumo</th><th>Test reference</th></tr></thead>
+  <tbody>
+    <tr><td><code>RN-REL-01</code></td><td>RBAC fina Relatórios</td><td>Apenas <code>RELATORIOS_CARGOS = ["ADMIN","PASTOR","FINANCEIRO"]</code>. SECRETARIO <strong>BLOQUEADO</strong> em todas as 5 rotas (decisão §5.3).</td><td>E2E <code>relatorios-rbac-secretario-bloqueado.spec.ts</code></td></tr>
+    <tr><td><code>RN-REL-02</code></td><td>Defesa em 3 camadas</td><td>UI <code>&lt;Can&gt;</code> + loader <code>assertCanSeeRelatorios</code> + service <code>assertCanSeeRelatorios</code> PRIMEIRO. Padrão RAG <code>pattern-3-layer-rbac</code>.</td><td>Unit + E2E</td></tr>
+    <tr><td><code>RN-REL-03</code></td><td>Soma em <code>Int</code> cents</td><td>Toda agregação em <code>Int</code>. Formatação BRL só na borda UI. Estende <code>convention-monetary-values</code>.</td><td>Unit <code>relatorios.server.test.ts</code></td></tr>
+    <tr><td><code>RN-REL-04</code></td><td>Filtro de data semi-aberto</td><td><code>where.dataCompetencia: { gte, lt }</code>. <code>lt</code> (não <code>lte</code>) garante boundary correto entre meses consecutivos.</td><td>Unit</td></tr>
+    <tr><td><code>RN-REL-05</code></td><td>Caixa arquivado preservado em agregações</td><td>Lançamentos de caixas com <code>ativo = false</code> (quando o campo for aprovado em ciclo futuro) <strong>continuam</strong> aparecendo no agregado. Filtro <code>ativo</code> aplicado APENAS para UI/listagem.</td><td>Unit <code>it('includes archived caixa in aggregate')</code></td></tr>
+    <tr><td><code>RN-REL-06</code></td><td>CSV sob RFC 4180 + BOM</td><td>UTF-8 com BOM (<code>EF BB BF</code>), separador <code>;</code>, CRLF, escape <code>""</code> para aspas internas, valor numérico puro (<code>1234.56</code>), SAÍDA com sinal negativo, <code>Cache-Control: no-store</code>.</td><td>Unit <code>relatorios-csv.server.test.ts</code> (10 testes)</td></tr>
+    <tr><td><code>RN-REL-07</code></td><td>Drill-down via query string</td><td>Link para <code>/app/financeiro/lancamentos?categoria=X&amp;periodo=...</code>. Rota pendente (§5.4) — fallback para placeholder enquanto S13 não entrega.</td><td>Unit (componente)</td></tr>
+  </tbody>
+</table>
+
+<script type="application/json" data-spec-section="6">
+{"rns_ciclo_4":[
+{"id":"RN-REL-01","titulo":"RBAC fina Relatorios","fonte":"brief §5.3","rbac":["ADMIN","PASTOR","FINANCEIRO"],"teste":"E2E bypass URL"},
+{"id":"RN-REL-02","titulo":"Defesa 3 camadas","fonte":"RAG pattern-3-layer-rbac","camadas":["UI <Can>","loader assertCanSeeRelatorios","service assertCanSeeRelatorios"],"teste":"Unit + E2E"},
+{"id":"RN-REL-03","titulo":"Soma em Int cents","fonte":"RAG convention-monetary-values","regra":"toda agregacao em Int, formatBRLFromCents na borda","teste":"Unit"},
+{"id":"RN-REL-04","titulo":"Filtro data semi-aberto","fonte":"RAG pattern-relatorios-aggregations","regra":"dataCompetencia: { gte, lt } (nunca lte)","teste":"Unit boundary"},
+{"id":"RN-REL-05","titulo":"Caixa arquivado preservado","fonte":"brief §4.1.1","regra":"lancamentos de caixa arquivado continuam em agregados","teste":"Unit"},
+{"id":"RN-REL-06","titulo":"CSV RFC 4180 + BOM","fonte":"RAG convention-relatorios-csv-export","regra":"BOM + ; + CRLF + escape + 1234.56 + no-store","teste":"10 testes Unit"},
+{"id":"RN-REL-07","titulo":"Drill-down query string","fonte":"brief §5.4","regra":"<Link> para /lancamentos?categoria=X&periodo=...","teste":"Unit componente"}
+],"rns_herdadas":["RN-FIN-01","RN-FIN-02","RN-FIN-03","RN-FIN-04","RN-FIN-05"],"nao_ha_migration":true}
+</script>
+
+<h2 id="componentes">7. Componentes / módulos</h2>
+
+<h3>7.1 <code>app/lib/relatorios.server.ts</code> (5 services read-only)</h3>
+<p>Padrão canônico: <code>assertCanSeeRelatorios → assertPeriodoValido → groupBy/findMany</code>. Sem <code>$transaction</code> de escrita. Soma em <code>Int</code> cents via <code>reduce</code>.</p>
+
+<h4>7.1.1 <code>getDRE(periodo, user)</code></h4>
+<pre><code>/**
+ * @description Agrega entradas e saidas por categoria em 1 periodo (DRE).
+ * @param {{ inicio: Date; fim: Date }} periodo - Range semi-aberto [inicio, fim).
+ * @param {SessionUser} user - Usuario autenticado.
+ * @returns {Promise&lt;DREData&gt;} DTO com totais, resultado liquido e listas por categoria.
+ * @throws {Response} 403 se user sem cargo em RELATORIOS_CARGOS.
+ * @throws {Response} 400 se periodo.inicio >= periodo.fim.
+ */
+export async function getDRE(periodo, user): Promise&lt;DREData&gt; {
+  assertCanSeeRelatorios(user);
+  assertPeriodoValido(periodo);
+
+  const [entradas, saidas] = await Promise.all([
+    prisma.lancamento.groupBy({
+      by: ["categoria"],
+      where: { dataCompetencia: { gte: periodo.inicio, lt: periodo.fim }, tipo: "ENTRADA" },
+      _sum: { valorCentavos: true }, _count: { _all: true }
+    }),
+    prisma.lancamento.groupBy({
+      by: ["categoria"],
+      where: { dataCompetencia: { gte: periodo.inicio, lt: periodo.fim }, tipo: "SAIDA" },
+      _sum: { valorCentavos: true }, _count: { _all: true }
+    })
+  ]);
+
+  const totalEntradasCentavos = entradas.reduce((acc, e) =&gt; acc + (e._sum.valorCentavos ?? 0), 0);
+  const totalSaidasCentavos = saidas.reduce((acc, s) =&gt; acc + (s._sum.valorCentavos ?? 0), 0);
+
+  return {
+    periodo,
+    totalEntradasCentavos, totalSaidasCentavos,
+    resultadoLiquidoCentavos: totalEntradasCentavos - totalSaidasCentavos,
+    entradasPorCategoria: mapCategorias(entradas, totalEntradasCentavos),
+    saidasPorCategoria: mapCategorias(saidas, totalSaidasCentavos)
+  };
+}</code></pre>
+
+<h4>7.1.2 <code>getBalanceteMensal(mesRef, user)</code></h4>
+<p>4 KPIs: Saldo Anterior (soma de lançamentos anteriores a <code>firstDayOfMonth</code>), Entradas / Saídas do mês (groupBy), Saldo Atual. Tabela "Resumo por Categoria" (Categoria | Entradas | Saídas | Saldo).</p>
+
+<h4>7.1.3 <code>getFluxoCaixa(periodo, user)</code></h4>
+<p>Série temporal com 12 pontos (1 ano default). Workaround SQLite: <code>findMany</code> + <code>Map</code> em memória (Prisma não suporta <code>strftime('%Y-%m', dataCompetencia)</code> em <code>groupBy</code>). Limite: 24 meses na UI.</p>
+
+<h4>7.1.4 <code>getRelatorioCustomizado(filtros, user)</code></h4>
+<p>Query filtrada (6 dimensões: período / tipo / categoria / membro / caixa / paginação). Status: <strong>NÃO</strong> implementado (placeholder §5.7). Zod strict no loader.</p>
+
+<h4>7.1.5 <code>exportarLancamentosCSV(filtros, user)</code></h4>
+<p>Re-exporta <code>relatorios-csv.server.ts:exportarLancamentosCSV</code> (regra de SRP, ADR-011). Camada 3: <code>assertCanSeeRelatorios</code> PRIMEIRO.</p>
+
+<h3>7.2 <code>app/lib/relatorios-csv.server.ts</code> (export CSV)</h3>
+<p>Helpers privados: <code>escapeCsvField</code> (RFC 4180 §2.6), <code>formatValorCsv</code> (centavos → <code>1234.56</code>), <code>montarCabecalhoCsv</code>. Função pública: <code>exportarLancamentosCSV(filtros, user)</code>. BOM UTF-8 (<code>EF BB BF</code>) + separador <code>;</code> + CRLF. Ver <a href=".harness/RAG/convention-relatorios-csv-export.md">RAG completo</a>.</p>
+
+<h3>7.3 <code>app/lib/relatorios-helpers.server.ts</code></h3>
+<p>Helpers internos: <code>assertPeriodoValido(periodo)</code> (lança 400 se <code>inicio &gt;= fim</code>), <code>mapCategorias(groupBy, totalCentavos)</code> (arredonda percentual para 2 casas), <code>buildWhere(filtros)</code> (constrói <code>where</code> do Prisma para Customizado).</p>
+
+<h3>7.4 <code>app/lib/rbac.server.ts</code> (estender)</h3>
+<p>Adicionar 2 exports:</p>
+<pre><code>/** @description Cargos que podem acessar /app/financeiro/relatorios/**. SECRETARIO BLOQUEADO (brief §5.3). */
+export const RELATORIOS_CARGOS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const;
+
+/**
+ * @description Lanca Response(403) se o usuario nao pode ver relatorios estruturados.
+ * @param {SessionUser} user - Usuario autenticado.
+ * @throws {Response} 403 se user.cargo nao esta em RELATORIOS_CARGOS.
+ * @example
+ *   assertCanSeeRelatorios(user); // SECRETARIO → throw Response(403)
+ */
+export function assertCanSeeRelatorios(user: SessionUser): void {
+  if (!user.cargo || !(RELATORIOS_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Acesso restrito a ADMIN/PASTOR/FINANCEIRO.", { status: 403 });
+  }
+}</code></pre>
+
+<h3>7.5 <code>app/components/FiltrosPeriodo.tsx</code> (compartilhado)</h3>
+<p>4 presets (7d / 30d / Mês corrente / Ano) + botão "Personalizado" que abre 2 <code>&lt;input type="date"&gt;</code>. Controlado via <code>useState</code>. Props: <code>{ value: { inicio, fim } | null; onChange: (periodo) =&gt; void; presets?: boolean }</code>. Reutilizado em DRE, Fluxo de Caixa e Customizado.</p>
+
+<h3>7.6 <code>app/components/KpiCard.tsx</code> (compartilhado)</h3>
+<p>Card com ícone colorido à esquerda + badge opcional (ex: "+12.5%") + valor em <code>text-2xl font-bold</code> + subtítulo. Props: <code>{ titulo, valor, cor?, icone, badge?, trend?, subtitulo? }</code>. Reutilizado em todos os 5 relatórios (economia estimada: ~120 linhas duplicadas).</p>
+
+<h3>7.7 <code>app/components/icons/FinanceIcons.tsx</code> (~25 SVGs)</h3>
+<p>Todos 24×24 viewBox, <code>stroke="currentColor"</code>, <code>strokeWidth=2</code>. Exemplos: <code>IconDRE</code> (bar_chart_4_bars), <code>IconBalancete</code> (description), <code>IconFluxoCaixa</code> (trending_up), <code>IconCustomizado</code> (tune), <code>IconKpiWallet</code>, <code>IconKpiArrowUp</code>, <code>IconKpiArrowDown</code>, <code>IconKpiBalance</code>, <code>IconExport</code>, <code>IconCalendar</code>, <code>IconRefresh</code>, <code>IconFilter</code>, <code>IconCloudDownload</code>, <code>IconChevronRight</code>, <code>IconInfo</code>, <code>IconMoreVert</code>, <code>IconPrint</code>, <code>IconHistory</code>, <code>IconCheck</code>, <code>IconWarning</code>, <code>IconVerified</code>, <code>IconAutoAwesome</code>, <code>IconShowChart</code>, <code>IconArrowDropUp</code>, <code>IconArrowDropDown</code>, <code>IconEvent</code>, <code>IconPictureAsPdf</code> (placeholder), <code>IconMail</code> (placeholder).</p>
+
+<h3>7.8 <code>app/components/Sidebar.tsx</code> (estender)</h3>
+<p>Adicionar 1 item ao array <code>MENU_ITEMS</code>:</p>
+<pre><code>{ label: "Relatorios", to: "/app/financeiro/relatorios", icon: ICON_RELATORIOS, roles: ["ADMIN", "PASTOR", "FINANCEIRO"] }</code></pre>
+<p>Ordem: após "Financeiro". SECRETARIO NÃO vê o item (Camada 1).</p>
+
+<script type="application/json" data-spec-section="7">
+{"services":[
+{"id":"getDRE","path":"app/lib/relatorios.server.ts","rns":["RN-REL-01","RN-REL-02","RN-REL-03","RN-REL-04"]},
+{"id":"getBalanceteMensal","path":"app/lib/relatorios.server.ts","rns":["RN-REL-01","RN-REL-02","RN-REL-03"]},
+{"id":"getFluxoCaixa","path":"app/lib/relatorios.server.ts","rns":["RN-REL-01","RN-REL-02","RN-REL-03"]},
+{"id":"getRelatorioCustomizado","path":"app/lib/relatorios.server.ts","rns":["RN-REL-01","RN-REL-02","RN-REL-03","RN-REL-07"]},
+{"id":"exportarLancamentosCSV","path":"app/lib/relatorios.server.ts (re-export relatorios-csv.server.ts)","rns":["RN-REL-01","RN-REL-02","RN-REL-06"]}
+],"csv_helpers":[{"id":"escapeCsvField","spec":"RFC 4180 §2.6"},{"id":"formatValorCsv","spec":"centavos -> 1234.56"},{"id":"montarCabecalhoCsv","spec":"linha 1 fixa"}],"rbac_exports":[{"id":"RELATORIOS_CARGOS","valor":["ADMIN","PASTOR","FINANCEIRO"]},{"id":"assertCanSeeRelatorios","throws":403}],"componentes":[{"id":"FiltrosPeriodo","path":"app/components/FiltrosPeriodo.tsx","presets":["7d","30d","mes","ano","personalizado"]},{"id":"KpiCard","path":"app/components/KpiCard.tsx","props":["titulo","valor","cor","icone","badge","trend","subtitulo"]},{"id":"FinanceIcons","path":"app/components/icons/FinanceIcons.tsx","quantidade":25}]}
+</script>
+
+<h2 id="seguranca">8. Segurança (OWASP Top 10 + LGPD)</h2>
+
+<h3>8.1 OWASP Top 10 (2021) aplicado ao ciclo 4</h3>
+<table>
+  <thead><tr><th>#</th><th>Categoria</th><th>Aplicação no ciclo 4</th><th>Mitigação</th></tr></thead>
+  <tbody>
+    <tr><td><strong>A01</strong></td><td>Broken Access Control</td><td>Defesa em 3 camadas. SECRETARIO bypass URL → 403.</td><td>UI <code>&lt;Can&gt;</code> + loader <code>assertCanSeeRelatorios</code> + service <code>assertCanSeeRelatorios</code>. E2E bypass URL cobre 100%.</td></tr>
+    <tr><td><strong>A02</strong></td><td>Cryptographic Failures</td><td>Sem dado sensível em payload (apenas agregados).</td><td>CSV não trafega criptografado (HSTS obrigatório em prod, fora do escopo do SPEC).</td></tr>
+    <tr><td><strong>A03</strong></td><td>Injection</td><td>SQL: Prisma prepared statements. CSV: <code>escapeCsvField</code> RFC 4180.</td><td>Prisma + RFC 4180 + Zod strict.</td></tr>
+    <tr><td><strong>A04</strong></td><td>Insecure Design</td><td>Read-only, sem mutação. Sem upload.</td><td>ADR-008 (services read-only).</td></tr>
+    <tr><td><strong>A05</strong></td><td>Security Misconfiguration</td><td><code>Cache-Control: no-store</code> em todas as respostas.</td><td>Helper <code>cacheControlNoStore</code> ou inline.</td></tr>
+    <tr><td><strong>A06</strong></td><td>Vulnerable Components</td><td>Zero deps novas (decisão §6.4).</td><td>Stack herdada dos ciclos 1–3.</td></tr>
+    <tr><td><strong>A07</strong></td><td>Auth Failures</td><td>Middleware de auth (ciclo 1) protege <code>/app/**</code>.</td><td>401 se anônimo.</td></tr>
+    <tr><td><strong>A08</strong></td><td>Software &amp; Data Integrity</td><td>Zod strict em todos os query params.</td><td><code>RelatorioPeriodoSchema</code>, <code>BalanceteMesSchema</code>, <code>FluxoCaixaPeriodoSchema</code>, <code>RelatorioCustomizadoFiltrosSchema</code>.</td></tr>
+    <tr><td><strong>A09</strong></td><td>Logging Failures</td><td><code>safeLog</code> sem PII. <code>valorCentavos</code> proibido em log.</td><td>RAG <code>lgpd-igreja-conect</code>.</td></tr>
+    <tr><td><strong>A10</strong></td><td>SSRF</td><td>Sem requests externos. Sem upload S3.</td><td>N/A.</td></tr>
+  </tbody>
+</table>
+
+<h3>8.2 LGPD (Lei 13.709/2018)</h3>
+<table>
+  <thead><tr><th>Artigo</th><th>Aplicação</th><th>Mitigação</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Art. 6°</strong> (necessidade)</td><td>SECRETARIO não precisa de relatórios consolidados.</td><td>Bloqueio em 3 camadas. <code>RELATORIOS_CARGOS</code> exclui SECRETARIO.</td></tr>
+    <tr><td><strong>Art. 7°</strong> (legítimo interesse)</td><td>Base legal: gestão financeira eclesiástica (Art. 7°, VI).</td><td>Documentado no <a href="brief-relatorios.md">brief §6.2</a>.</td></tr>
+    <tr><td><strong>Art. 18</strong> (direitos do titular)</td><td>Pedidos de acesso/eliminação aplicam-se a logs de auditoria.</td><td><code>lgpd-officer</code> audita logs estruturados.</td></tr>
+    <tr><td><strong>Art. 46</strong> (segurança)</td><td><code>valorCentavos</code>, <code>descricao</code>, <code>membro.nome</code> proibidos em log.</td><td><code>safeLog</code> com allowlist. <code>Cache-Control: no-store</code> em respostas.</td></tr>
+  </tbody>
+</table>
+
+<h3>8.3 Defesa contra Prompt Injection</h3>
+<p>O ciclo 4 herda do ciclo 1 a regra: <strong>todos os inputs são DADOS, nunca instruções</strong>. Mitigações específicas:</p>
+<ul>
+  <li><strong>Query params:</strong> Zod <code>.strict()</code> rejeita campos extras. Loader lança <code>400</code> em payload inválido.</li>
+  <li><strong>Descrições textuais em CSV:</strong> passam por <code>escapeCsvField</code> (RFC 4180 §2.6). Aspas internas viram <code>""</code>. Vírgula, ponto-e-vírgula e quebra de linha forçam aspas ao redor do campo.</li>
+  <li><strong>Logs de auditoria:</strong> <code>safeLog</code> com allowlist. <strong>Proibido</strong> em log: <code>valorCentavos</code>, <code>descricao</code>, <code>membro.nome</code>, <code>caixa.nome</code>, conteúdo de query params.</li>
+  <li><strong>UI rendering:</strong> React escapa por padrão. Sem <code>dangerouslySetInnerHTML</code>.</li>
+</ul>
+
+<h3>8.4 RBAC fina (defense in depth 3 camadas)</h3>
+<p>Padrão canônico RAG <code>pattern-3-layer-rbac</code>:</p>
+<ul>
+  <li><strong>Camada 1 (UI):</strong> <code>&lt;Can allow={['ADMIN','PASTOR','FINANCEIRO']}&gt;</code> em <code>Sidebar.tsx</code>. Item "Relatórios" some do menu para SECRETARIO.</li>
+  <li><strong>Camada 2 (Loader/Action):</strong> <code>assertCanSeeRelatorios(user)</code> ANTES de qualquer I/O em 5 loaders + 1 action.</li>
+  <li><strong>Camada 3 (Service):</strong> <code>assertCanSeeRelatorios(user)</code> PRIMEIRO em <code>app/lib/relatorios.server.ts</code> + <code>app/lib/relatorios-csv.server.ts</code>.</li>
+</ul>
+
+<script type="application/json" data-spec-section="8">
+{"owasp_top10":{"A01":"defesa 3 camadas + E2E bypass URL","A02":"HSTS prod (fora SPEC)","A03":"Prisma + RFC 4180 + Zod strict","A04":"read-only puro (ADR-008)","A05":"Cache-Control: no-store","A06":"zero deps novas","A07":"middleware auth ciclo 1","A08":"Zod strict em 4 schemas","A09":"safeLog sem PII","A10":"sem requests externos"},"lgpd":{"artigos":{"6":"necessidade - SECRETARIO bloqueado","7":"legitimo interesse gestao financeira (Art 7 VI)","18":"direitos titular - logs de auditoria","46":"seguranca - safeLog + no-store"},"proibido_em_log":["valorCentavos","descricao","membro.nome","caixa.nome","conteudo query params"],"permitido_em_log":["userId","action","resource","result","timestamp","ip"]},"defesa_prompt_injection":{"zod_strict":true,"escape_csv_field":"RFC 4180 §2.6","safe_log_allowlist":true,"react_default_escape":true,"dangerouslySetInnerHTML":"proibido"},"rbac_fina":{"camada_1":"UI <Can>","camada_2":"loader assertCanSeeRelatorios","camada_3":"service assertCanSeeRelatorios","e2e_bypass_url":"100% rotas cobertas"}}
+</script>
+
+<h2 id="testes">9. Testes (cobertura + e2eChains + crossModuleHints)</h2>
+
+<h3>9.1 Cobertura mínima</h3>
+<ul>
+  <li><strong>Global:</strong> ≥ 85% (gate do phase 5).</li>
+  <li><strong>Services de regra de negócio:</strong> 100% (todo branch): <code>app/lib/relatorios.server.ts</code>, <code>app/lib/relatorios-csv.server.ts</code>, <code>app/lib/relatorios-helpers.server.ts</code>.</li>
+  <li><strong>Componentes compartilhados:</strong> ≥ 90% (<code>FiltrosPeriodo.tsx</code>, <code>KpiCard.tsx</code>).</li>
+  <li><strong>Nenhum teste skipped</strong> sem justificativa no PR.</li>
+</ul>
+
+<h3>9.2 Frameworks</h3>
+<ul>
+  <li><strong>Unit:</strong> Vitest 4.1.8 (herdado).</li>
+  <li><strong>Integração:</strong> Vitest + <code>@testing-library/react</code> (herdado).</li>
+  <li><strong>E2E:</strong> Playwright 1.60+ via MCP <code>playwright</code>.</li>
+  <li><strong>Cobertura:</strong> <code>vitest --coverage</code> + <code>coverage-analyzer</code>.</li>
+</ul>
+
+<h3>9.3 Testes de borda (13 obrigatórios — brief §7.3)</h3>
+<table>
+  <thead><tr><th>#</th><th>Teste</th><th>Tipo</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>SECRETARIO acessando <code>/app/financeiro/relatorios</code> → 403 (Camada 2 + 3)</td><td>E2E</td></tr>
+    <tr><td>2</td><td>SECRETARIO bypass URL direta → 403 (não há fallback)</td><td>E2E</td></tr>
+    <tr><td>3</td><td>DISCIPULADOR / LIDER_MINISTERIO → 403 em todas as 5 rotas</td><td>E2E</td></tr>
+    <tr><td>4</td><td>DRE mês sem lançamentos: zeros + listas vazias (sem null)</td><td>Unit</td></tr>
+    <tr><td>5</td><td>Balancete mês sem categorias com movimento: tabela oculta + totais zerados</td><td>Unit</td></tr>
+    <tr><td>6</td><td>Customizado 0 resultados: "Nenhum lançamento encontrado" + KPIs zerados</td><td>Unit</td></tr>
+    <tr><td>7</td><td>Filtro <code>categoria=BURRO</code> → 400 (Zod strict)</td><td>Unit</td></tr>
+    <tr><td>8</td><td>Filtro <code>periodo inicio &gt; fim</code> → 400 (assertPeriodoValido)</td><td>Unit</td></tr>
+    <tr><td>9</td><td>Caixa arquivado no DRE: lançamentos continuam aparecendo</td><td>Unit</td></tr>
+    <tr><td>10</td><td>CSV 1.280 registros: &lt; 500ms</td><td>Unit (perf)</td></tr>
+    <tr><td>11</td><td>CSV escape RFC 4180: <code>"São Paulo &amp; Cia."</code></td><td>Unit</td></tr>
+    <tr><td>12</td><td>5 perfis logados simultaneamente: &lt; 2s latência (sem contenção)</td><td>Integração</td></tr>
+    <tr><td>13</td><td>CSV sem BOM → Excel pt-BR mojibake. 3 primeiros bytes <code>EF BB BF</code></td><td>Unit</td></tr>
+  </tbody>
+</table>
+
+<h3>9.4 e2eChains (3 cadeias para o <code>tester</code> agent)</h3>
+<p>Cada chain tem <code>sequence</code> (lista de endpoints) e <code>dataFlow</code> (como dados fluem entre steps).</p>
+
+<h4>9.4.1 Chain 1 — Métrica macro DRE (métrica de aceitação do ciclo)</h4>
+<pre><code>sequence:
+  - POST /login (FINANCEIRO)
+  - GET /app/financeiro/relatorios/dre (default: mes corrente)
+  - GET /app/financeiro/relatorios/dre?inicio=2026-01-01&fim=2026-04-01 (Q1)
+  - clicar em categoria "DESPESA_OPERACIONAL" (drill-down)
+dataFlow:
+  step_1: cookie sid=... httpOnly injetado
+  step_2: loader chama getDRE(mes, user) -> 2 groupBy paralelos (ENTRADA, SAIDA)
+  step_3: query Zod strict -> getDRE(Q1, user) -> mesmo service, novo periodo
+  step_4: <Link> para /app/financeiro/lancamentos?categoria=DESPESA_OPERACIONAL&periodo=...
+          (rota pendente - decisao Fase 3)</code></pre>
+
+<h4>9.4.2 Chain 2 — RBAC fina Relatórios (3 perfis)</h4>
+<pre><code>sequence:
+  - POST /login (SECRETARIO)
+  - GET /app/financeiro/relatorios -> 403 (camada 2)
+  - GET /app/financeiro/relatorios/dre -> 403
+  - GET /app/financeiro/relatorios/balancete -> 403
+  - GET /app/financeiro/relatorios/fluxo-caixa -> 403
+  - GET /app/financeiro/relatorios/customizado -> 403
+  - GET /app/financeiro/relatorios/customizado?export=csv -> 403
+  - POST /logout
+  - POST /login (FINANCEIRO)
+  - GET /app/financeiro/relatorios -> 200
+dataFlow:
+  - Camada 1: Sidebar SOME item "Relatorios" para SECRETARIO
+  - Camada 2: loader chama assertCanSeeRelatorios -> throw Response(403)
+  - Camada 3: service revalida (mesmo que Camada 2 falhe, service protege)
+  - FINANCEIRO: passes all 3 layers, renderiza Hub com 4 cards</code></pre>
+
+<h4>9.4.3 Chain 3 — Export CSV completo (RFC 4180 + BOM + Cache-Control)</h4>
+<pre><code>sequence:
+  - POST /login (FINANCEIRO)
+  - GET /app/financeiro/relatorios/customizado?inicio=2026-06-01&fim=2026-07-01&tipo=ENTRADA
+  - GET /app/financeiro/relatorios/customizado?inicio=2026-06-01&fim=2026-07-01&tipo=ENTRADA&export=csv
+dataFlow:
+  step_1: cookie sid=...
+  step_2: loader chama getRelatorioCustomizado(filtros, user) -> findMany Prisma -> tabela renderiza
+  step_3: action chama exportarLancamentosCSV(filtros, user) -> relatorios-csv.server
+          -> retorna string CSV com BOM + header + linhas + CRLF
+          -> Response com Content-Type, Content-Disposition, Cache-Control: no-store
+          -> browser faz download automatico</code></pre>
+
+<h3>9.5 crossModuleHints (dados entre módulos)</h3>
+<p>Endpoints que retornam dados consumidos por outros módulos.</p>
+<ul>
+  <li><strong>De <code>GET /app/financeiro/relatorios/dre</code> para <code>GET /app/financeiro/lancamentos</code>:</strong> clicar em categoria gera <code>&lt;Link&gt;</code> com <code>?categoria=X&amp;periodo=...</code>. <code>saidasPorCategoria[].categoria</code> é consumido pela rota de listagem (rota pendente, §5.4).</li>
+  <li><strong>De <code>GET /app/financeiro/relatorios/balancete</code> para <code>GET /app/financeiro/lancamentos</code>:</strong> clicar em linha de "Resumo por Categoria" gera <code>&lt;Link&gt;</code> com <code>?categoria=X&amp;periodo=YYYY-MM</code>.</li>
+  <li><strong>De <code>GET /app/financeiro/relatorios/customizado</code> para <code>GET /app/financeiro/lancamentos/customizado?export=csv</code>:</strong> mesmos filtros, formato de export. Filtros <code>categoria</code>, <code>tipo</code>, <code>membroId</code>, <code>caixaId</code> são consumidos pela action CSV.</li>
+  <li><strong>De <code>GET /app/financeiro/relatorios/fluxo-caixa</code> para <code>GET /app/financeiro/relatorios/balancete</code>:</strong> clicar em um mês da série temporal (futuro) pode navegar para Balancete daquele mês. <strong>Fora do escopo</strong> deste ciclo (UX simples: cada relatório é isolado).</li>
+</ul>
+
+<script type="application/json" data-spec-section="9">
+{"cobertura":{"global_min":85,"services_min":100,"componentes_min":90,"skipped_tolerado":0},"frameworks":{"unit":"vitest@4.1.8","integracao":"vitest + @testing-library/react","e2e":"playwright@1.60+ via MCP","cobertura":"vitest --coverage + coverage-analyzer"},"testes_borda_total":13,"e2eChains":[{"id":"E2E-REL-001","nome":"Metrica macro DRE","sequence":["POST /login (FINANCEIRO)","GET /app/financeiro/relatorios/dre","GET /dre?inicio=2026-01-01&fim=2026-04-01","drill-down categoria"],"dataFlow":"cookie sid -> loader getDRE -> 2 groupBy paralelos -> <Link> para /lancamentos?categoria=X"},{"id":"E2E-REL-002","nome":"RBAC fina Relatorios (3 perfis)","sequence":["POST /login (SECRETARIO)","GET /app/financeiro/relatorios (403)","GET /dre (403)","GET /balancete (403)","GET /fluxo-caixa (403)","GET /customizado (403)","GET /customizado?export=csv (403)","POST /logout","POST /login (FINANCEIRO)","GET /relatorios (200)"],"dataFlow":"Camada 1 Sidebar SOME para SECRETARIO; Camada 2 loader 403; Camada 3 service revalida; FINANCEIRO passa nas 3 camadas"},{"id":"E2E-REL-003","nome":"Export CSV completo (RFC 4180 + BOM)","sequence":["POST /login (FINANCEIRO)","GET /customizado?inicio=2026-06-01&fim=2026-07-01&tipo=ENTRADA","GET /customizado?inicio=2026-06-01&fim=2026-07-01&tipo=ENTRADA&export=csv"],"dataFlow":"cookie sid -> getRelatorioCustomizado -> action -> exportarLancamentosCSV -> BOM + header + linhas + CRLF -> Response text/csv + Cache-Control no-store"}],"crossModuleHints":[{"de":"GET /dre","para":"GET /lancamentos","campos":"saidasPorCategoria[].categoria + periodo (rota pendente §5.4)"},{"de":"GET /balancete","para":"GET /lancamentos","campos":"resumoPorCategoria[].categoria + periodo (rota pendente §5.4)"},{"de":"GET /customizado","para":"GET /customizado?export=csv","campos":"filtros (categoria, tipo, membroId, caixaId, periodo, page, pageSize)"},{"de":"GET /fluxo-caixa","para":"GET /balancete","status":"fora deste ciclo (cada relatorio isolado)"}]}
+</script>
+
+<h2 id="riscos">10. Riscos</h2>
+
+<table>
+  <thead><tr><th>#</th><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Mitigação</th></tr></thead>
+  <tbody>
+    <tr><td>R-REL-01</td><td><strong>SECRETARIO acessa relatórios via URL bypass</strong> (RN-REL-01 violada)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Defesa em 3 camadas: <code>&lt;Can&gt;</code> UI, loader 403, service 403. E2E cobre bypass URL em 5 rotas + 1 action. <code>RELATORIOS_CARGOS</code> em constante <code>as const</code>.</td></tr>
+    <tr><td>R-REL-02</td><td><strong>Bug de arredondamento monetário</strong> (Float em vez de Int)</td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td>Convenção RAG <code>convention-monetary-values</code>: <code>Int</code> cents sempre. Soma via <code>reduce</code> em <code>Int</code>. <code>formatBRLFromCents</code> só na borda. Code review recusa <code>parseFloat</code>/<code>toFixed(2)</code> em valores monetários.</td></tr>
+    <tr><td>R-REL-03</td><td><strong>CSV sem BOM gera mojibake no Excel pt-BR</strong></td><td>Média</td><td>Médio</td><td>Helper <code>exportarLancamentosCSV</code> SEMPRE prefixa <code>﻿</code>. Teste de borda #13 confere 3 primeiros bytes. <code>Cache-Control: no-store</code> no response.</td></tr>
+    <tr><td>R-REL-04</td><strong>Performance ruim no Fluxo de Caixa para 24+ meses</strong></td><td>Média</td><td>Médio</td><td>UI limita slider a 24 meses. <code>findMany + Map</code> em memória é viável até ~60k linhas. <code>prisma.$queryRaw</code> com <code>strftime</code> é backlog (ciclo 6+).</td></tr>
+    <tr><td>R-REL-05</td><strong>Drill-down quebra porque rota <code>/lancamentos</code> não existe</strong></td><td>Alta</td><td>Médio</td><td>Fase 3 decide entre Opção A (criar S13) ou Opção B (redirecionar). Placeholder enquanto S13 não entrega. PRD/SPEC fixa decisão antes de S12.</td></tr>
+    <tr><td>R-REL-06</td><strong>CSV injection via campo <code>descricao</code></strong></td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td><code>escapeCsvField</code> conforme RFC 4180 §2.6. Aspas internas viram <code>""</code>. Campos com <code>,;\r\n"</code> são quoted. Sheets/Excel não interpretam fórmulas porque helper escapa corretamente.</td></tr>
+    <tr><td>R-REL-07</td><strong>LGPD: <code>valorCentavos</code> em log de auditoria</strong></td><td>Baixa</td><td><span class="badge bad">Alto</span></td><td><code>safeLog</code> com allowlist. <code>valorCentavos</code>, <code>descricao</code>, <code>membro.nome</code> proibidos em log. <code>lgpd-officer</code> audita. Code review recusa <code>console.log</code> desses campos.</td></tr>
+    <tr><td>R-REL-08</td><strong>SQLite single-writer trava com 5+ perfis simultâneos</strong></td><td>Baixa</td><td>Médio</td><td>Teste de borda #12 valida 5 perfis simultâneos com &lt; 2s. Queries read-only (sem <code>$transaction</code> de escrita) reduzem contenção. Postgres é backlog (ciclo 6+).</td></tr>
   </tbody>
 </table>
 
 <script type="application/json" data-spec-section="10">
-{"endpoints_mvp":[{"metodo":"GET","path":"/login","permissao":"anonimo"},{"metodo":"POST","path":"/login","permissao":"anonimo","erros":[401,422]},{"metodo":"POST","path":"/logout","permissao":"autenticado"},{"metodo":"GET","path":"/app","permissao":"autenticado"},{"metodo":"GET","path":"/app/membros","permissao":"autenticado (RBAC fina)"},{"metodo":"POST","path":"/app/membros","permissao":"autenticado (RN-MEM-01)","erros":[401,422]},{"metodo":"GET","path":"/app/membros/:id","permissao":"autenticado (RBAC fina)","erros":[401,403,404]},{"metodo":"PUT","path":"/app/membros/:id","permissao":"autenticado (RN-MEM-01)","erros":[401,403,404,422]},{"metodo":"PATCH","path":"/app/membros/:id/tipo","permissao":"autenticado (RN-MEM-06)","erros":[401,403,404,422]},{"metodo":"DELETE","path":"/app/membros/:id","permissao":"Admin/Pastor","erros":[401,403,404,409]},{"metodo":"POST","path":"/app/membros/:id/discipulador","permissao":"autenticado (RN-MEM-04)","erros":[401,422]},{"metodo":"GET","path":"/app/alertas","permissao":"autenticado (escopo)","erros":[401]},{"metodo":"PATCH","path":"/app/alertas/:id/lido","permissao":"proprio destinatario","erros":[401,403,404]},{"metodo":"PATCH","path":"/app/alertas/:id/resolver","permissao":"proprio destinatario","erros":[401,403,404]},{"metodo":"PUT","path":"/app/config/acolhimento","permissao":"Admin (RN-MEM-05)","erros":[401,403,404,422]}]}
+{"riscos":[
+{"id":"R-REL-01","titulo":"SECRETARIO bypass URL","rns":["RN-REL-01","RN-REL-02"],"mitigacao":"3 camadas + E2E bypass URL + RELATORIOS_CARGOS as const"},
+{"id":"R-REL-02","titulo":"Bug arredondamento Float","rns":["RN-REL-03"],"mitigacao":"Int cents sempre + code review"},
+{"id":"R-REL-03","titulo":"CSV sem BOM (mojibake)","rns":["RN-REL-06"],"mitigacao":"BOM sempre prefixado + teste bytes + Cache-Control no-store"},
+{"id":"R-REL-04","titulo":"Performance Fluxo Caixa 24+ meses","rns":["RN-REL-04"],"mitigacao":"UI limita 24m + Map em memoria ate 60k + $queryRaw backlog"},
+{"id":"R-REL-05","titulo":"Drill-down quebra (rota /lancamentos nao existe)","rns":["RN-REL-07"],"mitigacao":"Fase 3 decide (Opcao A S13 ou Opcao B redirect) + placeholder"},
+{"id":"R-REL-06","titulo":"CSV injection via descricao","rns":["RN-REL-06"],"mitigacao":"escapeCsvField RFC 4180 §2.6 + aspas duplicadas"},
+{"id":"R-REL-07","titulo":"valorCentavos em log","rns":["LGPD Art 46"],"mitigacao":"safeLog allowlist + lgpd-officer audita"},
+{"id":"R-REL-08","titulo":"SQLite single-writer (5+ perfis)","rns":["RN-REL-04"],"mitigacao":"queries read-only (sem $transaction escrita) + teste #12"}
+]}
 </script>
 
-<h2 id="testes">11. Testes do MVP</h2>
+<h2 id="performance">11. Performance e limites</h2>
 
-<h3>11.1 Estratégia em 3 camadas</h3>
+<h3>11.1 Volumetria esperada</h3>
+<ul>
+  <li><strong>Igreja típica:</strong> ~5.000 lançamentos/mês (média). Pico de fechamento mensal: ~500 lançamentos em 1 dia.</li>
+  <li><strong>1 ano típico:</strong> ~60.000 lançamentos. Viável para <code>findMany + Map</code> em memória no Fluxo de Caixa.</li>
+  <li><strong>Limite superior SQLite:</strong> 100k+ lançamentos &lt; 50ms por query indexada.</li>
+  <li><strong>5 perfis logados simultâneos:</strong> SQLite serializa leituras; latência aceitável &lt; 2s (sem contenção).</li>
+</ul>
+
+<h3>11.2 Índices Prisma (existentes no schema, cobertura herdada)</h3>
 <table>
-  <thead><tr><th>Camada</th><th>Ferramenta</th><th>Localização</th></tr></thead>
+  <thead><tr><th>Índice</th><th>Tabela</th><th>Colunas</th><th>Cobre</th></tr></thead>
   <tbody>
-    <tr><td><strong>Unit</strong></td><td>Vitest</td><td><code>app/**/*.test.ts</code> co-localizado</td></tr>
-    <tr><td><strong>Integração</strong></td><td>Vitest + Prisma test DB</td><td><code>app/**/*.integration.test.ts</code></td></tr>
-    <tr><td><strong>E2E</strong></td><td>Playwright (MCP)</td><td><code>e2e/**/*.spec.ts</code></td></tr>
+    <tr><td><code>@@index([transferenciaGrupoId])</code></td><td>lancamentos</td><td>transferenciaGrupoId</td><td>Transferência atômica (ciclo 2)</td></tr>
+    <tr><td>(implícito FK)</td><td>lancamentos</td><td>caixaId</td><td>Filter por caixa no Customizado</td></tr>
+    <tr><td>(implícito FK)</td><td>lancamentos</td><td>membroId</td><td>Filter por membro no Customizado</td></tr>
+    <tr><td><strong>⚠️ PENDENTE (recomendado):</strong> <code>@@index([dataCompetencia, tipo, categoria])</code></td><td>lancamentos</td><td>dataCompetencia + tipo + categoria</td><td>DRE / Balancete / Fluxo de Caixa (queries groupBy)</td></tr>
   </tbody>
 </table>
 
-<h3>11.2 Cobertura mínima</h3>
-<ul>
-  <li><strong>Global:</strong> ≥ 85% (gate do phase 5).</li>
-  <li><strong>Services de regra de negócio:</strong> 100% (todo branch).</li>
-  <li><strong>Nenhum teste skipped</strong> sem justificativa no PR.</li>
-</ul>
+<p><strong>Decisão para S11 (backend foundation):</strong> o ciclo 4 <strong>não</strong> cria migration. Schema atual é suficiente para volume típico. Se volumetria real mostrar lentidão em S12, decisão de índice composto fica para ciclo 6+ (Postgres já traz índices compostos nativos).</p>
 
-<h3>11.3 e2eChains (cadeias críticas)</h3>
-<ol>
-  <li><strong>Chain 1 — Login + visitante + alerta</strong>: <code>POST /login</code> → <code>POST /app/membros</code> (visitante) → <code>GET /app/alertas</code> do responsável. DataFlow: cookie <code>sid</code>, payload visitante, transação atômica cria <code>Alerta</code>.</li>
-  <li><strong>Chain 2 — RBAC dízimos (3 perfis)</strong>: <code>POST /login</code> (perfil X) → <code>GET /app/membros/:id?tab=fidelidade</code> → 403 ou 200. DataFlow: middleware injeta <code>user</code>; loader chama <code>assertCanSeeFinancials</code>.</li>
-  <li><strong>Chain 3 — Trava de 12 discípulos</strong>: <code>POST /login</code> (DISCIPULADOR) → 12× POST discipulador → 13ª chamada retorna 422. DataFlow: count + update dentro do service.</li>
-</ol>
+<h3>11.3 Latência esperada (gate implícito)</h3>
+<table>
+  <thead><tr><th>Operação</th><th>Latência alvo</th><th>Volume típico</th></tr></thead>
+  <tbody>
+    <tr><td><code>getDRE</code> (1 mês)</td><td>&lt; 500ms</td><td>~500 lançamentos</td></tr>
+    <tr><td><code>getBalanceteMensal</code> (1 mês)</td><td>&lt; 500ms</td><td>~500 lançamentos + saldo anterior</td></tr>
+    <tr><td><code>getFluxoCaixa</code> (12 meses)</td><td>&lt; 1s</td><td>~5.000 lançamentos in-memory</td></tr>
+    <tr><td><code>getRelatorioCustomizado</code> (1 página)</td><td>&lt; 1s</td><td>50 lançamentos</td></tr>
+    <tr><td><code>exportarLancamentosCSV</code> (1.280 registros)</td><td>&lt; 500ms (teste de borda #10)</td><td>~1.280 lançamentos</td></tr>
+  </tbody>
+</table>
 
-<h3>11.4 crossModuleHints (dados entre módulos)</h3>
-<ul>
-  <li>De <code>POST /app/membros</code> para <code>GET /app/membros/:id</code>: campo <code>tipo</code> aparece na ficha.</li>
-  <li>De <code>POST /app/membros</code> (visitante) para <code>GET /app/alertas</code>: <code>Alerta.id</code> + <code>titulo</code> + <code>mensagem</code> aparecem na Central.</li>
-  <li>De <code>PUT /app/config/acolhimento</code> para <code>POST /app/membros</code>: <code>responsavelMembroId</code> lido na transação do visitante.</li>
-</ul>
+<h3>11.4 Limites conhecidos</h3>
+<table>
+  <thead><tr><th>Limite</th><th>Onde</th><th>Mitigação</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Sem projeção real</strong></td><td>Cards "Projeção" no Balancete e Fluxo</td><td>Placeholder cinza. Depende de <code>ContaPagar</code> (ciclo 6+).</td></tr>
+    <tr><td><strong>Sem status de lançamento</strong></td><td>Filtro no Customizado</td><td><code>&lt;select disabled&gt;</code>. Depende de refactor de schema.</td></tr>
+    <tr><td><strong>Sem PDF</strong></td><td>Export no Customizado</td><td>CSV cobre o caso real. PDF em ciclo 6+.</td></tr>
+    <tr><td><strong>Fluxo de Caixa não escala para 5+ anos</strong></td><td>300k+ linhas degrada <code>findMany + Map</code></td><td>UI limita a 24 meses. Migrar para <code>prisma.$queryRaw</code> com <code>strftime</code> em ciclo 6+.</td></tr>
+    <tr><td><strong>Fuso do servidor</strong></td><td><code>dataCompetencia</code> filtrada em <code>Date</code> local</td><td>Assumir fuso único. Migração para UTC puro em ciclo futuro.</td></tr>
+    <tr><td><strong>SQLite single-writer</strong></td><td><code>dev.db</code></td><td>1 processo Node + queries read-only (sem <code>$transaction</code> de escrita). Postgres é backlog.</td></tr>
+    <tr><td><strong>Rota <code>/app/financeiro/lancamentos</code> não existe</strong></td><td>Drill-down pendente (decisão §5.4)</td><td>Decisão na Fase 3 (Design): criar nova rota (S13) ou redirecionar para <code>/caixas/:id</code> com query params.</td></tr>
+  </tbody>
+</table>
 
 <script type="application/json" data-spec-section="11">
-{"testes":{"estrategia":"3 camadas (Vitest unit/integracao + Playwright E2E)","cobertura_min_global":85,"cobertura_min_services":100,"e2eChains":[{"id":"E2E-MVP-001","nome":"Login + visitante + alerta","sequence":["POST /login","POST /app/membros","GET /app/alertas"]},{"id":"E2E-MVP-002","nome":"RBAC dizimos (3 perfis)","sequence":["POST /login","GET /app/membros/:id?tab=fidelidade"]},{"id":"E2E-MVP-003","nome":"Trava 12 discipulos","sequence":["POST /login","12x POST /app/membros/:id/discipulador","13a chamada"]}],"crossModuleHints":[{"de":"POST /app/membros","para":"GET /app/membros/:id","campo":"tipo"},{"de":"POST /app/membros (visitante)","para":"GET /app/alertas","campos":"Alerta.id, titulo, mensagem"},{"de":"PUT /app/config/acolhimento","para":"POST /app/membros","campo":"responsavelMembroId"}]}}
+{"volumetria":{"igreja_tipica_lancamentos_mes":5000,"pico_fechamento_dia":500,"ano_tipico_total":60000,"limite_sqlite":100000,"perfis_simultaneos_alvo":5,"latencia_alvo_5_users":"< 2s"},"indices":{"existentes":["@@index([transferenciaGrupoId])","FK implicita caixaId","FK implicita membroId"],"recomendados_backlog":["@@index([dataCompetencia, tipo, categoria])"],"decisao_ciclo_4":"sem migration; indice composto fica para ciclo 6+ Postgres"},"latencia_alvo":{"getDRE_ms":500,"getBalanceteMensal_ms":500,"getFluxoCaixa_ms":1000,"getRelatorioCustomizado_ms":1000,"exportarLancamentosCSV_ms":500},"limites":[{"id":"L-REL-1","tema":"Projecao fake (depende ContaPagar)","mitigacao":"placeholder cinza"},{"id":"L-REL-2","tema":"Status lancamento (depende migration)","mitigacao":"select disabled"},{"id":"L-REL-3","tema":"PDF (depende lib externa)","mitigacao":"CSV cobre caso real"},{"id":"L-REL-4","tema":"Fluxo Caixa > 24 meses","mitigacao":"UI limita + $queryRaw backlog"},{"id":"L-REL-5","tema":"Fuso servidor (assumido unico)","mitigacao":"UTC puro em ciclo futuro"},{"id":"L-REL-6","tema":"SQLite single-writer","mitigacao":"queries read-only + Postgres backlog"},{"id":"L-REL-7","tema":"Rota /lancamentos nao existe","mitigacao":"Fase 3 decide (S13 ou redirect)"}]}
 </script>
 
-<h2 id="pendencias">12. Pendências de design</h2>
+<h2 id="pendencias">12. Pendências e cross-refs</h2>
 
-<p>Itens fora do escopo desta task, registrados para resolução em fases seguintes.</p>
+<h3>12.1 Pendências para a Fase 3 (Design)</h3>
+<ol>
+  <li><strong>Rota <code>/app/financeiro/lancamentos</code> (listagem geral) não existe hoje.</strong> Drill-down (decisão §5.4) depende dessa rota. Fase 3 deve decidir:
+    <ul>
+      <li><strong>Opção A:</strong> criar <code>/app/financeiro/lancamentos</code> nova rota → S13 condicional.</li>
+      <li><strong>Opção B:</strong> redirecionar drill-down para <code>/app/financeiro/caixas/:id</code> com query params adicionais (mais barato, mas UX perde filtros entre caixas).</li>
+    </ul>
+  </li>
+  <li><strong>Workaround de <code>state.json</code>:</strong> tools <code>harness_status</code>/<code>harness_advance</code> quebradas (erro <code>u.split</code> em <code>state.json:183-186</code>). Orchestrator continua usando edição direta via Python (workaround herdado do ciclo 2).</li>
+  <li><strong>Débitos técnicos pré-existentes:</strong> 74 testes falhando (<code>MVP-DEBT-001</code>) + 107 typecheck errors (<code>MVP-DEBT-003</code>). Não-bloqueadores para ciclo 4. <code>tester</code> agent deve isolar falhas pré-existentes vs. introduzidas.</li>
+  <li><strong>Decisão de design (cards Projeção):</strong> o componente <code>&lt;ProjectionPlaceholder /&gt;</code> deve ser criado na Fase 3 (ou S12 backend) — pode ser inline em <code>app/components/ProjectionPlaceholder.tsx</code>.</li>
+</ol>
 
+<h3>12.2 Cross-refs RAG (memória de longo prazo do projeto)</h3>
+<ul>
+  <li><a href=".harness/RAG/pattern-relatorios-aggregations.md"><code>pattern-relatorios-aggregations.md</code></a> (391 linhas) — padrão canônico dos 5 services. <strong>Crítico</strong>.</li>
+  <li><a href=".harness/RAG/convention-relatorios-csv-export.md"><code>convention-relatorios-csv-export.md</code></a> (429 linhas) — RFC 4180 + BOM + <code>;</code> + escape + <code>Cache-Control: no-store</code>. <strong>Crítico</strong>.</li>
+  <li><a href=".harness/RAG/convention-monetary-values.md"><code>convention-monetary-values.md</code></a> (208 linhas) — <code>Int</code> em centavos, helpers <code>formatBRLFromCents</code> / <code>parseBRLToCents</code>. <strong>Crítico</strong>.</li>
+  <li><a href=".harness/RAG/security-rbac-matrix.md"><code>security-rbac-matrix.md</code></a> (169 linhas) — matriz 6 perfis × 5 domínios. <strong>Crítico</strong>.</li>
+  <li><a href=".harness/RAG/pattern-3-layer-rbac.md"><code>pattern-3-layer-rbac.md</code></a> (275 linhas) — defense in depth em 3 camadas. <strong>Crítico</strong>.</li>
+  <li><a href=".harness/RAG/lgpd-igreja-conect.md"><code>lgpd-igreja-conect.md</code></a> — segregação, minimização, auditoria.</li>
+  <li><a href=".harness/RAG/architecture-monolith-modular.md"><code>architecture-monolith-modular.md</code></a> — camadas Apresentação/Aplicação/Domínio/Infra/Dados.</li>
+  <li><a href=".harness/RAG/architecture-financeiro.md"><code>architecture-financeiro.md</code></a> — visão macro do Módulo Financeiro (ciclo 2).</li>
+  <li><a href=".harness/RAG/pattern-trava-saldo-service.md"><code>pattern-trava-saldo-service.md</code></a> — parallel conceitual (RN-FIN-04). Mesmo princípio, escopo read-only.</li>
+</ul>
+
+<h3>12.3 Cross-refs de código (estender, não reinventar)</h3>
+<ul>
+  <li><a href="prisma/schema.prisma"><code>prisma/schema.prisma</code></a> — model <code>Lancamento</code> + enums <code>TipoLancamento</code>, <code>CategoriaLancamento</code>. <strong>Cobre 100% dos requisitos sem migration.</strong></li>
+  <li><a href="app/lib/finance.server.ts"><code>app/lib/finance.server.ts</code></a> — <code>getDashboardFinanceiro</code>, <code>assertSaldoSuficiente</code>, <code>getDizimosByMembro</code>. Padrão de service + Camada 3.</li>
+  <li><a href="app/lib/rbac.server.ts"><code>app/lib/rbac.server.ts</code></a> — <code>FINANCIAL_MODULE_CARGOS</code>, <code>DIZIMO_CARGOS</code>, <code>assertCanSeeFinancials</code>. <strong>Estender</strong> com <code>RELATORIOS_CARGOS</code> + <code>assertCanSeeRelatorios</code>.</li>
+  <li><a href="app/lib/money.server.ts"><code>app/lib/money.server.ts</code></a> — <code>formatBRLFromCents</code>, <code>parseBRLToCents</code>, <code>assertNonNegative</code>. Reusar em todas as agregações.</li>
+  <li><a href="app/components/Sidebar.tsx"><code>app/components/Sidebar.tsx</code></a> — adicionar item "Relatórios" com <code>roles: ["ADMIN", "PASTOR", "FINANCEIRO"]</code>.</li>
+  <li><a href="app/components/Can.tsx"><code>app/components/Can.tsx</code></a> — wrapper <code>&lt;Can allow={[...]}&gt;</code> herdado do ciclo 1.</li>
+  <li><a href="app/routes/app/financeiro._index.tsx"><code>app/routes/app/financeiro._index.tsx</code></a> — dashboard financeiro. Ponto de entrada conceitual para os relatórios.</li>
+</ul>
+
+<h3>12.4 Referências visuais (Stitch)</h3>
 <table>
-  <thead><tr><th>#</th><th>Item</th><th>Sugestão</th><th>Quem decide</th></tr></thead>
+  <thead><tr><th>Página</th><th>Stitch base</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>TTL exato da sessão e política de sliding renewal</td><td>7d sliding, teto 30d abs</td><td>Designer</td></tr>
-    <tr><td>2</td><td>Política de senha (mín., complexidade)</td><td>≥ 8 chars, sem forçar complexidade</td><td>Designer</td></tr>
-    <tr><td>3</td><td>Rate limit no <code>/login</code></td><td>5 tentativas / 15min / IP, in-memory</td><td>Backend agent</td></tr>
-    <tr><td>4</td><td>Model <code>Session</code> ainda não existe no schema</td><td>Adicionar como primeira migration</td><td>Backend agent</td></tr>
-    <tr><td>5</td><td>Duplicata <code>app/prisma.config.ts</code> vs <code>prisma.config.ts</code></td><td>Manter apenas o da raiz</td><td>Backend + usuário</td></tr>
-    <tr><td>6</td><td>Auditoria de leitura (LGPD art. 37)</td><td>Backlog (ciclo 2+ ou 3+)</td><td>LGPD officer</td></tr>
+    <tr><td>Hub de Relatórios</td><td><code>hub_de_relat_rios_igrejaconnect/code.html</code></td></tr>
+    <tr><td>Balancete Mensal</td><td><code>balancete_mensal_igrejaconnect/code.html</code></td></tr>
+    <tr><td>DRE</td><td><code>dre_igrejaconnect/code.html</code></td></tr>
+    <tr><td>Fluxo de Caixa</td><td><code>fluxo_de_caixa_igrejaconnect/code.html</code></td></tr>
+    <tr><td>Relatório Customizado</td><td><code>relat_rio_customizado_igrejaconnect/code.html</code></td></tr>
   </tbody>
 </table>
+
+<h3>12.5 Próximos passos (após aprovação do <code>spec-reviewer</code>)</h3>
+<ol>
+  <li><strong>Fase 3 (Design):</strong> wireframes + decisão sobre rota <code>/app/financeiro/lancamentos</code> + diagrama de sequência final + telas de placeholder.</li>
+  <li><strong>Fase 4 (Planejamento):</strong> 2 sprints (S11 + S12) + 1 sprint condicional (S13) se drill-down exigir nova rota.
+    <ul>
+      <li><strong>S11 (Backend foundation):</strong> <code>relatorios.server.ts</code> (5 services) + <code>rbac.server.ts</code> (2 helpers) + <code>relatorios-csv.server.ts</code> + testes unitários (TDD obrigatório, gate 100% em <code>relatorios.server.ts</code>).</li>
+      <li><strong>S12 (Frontend + integração):</strong> 5 rotas + 2 componentes compartilhados + Sidebar atualizada + ~25 ícones SVG + testes E2E.</li>
+      <li><strong>S13 (Drill-down, condicional):</strong> apenas se a Fase 3 confirmar que a rota <code>/app/financeiro/lancamentos</code> precisa ser criada.</li>
+    </ul>
+  </li>
+  <li><strong>Fase 5 (Build):</strong> 5 workers em paralelo (<code>backend</code>, <code>frontend</code>, <code>tester</code>, <code>security</code>, <code>lgpd-officer</code>) + gate <code>all-of</code>.</li>
+</ol>
 
 <script type="application/json" data-spec-section="12">
-{"pendencias":[{"id":1,"item":"TTL sessao","sugestao":"7d sliding + 30d abs"},{"id":2,"item":"Politica senha","sugestao":">=8 chars"},{"id":3,"item":"Rate limit /login","sugestao":"5/15min/IP"},{"id":4,"item":"Model Session","sugestao":"migration inicial"},{"id":5,"item":"Duplicata prisma.config","sugestao":"manter raiz"},{"id":6,"item":"Auditoria leitura (LGPD art. 37)","sugestao":"backlog"}]}
-</script>
-
-<h2 id="pronto-fase-5">13. Critérios de pronto da Fase 5 (gate <code>all-of</code>)</h2>
-
-<ul class="checklist">
-  <li>Cobertura ≥ 85% (tester).</li>
-  <li>0 vulnerabilidades critical/high (security).</li>
-  <li><code>planning-reviewer</code> score ≥ 70.</li>
-  <li>LGPD compliant (lgpd-officer).</li>
-  <li>Todas as funções públicas com JSDoc completo.</li>
-  <li>Nenhum teste skipped sem justificativa.</li>
-  <li>Todas as RNs com teste que prova o comportamento.</li>
-  <li><code>pnpm typecheck</code> passa.</li>
-  <li><code>pnpm build && pnpm start</code> sobe; seed cria Admin; login funciona.</li>
-  <li><code>README.md</code> documenta setup e credenciais.</li>
-</ul>
-
-<script type="application/json" data-spec-section="13">
-{"pronto_fase_5":["cobertura >= 85%","0 vuln critical/high","planning-reviewer >= 70","LGPD compliant","JSDoc completo","nenhum teste skipped","todas as RNs com teste","pnpm typecheck ok","pnpm build && pnpm start funciona","README com setup"]}
-</script>
-
-<h2 id="referencias">14. Referências</h2>
-
-<h3>14.1 Documentos do projeto</h3>
-<ul>
-  <li><a href="PRD.html">PRD.html</a> — Product Requirements Document (este documento).</li>
-  <li><code>brief.md</code> — Brief do ciclo 2 (Módulo Financeiro).</li>
-  <li><code>agents/AGENTS.md</code> — Memória de longo prazo para agentes LLM.</li>
-  <li><code>docs/architecture/ARCH.md</code> — Arquitetura técnica (inclui §8 do Financeiro).</li>
-  <li><code>docs/REGRAS_DE_NEGOCIO.md</code> — 14 RNs (RN-MEM-*, RN-FIN-*, RN-EST-*).</li>
-  <li><code>prisma/schema.prisma</code> — Fonte de verdade do modelo de dados.</li>
-</ul>
-
-<h3>14.2 RAGs (memória de longo prazo)</h3>
-<ul>
-  <li>Ciclo 1: <code>security-rbac-matrix</code>, <code>convention-monetary-values</code>, <code>pattern-3-layer-rbac</code>, <code>architecture-monolith-modular</code>, <code>convention-prisma-sqlite</code>, <code>lgpd-igreja-conect</code>, <code>lgpd-bases-legais-igreja</code>, <code>lesson-prisma-7-vite-8-ssr-incompat</code>, <code>lesson-route-service-bypass</code>, <code>lesson-prisma-7-commit-settle-e2e</code>.</li>
-  <li>Ciclo 2: <code>pattern-trava-saldo-service</code> (critical), <code>pattern-transferencia-caixas</code> (high), <code>architecture-financeiro</code> (high), <code>decision-caixa-soft-delete</code> (pending).</li>
-  <li>Ciclo 3 (a criar na Fase 1): <code>architecture-estoque</code> (high), <code>pattern-movimentacao-estoque</code> (high), <code>pattern-manutencao-patrimonio</code> (high), <code>decision-itemEstoque-soft-delete</code> (medium, espelha <code>decision-caixa-soft-delete</code>).</li>
-</ul>
-
-<h3>14.3 Comandos úteis</h3>
-<pre><code>pnpm build                      # build de prod
-pnpm start                      # serve build (porta 3000)
-pnpm dev                        # ⚠️ QUEBRADO (Prisma 7 + Vite 8 SSR)
-pnpm typecheck                  # react-router typegen && tsc
-pnpm test                       # Vitest completo
-pnpm test:watch -- &lt;pattern&gt;    # watch
-pnpm test:coverage              # coverage (gate ≥ 85%)
-pnpm test:e2e                   # Playwright
-pnpm db:reset                   # drop + migrate + seed
-pnpm prisma migrate dev --name X # nova migration (NUNCA db push)
-</code></pre>
-
-<script type="application/json" data-spec-section="14">
-{"refs":{"docs":["PRD.html","brief.md","agents/AGENTS.md","docs/architecture/ARCH.md §8","docs/REGRAS_DE_NEGOCIO.md","prisma/schema.prisma"],"rags_ciclo_1":["security-rbac-matrix","convention-monetary-values","pattern-3-layer-rbac","architecture-monolith-modular","convention-prisma-sqlite","lgpd-igreja-conect","lgpd-bases-legais-igreja","lesson-prisma-7-vite-8-ssr-incompat","lesson-route-service-bypass","lesson-prisma-7-commit-settle-e2e"],"rags_ciclo_2":["pattern-trava-saldo-service (critical)","pattern-transferencia-caixas (high)","architecture-financeiro (high)","decision-caixa-soft-delete (pending)"]}}
-</script>
-
-<hr />
-
-<!-- ===================================================== -->
-<!-- APÊNDICE D — MÓDULO FINANCEIRO (CICLO 2)              -->
-<!-- ===================================================== -->
-<h1 id="c2-apendice">Apêndice D — Módulo Financeiro (ciclo 2)</h1>
-<p class="meta">
-  <strong>Adicionado em:</strong> 2026-06-14 (Fase 2, ciclo 2) &middot;
-  <strong>Escopo:</strong> Caixas + Lançamentos + Dízimos + Transferências + Trava de Saldo + Fidelidade Financeira
-</p>
-
-<nav class="toc" aria-label="Apêndice D — Módulo Financeiro">
-  <strong>Apêndice D — Módulo Financeiro (ciclo 2)</strong>
-  <ol>
-    <li><a href="#c2-models">D.1 Models do Financeiro</a></li>
-    <li><a href="#c2-migrations">D.2 Migrations necessárias</a></li>
-    <li><a href="#c2-camadas">D.3 Camadas do módulo (5 services + 7 rotas)</a></li>
-    <li><a href="#c2-endpoints">D.4 Endpoints da API</a></li>
-    <li><a href="#c2-rbac">D.5 RBAC fina (matriz)</a></li>
-    <li><a href="#c2-auditoria">D.6 Trilha de auditoria (LGPD + financeiro)</a></li>
-    <li><a href="#c2-schema">D.7 Schema do SQLite (gotchas)</a></li>
-    <li><a href="#c2-helpers">D.8 Helpers canônicos</a></li>
-    <li><a href="#c2-testes-borda">D.9 Testes de borda obrigatórios (12)</a></li>
-    <li><a href="#c2-limites">D.10 Limites conhecidos e dependências externas</a></li>
-  </ol>
-</nav>
-
-<h2 id="c2-models">D.1 Models do Financeiro</h2>
-
-<p>
-3 models do schema Prisma já existem desde o ciclo 1: <code>Caixa</code>, <code>TransferenciaCaixa</code>, <code>Lancamento</code>. Esta seção documenta campos, índices, FKs e decisões de modelagem aplicadas.
-</p>
-
-<h3>D.1.1 <code>Caixa</code> (model)</h3>
-<pre><code>model Caixa {
-  id            String   @id @default(uuid())
-  nome          String   @unique               // "Caixa Geral", "Caixa Cantina"
-  saldoCentavos Int      @default(0)           // Armazenado em centavos (Int)
-  // ativo: Boolean @default(true)             // PROPOSTA PENDENTE — D.9 do PRD
-  lancamentos   Lancamento[]
-  origemTransf  TransferenciaCaixa[] @relation("CaixaOrigem")
-  destinoTransf TransferenciaCaixa[] @relation("CaixaDestino")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  // @@index([ativo])                          // PROPOSTA PENDENTE
-  @@map("caixas")
-}</code></pre>
-
-<h3>D.1.2 <code>TransferenciaCaixa</code> (model)</h3>
-<pre><code>model TransferenciaCaixa {
-  id             String   @id @default(uuid())
-  valorCentavos  Int
-  caixaOrigemId  String
-  caixaDestinoId String
-  executadoPorId String   // operador (RN-FIN-02 — carimbo obrigatório)
-  dataHora       DateTime @default(now())
-  caixaOrigem  Caixa  @relation("CaixaOrigem",  fields: [caixaOrigemId],  references: [id], onDelete: Restrict)
-  caixaDestino Caixa  @relation("CaixaDestino", fields: [caixaDestinoId], references: [id], onDelete: Restrict)
-  executadoPor Membro @relation(fields: [executadoPorId], references: [id], onDelete: Restrict)
-  @@map("transferencias_caixa")
-}</code></pre>
-
-<h3>D.1.3 <code>Lancamento</code> (model)</h3>
-<pre><code>model Lancamento {
-  id              String              @id @default(uuid())
-  tipo            TipoLancamento      // ENTRADA | SAIDA
-  categoria       CategoriaLancamento // 7 valores (DIZIMO..TRANSFERENCIA)
-  valorCentavos   Int                 // sempre > 0 (Zod)
-  descricao       String
-  dataCompetencia DateTime            @default(now())
-  caixaId String
-  caixa   Caixa  @relation(fields: [caixaId], references: [id], onDelete: Restrict)
-  membroId String?   // obrigatório se DIZIMO; opcional se OFERTA; null demais (RN-FIN-05)
-  membro   Membro? @relation("MembroDizimo", fields: [membroId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@index([caixaId, dataCompetencia])  // performance: extrato por caixa
-  @@index([membroId, categoria])       // performance: aba Fidelidade
-  @@map("lancamentos")
-}</code></pre>
-
-<h3>D.1.4 Mapa de <code>CategoriaLancamento</code></h3>
-<table>
-  <thead><tr><th>Categoria</th><th>Tipo esperado</th><th><code>membroId</code></th><th>RN</th></tr></thead>
-  <tbody>
-    <tr><td><code>DIZIMO</code></td><td><code>ENTRADA</code></td><td><strong>obrigatório</strong></td><td>RN-FIN-05</td></tr>
-    <tr><td><code>OFERTA</code></td><td><code>ENTRADA</code></td><td>opcional (anônimo)</td><td>RN-FIN-05</td></tr>
-    <tr><td><code>CAMPANHA</code></td><td><code>ENTRADA</code></td><td><code>null</code></td><td>—</td></tr>
-    <tr><td><code>DESPESA_OPERACIONAL</code></td><td><code>SAIDA</code></td><td><code>null</code></td><td>RN-FIN-04 (trava)</td></tr>
-    <tr><td><code>COMPRA_ESTOQUE</code></td><td><code>SAIDA</code></td><td><code>null</code></td><td>RN-FIN-04 (trava)</td></tr>
-    <tr><td><code>MANUTENCAO</code></td><td><code>SAIDA</code></td><td><code>null</code></td><td>RN-FIN-04 (trava)</td></tr>
-    <tr><td><code>TRANSFERENCIA</code></td><td>ambos</td><td><code>null</code></td><td><strong>Exclusivo</strong> do espelho (RAG <code>pattern-transferencia-caixas</code>)</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-spec-section="D.1">
-{"models":{"Caixa":{"campos":["id","nome @unique","saldoCentavos Int @default(0)","createdAt","updatedAt","ativo? (proposta)"],"relacionamentos":["lancamentos[]","origemTransf[]","destinoTransf[]"],"indices_propostos":["@@index([ativo])"]},"TransferenciaCaixa":{"campos":["id","valorCentavos Int","caixaOrigemId","caixaDestinoId","executadoPorId","dataHora"],"fks":{"caixaOrigem":"Restrict","caixaDestino":"Restrict","executadoPor":"Restrict"}},"Lancamento":{"campos":["id","tipo","categoria","valorCentavos Int","descricao","dataCompetencia","caixaId","membroId?","createdAt","updatedAt"],"fks":{"caixa":"Restrict","membro":"SetNull"},"indices":["@@index([caixaId, dataCompetencia])","@@index([membroId, categoria])"]}},"categoria_lancamento":{"DIZIMO":{"membroId":"obrigatorio","tipo":"ENTRADA","rn":"RN-FIN-05"},"OFERTA":{"membroId":"opcional","tipo":"ENTRADA","rn":"RN-FIN-05"},"TRANSFERENCIA":{"membroId":"null","tipo":"ambos","exclusivo":"transferirEntreCaixas"}}}
-</script>
-
-<h2 id="c2-migrations">D.2 Migrations necessárias</h2>
-
-<h3>D.2.1 Migration 1 (PROPOSTA, depende de D.9 do PRD): <code>add_ativo_to_caixa</code></h3>
-
-<p>Se o <code>prd-reviewer</code> aprovar a proposta <code>Caixa.ativo</code>:</p>
-
-<pre><code>-- prisma/migrations/&lt;timestamp&gt;_add_ativo_to_caixa/migration.sql
-ALTER TABLE "caixas" ADD COLUMN "ativo" BOOLEAN NOT NULL DEFAULT 1;
-CREATE INDEX "caixas_ativo_idx" ON "caixas"("ativo");
-</code></pre>
-
-<p>
-<strong>Não</strong> gerar enquanto o RAG <code>decision-caixa-soft-delete</code> estiver <code>pending</code>. O <code>prd-reviewer</code> valida, depois a Fase 5 gera.
-</p>
-
-<h3>D.2.2 Ordem de execução das migrations (Fase 5)</h3>
-<ol>
-  <li><code>pnpm prisma migrate dev --name add_ativo_to_caixa</code> (se aprovado).</li>
-  <li><code>pnpm prisma generate</code> (regenera cliente).</li>
-  <li><code>pnpm db:reset</code> (valida + backup + drop + migrate + seed).</li>
-  <li>Verificar <code>prisma/seed.ts</code> cria <code>Caixa Geral</code> com <code>ativo: true</code>.</li>
-</ol>
-
-<h3>D.2.3 Gotcha: <code>DEFAULT 1</code> em SQLite</h3>
-<p>
-SQLite aceita <code>BOOLEAN NOT NULL DEFAULT 1</code> (mapeia para inteiro). <code>Boolean?</code> do Prisma vira <code>BOOLEAN</code> no SQLite. Migração retroativa: caixas existentes ficam <code>ativo = true</code> por padrão (compat 100%).
-</p>
-
-<script type="application/json" data-spec-section="D.2">
-{"migrations":[{"id":"add_ativo_to_caixa","status":"proposta_pendente (depende D.9 PRD)","sql":"ALTER TABLE caixas ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT 1; CREATE INDEX caixas_ativo_idx ON caixas(ativo);","comando":"pnpm prisma migrate dev --name add_ativo_to_caixa","quando_gerar":"Fase 5, APOS prd-reviewer aprovar"}],"ordem_execucao":["migrate dev","prisma generate","db:reset (valida+seed)","verificar seed cria Caixa Geral ativo=true"],"gotcha":"SQLite aceita BOOLEAN NOT NULL DEFAULT 1 (mapeia para inteiro). Retrocompat: caixas existentes ficam ativo=true."}
-</script>
-
-<h2 id="c2-camadas">D.3 Camadas do módulo (5 services + 7 rotas)</h2>
-
-<h3>D.3.1 5 services do Módulo Financeiro</h3>
-
-<table>
-  <thead><tr><th>Service</th><th>Responsabilidade</th><th>RN</th></tr></thead>
-  <tbody>
-    <tr><td><code>app/lib/caixas.server.ts</code></td><td>CRUD <code>Caixa</code>: listar, criar, editar, arquivar, reabrir</td><td>RN-FIN-01</td></tr>
-    <tr><td><code>app/lib/lancamentos.server.ts</code></td><td>CRUD <code>Lancamento</code>: criar, listarPorCaixa, listarPorMembro, editar descritivo</td><td>RN-FIN-01, RN-FIN-04, RN-FIN-05</td></tr>
-    <tr><td><code>app/lib/transferencias.server.ts</code></td><td><code>transferirEntreCaixas</code> (operação composta atômica)</td><td>RN-FIN-02</td></tr>
-    <tr><td><code>app/lib/finance.server.ts</code> (canônico)</td><td><code>assertSaldoSuficiente</code>, <code>getDizimosByMembro</code> (Camada 3 já pronta)</td><td>(transversal)</td></tr>
-    <tr><td><code>app/lib/money.server.ts</code> (canônico)</td><td><code>formatBRLFromCents</code>, <code>parseBRLToCents</code>, <code>assertNonNegative</code></td><td>(transversal)</td></tr>
-  </tbody>
-</table>
-
-<h3>D.3.2 7 rotas adicionadas em <code>app/routes/app/financeiro/**</code></h3>
-
-<table>
-  <thead><tr><th>Rota</th><th>Função</th></tr></thead>
-  <tbody>
-    <tr><td><code>financeiro._index.tsx</code></td><td>Dashboard (cards de saldo por caixa + indicador agregado)</td></tr>
-    <tr><td><code>financeiro.caixas._index.tsx</code></td><td>Listagem de caixas</td></tr>
-    <tr><td><code>financeiro.caixas.novo.tsx</code></td><td>Criar caixa (Admin/PASTOR/FINANCEIRO)</td></tr>
-    <tr><td><code>financeiro.caixas.$id.tsx</code></td><td>Extrato do caixa + arquivar/reabrir</td></tr>
-    <tr><td><code>financeiro.lancamentos.novo.tsx</code></td><td>Criar lançamento (com campo "Membro" condicional à categoria)</td></tr>
-    <tr><td><code>financeiro.transferencias._index.tsx</code></td><td>Listagem de transferências (somente leitura)</td></tr>
-    <tr><td><code>financeiro.transferencias.novo.tsx</code></td><td>Form de transferência (RN-FIN-02 atômico)</td></tr>
-  </tbody>
-</table>
-
-<h3>D.3.3 Regras de fronteira entre services</h3>
-<ul>
-  <li><code>caixas.server.ts</code> → <code>lancamentos.server.ts</code>? <strong>Não</strong> (independência).</li>
-  <li><code>lancamentos.server.ts</code> → <code>caixas.server.ts</code>? <strong>Não</strong> (lê <code>caixa.saldoCentavos</code> via <code>prisma.caixa.findUnique</code> direto).</li>
-  <li><code>transferencias.server.ts</code> → <code>lancamentos.server.ts</code>? <strong>Não</strong> (cria 2 <code>Lancamento</code> via <code>tx.lancamento.create</code> dentro do <code>$transaction</code>).</li>
-  <li><code>finance.server.ts</code> é usado <strong>por</strong> todos (helpers transversais).</li>
-  <li><code>rbac.server.ts</code> é usado <strong>por</strong> todos (Camada 3 RBAC).</li>
-</ul>
-
-<script type="application/json" data-spec-section="D.3">
-{"services":[{"path":"app/lib/caixas.server.ts","responsabilidade":"CRUD Caixa","rns":["RN-FIN-01"]},{"path":"app/lib/lancamentos.server.ts","responsabilidade":"CRUD Lancamento","rns":["RN-FIN-01","RN-FIN-04","RN-FIN-05"]},{"path":"app/lib/transferencias.server.ts","responsabilidade":"transferirEntreCaixas (atomico)","rns":["RN-FIN-02"]},{"path":"app/lib/finance.server.ts","responsabilidade":"assertSaldoSuficiente, getDizimosByMembro","rns":["transversal"]},{"path":"app/lib/money.server.ts","responsabilidade":"formatBRLFromCents, parseBRLToCents","rns":["transversal"]}],"rotas":[{"path":"financeiro._index.tsx","funcao":"dashboard"},{"path":"financeiro.caixas._index.tsx","funcao":"listagem caixas"},{"path":"financeiro.caixas.novo.tsx","funcao":"criar caixa"},{"path":"financeiro.caixas.$id.tsx","funcao":"extrato + arquivar"},{"path":"financeiro.lancamentos.novo.tsx","funcao":"criar lancamento"},{"path":"financeiro.transferencias._index.tsx","funcao":"listagem transferencias"},{"path":"financeiro.transferencias.novo.tsx","funcao":"form transferencia"}]}
-</script>
-
-<h2 id="c2-endpoints">D.4 Endpoints da API (Módulo Financeiro)</h2>
-
-<table class="endpoint-table">
-  <thead><tr><th>Método</th><th>Path</th><th>Permissão</th><th>Erros</th></tr></thead>
-  <tbody>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro</code></td><td><code>canSeeFinancials</code> (4 perfis)</td><td>401, 403</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/caixas</code></td><td><code>canSeeFinancials</code></td><td>401, 403</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/caixas/nova</code></td><td><code>assertCanManageCaixa</code> (3 perfis)</td><td>401, 403</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/financeiro/caixas</code></td><td><code>assertCanManageCaixa</code></td><td>401, 403, 409 (nome dup), 422</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/caixas/:id</code></td><td><code>canSeeFinancials</code></td><td>401, 403, 404</td></tr>
-    <tr><td><span class="badge method-PATCH">PATCH</span></td><td class="path"><code>/app/financeiro/caixas/:id/arquivar</code></td><td><code>assertCanManageCaixa</code></td><td>401, 403, 404</td></tr>
-    <tr><td><span class="badge method-PATCH">PATCH</span></td><td class="path"><code>/app/financeiro/caixas/:id/reabrir</code></td><td><code>assertCanManageCaixa</code></td><td>401, 403, 404</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/lancamentos/novo</code></td><td><code>canSeeFinancials</code></td><td>401, 403</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/financeiro/lancamentos</code></td><td><code>canSeeFinancials</code></td><td>401, 403, 400 (DIZIMO sem membro), 409 (saldo), 422</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/transferencias</code></td><td><code>canSeeFinancials</code></td><td>401, 403</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/financeiro/transferencias/nova</code></td><td><code>canSeeFinancials</code></td><td>401, 403</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/financeiro/transferencias</code></td><td><code>canSeeFinancials</code></td><td>401, 403, 400 (origem=destino/valor 0/negativo), 409 (saldo origem), 422</td></tr>
-  </tbody>
-</table>
-
-<h3>D.4.1 Contratos de exemplo</h3>
-
-<p><strong>POST <code>/app/financeiro/lancamentos</code>:</strong></p>
-<ul>
-  <li>Request: form <code>{ tipo, categoria, valorCentavos, caixaId, membroId?, dataCompetencia, descricao }</code>.</li>
-  <li>Resposta sucesso: 302 → <code>/app/financeiro/caixas/{caixaId}</code> (toast "Dízimo registrado").</li>
-  <li>Resposta erro: 400 (DIZIMO sem membro), 409 (saldo insuficiente), 422 (Zod).</li>
-</ul>
-
-<p><strong>POST <code>/app/financeiro/transferencias</code>:</strong></p>
-<ul>
-  <li>Request: form <code>{ caixaOrigemId, caixaDestinoId, valorBRL }</code>.</li>
-  <li>Resposta sucesso: 302 → <code>/app/financeiro/transferencias</code> (toast "Transferência registrada").</li>
-  <li>Resposta erro: 400 (origem=destino, valor≤0), 409 (saldo origem), 422.</li>
-</ul>
-
-<script type="application/json" data-spec-section="D.4">
-{"endpoints_financeiro":[{"metodo":"GET","path":"/app/financeiro","permissao":"canSeeFinancials","erros":[401,403]},{"metodo":"GET","path":"/app/financeiro/caixas","permissao":"canSeeFinancials","erros":[401,403]},{"metodo":"GET","path":"/app/financeiro/caixas/nova","permissao":"assertCanManageCaixa","erros":[401,403]},{"metodo":"POST","path":"/app/financeiro/caixas","permissao":"assertCanManageCaixa","erros":[401,403,409,422]},{"metodo":"GET","path":"/app/financeiro/caixas/:id","permissao":"canSeeFinancials","erros":[401,403,404]},{"metodo":"PATCH","path":"/app/financeiro/caixas/:id/arquivar","permissao":"assertCanManageCaixa","erros":[401,403,404]},{"metodo":"PATCH","path":"/app/financeiro/caixas/:id/reabrir","permissao":"assertCanManageCaixa","erros":[401,403,404]},{"metodo":"GET","path":"/app/financeiro/lancamentos/novo","permissao":"canSeeFinancials","erros":[401,403]},{"metodo":"POST","path":"/app/financeiro/lancamentos","permissao":"canSeeFinancials","erros":[401,403,400,409,422]},{"metodo":"GET","path":"/app/financeiro/transferencias","permissao":"canSeeFinancials","erros":[401,403]},{"metodo":"GET","path":"/app/financeiro/transferencias/nova","permissao":"canSeeFinancials","erros":[401,403]},{"metodo":"POST","path":"/app/financeiro/transferencias","permissao":"canSeeFinancials","erros":[401,403,400,409,422]}],"contratos_exemplo":{"POST_lancamentos":"form: tipo, categoria, valorCentavos, caixaId, membroId?, dataCompetencia, descricao. Sucesso 302 /caixas/{id}. Erros: 400 (DIZIMO sem membro), 409 (saldo), 422 (Zod).","POST_transferencias":"form: caixaOrigemId, caixaDestinoId, valorBRL. Sucesso 302 /transferencias. Erros: 400 (origem=destino/valor≤0), 409 (saldo origem), 422."}}
-</script>
-
-<h2 id="c2-rbac">D.5 RBAC fina (matriz perfil × operação × módulo)</h2>
-
-<table>
-  <thead><tr><th>Operação \ Perfil</th><th>ADMIN</th><th>PASTOR</th><th>FINANCEIRO</th><th>SECRETARIO</th><th>DISCIPULADOR</th><th>LIDER_MIN.</th></tr></thead>
-  <tbody>
-    <tr><td>Ver dashboard <code>/app/financeiro</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Criar / arquivar Caixa</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Lançar DIZIMO (com membro)</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Lançar OFERTA (anônima)</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Lançar DESPESA / SAIDA (com trava)</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Transferir entre Caixas</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Ver aba Fidelidade Financeira (RN-MEM-03)</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Ver extrato de Caixa alheio</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Auditar reconciliação (futuro)</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-  </tbody>
-</table>
-
-<p><strong>Defesa em 3 camadas obrigatória em todas as células ✅:</strong> UI <code>&lt;Can allow={[...]}&gt;</code>, loader/action <code>assertCan*</code> antes de I/O, service <code>assertCan*</code> como PRIMEIRA linha. <strong>DISCIPULADOR</strong> e <strong>LIDER_MINISTERIO</strong> são BLOQUEADOS em todo o módulo — bypass via URL direta ou chamada programática é barrado pela Camada 3.</p>
-
-<script type="application/json" data-spec-section="D.5">
-{"rbac_matriz":{"ADMIN":["ver_dashboard","criar_arquivar_caixa","lancar_dizimo","lancar_oferta","lancar_despesa","transferir","ver_fidelidade","ver_extrato","auditar"],"PASTOR":["ver_dashboard","criar_arquivar_caixa","lancar_dizimo","lancar_oferta","lancar_despesa","transferir","ver_fidelidade","ver_extrato","auditar"],"FINANCEIRO":["ver_dashboard","criar_arquivar_caixa","lancar_dizimo","lancar_oferta","lancar_despesa","transferir","ver_fidelidade","ver_extrato","auditar"],"SECRETARIO":["ver_dashboard","lancar_dizimo","lancar_oferta","lancar_despesa","transferir","ver_extrato"],"DISCIPULADOR":[],"LIDER_MINISTERIO":[]},"camadas":["UI <Can allow>","loader/action assertCan*","service assertCan*"],"bloqueio_total":["DISCIPULADOR","LIDER_MINISTERIO"]}
-</script>
-
-<h2 id="c2-auditoria">D.6 Trilha de auditoria (LGPD + financeiro)</h2>
-
-<h3>D.6.1 Princípios</h3>
-<ul>
-  <li><strong>Logs estruturados</strong> via <code>safeLog</code> (allowlist) — <strong>nunca</strong> <code>valorCentavos</code>, email, telefone, endereço.</li>
-  <li><strong>Carimbo do operador</strong> em <code>TransferenciaCaixa.executadoPorId</code> (imutável, RN-FIN-02).</li>
-  <li><strong>RN-FIN-02 imutabilidade:</strong> 1 <code>TransferenciaCaixa</code> por operação, sem update/delete no service.</li>
-  <li><strong>Dízimo órfão</strong>: <code>SetNull</code> em <code>Lancamento.membro</code> (RN-FIN-05 + LGPD art. 18).</li>
-  <li><strong>Saldo reconciliável</strong>: <code>SUM(Lancamento WHERE caixaId = X) === Caixa.saldoCentavos</code>. Reconciliação semanal é <strong>backlog</strong> (ciclo 3+).</li>
-</ul>
-
-<h3>D.6.2 O que <strong>não</strong> vai para log</h3>
-<table>
-  <thead><tr><th>Dado</th><th>Razão</th></tr></thead>
-  <tbody>
-    <tr><td><code>senha</code> / <code>senhaHash</code></td><td>LGPD + segurança (mesmo hasheada)</td></tr>
-    <tr><td><code>Membro.email</code></td><td>Dado pessoal, PII</td></tr>
-    <tr><td><code>Membro.telefone</code></td><td>Dado pessoal, PII</td></tr>
-    <tr><td><code>Membro.endereço</code></td><td>Dado pessoal, PII</td></tr>
-    <tr><td><code>Lancamento.valorCentavos</code></td><td>RN-MEM-03 + LGPD (dado financeiro sensível)</td></tr>
-  </tbody>
-</table>
-
-<h3>D.6.3 O que <strong>vai</strong> para log</h3>
-<ul>
-  <li><code>userId</code> (id do operador).</li>
-  <li><code>action</code> (ex: <code>"create_lancamento"</code>, <code>"transferir_caixa"</code>, <code>"arquivar_caixa"</code>).</li>
-  <li><code>resource</code> (ex: <code>"caixa:&lt;id&gt;"</code>, <code>"lancamento:&lt;id&gt;"</code>).</li>
-  <li><code>result</code> (<code>"ok"</code> | <code>"fail"</code>).</li>
-  <li><code>timestamp</code> (ISO 8601).</li>
-  <li><code>ip</code> (rate limit + auditoria de origem).</li>
-</ul>
-
-<script type="application/json" data-spec-section="D.6">
-{"auditoria":{"principios":["safeLog com allowlist (sem valorCentavos/PII)","TransferenciaCaixa.executadoPorId imutavel (RN-FIN-02)","Dízimo orfao via SetNull (RN-FIN-05 + LGPD art. 18)","Saldo reconciliavel via SUM(Lancamento) (reconciliacao semanal = backlog)"],"proibido_em_log":["senha","senhaHash","Membro.email","Membro.telefone","Membro.endereco","Lancamento.valorCentavos"],"permitido_em_log":["userId","action","resource","result","timestamp","ip"]}}
-</script>
-
-<h2 id="c2-schema">D.7 Schema do SQLite (gotchas)</h2>
-
-<h3>D.7.1 Gotcha 1 — <code>prisma.$transaction</code> + commit assíncrono em E2E</h3>
-<p>
-Prisma 7.8 tem commit assíncrono. Se o <code>page.goto</code> subsequente em E2E não vir o lançamento criado, usar <code>dbSettle(100)</code> como workaround. Ver RAG <code>lesson-prisma-7-commit-settle-e2e</code>.
-</p>
-
-<h3>D.7.2 Gotcha 2 — <code>Int</code> para centavos (nunca <code>Float</code>)</h3>
-<p>
-<code>valorCentavos: Int</code> cobre até R$ 21.474.836,47 (32-bit signed). <code>Float</code> reintroduz bugs de arredondamento (RAG <code>convention-monetary-values</code>). Conversão só na borda via <code>parseBRLToCents</code> e <code>formatBRLFromCents</code>.
-</p>
-
-<h3>D.7.3 Gotcha 3 — <code>DateTime</code> no SQLite</h3>
-<p>
-SQLite armazena <code>DateTime</code> como string ISO 8601. Prisma faz parse transparente. Fuso horário: sempre UTC no DB, conversão para <code>America/Sao_Paulo</code> só na exibição (helper <code>formatDate</code> em <code>app/lib/format-date.ts</code>).
-</p>
-
-<h3>D.7.4 Gotcha 4 — <code>onDelete</code> em <code>TransferenciaCaixa.executadoPor</code> é <code>Restrict</h3>
-<p>
-Operador carimbado é imutável. Se um Membro deixar a igreja, <code>executadoPorId</code> continua apontando para ele. Histórico preservado (RN-FIN-02 + auditoria).
-</p>
-
-<h3>D.7.5 Gotcha 5 — <code>@@index</code> em volume esperado</h3>
-<p>
-<code>@@index([caixaId, dataCompetencia])</code> no <code>Lancamento</code> otimiza extrato. <code>@@index([membroId, categoria])</code> otimiza aba Fidelidade. ~1k lançamentos/mês por caixa: índice composto é suficiente (YAGNI antecipar Postgres full-text).
-</p>
-
-<script type="application/json" data-spec-section="D.7">
-{"gotchas":[{"id":"G1","tema":"transaction async","mitigacao":"dbSettle(100) em E2E","ref":"lesson-prisma-7-commit-settle-e2e"},{"id":"G2","tema":"Int para centavos","mitigacao":"nunca Float, conversao so na borda","ref":"convention-monetary-values"},{"id":"G3","tema":"DateTime UTC","mitigacao":"UTC no DB, formatDate para America/Sao_Paulo"},{"id":"G4","tema":"Restrict em executadoPor","mitigacao":"operador imutavel, historico preservado"},{"id":"G5","tema":"indices","mitigacao":"@@index composto, YAGNI Postgres full-text"}]}
-</script>
-
-<h2 id="c2-helpers">D.8 Helpers canônicos</h2>
-
-<h3>D.8.1 <code>assertSaldoSuficiente</code> (Camada 3, RN-FIN-04)</h3>
-<p>Helper canônico em <code>app/lib/finance.server.ts</code>. Lança <code>Response(409)</code> se caixa não tem saldo. <strong>PRIMEIRO</strong> no service, antes do <code>$transaction</code>. JÁ checa <code>caixa.ativo === false</code> (null-safe com proposta pendente).</p>
-
-<h3>D.8.2 <code>transferirEntreCaixas</code> (Camada 3, RN-FIN-02 + RN-FIN-04 atômico)</h3>
-<p>Helper canônico em <code>app/lib/transferencias.server.ts</code>. Executa 5 mutações em <code>$transaction</code> atômica. Re-leitura anti-TOCTOU dentro da transação.</p>
-
-<h3>D.8.3 <code>formatBRLFromCents</code> / <code>parseBRLToCents</code> / <code>assertNonNegative</code></h3>
-<p>Helpers canônicos em <code>app/lib/money.server.ts</code>. Conversão só na borda (form → cents, cents → BRL). Zod <code>.int().positive()</code> rejeita 0 e negativo.</p>
-
-<h3>D.8.4 <code>getDizimosByMembro</code> (Camada 3, RN-MEM-03)</h3>
-<p>Helper canônico em <code>app/lib/finance.server.ts</code>. JÁ EXISTE no ciclo 1 (placeholder). No ciclo 2, basta descomentar a query real (<code>where: { membroId, categoria: "DIZIMO" }</code>).</p>
-
-<h3>D.8.5 <code>assertCanSeeFinancials</code> (Camada 3, RBAC)</h3>
-<p>Helper canônico em <code>app/lib/rbac.server.ts</code>. Lança <code>Response(403)</code> se user sem perfil financeiro (FINANCIAL_CARGOS = ADMIN, PASTOR, FINANCEIRO). <strong>PRIMEIRO</strong> no service, antes de qualquer I/O.</p>
-
-<h3>D.8.6 <code>assertCanManageCaixa</code> (Camada 3, RBAC — PROPOSTO ciclo 2)</h3>
-<p>Helper <strong>proposto</strong> em <code>app/lib/rbac.server.ts</code>. Lança <code>Response(403)</code> se user não tem permissão de criar/arquivar Caixa (ADMIN, PASTOR, FINANCEIRO — matriz §4.8 do brief).</p>
-
-<script type="application/json" data-spec-section="D.8">
-{"helpers":[{"id":"H1","nome":"assertSaldoSuficiente","localizacao":"app/lib/finance.server.ts","camada":3,"rns":["RN-FIN-04"],"throws":[400,404,409]},{"id":"H2","nome":"transferirEntreCaixas","localizacao":"app/lib/transferencias.server.ts","camada":3,"rns":["RN-FIN-02","RN-FIN-04"],"atomicidade":"5 mutacoes em $transaction"},{"id":"H3","nome":"formatBRLFromCents / parseBRLToCents / assertNonNegative","localizacao":"app/lib/money.server.ts","rns":["convencao monetary"]},{"id":"H4","nome":"getDizimosByMembro","localizacao":"app/lib/finance.server.ts","camada":3,"rns":["RN-MEM-03"],"status":"ja_existe_ciclo_1"},{"id":"H5","nome":"assertCanSeeFinancials","localizacao":"app/lib/rbac.server.ts","camada":3,"rns":["RN-MEM-03"]},{"id":"H6","nome":"assertCanManageCaixa","localizacao":"app/lib/rbac.server.ts","camada":3,"rns":["RN-FIN-01"],"status":"proposto_ciclo_2"}]}
-</script>
-
-<h2 id="c2-testes-borda">D.9 Testes de borda obrigatórios (12)</h2>
-
-<p>Lista derivada do brief §7.3. Cada teste é bloqueador da sprint que o entrega. TDD antes do service.</p>
-
-<table>
-  <thead><tr><th>#</th><th>Teste</th><th>RN</th><th>Tipo</th></tr></thead>
-  <tbody>
-    <tr><td>1</td><td>12 discípulos: passa (regressão ciclo 1)</td><td>RN-MEM-04</td><td>Unit + Integração</td></tr>
-    <tr><td>2</td><td>13º discípulo: bloqueia com mensagem clara</td><td>RN-MEM-04</td><td>Unit + Integração</td></tr>
-    <tr><td>3</td><td><strong>Saldo = 0, SAIDA de R$ 0,01: bloqueia com 409</strong></td><td>RN-FIN-04</td><td>Unit (bloqueador)</td></tr>
-    <tr><td>4</td><td><strong>DIZIMO sem membro: bloqueia com 400</strong></td><td>RN-FIN-05</td><td>Unit + Integração</td></tr>
-    <tr><td>5</td><td><strong>OFERTA sem membro: passa, anônimo</strong></td><td>RN-FIN-05</td><td>Unit + Integração</td></tr>
-    <tr><td>6</td><td><strong>Transferência origem = destino: bloqueia com 400</strong></td><td>RN-FIN-02</td><td>Unit</td></tr>
-    <tr><td>7</td><td><strong>Transferência valor = 0: bloqueia com 400</strong></td><td>RN-FIN-02</td><td>Unit</td></tr>
-    <tr><td>8</td><td><strong>Transferência valor negativo: bloqueia com 400</strong></td><td>RN-FIN-02</td><td>Unit</td></tr>
-    <tr><td>9</td><td>SECRETARIO acessando <code>/app/financeiro</code>: recebe 403</td><td>RBAC</td><td>E2E</td></tr>
-    <tr><td>10</td><td>SECRETARIO acessando <code>/app/membros/:id?tab=fidelidade</code>: aba não renderiza + service 403</td><td>RN-MEM-03</td><td>E2E</td></tr>
-    <tr><td>11</td><td>DISCIPULADOR tentando qualquer rota <code>/app/financeiro/**</code>: recebe 403</td><td>RBAC</td><td>E2E</td></tr>
-    <tr><td>12</td><td><strong>Caixa arquivado rejeita movimentação (depende D.9 do PRD)</strong></td><td>RN-FIN-01</td><td>Unit (condicional)</td></tr>
-  </tbody>
-</table>
-
-<h3>D.9.1 e2eChains (para o tester agent)</h3>
-<ol>
-  <li><strong>Chain 1 — Dízimo end-to-end (métrica macro):</strong> <code>POST /login</code> (FINANCEIRO) → <code>POST /app/financeiro/lancamentos</code> (DIZIMO) → <code>GET /app/membros/:id?tab=fidelidade</code> (PASTOR). DataFlow: cookie <code>sid</code> + payload com <code>membroId</code> + <code>caixaId</code> → <code>$transaction</code> cria <code>Lancamento</code> + atualiza <code>Caixa.saldoCentavos</code> → aba Fidelidade lê <code>getDizimosByMembro</code>.</li>
-  <li><strong>Chain 2 — Transferência atômica (5 mutações):</strong> <code>POST /login</code> (FINANCEIRO) → <code>POST /app/financeiro/transferencias</code> → <code>GET /app/financeiro/caixas/origem</code> + <code>GET /app/financeiro/caixas/destino</code>. DataFlow: payload com 2 caixas + valor → <code>assertSaldoSuficiente</code> → <code>$transaction</code> cria 1 <code>TransferenciaCaixa</code> + 2 <code>Lancamento</code> + 2 <code>Caixa.update</code>. Extrato de ambos reflete (origem SAIDA, destino ENTRADA, mesmo valor).</li>
-</ol>
-
-<h3>D.9.2 crossModuleHints (dados entre módulos)</h3>
-<ul>
-  <li>De <code>POST /app/financeiro/lancamentos</code> (DIZIMO) para <code>GET /app/membros/:id?tab=fidelidade</code>: campo <code>Lancamento</code> aparece na tabela (data, valor BRL, descrição).</li>
-  <li>De <code>POST /app/financeiro/transferencias</code> para <code>GET /app/financeiro/caixas/:id</code>: 2 lançamentos espelho com <code>categoria: TRANSFERENCIA</code> aparecem no extrato de cada caixa envolvido.</li>
-  <li>De <code>POST /app/financeiro/lancamentos</code> (DESPESA) para <code>GET /app/financeiro</code> (dashboard): <code>Caixa.saldoCentavos</code> decrementa e aparece no card do caixa.</li>
-</ul>
-
-<script type="application/json" data-spec-section="D.9">
-{"testes_borda":[{"id":1,"nome":"12 discipulos","rn":"RN-MEM-04","tipo":"unit+integracao"},{"id":2,"nome":"13o discipulo","rn":"RN-MEM-04","tipo":"unit+integracao"},{"id":3,"nome":"Saldo=0 + SAIDA 1 cent","rn":"RN-FIN-04","tipo":"unit (bloqueador)"},{"id":4,"nome":"DIZIMO sem membro","rn":"RN-FIN-05","tipo":"unit+integracao"},{"id":5,"nome":"OFERTA sem membro","rn":"RN-FIN-05","tipo":"unit+integracao"},{"id":6,"nome":"Transferencia origem=destino","rn":"RN-FIN-02","tipo":"unit"},{"id":7,"nome":"Transferencia valor=0","rn":"RN-FIN-02","tipo":"unit"},{"id":8,"nome":"Transferencia valor negativo","rn":"RN-FIN-02","tipo":"unit"},{"id":9,"nome":"SECRETARIO /app/financeiro","rn":"RBAC","tipo":"e2e"},{"id":10,"nome":"SECRETARIO aba fidelidade","rn":"RN-MEM-03","tipo":"e2e"},{"id":11,"nome":"DISCIPULADOR /app/financeiro/**","rn":"RBAC","tipo":"e2e"},{"id":12,"nome":"Caixa arquivado rejeita","rn":"RN-FIN-01","tipo":"unit (condicional)"}],"e2eChains":[{"id":"E2E-FIN-001","nome":"Dizimo end-to-end (metrica macro)","sequence":["POST /login (FINANCEIRO)","POST /app/financeiro/lancamentos (DIZIMO)","GET /app/membros/:id?tab=fidelidade (PASTOR)"]},{"id":"E2E-FIN-002","nome":"Transferencia atomica (5 mutacoes)","sequence":["POST /login (FINANCEIRO)","POST /app/financeiro/transferencias","GET /app/financeiro/caixas/origem","GET /app/financeiro/caixas/destino"]}],"crossModuleHints":[{"de":"POST /app/financeiro/lancamentos (DIZIMO)","para":"GET /app/membros/:id?tab=fidelidade","campo":"Lancamento (data, valor BRL, descricao)"},{"de":"POST /app/financeiro/transferencias","para":"GET /app/financeiro/caixas/:id","campos":"2 Lancamento espelho com categoria TRANSFERENCIA"},{"de":"POST /app/financeiro/lancamentos (DESPESA)","para":"GET /app/financeiro (dashboard)","campo":"Caixa.saldoCentavos"}]}
-</script>
-
-<h2 id="c2-limites">D.10 Limites conhecidos e dependências externas</h2>
-
-<h3>D.10.1 Limites</h3>
-
-<table>
-  <thead><tr><th>Limite</th><th>Onde</th><th>Mitigação</th></tr></thead>
-  <tbody>
-    <tr><td><strong>SQLite single-writer</strong></td><td><code>dev.db</code></td><td>1 processo Node + <code>$transaction</code> atômico. Postgres é mudança aditiva.</td></tr>
-    <tr><td><strong>Sem auditoria de leitura</strong> (LGPD art. 37)</td><td><code>getDizimosByMembro</code> lê sem registrar quem viu</td><td>Backlog (não ciclo 2).</td></tr>
-    <tr><td><strong>Sem gateway de pagamento</strong></td><td>não há Pix/cartão</td><td>Brief §8 — não-objetivo.</td></tr>
-    <tr><td><strong>Sem multi-moeda</strong></td><td>apenas BRL</td><td><code>Int</code> cobre até R$ 21M/caixa.</td></tr>
-    <tr><td><strong>Sem upload de comprovantes</strong></td><td><code>Lancamento.descricao</code> é textual</td><td>Backlog (S3/MinIO).</td></tr>
-    <tr><td><strong>Sem relatório PDF/Excel</strong></td><td>exportação manual</td><td>Backlog.</td></tr>
-    <tr><td><strong>Sem aprovação multi-nível</strong></td><td>trava de saldo é o único gate</td><td>RN-FIN-03 é autonomia por saldo, sem "aprovação do pastor" como portão extra.</td></tr>
-    <tr><td><strong>Volumetria: 1k+ lançamentos/mês por caixa</strong></td><td>extrato fica lento</td><td>Paginador + filtro por período + <code>@@index([caixaId, dataCompetencia DESC])</code>.</td></tr>
-    <tr><td><strong>Caixa arquivado tem saldo congelado</strong></td><td>saldo histórico preservado</td><td>Correto e desejável — dinheiro "guardado" no extrato.</td></tr>
-  </tbody>
-</table>
-
-<h3>D.10.2 Dependências externas (nenhuma nova)</h3>
-<ul>
-  <li>❌ Gateway de pagamento (Pix, cartão, boleto) — não integrado.</li>
-  <li>❌ SMTP / e-mail — sem envio de recibos.</li>
-  <li>❌ S3 / MinIO — sem upload de comprovantes.</li>
-  <li>❌ Redis / message broker — sem filas, sem cache distribuído.</li>
-  <li>❌ Postgres / multi-tenant — 1 instância = 1 igreja.</li>
-  <li>❌ Cron jobs externos — sem notificações agendadas (alinhado com ciclo 1).</li>
-</ul>
-
-<h3>D.10.3 Próximos passos (S06+)</h3>
-<ol>
-  <li><strong>S06 — Caixa + Lançamento (Sprint 1 do ciclo 2):</strong> CRUD básico, dashboard de saldos, RAG <code>pattern-trava-saldo-service</code> implementado em <code>criarLancamento</code>.</li>
-  <li><strong>S07 — Transferência + Trava saldo em SAIDA (Sprint 2):</strong> RAG <code>pattern-transferencia-caixas</code> implementado, E2E de bypass.</li>
-  <li><strong>S08 — Fidelidade Financeira + RBAC fina (Sprint 3):</strong> substituir placeholder do <code>TabFidelidadeFinanceira</code>, testes E2E de bypass (RN-MEM-03).</li>
-  <li><strong>S09+ (backlog):</strong> Reconciliação semanal, relatórios, multi-moeda, gateway de pagamento.</li>
-</ol>
-
-<script type="application/json" data-spec-section="D.10">
-{"limites":[{"id":"L1","tema":"SQLite single-writer","mitigacao":"$transaction atomico"},{"id":"L2","tema":"Auditoria leitura (LGPD art. 37)","mitigacao":"Backlog"},{"id":"L3","tema":"Sem gateway pagamento","mitigacao":"Nao objetivo"},{"id":"L4","tema":"Sem multi-moeda","mitigacao":"Int cobre R$ 21M/caixa"},{"id":"L5","tema":"Sem upload","mitigacao":"Backlog (S3)"},{"id":"L6","tema":"Sem PDF/Excel","mitigacao":"Backlog"},{"id":"L7","tema":"Sem aprovacao multi-nivel","mitigacao":"RN-FIN-03 autonomia por saldo"},{"id":"L8","tema":"Volumetria 1k+/mes","mitigacao":"Paginador + indice composto"},{"id":"L9","tema":"Caixa arquivado saldo congelado","mitigacao":"Correto e desejavel"}],"dependencias_externas":["Nenhuma nova. Mantem stack do ciclo 1."],"proximos_passos":["S06 Caixa + Lancamento","S07 Transferencia + Trava","S08 Fidelidade + RBAC","S09+ backlog (reconciliacao, relatorios, multi-moeda)"]}
-</script>
-
-<hr />
-
-<!-- ===================================================== -->
-<!-- APÊNDICE E — MÓDULO ESTOQUE + PATRIMÔNIO (CICLO 3)    -->
-<!-- ===================================================== -->
-<h1 id="c3-apendice">Apêndice E — Módulo Estoque + Patrimônio (ciclo 3)</h1>
-<p class="meta">
-  <strong>Adicionado em:</strong> 2026-06-19 (Fase 2, ciclo 3) &middot;
-  <strong>Escopo:</strong> Estoque (Consumo) + Patrimônio (Manutenção + Baixa por perda) &middot;
-  <strong>Schema:</strong> <code>prisma/schema.prisma:232–289</code> (já existia no ciclo 1)
-</p>
-
-<nav class="toc" aria-label="Apêndice E — Módulo Estoque + Patrimônio">
-  <strong>Apêndice E — Módulo Estoque + Patrimônio (ciclo 3)</strong>
-  <ol>
-    <li><a href="#c3-models">E.1 Models do Estoque+Patrimônio</a></li>
-    <li><a href="#c3-migrations">E.2 Migrations (soft-delete)</a></li>
-    <li><a href="#c3-camadas">E.3 Camadas (4 services + 11 rotas)</a></li>
-    <li><a href="#c3-endpoints">E.4 Endpoints da API (11 rotas)</a></li>
-    <li><a href="#c3-schemas">E.5 Schemas Zod (4 schemas)</a></li>
-    <li><a href="#c3-rbac">E.6 RBAC fina (matriz 6×9)</a></li>
-    <li><a href="#c3-lgpd">E.7 LGPD aplicada (Art. 6, 7, 18, 46)</a></li>
-    <li><a href="#c3-testes">E.8 Testes (12 borda + 3 e2eChains + crossModuleHints)</a></li>
-    <li><a href="#c3-helpers">E.9 Helpers canônicos</a></li>
-    <li><a href="#c3-limites">E.10 Limites e dependências</a></li>
-  </ol>
-</nav>
-
-<h2 id="c3-models">E.1 Models do Estoque + Patrimônio</h2>
-<p>3 models + 2 enums já existem no schema Prisma (linhas 232–289 do <code>prisma/schema.prisma</code>). Esta seção confirma a modelagem e adiciona o campo <code>ativo</code> (decisão E.2).</p>
-
-<h3>E.1.1 <code>ItemEstoque</code> (model)</h3>
-<pre><code>model ItemEstoque {
-  id                String   @id @default(uuid())
-  nome              String                   // "Pacote papel A4", "Projetor BenQ"
-  descricao         String?
-  tipo              TipoItemEstoque          // CONSUMO | PATRIMONIO
-  quantidade        Int      @default(0)    // CONSUMO: estoque atual; PATRIMONIO: geralmente 1
-  numeroSerie       String?  @unique        // PATRIMONIO: obrigatório e único
-  statusPatrimonio  StatusItemPatrimonio?    // PATRIMONIO: DISPONIVEL/EM_MANUTENCAO/BAIXADO_PERDA
-  localizacaoFisica String?                  // "Sala de som", "Cozinha"
-  // ativo: Boolean @default(true)           // PROPOSTA — espelha Caixa.ativo
-  movimentacoes     MovimentacaoEstoque[]
-  manutencoes       ManutencaoAtivo[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@index([tipo, ativo])
-  @@index([statusPatrimonio])
-  @@map("itens_estoque")
-}</code></pre>
-
-<h3>E.1.2 <code>MovimentacaoEstoque</code> (model)</h3>
-<pre><code>model MovimentacaoEstoque {
-  id              String                  @id @default(uuid())
-  itemEstoqueId   String
-  tipo            TipoMovimentacaoEstoque // ENTRADA | SAIDA
-  quantidade      Int                     // sempre > 0 (Zod positive)
-  nomeRetirante   String?                 // OBRIGATÓRIO quando tipo=SAIDA (texto livre)
-  justificativa   String?                 // OBRIGATÓRIO quando tipo=SAIDA
-  autorizadoPorId String                  // user.id (carimbo imutável, RN-EST-02)
-  dataHora        DateTime @default(now())
-  itemEstoque   ItemEstoque @relation(fields: [itemEstoqueId], references: [id], onDelete: Restrict)
-  autorizadoPor Membro     @relation(fields: [autorizadoPorId], references: [id], onDelete: Restrict)
-  @@index([itemEstoqueId, dataHora])
-  @@map("movimentacoes_estoque")
-}</code></pre>
-
-<h3>E.1.3 <code>ManutencaoAtivo</code> (model)</h3>
-<pre><code>model ManutencaoAtivo {
-  id                   String   @id @default(uuid())
-  itemEstoqueId        String
-  dataEnvio            DateTime @default(now())
-  previsaoRetorno      DateTime?   // prazoTermino (opcional, RN-EST-04)
-  dataRetorno          DateTime?   // preenchido no retorno
-  custoCentavos        Int?         // preenchido no retorno (ou futura integração Financeiro)
-  assistenciaTecnica   String       // OBRIGATÓRIO (RN-EST-03)
-  enderecoAssistencia  String       // OBRIGATÓRIO (RN-EST-03)
-  numeroOs             String?      // opcional (RN-EST-03)
-  motivoPerda          String?      // preenchido na baixa por perda (RN-EST-05)
-  foiPerdaTotal        Boolean @default(false)
-  urlLaudoTecnico      String?      // SEMPRE null neste ciclo (S3 fora de escopo)
-  itemEstoque ItemEstoque @relation(fields: [itemEstoqueId], references: [id], onDelete: Restrict)
-  @@index([itemEstoqueId])
-  @@index([dataRetorno])
-  @@map("manutencoes_ativo")
-}</code></pre>
-
-<h3>E.1.4 Enums (resumo)</h3>
-<table>
-  <thead><tr><th>Enum</th><th>Valores</th><th>Aplicação</th></tr></thead>
-  <tbody>
-    <tr><td><code>TipoItemEstoque</code></td><td><code>CONSUMO, PATRIMONIO</code></td><td><code>ItemEstoque.tipo</code></td></tr>
-    <tr><td><code>StatusItemPatrimonio</code></td><td><code>DISPONIVEL, EM_MANUTENCAO, BAIXADO_PERDA</code></td><td><code>ItemEstoque.statusPatrimonio</code> (PATRIMONIO only)</td></tr>
-    <tr><td><code>TipoMovimentacaoEstoque</code></td><td><code>ENTRADA, SAIDA</code></td><td><code>MovimentacaoEstoque.tipo</code></td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-spec-section="E.1">
-{"models":{"ItemEstoque":{"campos":["id","nome","descricao","tipo","quantidade","numeroSerie @unique","statusPatrimonio","localizacaoFisica","ativo? (proposta)"],"relacionamentos":["movimentacoes[]","manutencoes[]"],"indices":["@@index([tipo, ativo])","@@index([statusPatrimonio])"]},"MovimentacaoEstoque":{"campos":["id","itemEstoqueId","tipo","quantidade","nomeRetirante","justificativa","autorizadoPorId","dataHora"],"fks":{"itemEstoque":"Restrict","autorizadoPor":"Restrict"}},"ManutencaoAtivo":{"campos":["id","itemEstoqueId","dataEnvio","previsaoRetorno","dataRetorno","custoCentavos","assistenciaTecnica","enderecoAssistencia","numeroOs","motivoPerda","foiPerdaTotal","urlLaudoTecnico"],"fks":{"itemEstoque":"Restrict"}},"enums":{"TipoItemEstoque":["CONSUMO","PATRIMONIO"],"StatusItemPatrimonio":["DISPONIVEL","EM_MANUTENCAO","BAIXADO_PERDA"],"TipoMovimentacaoEstoque":["ENTRADA","SAIDA"]}}
-</script>
-
-<h2 id="c3-migrations">E.2 Migrations necessárias</h2>
-
-<h3>E.2.1 Migration: <code>add_ativo_to_item_estoque</code></h3>
-<p>Decisão alinhada com <code>decision-caixa-soft-delete</code> (ciclo 2, pendente). Se aprovado, gera:</p>
-<pre><code>-- prisma/migrations/&lt;timestamp&gt;_add_ativo_to_item_estoque/migration.sql
-ALTER TABLE "itens_estoque" ADD COLUMN "ativo" BOOLEAN NOT NULL DEFAULT 1;
-CREATE INDEX "itens_estoque_tipo_ativo_idx" ON "itens_estoque"("tipo", "ativo");</code></pre>
-
-<h3>E.2.2 Ordem de execução (Fase 5)</h3>
-<ol>
-  <li>Aprovar RAG <code>decision-itemEstoque-soft-delete</code> (espelha <code>decision-caixa-soft-delete</code>).</li>
-  <li><code>pnpm prisma migrate dev --name add_ativo_to_item_estoque</code>.</li>
-  <li><code>pnpm prisma generate</code> (regenera cliente).</li>
-  <li><code>pnpm db:reset</code> (valida + seed).</li>
-</ol>
-
-<script type="application/json" data-spec-section="E.2">
-{"migrations":[{"id":"add_ativo_to_item_estoque","status":"proposta (espelha Caixa.ativo)","sql":"ALTER TABLE itens_estoque ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT 1; CREATE INDEX itens_estoque_tipo_ativo_idx ON itens_estoque(tipo, ativo);","comando":"pnpm prisma migrate dev --name add_ativo_to_item_estoque","quando_gerar":"Fase 5, APOS spec-reviewer aprovar"}]}
-</script>
-
-<h2 id="c3-camadas">E.3 Camadas do módulo (4 services + 11 rotas)</h2>
-
-<h3>E.3.1 4 services do Módulo Estoque + Patrimônio</h3>
-<table>
-  <thead><tr><th>Service</th><th>Responsabilidade</th><th>RN</th></tr></thead>
-  <tbody>
-    <tr><td><code>app/lib/itemEstoque.server.ts</code></td><td>CRUD <code>ItemEstoque</code>: listar, criar, editar, arquivar (soft-delete)</td><td>RN-EST-01</td></tr>
-    <tr><td><code>app/lib/movimentacao.server.ts</code></td><td><code>criarMovimentacao</code> (ENTRADA/SAIDA com trava de estoque)</td><td>RN-EST-02</td></tr>
-    <tr><td><code>app/lib/manutencao.server.ts</code></td><td><code>enviarParaManutencao</code>, <code>retornarDeManutencao</code>, <code>baixaPorPerda</code>, <code>criarAlertaManutencaoSemPrazo</code></td><td>RN-EST-03, RN-EST-04, RN-EST-05</td></tr>
-    <tr><td><code>app/lib/estoque.server.ts</code> (canônico)</td><td><code>assertEstoquePositivo</code>, <code>assertItemPodeManutencao</code>, <code>getAlertasCriticos</code></td><td>(transversal)</td></tr>
-  </tbody>
-</table>
-
-<h3>E.3.2 11 rotas adicionadas em <code>app/routes/app/estoque/**</code></h3>
-<table>
-  <thead><tr><th>Rota</th><th>Função</th></tr></thead>
-  <tbody>
-    <tr><td><code>estoque._index.tsx</code></td><td>Dashboard (cards de alertas críticos + listagem filtrada)</td></tr>
-    <tr><td><code>estoque.alertas.tsx</code></td><td>Lista de itens críticos (manutenção &gt;30 dias, estoque baixo)</td></tr>
-    <tr><td><code>estoque.novo.tsx</code></td><td>Criar item (campos condicionais por tipo)</td></tr>
-    <tr><td><code>estoque.$id.tsx</code></td><td>Detalhe + abas Movimentações/Manutenções (gera alerta RN-EST-04)</td></tr>
-    <tr><td><code>estoque.$id.editar.tsx</code></td><td>Editar item</td></tr>
-    <tr><td><code>estoque.$id.movimentacao.nova.tsx</code></td><td>Form de movimentação (toggle ENTRADA/SAIDA)</td></tr>
-    <tr><td><code>estoque.$id.manutencao.nova.tsx</code></td><td>Form de envio para manutenção (PATRIMONIO only)</td></tr>
-    <tr><td><code>estoque.$id.retorno.tsx</code></td><td>Form de retorno de manutenção</td></tr>
-    <tr><td><code>estoque.$id.baixa-perda.tsx</code></td><td>Form de baixa por perda (ADMIN only)</td></tr>
-    <tr><td><code>estoque.$id.historico.tsx</code></td><td>Histórico consolidado (movimentações + manutenções)</td></tr>
-    <tr><td><code>patrimonio._index.tsx</code></td><td>Lista dedicada de patrimônio (atalho de <code>/app/estoque?tipo=PATRIMONIO</code>)</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-spec-section="E.3">
-{"services":[{"path":"app/lib/itemEstoque.server.ts","responsabilidade":"CRUD ItemEstoque","rns":["RN-EST-01"]},{"path":"app/lib/movimentacao.server.ts","responsabilidade":"criarMovimentacao (trava estoque)","rns":["RN-EST-02"]},{"path":"app/lib/manutencao.server.ts","responsabilidade":"enviar/retornar/baixa + alerta","rns":["RN-EST-03","RN-EST-04","RN-EST-05"]},{"path":"app/lib/estoque.server.ts","responsabilidade":"assertEstoquePositivo + helpers transversais","rns":["transversal"]}],"rotas_total":11}
-</script>
-
-<h2 id="c3-endpoints">E.4 Endpoints da API (Módulo Estoque + Patrimônio)</h2>
-<table class="endpoint-table">
-  <thead><tr><th>Método</th><th>Path</th><th>Permissão</th><th>Erros</th></tr></thead>
-  <tbody>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/estoque</code></td><td>Autenticado (todos)</td><td>401</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/estoque/alertas</code></td><td>Autenticado (todos)</td><td>401</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/estoque/novo</code></td><td><code>assertCanManageEstoque</code></td><td>401, 403</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/estoque</code></td><td><code>assertCanManageEstoque</code></td><td>401, 403, 409 (numeroSerie dup), 422</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/estoque/:id</code></td><td>Autenticado (todos, leitura)</td><td>401, 404</td></tr>
-    <tr><td><span class="badge method-PUT">PUT</span></td><td class="path"><code>/app/estoque/:id</code></td><td><code>assertCanManageEstoque</code></td><td>401, 403, 404, 422</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/estoque/:id/movimentar</code></td><td><code>assertCanMovimentarConsumo</code></td><td>400, 401, 403, 404, 409 (estoque &lt; 0), 422</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/estoque/:id/manutencao</code></td><td><code>assertCanManageEstoque</code></td><td>400 (CONSUMO/EM_MANUTENCAO), 401, 403, 404, 422</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/estoque/:id/retorno</code></td><td><code>assertCanManageEstoque</code></td><td>400 (dataRetorno&lt;dataEnvio), 401, 403, 404</td></tr>
-    <tr><td><span class="badge method-POST">POST</span></td><td class="path"><code>/app/estoque/:id/baixa</code></td><td><code>assertCanBaixarPerda</code> (ADMIN only)</td><td>400, 401, 403, 404, 422</td></tr>
-    <tr><td><span class="badge method-GET">GET</span></td><td class="path"><code>/app/patrimonio</code></td><td>Autenticado (todos, leitura)</td><td>401</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-spec-section="E.4">
-{"endpoints_estoque":[{"metodo":"GET","path":"/app/estoque","permissao":"autenticado","erros":[401]},{"metodo":"GET","path":"/app/estoque/alertas","permissao":"autenticado","erros":[401]},{"metodo":"GET","path":"/app/estoque/novo","permissao":"assertCanManageEstoque","erros":[401,403]},{"metodo":"POST","path":"/app/estoque","permissao":"assertCanManageEstoque","erros":[401,403,409,422]},{"metodo":"GET","path":"/app/estoque/:id","permissao":"autenticado","erros":[401,404]},{"metodo":"PUT","path":"/app/estoque/:id","permissao":"assertCanManageEstoque","erros":[401,403,404,422]},{"metodo":"POST","path":"/app/estoque/:id/movimentar","permissao":"assertCanMovimentarConsumo","erros":[400,401,403,404,409,422]},{"metodo":"POST","path":"/app/estoque/:id/manutencao","permissao":"assertCanManageEstoque","erros":[400,401,403,404,422]},{"metodo":"POST","path":"/app/estoque/:id/retorno","permissao":"assertCanManageEstoque","erros":[400,401,403,404]},{"metodo":"POST","path":"/app/estoque/:id/baixa","permissao":"assertCanBaixarPerda (ADMIN)","erros":[400,401,403,404,422]},{"metodo":"GET","path":"/app/patrimonio","permissao":"autenticado","erros":[401]}]}
-</script>
-
-<h2 id="c3-schemas">E.5 Schemas Zod (4 schemas)</h2>
-<p>Schemas localizados em <code>app/lib/schemas/estoque.ts</code>. Padrão: <code>.strict()</code>, <code>.int().positive()</code> em quantidades.</p>
-
-<h3>E.5.1 <code>ItemEstoqueCreateSchema</code></h3>
-<pre><code>z.object({
-  nome: z.string().min(2).max(120),
-  descricao: z.string().max(500).optional(),
-  tipo: z.enum(["CONSUMO", "PATRIMONIO"]),
-  quantidade: z.number().int().min(0).default(0),
-  numeroSerie: z.string().min(1).max(80).optional(),
-  statusPatrimonio: z.enum(["DISPONIVEL", "EM_MANUTENCAO", "BAIXADO_PERDA"]).default("DISPONIVEL"),
-  localizacaoFisica: z.string().max(120).optional(),
-}).superRefine((data, ctx) =&gt; {
-  if (data.tipo === "PATRIMONIO" &amp;&amp; !data.numeroSerie) {
-    ctx.addIssue({ code: "custom", message: "Patrimônio exige numeroSerie" });
-  }
-}).strict();</code></pre>
-
-<h3>E.5.2 <code>MovimentacaoCreateSchema</code></h3>
-<pre><code>z.object({
-  tipo: z.enum(["ENTRADA", "SAIDA"]),
-  quantidade: z.number().int().positive(),
-  nomeRetirante: z.string().max(120).optional(),
-  justificativa: z.string().max(500).optional(),
-}).superRefine((data, ctx) =&gt; {
-  if (data.tipo === "SAIDA") {
-    if (!data.nomeRetirante || data.nomeRetirante.trim() === "") {
-      ctx.addIssue({ code: "custom", message: "Saída exige nomeRetirante não-vazio" });
-    }
-    if (!data.justificativa || data.justificativa.trim() === "") {
-      ctx.addIssue({ code: "custom", message: "Saída exige justificativa" });
-    }
-  }
-}).strict();</code></pre>
-
-<h3>E.5.3 <code>ManutencaoCreateSchema</code></h3>
-<pre><code>z.object({
-  assistenciaTecnica: z.string().min(2).max(120),
-  enderecoAssistencia: z.string().min(2).max(200),
-  numeroOs: z.string().max(60).optional(),
-  prazoTermino: z.coerce.date().optional(),
-}).strict();</code></pre>
-
-<h3>E.5.4 <code>BaixaPerdaSchema</code></h3>
-<pre><code>z.object({
-  motivo: z.string().min(10).max(1000),  // texto livre obrigatório
-}).strict();</code></pre>
-
-<script type="application/json" data-spec-section="E.5">
-{"schemas":[{"id":"ItemEstoqueCreateSchema","arquivo":"app/lib/schemas/estoque.ts","campos":["nome","descricao","tipo","quantidade","numeroSerie","statusPatrimonio","localizacaoFisica"],"superRefine":"PATRIMONIO exige numeroSerie"},{"id":"MovimentacaoCreateSchema","campos":["tipo","quantidade","nomeRetirante","justificativa"],"superRefine":"SAIDA exige nomeRetirante+justificativa"},{"id":"ManutencaoCreateSchema","campos":["assistenciaTecnica","enderecoAssistencia","numeroOs","prazoTermino"]},{"id":"BaixaPerdaSchema","campos":["motivo (min 10 chars)"]}]}
-</script>
-
-<h2 id="c3-rbac">E.6 RBAC fina (matriz perfil × operação × módulo)</h2>
-<table>
-  <thead><tr><th>Operação \ Perfil</th><th>ADMIN</th><th>PASTOR</th><th>SECRETARIO</th><th>FINANCEIRO</th><th>LIDER_MIN.</th><th>DISCIPULADOR</th></tr></thead>
-  <tbody>
-    <tr><td>Ver listagem <code>/app/estoque</code> e detalhe <code>:id</code></td><td>✅</td><td>✅</td><td>✅</td><td>👁</td><td>👁</td><td>👁</td></tr>
-    <tr><td>Criar/editar Item (qualquer tipo)</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Arquivar Item (soft-delete)</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Movimentação ENTRADA (Consumo)</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Movimentação SAÍDA (Consumo, com nomeRetirante)</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Enviar para Manutenção (PATRIMONIO)</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Retornar de Manutenção</td><td>✅</td><td>✅</td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td><strong>Baixa por Perda Total (RN-EST-05)</strong></td><td>✅</td><td>🚫</td><td>🚫</td><td>🚫</td><td>🚫</td><td>🚫</td></tr>
-    <tr><td>Ver aba Manutenções (detalhe)</td><td>✅</td><td>✅</td><td>✅</td><td>👁</td><td>👁</td><td>👁</td></tr>
-  </tbody>
-</table>
-
-<p><strong>Defesa em 3 camadas obrigatória:</strong> UI <code>&lt;Can allow={[...]}&gt;</code>, loader/action <code>assertCan*</code> antes de I/O, service <code>assertCan*</code> como PRIMEIRA linha. <strong>FINANCEIRO</strong>, <strong>LIDER_MINISTERIO</strong> e <strong>DISCIPULADOR</strong> são <strong>BLOQUEADOS</strong> em escrita (somente leitura).</p>
-
-<script type="application/json" data-spec-section="E.6">
-{"rbac_matriz":{"ADMIN":["ver","criar","editar","arquivar","movimentar_entrada","movimentar_saida","manutencao_enviar","manutencao_retornar","baixa_perda"],"PASTOR":["ver","criar","editar","arquivar","movimentar_entrada","movimentar_saida","manutencao_enviar","manutencao_retornar"],"SECRETARIO":["ver","criar","editar","arquivar","movimentar_entrada","movimentar_saida","manutencao_enviar","manutencao_retornar"],"FINANCEIRO":["ver_leitura"],"LIDER_MINISTERIO":["ver_leitura"],"DISCIPULADOR":["ver_leitura"]},"camadas":["UI <Can allow>","loader/action assertCan*","service assertCan*"],"bloqueio_escrita":["FINANCEIRO","LIDER_MINISTERIO","DISCIPULADOR"]}
-</script>
-
-<h2 id="c3-lgpd">E.7 LGPD aplicada (Art. 6, 7, 18, 46)</h2>
-
-<h3>E.7.1 Princípios (espelha <a href="PRD.html#c3-lgpd">PRD §E.6</a>)</h3>
-<ul>
-  <li><strong>Art. 6° (necessidade):</strong> sem CPF, RG, endereço residencial, telefone, e-mail. Campos <code>ItemEstoque</code> são apenas textuais: nome, descrição, número de série, localização.</li>
-  <li><strong>Art. 7° (legítimo interesse — Art. 7°, VI):</strong> gestão patrimonial eclesiástica como base legal. <code>nomeRetirante</code> é texto livre sem vinculação a <code>Membro</code>.</li>
-  <li><strong>Art. 18 (direitos do titular):</strong> sem dados pessoais, pedidos de acesso/eliminação aplicam-se apenas a logs de auditoria.</li>
-  <li><strong>Art. 46 (segurança):</strong> <code>safeLog</code> com allowlist. <strong>Proibido em logs:</strong> <code>nomeRetirante</code>, <code>motivo</code> (perda), <code>descricao</code> textual livre, <code>justificativa</code>.</li>
-</ul>
-
-<h3>E.7.2 O que <strong>não</strong> vai para log</h3>
-<table>
-  <thead><tr><th>Dado</th><th>Razão</th></tr></thead>
-  <tbody>
-    <tr><td><code>nomeRetirante</code> (Movimentação)</td><td>Texto livre, potencialmente PII</td></tr>
-    <tr><td><code>motivo</code> / <code>motivoPerda</code> (Baixa)</td><td>Pode conter dados sensíveis</td></tr>
-    <tr><td><code>justificativa</code> (Movimentação)</td><td>Texto livre</td></tr>
-    <tr><td><code>descricao</code> (ItemEstoque)</td><td>Texto livre</td></tr>
-    <tr><td><code>localizacaoFisica</code></td><td>Não é PII de pessoa, mas é textual</td></tr>
-  </tbody>
-</table>
-
-<h3>E.7.3 O que <strong>vai</strong> para log</h3>
-<ul>
-  <li><code>userId</code> (id do operador).</li>
-  <li><code>action</code> (ex: <code>"criar_item_estoque"</code>, <code>"movimentar_saida"</code>, <code>"baixa_perda"</code>).</li>
-  <li><code>resource</code> (ex: <code>"item_estoque:&lt;id&gt;"</code>, <code>"movimentacao:&lt;id&gt;"</code>).</li>
-  <li><code>result</code> (<code>"ok"</code> | <code>"fail"</code>).</li>
-  <li><code>timestamp</code> (ISO 8601).</li>
-  <li><code>ip</code>.</li>
-  <li><strong>Flags estruturados</strong> (booleanos): <code>temNomeRetirante</code>, <code>temMotivo</code> — sem o conteúdo.</li>
-</ul>
-
-<script type="application/json" data-spec-section="E.7">
-{"lgpd":{"artigos":{"6":"necessidade (sem dados pessoais identificaveis)","7":"legitimo interesse (gestao patrimonial, Art. 7 VI)","18":"direitos titular (apenas logs de auditoria)","46":"seguranca (safeLog + allowlist)"},"proibido_em_log":["nomeRetirante","motivo","motivoPerda","justificativa","descricao","localizacaoFisica"],"permitido_em_log":["userId","action","resource","result","timestamp","ip","temNomeRetirante (bool)","temMotivo (bool)"]}}
-</script>
-
-<h2 id="c3-testes">E.8 Testes (12 borda + 3 e2eChains + crossModuleHints)</h2>
-
-<h3>E.8.1 Cobertura mínima</h3>
-<ul>
-  <li><strong>Global:</strong> ≥ 85% (gate do phase 5).</li>
-  <li><strong>Services de regra de negócio:</strong> 100% (todo branch): <code>itemEstoque.server.ts</code>, <code>movimentacao.server.ts</code>, <code>manutencao.server.ts</code>.</li>
-  <li><strong>Nenhum teste skipped</strong> sem justificativa no PR.</li>
-</ul>
-
-<h3>E.8.2 Testes de borda (12 obrigatórios do brief §7.3)</h3>
-<table>
-  <thead><tr><th>#</th><th>Teste</th><th>RN</th><th>Tipo</th></tr></thead>
-  <tbody>
-    <tr><td>1</td><td>SAIDA com <code>nomeRetirante</code> vazio → 400</td><td>RN-EST-02</td><td>Unit + Integração</td></tr>
-    <tr><td>2</td><td>SAIDA que deixa estoque negativo → 409 (bloqueador)</td><td>RN-EST-02</td><td>Unit</td></tr>
-    <tr><td>3</td><td>ENTRADA sem <code>justificativa</code> → passa</td><td>RN-EST-02</td><td>Unit</td></tr>
-    <tr><td>4</td><td>SAIDA sem <code>justificativa</code> → 400</td><td>RN-EST-02</td><td>Unit</td></tr>
-    <tr><td>5</td><td>Enviar para manutenção item <code>CONSUMO</code> → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
-    <tr><td>6</td><td>Enviar para manutenção item já em manutenção → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
-    <tr><td>7</td><td>Manutenção sem <code>assistenciaTecnica</code> ou <code>enderecoAssistencia</code> → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
-    <tr><td>8</td><td>Manutenção sem <code>prazoTermino</code> → passa (dispara alerta)</td><td>RN-EST-03 + 04</td><td>Unit</td></tr>
-    <tr><td>9</td><td>Retorno com <code>dataRetorno &lt; dataEnvio</code> → 400</td><td>RN-EST-03</td><td>Unit</td></tr>
-    <tr><td>10</td><td>Baixa por <code>SECRETARIO</code> → 403 (3 camadas)</td><td>RN-EST-05</td><td>E2E</td></tr>
-    <tr><td>11</td><td>Baixa por <code>PASTOR</code> → 403</td><td>RN-EST-05</td><td>E2E</td></tr>
-    <tr><td>12</td><td>Baixa por <code>ADMIN</code> em item <code>DISPONIVEL</code> → 400</td><td>RN-EST-05</td><td>Unit</td></tr>
-    <tr><td>13</td><td>Baixa por <code>ADMIN</code> sem <code>motivo</code> → 400</td><td>RN-EST-05</td><td>Unit</td></tr>
-    <tr><td>14</td><td>Item com patrimônio mesmo <code>numeroSerie</code> → 409 (unique)</td><td>RN-EST-01</td><td>Unit</td></tr>
-    <tr><td>15</td><td>Listagem filtra itens com <code>ativo = false</code> por padrão</td><td>RN-EST-01 (soft-delete)</td><td>Unit</td></tr>
-    <tr><td>16</td><td><code>DISCIPULADOR</code> tentando <code>/app/estoque/novo</code> → 403 em todas as 3 camadas</td><td>RBAC</td><td>E2E</td></tr>
-    <tr><td>17</td><td><code>FINANCEIRO</code> tentando criar movimentação de saída → 403 em todas as 3 camadas</td><td>RBAC</td><td>E2E</td></tr>
-    <tr><td>18</td><td>Alerta RN-EST-04: 31 dias sem prazo + sem alerta 24h → cria alerta "todos"</td><td>RN-EST-04</td><td>Unit + Integração</td></tr>
-  </tbody>
-</table>
-
-<h3>E.8.3 e2eChains (3 cadeias para o tester agent)</h3>
-<ol>
-  <li><strong>Chain 1 — Métrica macro (cadastro + saída + histórico):</strong> <code>POST /login</code> (SECRETARIO) → <code>POST /app/estoque</code> (CONSUMO, qty 5) → <code>POST /app/estoque/:id/movimentar</code> (SAIDA qty 2 com nomeRetirante) → <code>GET /app/estoque/:id</code> (ADMIN) → vê histórico. DataFlow: <code>$transaction</code> insere <code>MovimentacaoEstoque</code> + atualiza <code>ItemEstoque.quantidade</code> de 5→3; <code>autorizadoPorId = SECRETARIO.id</code> aparece no histórico.</li>
-  <li><strong>Chain 2 — Manutenção externa (3 estados):</strong> <code>POST /login</code> (ADMIN) → <code>POST /app/estoque</code> (PATRIMONIO, status DISPONIVEL) → <code>POST /app/estoque/:id/manutencao</code> → <code>GET /app/estoque/:id</code> (verifica status EM_MANUTENCAO) → <code>POST /app/estoque/:id/retorno</code> (dataRetorno = hoje) → <code>GET /app/estoque/:id</code> (verifica status DISPONIVEL). DataFlow: cada transição é <code>$transaction</code> (insert/update ManutencaoAtivo + update ItemEstoque.statusPatrimonio).</li>
-  <li><strong>Chain 3 — RBAC fina Estoque (3 perfis):</strong> <code>POST /login</code> (perfil X) → <code>GET /app/estoque/novo</code> → 200 (ADMIN/PASTOR/SECRETARIO) ou 403 (FINANCEIRO/LIDER_MIN./DISCIPULADOR). DataFlow: middleware injeta <code>user</code>; loader chama <code>assertCanManageEstoque</code>; service <code>assertCanManageEstoque</code> revalida. Bypass via URL direta bloqueado em 3 camadas.</li>
-</ol>
-
-<h3>E.8.4 crossModuleHints (dados entre módulos)</h3>
-<ul>
-  <li>De <code>POST /app/estoque/:id/movimentar</code> (SAIDA) para <code>GET /app/estoque/:id</code>: <code>MovimentacaoEstoque.quantidade</code> aparece na aba Movimentações + <code>ItemEstoque.quantidade</code> reflete (5→3).</li>
-  <li>De <code>POST /app/estoque/:id/manutencao</code> para <code>GET /app/estoque/:id</code>: <code>ManutencaoAtivo.assistenciaTecnica + dataEnvio</code> aparece na aba Manutenções + <code>ItemEstoque.statusPatrimonio</code> muda para EM_MANUTENCAO.</li>
-  <li>De <code>GET /app/estoque/:id</code> para <code>GET /app/alertas</code> (RN-EST-04): se <code>dataEnvio &lt; now() - 30 dias</code> E <code>prazoTermino IS NULL</code>, alerta "todos" aparece na Central de Alertas com mensagem "Item X em manutenção há &gt;30 dias sem prazo".</li>
-  <li><strong>Backlog (ciclo futuro):</strong> <code>POST /app/estoque/:id/manutencao</code> deveria disparar <code>POST /app/financeiro/lancamentos</code> com <code>categoria: MANUTENCAO</code> (RN-FIN-* + integração Estoque↔Financeiro). Sem integração automática neste ciclo.</li>
-</ul>
-
-<script type="application/json" data-spec-section="E.8">
-{"cobertura":{"global_min":85,"services_min":100},"testes_borda_total":18,"e2eChains":[{"id":"E2E-EST-001","nome":"Metrica macro (cadastro + saida + historico)","sequence":["POST /login (SECRETARIO)","POST /app/estoque (CONSUMO qty 5)","POST /app/estoque/:id/movimentar (SAIDA qty 2)","GET /app/estoque/:id (ADMIN)"]},{"id":"E2E-EST-002","nome":"Manutencao externa (3 estados)","sequence":["POST /login (ADMIN)","POST /app/estoque (PATRIMONIO DISPONIVEL)","POST /app/estoque/:id/manutencao","GET /app/estoque/:id (verifica EM_MANUTENCAO)","POST /app/estoque/:id/retorno","GET /app/estoque/:id (verifica DISPONIVEL)"]},{"id":"E2E-EST-003","nome":"RBAC fina Estoque (3 perfis)","sequence":["POST /login (perfil X)","GET /app/estoque/novo"]}],"crossModuleHints":[{"de":"POST /app/estoque/:id/movimentar","para":"GET /app/estoque/:id","campos":"MovimentacaoEstoque + ItemEstoque.quantidade"},{"de":"POST /app/estoque/:id/manutencao","para":"GET /app/estoque/:id","campos":"ManutencaoAtivo + statusPatrimonio"},{"de":"GET /app/estoque/:id","para":"GET /app/alertas","campos":"Alerta (mensagem manutencao >30 dias)"},{"de":"(backlog) manutencao","para":"(backlog) lancamento MANUTENCAO","status":"fora deste ciclo"}]}
-</script>
-
-<h2 id="c3-helpers">E.9 Helpers canônicos</h2>
-<table>
-  <thead><tr><th>Helper</th><th>Localização</th><th>Camada</th><th>RN</th><th>Throws</th></tr></thead>
-  <tbody>
-    <tr><td><code>assertEstoquePositivo(item, decremento)</code></td><td><code>app/lib/estoque.server.ts</code></td><td>3</td><td>RN-EST-02</td><td>400, 404, 409</td></tr>
-    <tr><td><code>assertItemPodeManutencao(item)</code></td><td><code>app/lib/estoque.server.ts</code></td><td>3</td><td>RN-EST-03</td><td>400 (CONSUMO, EM_MANUTENCAO)</td></tr>
-    <tr><td><code>enviarParaManutencao(itemId, input, user)</code></td><td><code>app/lib/manutencao.server.ts</code></td><td>3</td><td>RN-EST-03</td><td>400, 404, 422</td></tr>
-    <tr><td><code>retornarDeManutencao(manutencaoId, dataRetorno, user)</code></td><td><code>app/lib/manutencao.server.ts</code></td><td>3</td><td>RN-EST-03</td><td>400 (dataRetorno &lt; dataEnvio), 404</td></tr>
-    <tr><td><code>baixaPorPerda(manutencaoId, motivo, user)</code></td><td><code>app/lib/manutencao.server.ts</code></td><td>3</td><td>RN-EST-05</td><td>400, 403, 404, 422</td></tr>
-    <tr><td><code>criarAlertaManutencaoSemPrazo(itemId, userId)</code></td><td><code>app/lib/manutencao.server.ts</code></td><td>3 (interno)</td><td>RN-EST-04</td><td>idempotente 24h</td></tr>
-    <tr><td><code>getAlertasCriticos()</code></td><td><code>app/lib/estoque.server.ts</code></td><td>3</td><td>RN-EST-01 + RN-EST-04</td><td>—</td></tr>
-    <tr><td><code>assertCanManageEstoque(user)</code></td><td><code>app/lib/rbac.server.ts</code></td><td>3</td><td>RBAC</td><td>403</td></tr>
-    <tr><td><code>assertCanMovimentarConsumo(user)</code></td><td><code>app/lib/rbac.server.ts</code></td><td>3</td><td>RBAC</td><td>403</td></tr>
-    <tr><td><code>assertCanBaixarPerda(user)</code></td><td><code>app/lib/rbac.server.ts</code></td><td>3</td><td>RN-EST-05</td><td>403 (ADMIN only)</td></tr>
-  </tbody>
-</table>
-
-<script type="application/json" data-spec-section="E.9">
-{"helpers":[{"id":"H-EST-01","nome":"assertEstoquePositivo","localizacao":"app/lib/estoque.server.ts","camada":3,"rns":["RN-EST-02"]},{"id":"H-EST-02","nome":"assertItemPodeManutencao","localizacao":"app/lib/estoque.server.ts","camada":3,"rns":["RN-EST-03"]},{"id":"H-EST-03","nome":"enviarParaManutencao","localizacao":"app/lib/manutencao.server.ts","camada":3,"rns":["RN-EST-03"]},{"id":"H-EST-04","nome":"retornarDeManutencao","localizacao":"app/lib/manutencao.server.ts","camada":3,"rns":["RN-EST-03"]},{"id":"H-EST-05","nome":"baixaPorPerda","localizacao":"app/lib/manutencao.server.ts","camada":3,"rns":["RN-EST-05"]},{"id":"H-EST-06","nome":"criarAlertaManutencaoSemPrazo","localizacao":"app/lib/manutencao.server.ts","camada":3,"rns":["RN-EST-04"]},{"id":"H-EST-07","nome":"getAlertasCriticos","localizacao":"app/lib/estoque.server.ts","camada":3,"rns":["RN-EST-01","RN-EST-04"]},{"id":"H-EST-08","nome":"assertCanManageEstoque","localizacao":"app/lib/rbac.server.ts","camada":3,"rns":["RBAC"]},{"id":"H-EST-09","nome":"assertCanMovimentarConsumo","localizacao":"app/lib/rbac.server.ts","camada":3,"rns":["RBAC"]},{"id":"H-EST-10","nome":"assertCanBaixarPerda (ADMIN only)","localizacao":"app/lib/rbac.server.ts","camada":3,"rns":["RN-EST-05"]}]}
-</script>
-
-<h2 id="c3-limites">E.10 Limites e dependências</h2>
-
-<h3>E.10.1 Limites</h3>
-<table>
-  <thead><tr><th>Limite</th><th>Onde</th><th>Mitigação</th></tr></thead>
-  <tbody>
-    <tr><td><strong>Sem cron automático</strong> (RN-EST-04)</td><td>Alerta de manutenção sem prazo</td><td>Alerta manual disparado na consulta do item + na rota <code>/app/alertas</code>. Idempotência 24h.</td></tr>
-    <tr><td><strong>Sem upload de laudo</strong> (RN-EST-05)</td><td><code>urlLaudoTecnico</code> permanece <code>null</code></td><td><code>motivo</code> textual substitui (mín 10 chars). S3 é backlog.</td></tr>
-    <tr><td><strong>Sem upload de fotos</strong></td><td>Patrimônio sem foto</td><td><code>localizacaoFisica</code> textual. S3 é backlog.</td></tr>
-    <tr><td><strong>Sem sync Estoque↔Financeiro</strong></td><td>Manutenção não gera lançamento automático</td><td>FINANCEIRO lança manualmente (categoria MANUTENCAO). Integração é backlog.</td></tr>
-    <tr><td><strong>Sem código de barras/QR</strong></td><td>Identificação por <code>numeroSerie</code> textual</td><td>Suficiente para igrejas pequenas. Etiqueta física é backlog.</td></tr>
-    <tr><td><strong>Volumetria: 1k+ itens/ano</strong></td><td>Listagem fica lenta</td><td>Paginador + <code>@@index([tipo, ativo])</code> + filtro por texto (YAGNI full-text).</td></tr>
-    <tr><td><strong>Patrimônio arquivado tem status congelado</strong></td><td><code>statusPatrimonio = BAIXADO_PERDA</code></td><td>Correto e desejável — bem "baixado" não volta.</td></tr>
-  </tbody>
-</table>
-
-<h3>E.10.2 Dependências externas (nenhuma nova)</h3>
-<ul>
-  <li>❌ <code>node-cron</code> — sem scheduler (alerta manual).</li>
-  <li>❌ S3 / MinIO — sem upload (motivo textual).</li>
-  <li>❌ SMTP — sem notificações por e-mail.</li>
-  <li>❌ Barcode / QR scanner — sem hardware.</li>
-  <li>❌ App mobile — web responsivo é suficiente.</li>
-</ul>
-
-<h3>E.10.3 Próximos passos (S11+)</h3>
-<ol>
-  <li><strong>S11 — Estoque (Sprint 1 do ciclo 3):</strong> CRUD <code>ItemEstoque</code> + Movimentação com trava + RAG <code>pattern-movimentacao-estoque</code> implementado.</li>
-  <li><strong>S12 — Patrimônio + Manutenção + Baixa (Sprint 2):</strong> Envio/retorno/baixa + alerta manual RN-EST-04 + RAG <code>pattern-manutencao-patrimonio</code>.</li>
-  <li><strong>S13+ (backlog):</strong> Sync Estoque↔Financeiro, S3 para laudos/fotos, cron automático, relatórios ABC, multi-igreja.</li>
-</ol>
-
-<script type="application/json" data-spec-section="E.10">
-{"limites":[{"id":"L-EST-1","tema":"Sem cron automatico","mitigacao":"alerta manual na consulta + idempotencia 24h"},{"id":"L-EST-2","tema":"Sem upload laudo","mitigacao":"motivo textual min 10 chars"},{"id":"L-EST-3","tema":"Sem foto patrimonio","mitigacao":"localizacaoFisica textual"},{"id":"L-EST-4","tema":"Sem sync Estoque<->Financeiro","mitigacao":"FINANCEIRO lanca manualmente"},{"id":"L-EST-5","tema":"Sem barcode/QR","mitigacao":"numeroSerie textual"},{"id":"L-EST-6","tema":"Volumetria 1k+/ano","mitigacao":"Paginador + indice composto"},{"id":"L-EST-7","tema":"Status patrimonio arquivado congelado","mitigacao":"Correto e desejavel"}],"dependencias_externas":["Nenhuma nova. Mantem stack dos ciclos 1+2."],"proximos_passos":["S11 Estoque + Movimentacao","S12 Patrimonio + Manutencao + Baixa","S13+ backlog (sync, S3, cron, relatorios)"]}
+{"pendencias_fase_3":[{"id":"PEND-DRILL-DOWN","titulo":"Rota /app/financeiro/lancamentos nao existe","opcoes":["A: criar nova rota (S13 condicional)","B: redirecionar para /caixas/:id com query params"],"decisao_esperada":"Fase 3 Design"},{"id":"PEND-WORKAROUND-STATE","titulo":"tools harness_status/harness_advance quebradas","mitigacao":"workaround Python em uso"},{"id":"PEND-DEBT-001","titulo":"74 testes pre-existentes falhando (MVP-DEBT-001)","nao_bloqueador":true},{"id":"PEND-DEBT-003","titulo":"107 typecheck errors pre-existentes (MVP-DEBT-003)","nao_bloqueador":true},{"id":"PEND-PLACEHOLDER","titulo":"Componente <ProjectionPlaceholder />","decisao":"criar em S12 backend ou Fase 3"}],"rags_criticos":["pattern-relatorios-aggregations","convention-relatorios-csv-export","convention-monetary-values","security-rbac-matrix","pattern-3-layer-rbac"],"rags_relevantes":["lgpd-igreja-conect","architecture-monolith-modular","architecture-financeiro","pattern-trava-saldo-service"],"codigo_estender":["prisma/schema.prisma (sem migration)","app/lib/finance.server.ts","app/lib/rbac.server.ts","app/lib/money.server.ts","app/components/Sidebar.tsx","app/components/Can.tsx","app/routes/app/financeiro._index.tsx"],"referencias_visuais_stitch":["hub_de_relat_rios_igrejaconnect/code.html","balancete_mensal_igrejaconnect/code.html","dre_igrejaconnect/code.html","fluxo_de_caixa_igrejaconnect/code.html","relat_rio_customizado_igrejaconnect/code.html"],"proximos_passos":["Fase 3 Design","Fase 4 Planejamento (S11 + S12 + S13 condicional)","Fase 5 Build (5 workers + gate all-of)"]}
 </script>
 
 <hr />
 
 <footer>
   <p>
-    Igreja Conect — Especificação Técnica v0.3 (MVP + Módulo Financeiro ciclo 2 + Módulo Estoque+Patrimônio ciclo 3). Mantida pelo <code>requirements</code> agent na Fase 2 do Harness v6.
-    Documento irmão: <a href="PRD.html">PRD.html</a>. Pendências em <a href="#pendencias">§12</a>. Gate de qualidade em <a href="#pronto-fase-5">§13</a>. Módulo Financeiro no <a href="#c2-apendice">Apêndice D</a>. Módulo Estoque+Patrimônio no <a href="#c3-apendice">Apêndice E</a>.
+    Igreja Conect — SPEC v0.1 (Ciclo 4: Relatórios Financeiros). Mantido pelo <code>requirements</code> agent na Fase 2 do Harness v6.
+    Documento irmão: <a href="PRD.html">PRD.html</a>. Brief canônico: <a href="brief-relatorios.md">brief-relatorios.md</a>. RAGs: <a href="#pendencias">§12.2</a>. Testes: <a href="#testes">§9</a>. Riscos: <a href="#riscos">§10</a>. Limites: <a href="#performance">§11.4</a>.
   </p>
 </footer>
 

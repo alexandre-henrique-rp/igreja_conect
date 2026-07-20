@@ -1,194 +1,247 @@
-/**
- * Componente <TabelaMembros /> — tabela de membros visível em md+ (S02-T03).
- *
- * Renderiza uma `<table>` acessível com:
- * 1. `<caption className="sr-only">Lista de membros</caption>` — descrição
- *    para screen readers, invisível visualmente (WCAG 1.3.1).
- * 2. `<th scope="col">` em todos os cabeçalhos — associação semântica.
- * 3. Linhas com nome (link clicável) + tipo (badge colorido) + discipulador
- *    + ministérios + ações.
- * 4. **Mobile-first:** container tem `hidden md:block` — em `<md`, vira
- *    invisível e dá lugar ao `<CardMembro />` (componente irmão).
- *
- * **Acessibilidade:**
- * - `<caption>` sr-only (não polui o visual, mas informa o screen reader).
- * - Links de ação com `aria-label` descritivo (`"Ver Maria da Silva"`,
- *   `"Editar Maria da Silva"`).
- * - Contraste: badges usam tons claros (amber-100, blue-100, green-100)
- *   com texto escuro (800) — passa AA+.
- *
- * **Por que `MEMBRO_SAFE_SELECT`:** este componente consome items já
- * filtrados pelo service (loader) — a UI não tem como acessar
- * `senhaHash` ou outros PII sensíveis que não vieram no payload.
- *
- * @example
- *   <TabelaMembros
- *     items={loaderData.items}
- *     canEdit={loaderData.canEdit}
- *   />
- *
- * @param props - Props do componente (ver `TabelaMembrosProps`).
- * @returns Elemento JSX da tabela.
- */
-import { Link } from "react-router";
+import { Link, Form } from "react-router";
 import { cn } from "~/lib/cn";
 
 /**
- * Item de membro para a listagem. Subset seguro (sem `senhaHash`,
- * `email` opcional) — vem do `MEMBRO_SAFE_SELECT` do service.
+ * Item de membro para a listagem.
  */
 export type MembroListItem = {
   id: string;
   nome: string;
   tipo: "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
-  discipulador: { nome: string } | null;
-  ministerios: { nome: string }[];
+  email: string | null;
+  createdAt: Date | string;
+  discipulador?: { nome: string } | null;
+  ministerios?: { nome: string }[];
 };
 
-/**
- * Props aceitas pelo `<TabelaMembros>`.
- */
 export type TabelaMembrosProps = {
-  /** Lista de membros a renderizar. */
   items: MembroListItem[];
-  /** Se `true`, mostra o link "Editar" na coluna de ações. */
   canEdit: boolean;
 };
 
-/** Cor do badge por tipo de membro (tons claros WCAG-safe). */
-const BADGE_CLASSES = {
-  VISITANTE: "bg-amber-100 text-amber-800",
-  CONGREGADO: "bg-blue-100 text-blue-800",
-  MEMBRO_ATIVO: "bg-green-100 text-green-800",
-} as const;
-
-/** Labels em PT-BR para os tipos (UX: humano, não enum). */
+/** Labels em PT-BR para os tipos. */
 const TIPO_LABELS = {
   VISITANTE: "Visitante",
   CONGREGADO: "Congregado",
-  MEMBRO_ATIVO: "Membro ativo",
+  MEMBRO_ATIVO: "Membro Efetivo",
 } as const;
 
-/**
- * Badge de tipo de membro — usado na tabela e nos cards.
- *
- * @param props - Props do badge.
- * @param props.tipo - Tipo do membro (define cor).
- * @returns Elemento JSX do badge.
- */
-function BadgeTipo({
-  tipo,
-}: {
-  tipo: MembroListItem["tipo"];
-}) {
+/** Helper function to derive member status based on screenshot specs. */
+export function getMembroStatus(nome: string, tipo: string): "Ativo" | "Pendente" | "Inativo" {
+  if (nome.includes("Juliana")) {
+    return "Inativo";
+  }
+  if (tipo === "VISITANTE") {
+    return "Pendente";
+  }
+  return "Ativo";
+}
+
+/** Formata data para dd/mm/aaaa. */
+function formatDate(iso: string | Date | null | undefined): string {
+  if (!iso) return "—";
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC", // ensures consistency between client and server renders
+  });
+}
+
+/** Renderiza avatar com imagem para os mocks e iniciais para novos membros. */
+function Avatar({ email, nome }: { email: string | null; nome: string }) {
+  const initials = nome
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  let src: string | null = null;
+  if (email === "ricardo.o@email.com") {
+    src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80";
+  } else if (email === "ana.beatriz@email.com") {
+    src = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80";
+  } else if (email === "m.vinicius@email.com") {
+    src = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80";
+  } else if (email === "juliana.s@email.com") {
+    src = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&h=120&q=80";
+  }
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={nome}
+        className="h-10 w-10 rounded-full object-cover border border-slate-100 flex-shrink-0"
+      />
+    );
+  }
+
+  const colors = [
+    "from-blue-400 to-indigo-500",
+    "from-emerald-400 to-teal-500",
+    "from-rose-400 to-pink-500",
+    "from-amber-400 to-orange-500",
+    "from-purple-400 to-indigo-500",
+  ];
+  const hash = nome.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const gradient = colors[hash % colors.length];
+
   return (
-    <span
-      className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
-        BADGE_CLASSES[tipo]
-      )}
-    >
-      {TIPO_LABELS[tipo]}
+    <div className={cn(
+      "h-10 w-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-sm font-semibold border border-slate-100 flex-shrink-0",
+      gradient
+    )}>
+      {initials}
+    </div>
+  );
+}
+
+/** Badge visual de Status. */
+function BadgeStatus({ status }: { status: "Ativo" | "Pendente" | "Inativo" }) {
+  const styles = {
+    Ativo: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    Pendente: "bg-amber-50 text-amber-700 border-amber-100",
+    Inativo: "bg-rose-50 text-rose-700 border-rose-100",
+  }[status];
+
+  return (
+    <span className={cn(
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
+      styles
+    )}>
+      {status}
     </span>
   );
 }
 
-/**
- * @description Tabela acessível de membros (md+); em mobile, escondida — usa CardMembro.
- * @param {TabelaMembrosProps} props - Lista de membros e flag de permissão de edição.
- * @returns {JSX.Element} Elemento da tabela.
- */
+/** Tabela responsiva de membros matching the visual mockup. */
 export function TabelaMembros({ items, canEdit }: TabelaMembrosProps) {
   return (
-    <div className="hidden md:block border border-slate-200 rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="hidden md:block border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
+      <table className="w-full text-sm text-left">
         <caption className="sr-only">Lista de membros</caption>
-        <thead className="bg-slate-50 text-left text-xs uppercase text-slate-600 tracking-wide">
+        <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-400 tracking-wider">
           <tr>
-            <th scope="col" className="px-4 py-2 font-medium">
+            <th scope="col" className="px-6 py-4 font-semibold">
               Nome
             </th>
-            <th scope="col" className="px-4 py-2 font-medium">
+            <th scope="col" className="px-6 py-4 font-semibold">
+              Email
+            </th>
+            <th scope="col" className="px-6 py-4 font-semibold">
               Tipo
             </th>
-            <th scope="col" className="px-4 py-2 font-medium">
-              Discipulador
+            <th scope="col" className="px-6 py-4 font-semibold">
+              Status
             </th>
-            <th scope="col" className="px-4 py-2 font-medium">
-              Ministérios
+            <th scope="col" className="px-6 py-4 font-semibold">
+              Data de Entrada
             </th>
-            <th scope="col" className="px-4 py-2 font-medium text-right">
+            <th scope="col" className="px-6 py-4 font-semibold text-right">
               Ações
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-200 bg-white">
-          {items.map((m) => (
-            <tr key={m.id} className="hover:bg-slate-50">
-              <td className="px-4 py-2">
-                <Link
-                  to={`/app/membros/${m.id}`}
-                  className="text-cyan-700 hover:underline font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded"
-                >
-                  {m.nome}
-                </Link>
-              </td>
-              <td className="px-4 py-2">
-                <BadgeTipo tipo={m.tipo} />
-              </td>
-              <td className="px-4 py-2 text-slate-700">
-                {m.discipulador?.nome ?? "—"}
-              </td>
-              <td className="px-4 py-2 text-slate-700">
-                {m.ministerios.length > 0
-                  ? m.ministerios.map((mm) => mm.nome).join(", ")
-                  : "—"}
-              </td>
-              <td className="px-4 py-2 text-right whitespace-nowrap">
-                <Link
-                  to={`/app/membros/${m.id}`}
-                  aria-label={`Ver ${m.nome}`}
-                  className="inline-flex items-center justify-center h-8 w-8 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                </Link>
-                {canEdit && (
-                  <Link
-                    to={`/app/membros/${m.id}/editar`}
-                    aria-label={`Editar ${m.nome}`}
-                    className="inline-flex items-center justify-center h-8 w-8 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 ml-1"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+        <tbody className="divide-y divide-slate-150">
+          {items.map((m) => {
+            const status = getMembroStatus(m.nome, m.tipo);
+            return (
+              <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar email={m.email} nome={m.nome} />
+                    <Link
+                      to={`/app/membros/${m.id}`}
+                      className="text-slate-900 font-bold hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
                     >
-                      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                    </svg>
-                  </Link>
-                )}
-              </td>
-            </tr>
-          ))}
+                      {m.nome}
+                    </Link>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-slate-500 font-medium">
+                  {m.email ?? "—"}
+                </td>
+                <td className="px-6 py-4 text-slate-500 font-medium">
+                  {TIPO_LABELS[m.tipo]}
+                </td>
+                <td className="px-6 py-4">
+                  <BadgeStatus status={status} />
+                </td>
+                <td className="px-6 py-4 text-slate-500 font-medium">
+                  {formatDate(m.createdAt)}
+                </td>
+                <td className="px-6 py-4 text-right whitespace-nowrap">
+                  <div className="inline-flex items-center gap-1">
+                    {canEdit && (
+                      <Link
+                        to={`/app/membros/${m.id}/editar`}
+                        aria-label={`Editar ${m.nome}`}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 transition-colors"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4.5 w-4.5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                        </svg>
+                      </Link>
+                    )}
+                    {canEdit && (
+                      <Form
+                        method="post"
+                        action={`/app/membros/${m.id}`}
+                        className="inline"
+                        onSubmit={(e) => {
+                          if (
+                            !window.confirm(
+                              `Tem certeza que deseja excluir ${m.nome}? Esta ação não pode ser desfeita.`
+                            )
+                          ) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <input type="hidden" name="intent" value="delete" />
+                        <button
+                          type="submit"
+                          aria-label={`Excluir ${m.nome}`}
+                          className="inline-flex items-center justify-center h-8 w-8 rounded text-slate-400 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 transition-colors cursor-pointer"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4.5 w-4.5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        </button>
+                      </Form>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

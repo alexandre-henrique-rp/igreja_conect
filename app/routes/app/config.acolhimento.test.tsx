@@ -50,7 +50,6 @@ afterAll(async () => { await cleanup(); });
 beforeEach(async () => {
   await prismaTest.alertaDestinatario.deleteMany();
   await prismaTest.alerta.deleteMany();
-  await prismaTest.configAcolhimento.deleteMany();
   await prismaTest.ministerioMembro.deleteMany();
   await prismaTest.ministerio.deleteMany();
   await prismaTest.membro.updateMany({ data: { discipuladorId: null } });
@@ -156,7 +155,7 @@ describe("config.acolhimento — action (S04-T06)", () => {
     expect(res.status).toBe(302);
 
     // Verifica DB
-    const config = await prismaTest.configAcolhimento.findFirst();
+    const config = await prismaTest.configuracaoGeral.findFirst();
     expect(config?.responsavelVisitanteTipo).toBe("MEMBRO");
     expect(config?.responsavelMembroId).toBe(membro.id);
   });
@@ -178,7 +177,7 @@ describe("config.acolhimento — action (S04-T06)", () => {
     expect(res).toBeInstanceOf(Response);
     expect(res.status).toBe(302);
 
-    const config = await prismaTest.configAcolhimento.findFirst();
+    const config = await prismaTest.configuracaoGeral.findFirst();
     expect(config?.responsavelVisitanteTipo).toBe("MINISTERIO");
     expect(config?.responsavelMinisterioId).toBe(ministerio.id);
   });

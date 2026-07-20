@@ -10,12 +10,11 @@
  * @see app/lib/caixas.server.ts (criarCaixa)
  */
 import {
-  useActionData,
-  useLoaderData,
-  useNavigation,
-  Form,
+  data,
   Link,
   redirect,
+  useActionData,
+  useNavigation,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "react-router";
@@ -23,8 +22,7 @@ import type { Route } from "./+types/financeiro.caixas.novo";
 import { userContext } from "~/lib/user-context";
 import { assertCanManageCaixa } from "~/lib/rbac.server";
 import { criarCaixa } from "~/lib/caixas.server";
-import { CaixaCreateSchema, type CaixaCreateInput } from "~/lib/schemas/caixas";
-import { PageHeader } from "~/components/PageHeader";
+import { CaixaCreateSchema } from "~/lib/schemas/caixas";
 import { Button } from "~/components/Button";
 import { Input } from "~/components/Input";
 
@@ -58,13 +56,14 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const parsed = CaixaCreateSchema.safeParse(raw);
   if (!parsed.success) {
-    const fieldErrors: Record<string, string[]> = {};
+    const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
       const path = issue.path.join(".");
-      if (!fieldErrors[path]) fieldErrors[path] = [];
-      fieldErrors[path].push(issue.message);
+      if (path && !fieldErrors[path]) {
+        fieldErrors[path] = issue.message;
+      }
     }
-    return { ok: false as const, fieldErrors, formError: null };
+    return data({ ok: false as const, fieldErrors, formError: null }, { status: 422 });
   }
 
   try {
@@ -74,7 +73,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (e instanceof Response) {
       if (e.status === 409) {
         const text = await e.text().catch(() => "Nome já em uso.");
-        return { ok: false as const, fieldErrors: null, formError: text };
+        return data({ ok: false as const, fieldErrors: null, formError: text }, { status: 409 });
       }
       throw e; // 403, 404, etc.
     }
@@ -83,46 +82,71 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 /**
- * Página de criação de caixa.
+ * Página de criação de caixa — layout alinhado ao Novo Lançamento.
  */
 export default function NovaCaixa() {
-  const { user } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
-  return (
-    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
-      <PageHeader title="Nova Caixa" />
+  const fieldErrors: Record<string, string> =
+    (actionData as { fieldErrors?: Record<string, string> } | undefined)
+      ?.fieldErrors ?? {};
+  const formError =
+    (actionData as { formError?: string | null } | undefined)?.formError ?? null;
 
-      <Form method="post" className="space-y-4" noValidate>
-        {actionData?.formError && (
-          <div
-            role="alert"
-            className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800"
-          >
-            {actionData.formError}
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Novo Caixa</h1>
+          <p className="text-slate-600 mt-1">Crie uma nova conta para organizar as finanças da igreja.</p>
+        </div>
+        <Button as={Link} to="/app/financeiro/caixas" variant="secondary" size="sm">
+          Cancelar
+        </Button>
+      </div>
+
+      <form method="POST" noValidate className="space-y-6">
+        {formError && (
+          <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+            {formError}
           </div>
         )}
 
-        <Input
-          label="Nome do Caixa"
-          name="nome"
-          required
-          placeholder="Ex: Caixa da Cantina"
-          maxLength={80}
-          error={actionData?.fieldErrors?.nome?.[0]}
-        />
+        {/* Informações Básicas */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+            <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4M12 8h.01" />
+            </svg>
+            <h2 className="font-semibold text-slate-900">Informações Básicas</h2>
+          </div>
+          <div className="p-6 space-y-5">
+            <Input
+              name="nome"
+              label="Nome do Caixa"
+              placeholder="Ex: Conta Principal (Bradesco)"
+              maxLength={80}
+              defaultValue=""
+              error={fieldErrors.nome}
+              required
+            />
+          </div>
+        </div>
 
-        <div className="flex items-center gap-3 pt-2">
-          <Button type="submit" loading={isSubmitting}>
+        {/* Ações */}
+        <div className="flex items-center gap-3">
+          <Button type="submit" loading={isSubmitting} className="flex-1">
             Criar Caixa
           </Button>
-          <Button variant="ghost" as={Link} to="/app/financeiro/caixas">
+          <Button as={Link} to="/app/financeiro/caixas" variant="secondary">
             Cancelar
           </Button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 }

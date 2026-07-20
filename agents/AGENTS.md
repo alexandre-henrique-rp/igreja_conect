@@ -3,12 +3,12 @@
 > **Memória de longo prazo do projeto para agentes LLM (Harness v6).**
 > Lido no início de **toda** task. Se você é um agente entrando no projeto, leia este arquivo inteiro antes de tocar em qualquer código.
 >
-> **Última atualização:** 2026-06-19 (Fase 1, ciclo 3 — Módulo Estoque + Patrimônio)
+> **Última atualização:** 2026-06-20 (Fase 1, ciclo 4 — Relatórios Financeiros)
 > **Mantido por:** `documenter` agent (Fase 1 do Harness v6)
 >
 > **Localização:** este arquivo está em `agents/AGENTS.md` (não na raiz) por restrição do `path-boundary.ts` do projeto (allowlist não inclui `AGENTS.md` na raiz). Convenção universal é raiz, mas o hook bloqueia. Se o allowlist for ampliado, mover para a raiz e atualizar este cabeçalho.
 >
-> **Estado do ciclo:** ciclo 1 (MVP — Auth + Membros + Discipulado + Alertas + Acolhimento) **FECHADO** em 2026-06-13. Ciclo 2 (Módulo Financeiro) **FECHADO** em 2026-06-19. Ciclo 3 (Módulo Estoque + Patrimônio) em **Fase 1 — Documentação** (2026-06-19).
+> **Estado do ciclo:** ciclo 1 (MVP — Auth + Membros + Discipulado + Alertas + Acolhimento) **FECHADO** em 2026-06-13. Ciclo 2 (Módulo Financeiro) **FECHADO** em 2026-06-19. Ciclo 3 (Módulo Estoque + Patrimônio) **FECHADO** (planning completo, build deferred). **Ciclo 4 (Relatórios Financeiros) em Fase 1 — Documentação** (2026-06-20, brief aprovado em 2026-06-20T15:35Z).
 
 ---
 
@@ -18,11 +18,12 @@ O **Igreja Conect** é um sistema web SSR para gestão eclesiástica local.
 
 - **Ciclo 1 (FECHADO, 2026-06-13):** Auth + Membros + Discipulado + Alertas + Acolhimento. **872 unit + 28 E2E + 5 smoke** passando. Line coverage **88.21%**. `gate: all-of passed`.
 - **Ciclo 2 (FECHADO, 2026-06-19):** **Módulo Financeiro** (Caixas + Lançamentos + Dízimos + Ofertas + Transferências + Trava de Saldo + Fidelidade Financeira). 5 RNs já documentadas (`RN-FIN-01` a `05`); schema Prisma com 3 models (`Caixa`, `TransferenciaCaixa`, `Lancamento`); serviços e UI entregues em S06–S08 + cleanup S09–S10. `gate: all-of passed` (1115 testes, 96% cobertura/sprint).
-- **Ciclo 3 (EM ANDAMENTO, 2026-06-19+):** **Módulo Estoque + Patrimônio** (Consumo + Manutenção externa + Baixa por perda). 5 RNs já documentadas (`RN-EST-01` a `05`); schema Prisma já tem 3 models (`ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo`) + 2 enums (`TipoItemEstoque`, `StatusItemPatrimonio`); serviços e UI a serem implementados em S11+.
+- **Ciclo 3 (FECHADO — planning completo, build deferred):** **Módulo Estoque + Patrimônio** (Consumo + Manutenção externa + Baixa por perda). 5 RNs já documentadas (`RN-EST-01` a `05`); schema Prisma já tem 3 models (`ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo`) + 2 enums (`TipoItemEstoque`, `StatusItemPatrimonio`).
+- **Ciclo 4 (EM ANDAMENTO, 2026-06-20+):** **Relatórios Financeiros** (5 páginas: Hub + DRE + Balancete + Fluxo de Caixa + Customizado). **Camada read-only sobre o Módulo Financeiro do ciclo 2** — sem migration, sem novos models, sem novas RNs. 5 services de agregação em `app/lib/relatorios.server.ts` + 1 service de export CSV em `app/lib/relatorios-csv.server.ts`. Fonte canônica: `brief-relatorios.md` (489 linhas, 9 seções, aprovado em 2026-06-20T15:35Z).
 
 **Stack (imutável entre ciclos):** React Router 7.17 (SSR) + Vite 8 + Tailwind 4 + Prisma 7.8 (SQLite via `better-sqlite3`) + TypeScript 5.9 strict + Zod 4 + bcryptjs. Auth por **session cookie httpOnly + bcrypt cost 10**. RBAC com **6 perfis** e **defense in depth em 3 camadas** (UI `<Can>` + loader `assertCan*` + service `assertCan*`). **LGPD estrito**: sem CPF/RG/CNPJ; aba de dízimos bloqueada nas 3 camadas.
 
-**RAGs críticos (ler antes de qualquer feature):** `security-rbac-matrix` + `convention-monetary-values` (RBAC + dinheiro). Para o **Módulo Estoque + Patrimônio especificamente**, ler também: `pattern-estoque-trava-quantidade` (high) + `pattern-patrimonio-status-state-machine` (high) + `pattern-manutencao-alerta-manual` (medium) + `convention-tipos-item-estoque` (medium).
+**RAGs críticos (ler antes de qualquer feature):** `security-rbac-matrix` + `convention-monetary-values` (RBAC + dinheiro). Para o **Módulo Relatórios Financeiros especificamente (ciclo 4)**, ler também: `pattern-relatorios-aggregations` (high, novo) + `convention-relatorios-csv-export` (high, novo) + `architecture-financeiro` (high) + `pattern-trava-saldo-service` (critical, herdado).
 
 ---
 
@@ -486,7 +487,7 @@ Princípios não-negociáveis (constraint 5.2 do brief + Lei 13.709/2018):
 
 ---
 
-## RAG (`.harness/RAG/`) — 18 docs (18 approved)
+## RAG (`.harness/RAG/`) — 20 docs (20 approved)
 
 **Sempre `ls .harness/RAG/` no início de uma task; ler antes de improvisar.**
 
@@ -523,11 +524,20 @@ Princípios não-negociáveis (constraint 5.2 do brief + Lei 13.709/2018):
 | `pattern-manutencao-alerta-manual` | pattern | medium | Implementar RN-EST-04 (alerta de manutenção sem prazo) sem cron job — gatilho on-consulta + idempotência 24h | approved |
 | `convention-tipos-item-estoque` | convention | medium | Diferenciar `TipoItemEstoque.CONSUMO` vs `PATRIMONIO`, `discriminatedUnion` Zod, validação de tipo no service | approved |
 
+### Ciclo 4 (2 docs novos — específicos do Módulo Relatórios Financeiros)
+
+| ID | Categoria | Prioridade | Quando ler | Status |
+|---|---|---|---|---|
+| `pattern-relatorios-aggregations` | pattern | high | Criar/alterar `app/lib/relatorios.server.ts` (5 services de agregação: `getDRE`, `getBalanceteMensal`, `getFluxoCaixa`, `getRelatorioCustomizado`, `exportarLancamentosCSV`); usar `groupBy`, soma em `Int` centavos, `assertCanSeeRelatorios` como Camada 3 | approved |
+| `convention-relatorios-csv-export` | convention | high | Implementar ou alterar export CSV em `/app/financeiro/relatorios/customizado?export=csv`; aplicar RFC 4180 + BOM UTF-8 + separador `;` + escape de aspas + `Cache-Control: no-store` | approved |
+
 Também relevantes (fora de `.harness/RAG/`):
 - `docs/REGRAS_DE_NEGOCIO.md` — 14 RNs (RN-MEM-*, RN-FIN-*, RN-EST-*)
 - `docs/DESCRIÇÃO_DOS_MODULOS.md` — produto + matriz RBAC
-- `docs/architecture/ARCH.md` — decisões macro
-- `.harness/brief.md` — escopo do ciclo atual (Estoque+Patrimônio, ciclo 3)
+- `docs/architecture/ARCH.md` — decisões macro (atualizado em 2026-06-20 com §10 Relatórios Financeiros, ciclo 4)
+- `brief-mvp.md` — escopo do ciclo 1 (MVP)
+- `brief-mvp-financeiro.md` — escopo do ciclo 2 (Módulo Financeiro — base para Relatórios)
+- `brief-relatorios.md` — escopo do ciclo 4 (Relatórios Financeiros; brief atual, aprovado em 2026-06-20T15:35Z)
 - `.harness/sprints/S05/security-audit.md` — auditoria completa S05
 - `.harness/sprints/S05/lgpd-parecer.md` — parecer LGPD S05
 
@@ -941,6 +951,363 @@ export async function criarMovimentacao(
 | **Sem relatório de curva ABC** | Consumo por item | Loader básico + filtros. Relatório avançado backlog. |
 | **BAIXADO_PERDA é terminal** | Item perdido não volta | Decisão consciente (auditoria). Para "recuperar" item perdido, criar item NOVO. |
 | **SQLite single-writer** | `dev.db` | 1 processo Node + `$transaction` atômico. Postgres futuro é mudança aditiva. |
+
+---
+
+## Módulo Relatórios Financeiros (ciclo 4)
+
+> **Escopo único do ciclo 4 (2026-06-20+):** 5 páginas de leitura agregada em `/app/financeiro/relatorios/**` (Hub + DRE + Balancete + Fluxo de Caixa + Customizado) que transformam o repositório bruto de `Lancamento` em inteligência pastoral/tesouraria. **Camada read-only sobre o Módulo Financeiro do ciclo 2** — sem migration, sem novos models Prisma, sem novas regras de negócio. As 5 RNs já existentes (`RN-FIN-01` a `05`) são suficientes; este ciclo **lê** o que já foi escrito.
+>
+> **Fonte canônica:** [`brief-relatorios.md`](../../brief-relatorios.md) §4 (Escopo), §5 (Decisões), §6 (Restrições), §7 (Sucesso), §8 (Não-objetivos). Brief aprovado pelo usuário em 2026-06-20T15:35Z, 489 linhas, 9 seções.
+>
+> **Cross-refs principais:** [`brief-mvp-financeiro.md`](../../brief-mvp-financeiro.md) (ciclo 2 — base) + [`prisma/schema.prisma`](../../prisma/schema.prisma) (model `Lancamento` + enums) + [`app/lib/finance.server.ts`](../../app/lib/finance.server.ts) (services existentes para extensão).
+
+### Stack do módulo
+
+Mesma dos ciclos 1–3. **Nada de novo** no ciclo 4: React Router 7.17 SSR, Prisma 7.8 + SQLite, Tailwind 4, Vite 8, TypeScript 5.9 strict, Zod 4, bcryptjs. **Sem** `pdfkit`, `puppeteer`, `lucide-react`, `recharts`. Charts são SVG inline; export é CSV nativo (RFC 4180). Decisões conscientes:
+
+- **CSV em vez de PDF** (brief §5.2): sem dependências externas com peso considerável. PDF diferido para ciclo 6+.
+- **SVG inline em vez de lib de ícones** (brief §5.5): consistência com `Sidebar.tsx` e `TopbarAutenticada.tsx`. ~25 SVGs em `app/components/icons/FinanceIcons.tsx`.
+- **Placeholders em vez de features fake** (brief §5.6, §5.7): cards "Projeção Próximo Mês" e filtro "Status" renderizam placeholder cinza. Implementar "fake" seria mentir para o usuário.
+
+### Onde mora cada trava (camadas)
+
+| Camada | Helper / Componente | Onde | Finalidade |
+|---|---|---|---|
+| **1 — UI** | `<Can allow={['ADMIN','PASTOR','FINANCEIRO']}>` + item "Relatórios" some do menu para SECRETARIO | `app/components/Can.tsx` + `app/components/Sidebar.tsx` | Esconde controles. **UX, não segurança.** |
+| **2 — Loader/Action** | `assertCanSeeRelatorios(user)` antes de I/O | `app/routes/app/financeiro/relatorios/**.tsx` (5 loaders + 1 action de export CSV) | Gate de navegação. 403 se bypass via URL. |
+| **3 — Service** | `assertCanSeeRelatorios` PRIMEIRO + `prisma.lancamento.groupBy(...)` em `Int` cents | `app/lib/relatorios.server.ts` (5 funções públicas) + `app/lib/relatorios-csv.server.ts` (1 função de export) | **Única segurança real.** Barreira antes do DB. |
+
+### 6 services previstos no Módulo Relatórios Financeiros
+
+| Service | Responsabilidade | RN coberta |
+|---|---|---|
+| `app/lib/relatorios.server.ts` → `getDRE` | Agrega entradas e saídas por categoria em 1 período (DRE simplificado) | (read-only sobre RN-FIN-01/04) |
+| `app/lib/relatorios.server.ts` → `getBalanceteMensal` | 4 KPIs (Saldo Anterior / Entradas / Saídas / Saldo Atual) + tabela por categoria para 1 mês | (read-only) |
+| `app/lib/relatorios.server.ts` → `getFluxoCaixa` | Série temporal de 12 meses (entradas / saídas / saldo acumulado) | (read-only) |
+| `app/lib/relatorios.server.ts` → `getRelatorioCustomizado` | Query filtrada com 6 dimensões (período / tipo / categoria / membro / caixa / status-placeholder) + paginação | (read-only) |
+| `app/lib/relatorios.server.ts` → `exportarLancamentosCSV` | Server-side CSV download (RFC 4180 + BOM + `;` + Cache-Control no-store) | (read-only) |
+| `app/lib/relatorios-csv.server.ts` | Helpers `escapeCsvField`, `formatValorCsv`, `montarCabecalhoCsv`, `exportarLancamentosCSV` | (regra de responsabilidade única — separado de `relatorios.server.ts`) |
+
+> **Convenção de nomes:** services com sufixo `.server.ts` garantem tree-shaking do bundle do cliente (Vite). Separar `relatorios-csv.server.ts` de `relatorios.server.ts` segue **regra de responsabilidade única** (CSV é formato de export, não regra de negócio). Helpers podem ser reusados em futuros exports (PDF, JSON).
+
+### 5 rotas previstas em `/app/financeiro/relatorios/**`
+
+- `relatorios._index.tsx` — Hub (grid 2×2 com 4 cards grandes + bloco secundário "Relatório de Transparência 2024" placeholder).
+- `relatorios.dre.tsx` — DRE (3 KPIs Entradas/Saídas/Resultado + grid Entradas por Tipo + Saídas por Categoria).
+- `relatorios.balancete.tsx` — Balancete Mensal (4 KPIs + tabela Resumo por Categoria + side card Distribuição de Saídas em donut SVG).
+- `relatorios.fluxo-caixa.tsx` — Fluxo de Caixa (4 KPIs + SVG line chart Entradas/Saídas/Saldo + side card Projeção placeholder).
+- `relatorios.customizado.tsx` — Customizado (filtros + KPIs + tabela paginada + ação de export CSV via `?export=csv`).
+
+**Helper RBAC novo:** `RELATORIOS_CARGOS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const` (em `app/lib/rbac.server.ts`). **SECRETARIO BLOQUEADO** (mesmo podendo acessar o módulo financeiro operacional) — decisão de produto (brief §3.1, §5.3).
+
+### Matriz RBAC fina do Módulo Relatórios Financeiros
+
+| Operação \ Perfil | ADMIN | PASTOR | SECRETARIO | FINANCEIRO | LIDER_MIN. | DISCIPULADOR |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Ver Hub de Relatórios (`/app/financeiro/relatorios`) | ✅ | ✅ | 🚫 | ✅ | 🚫 | 🚫 |
+| Ver DRE / Balancete / Fluxo de Caixa | ✅ | ✅ | 🚫 | ✅ | 🚫 | 🚫 |
+| Ver Relatório Customizado | ✅ | ✅ | 🚫 | ✅ | 🚫 | 🚫 |
+| Export CSV (Qualquer relatório) | ✅ | ✅ | 🚫 | ✅ | 🚫 | 🚫 |
+| Drill-down (clicar categoria → `/app/financeiro/lancamentos?...`) | ✅ | ✅ | n/a | ✅ | n/a | n/a |
+| Item "Relatórios" no Sidebar | ✅ | ✅ | 🚫 | ✅ | 🚫 | 🚫 |
+
+> 👁 = leitura / 🚫 = bloqueado / ✅ = permitido / n/a = sem acesso upstream. SECRETARIO é BLOQUEADO nas 3 camadas (UI some do menu, loader 403, helper 403). Defesa em 3 camadas comprovada por teste E2E: SECRETARIO logado digitando `/app/financeiro/relatorios` direto na URL → 403.
+
+### 2 componentes compartilhados previstos
+
+- `<FiltrosPeriodo />` (`app/components/FiltrosPeriodo.tsx`) — 4 presets (7d / 30d / mês corrente / ano) + botão "Personalizado" que abre 2 inputs `<input type="date">`. Controlado via `useState`. Reutilizado em DRE, Fluxo de Caixa e Customizado.
+- `<KpiCard />` (`app/components/KpiCard.tsx`) — card com ícone colorido + badge opcional + valor em `text-2xl font-bold` + subtítulo. Reutilizado em todos os 5 relatórios (economia estimada: ~120 linhas duplicadas).
+
+### Padrões críticos (estender, não reinventar)
+
+#### Queries de agregação (`prisma.lancamento.groupBy`)
+
+```ts
+// Padrão canônico (estende pattern-trava-saldo-service — read-only)
+export async function getDRE(periodo: { inicio: Date; fim: Date }, user: SessionUser): Promise<DREData> {
+  // CAMADA 3 — PRIMEIRO, antes de qualquer I/O
+  assertCanSeeRelatorios(user);
+  assertPeriodoValido(periodo); // inicio < fim, lança 400 se inválido
+
+  const [entradas, saidas] = await Promise.all([
+    prisma.lancamento.groupBy({
+      by: ["categoria"],
+      where: { dataCompetencia: { gte: periodo.inicio, lt: periodo.fim }, tipo: "ENTRADA" },
+      _sum: { valorCentavos: true },
+      _count: { _all: true },
+    }),
+    prisma.lancamento.groupBy({
+      by: ["categoria"],
+      where: { dataCompetencia: { gte: periodo.inicio, lt: periodo.fim }, tipo: "SAIDA" },
+      _sum: { valorCentavos: true },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const totalEntradasCentavos = entradas.reduce((acc, e) => acc + (e._sum.valorCentavos ?? 0), 0);
+  const totalSaidasCentavos = saidas.reduce((acc, s) => acc + (s._sum.valorCentavos ?? 0), 0);
+
+  return {
+    periodo,
+    totalEntradasCentavos,
+    totalSaidasCentavos,
+    resultadoLiquidoCentavos: totalEntradasCentavos - totalSaidasCentavos,
+    entradasPorCategoria: mapCategorias(entradas, totalEntradasCentavos),
+    saidasPorCategoria: mapCategorias(saidas, totalSaidasCentavos),
+  };
+}
+```
+
+**Ver [`.harness/RAG/pattern-relatorios-aggregations.md`](../../.harness/RAG/pattern-relatorios-aggregations.md)** para detalhes completos (filtros de data semi-abertos, edge cases, Fluxo de Caixa com `findMany` + `Map` em memória, anti-exemplos).
+
+#### Filtros de data — sempre semi-aberto `[gte, lt)`
+
+```ts
+// SEMPRE: dataCompetencia: { gte: inicio, lt: fim }
+// NUNCA: dataCompetencia: { gte: inicio, lte: fim }  ← meses consecutivos sobrepõem no boundary
+```
+
+**Presets no `<FiltrosPeriodo />`:**
+
+| Preset | `inicio` | `fim` |
+|---|---|---|
+| 7 dias | `now - 7d` | `now` |
+| 30 dias | `now - 30d` | `now` |
+| Mês corrente | `now.getFullYear(), now.getMonth(), 1` | `now.getFullYear(), now.getMonth()+1, 1` |
+| Ano corrente | `now.getFullYear(), 0, 1` | `now.getFullYear()+1, 0, 1` |
+| Personalizado | `<input type="date">` × 2 | `<input type="date">` × 2 |
+
+#### Export CSV (RFC 4180 + BOM UTF-8 + `;`)
+
+```ts
+// app/lib/relatorios-csv.server.ts
+export async function exportarLancamentosCSV(filtros, user): Promise<string> {
+  assertCanSeeRelatorios(user); // CAMADA 3
+  // ... gera CSV com BOM UTF-8 (\uFEFF), separador ";", escape RFC 4180 ...
+}
+
+// app/routes/app/financeiro/relatorios/customizado.tsx (action)
+return new Response(csv, {
+  status: 200,
+  headers: {
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": `attachment; filename="igreja-conect-relatorio-${YYYY-MM-DD}.csv"`,
+    "Cache-Control": "no-store", // LGPD — dado financeiro sensível, nunca cachear
+  },
+});
+```
+
+**Ver [`.harness/RAG/convention-relatorios-csv-export.md`](../../.harness/RAG/convention-relatorios-csv-export.md)** para especificações completas (formato de valor `1234.56`, sinal negativo em SAÍDA, escape de aspas conforme RFC 4180, anti-exemplos).
+
+#### Drill-down (navegação para `/app/financeiro/lancamentos?...`)
+
+```tsx
+// No DRE / Balancete: clicar em linha de categoria gera <Link>
+import { Link } from "react-router";
+<Link
+  to={`/app/financeiro/lancamentos?caixa=${caixaId ?? ""}&categoria=${categoria}&periodo=${inicio.toISOString()}..${fim.toISOString()}`}
+  prefetch="intent"
+>
+  {categoria} (R$ {formatBRLFromCents(total)})
+</Link>
+```
+
+> **PENDÊNCIA (brief §5.4, §9.7 item #2):** a rota `/app/financeiro/lancamentos` (listagem geral) **não existe** hoje — só há `/app/financeiro/lancamentos/novo` (form) e `/app/financeiro/caixas/:id` (extrato). Decisão final na Fase 3 (Design): **Opção A** (criar `/app/financeiro/lancamentos` → S13 condicional) ou **Opção B** (redirecionar para `/app/financeiro/caixas/:id` com query params). PRD/SPEC deve fixar antes de S12.
+
+### Comandos de verificação específicos
+
+```bash
+# Rodar testes apenas de Relatórios (quando services existirem em S11+)
+pnpm test:watch -- relatorios
+pnpm test:watch -- relatorios-csv
+
+# Cobertura focada nos services de regra de negócio (gate: 100%)
+pnpm test:coverage -- app/lib/relatorios.server.ts \
+                     app/lib/relatorios-csv.server.ts \
+                     app/lib/rbac.server.ts
+
+# Validar Zod schemas
+pnpm test:watch -- schemas/relatorios
+
+# E2E específicos (Playwright, a serem criados em S11+)
+pnpm test:e2e -- relatorios-hub
+pnpm test:e2e -- relatorios-dre
+pnpm test:e2e -- relatorios-balancete
+pnpm test:e2e -- relatorios-fluxo-caixa
+pnpm test:e2e -- relatorios-customizado
+pnpm test:e2e -- relatorios-csv-export
+pnpm test:e2e -- relatorios-rbac-secretario-bloqueado  # bypass via URL direta → 403
+```
+
+### Como rodar o Módulo Relatórios localmente
+
+1. **Build de prod** (não `pnpm dev` — ver ⚠️ critical gotcha do ciclo 1):
+   ```bash
+   pnpm build && pnpm start
+   # → http://localhost:3000
+   ```
+2. **Login** com perfil financeiro: `financeiro@igreja.local` / `fin123` (credenciais do seed).
+3. **Navegar:** `/app/financeiro/relatorios` → escolher relatório (Hub) → ajustar filtros de período (preset ou personalizado) → ver KPIs + tabelas agregadas.
+4. **Drill-down:** clicar em uma linha de categoria do DRE ou Balancete → abrir `/app/financeiro/lancamentos?categoria=X&periodo=...` (quando a rota existir, pendência §9.7 #2 do brief).
+5. **Export CSV:** em `/app/financeiro/relatorios/customizado` → ajustar filtros → clicar "Exportar CSV" → download `igreja-conect-relatorio-YYYY-MM-DD.csv` → abrir no Excel/Sheets pt-BR (UTF-8 com BOM garante acentos corretos).
+6. **Verificar Camada 2 (RBAC):** acessar `/app/financeiro/relatorios` direto na URL com perfil `secretario@igreja.local` → loader chama `assertCanSeeRelatorios` → 403.
+7. **Verificar Camada 3 (RBAC service-side):** bypass programático via `curl` à rota `/app/financeiro/relatorios/dre` retorna 403 mesmo se loader for refatorado, porque `getDRE` chama `assertCanSeeRelatorios` PRIMEIRO.
+
+### Quais RAGs ler **antes** de tocar em código de Relatórios
+
+**Obrigatórios (não-negociáveis):**
+
+1. **`security-rbac-matrix`** — matriz 6 perfis × 6 domínios, padrão de 3 camadas, helper `assertCan*`.
+2. **`convention-monetary-values`** — `Int` em centavos, helpers `formatBRLFromCents` / `parseBRLToCents` / `assertNonNegative`. **Toda agregação em cents.**
+3. **`pattern-3-layer-rbac`** — UI / loader / service. Camada 3 é a única segurança real.
+4. **`pattern-relatorios-aggregations`** *(NOVO ciclo 4, high)* — `prisma.lancamento.groupBy` + soma em `Int` + filtros de data semi-abertos + edge cases (período vazio, categoria inválida, caixa arquivado).
+
+**Específicos do módulo (ciclo 4):**
+
+5. **`convention-relatorios-csv-export`** *(NOVO ciclo 4, high)* — RFC 4180 + BOM UTF-8 + separador `;` + escape de aspas + `Cache-Control: no-store` + SAÍDA com sinal negativo.
+
+**Específicos do Financeiro (ciclo 2, herdados):**
+
+6. **`architecture-financeiro`** (high) — visão macro, lifecycles, RBAC fina do Módulo Financeiro.
+7. **`pattern-trava-saldo-service`** (critical) — ordem inegociável: `assertCan*` → `assertSaldoSuficiente` → `$transaction`. Para Relatórios (read-only), apenas `assertCan*` antes do I/O.
+
+**Complementares (transversais):**
+
+8. **`lgpd-igreja-conect`** — `Cache-Control: no-store` no CSV, logs de auditoria **nunca** registram `valorCentavos` (mesma regra do ciclo 2).
+9. **`convention-prisma-sqlite`** — `$transaction` workflow (não usado em Relatórios read-only), `onDelete: Restrict`, enum `CategoriaLancamento` (7 valores) e `TipoLancamento` (ENTRADA/SAIDA).
+10. **`lesson-route-service-bypass`** — **nunca** `prisma.*` direto em loader/action de `/app/financeiro/relatorios/**`. Sempre via `relatorios.server.ts`.
+11. **`lesson-prisma-7-commit-settle-e2e`** — em E2E, `page.goto` logo após `criarLancamento` pode não ver os lançamentos espelho. Workaround: `dbSettle(100)` antes do `page.goto` no teste.
+
+### Exemplo de service signature (referência canônica)
+
+```ts
+// app/lib/relatorios.server.ts (esboço — implementação é no ciclo 4, Fase 5)
+export async function getBalanceteMensal(
+  mesReferencia: { ano: number; mes: number }, // 1-12
+  user: SessionUser
+): Promise<BalanceteData> {
+  // CAMADA 3 (RBAC) — PRIMEIRO, antes de qualquer I/O.
+  assertCanSeeRelatorios(user);
+
+  // Período: [primeiro dia do mês 00:00, primeiro dia do próximo mês 00:00)
+  const inicio = new Date(mesReferencia.ano, mesReferencia.mes - 1, 1);
+  const fim = new Date(mesReferencia.ano, mesReferencia.mes, 1);
+
+  // Saldo anterior: agregação ANTES do início do mês (interpretação por tipo)
+  const saldoAnterior = await prisma.lancamento.aggregate({
+    where: { dataCompetencia: { lt: inicio } },
+    _sum: { valorCentavos: true },
+  });
+
+  // Entradas / saídas do mês: groupBy por categoria
+  const [entradas, saidas] = await Promise.all([
+    prisma.lancamento.groupBy({
+      by: ["categoria"],
+      where: { dataCompetencia: { gte: inicio, lt: fim }, tipo: "ENTRADA" },
+      _sum: { valorCentavos: true },
+      _count: { _all: true },
+    }),
+    prisma.lancamento.groupBy({
+      by: ["categoria"],
+      where: { dataCompetencia: { gte: inicio, lt: fim }, tipo: "SAIDA" },
+      _sum: { valorCentavos: true },
+      _count: { _all: true },
+    }),
+  ]);
+
+  // Soma em Int (cents)
+  const totalEntradasCentavos = entradas.reduce((acc, e) => acc + (e._sum.valorCentavos ?? 0), 0);
+  const totalSaidasCentavos = saidas.reduce((acc, s) => acc + (s._sum.valorCentavos ?? 0), 0);
+  const saldoAtualCentavos = (saldoAnterior._sum.valorCentavos ?? 0) + totalEntradasCentavos - totalSaidasCentavos;
+
+  return {
+    periodo: { inicio, fim },
+    saldoAnteriorCentavos: saldoAnterior._sum.valorCentavos ?? 0,
+    totalEntradasCentavos,
+    totalSaidasCentavos,
+    saldoAtualCentavos,
+    resumoPorCategoria: mergeCategorias(entradas, saidas),
+  };
+}
+```
+
+> **Assinaturas canônicas** (referência para implementação no ciclo 4, Fase 5):
+> - `relatorios.server.ts` → `getDRE(periodo, user)`, `getBalanceteMensal(mesRef, user)`, `getFluxoCaixa(periodo, user)`, `getRelatorioCustomizado(filtros, user)`, `exportarLancamentosCSV(filtros, user)` (este último delega para `relatorios-csv.server.ts`).
+> - `relatorios-csv.server.ts` → `escapeCsvField(value)`, `formatValorCsv(centavos)`, `montarCabecalhoCsv()`, `exportarLancamentosCSV(filtros, user)`. Helpers privados — apenas 1 export público.
+> - `rbac.server.ts` → `RELATORIOS_CARGOS` (constante) + `assertCanSeeRelatorios(user)` (helper canônico, espelha `assertCanSeeFinancials`).
+
+### Glossário do Módulo Relatórios Financeiros
+
+| Termo | Significado |
+|---|---|
+| **Relatório Estruturado** | Agregação read-only sobre `Lancamento` que transforma o repositório bruto em inteligência (DRE, Balancete, Fluxo, Custom). **SEMPRE** com Camada 3 RBAC (`assertCanSeeRelatorios`). |
+| **DRE (Demonstrativo de Resultado)** | Resumo de entradas (receitas) vs saídas (despesas) em 1 período, com resultado líquido (lucro/déficit). 3 KPIs + listas por categoria. |
+| **Balancete Mensal** | 4 KPIs (Saldo Anterior / Entradas / Saídas / Saldo Atual) + tabela "Resumo por Categoria" para 1 mês específico. |
+| **Fluxo de Caixa** | Série temporal (default: 12 meses) de entradas, saídas e saldo acumulado. Renderizado como SVG line chart inline. |
+| **Relatório Customizado** | Query filtrada com 6 dimensões (período / tipo / categoria / membro / caixa / status-placeholder) + paginação + export CSV. |
+| **`RELATORIOS_CARGOS`** | Constante em `app/lib/rbac.server.ts`: `["ADMIN", "PASTOR", "FINANCEIRO"]` (3 perfis). **SECRETARIO BLOQUEADO** (decisão de produto, brief §5.3). |
+| **`assertCanSeeRelatorios`** | Helper canônico em `app/lib/rbac.server.ts`. Lança `Response(403)` se user não tem cargo em `RELATORIOS_CARGOS`. PRIMEIRO no service, antes de qualquer I/O. |
+| **CSV (Comma-Separated Values)** | Formato de texto para dados tabulares. Convenção do ciclo 4: separador `;`, encoding UTF-8 com BOM, escape RFC 4180. **NÃO** é o "CSV com vírgula" do padrão inglês. |
+| **BOM (Byte Order Mark)** | 3 bytes (`EF BB BF`) no início de arquivo UTF-8 que sinalizam encoding. Sem BOM, Excel pt-BR abre com Latin-1 e corrompe acentos. |
+| **RFC 4180** | Especificação formal de CSV (Mozilla/IETF). Define aspas duplas como quote char, escape de aspas internas duplicadas, separador CRLF. |
+| **Drill-down** | Navegação de uma célula agregada (categoria, total) para o detalhe (lista de lançamentos individuais). Implementado como `<Link>` com query params. |
+| **`<FiltrosPeriodo />`** | Componente compartilhado com 4 presets (7d / 30d / mês corrente / ano) + botão "Personalizado" que abre 2 inputs `<input type="date">`. Reutilizado em DRE, Fluxo e Customizado. |
+| **`<KpiCard />`** | Componente compartilhado com ícone colorido + badge opcional + valor + subtítulo. Reutilizado em todos os 5 relatórios. |
+| **Filtro de Data Semi-Aberto** | `where.dataCompetencia: { gte: inicio, lt: fim }`. O `lt` (não `lte`) garante que meses consecutivos não se sobreponham no boundary. |
+| **Projeção (placeholder)** | Card cinza com texto "Disponível em ciclo futuro — depende de módulo Contas a Pagar". Renderizado por `<ProjectionPlaceholder />` em Balancete (próximo mês) e Fluxo (próximos 30 dias). |
+| **Status de Lançamento (placeholder)** | `<select disabled>` no Customizado com 4 opções visíveis mas não-clicáveis. Schema atual não tem campo `status` — diferido para ciclo 6+. |
+
+### Restrições do ciclo 4 (não-objetivos, brief §8)
+
+- ❌ **Export PDF.** Diferido (sem `pdfkit`/`puppeteer` por dependência externa pesada).
+- ❌ **Envio de relatório por e-mail.** Sem SMTP no projeto.
+- ❌ **Agendamento de relatórios (cron).** Sem jobs no projeto.
+- ❌ **Projeção financeira real.** Depende de `ContaPagar` (não existe). Placeholder cinza.
+- ❌ **Status de lançamento.** Schema não tem campo. Placeholder.
+- ❌ **Conciliação bancária.** Caixas são internos (RN-FIN-01). Sem extrato bancário.
+- ❌ **Multi-igreja / multi-tenant.** Uma instância = uma igreja.
+- ❌ **Multi-moeda.** Apenas BRL.
+- ❌ **Cache de relatório.** Toda geração é on-demand. Sem Redis.
+- ❌ **Filtros por centro de custo.** Não há modelagem.
+- ❌ **Drill-down em gráficos SVG.** Apenas clique em linhas de tabela.
+- ❌ **Impressão formatada (CSS print).** `window.print()` simples.
+- ❌ **Comparativo YoY automático.** Via filtro manual de período.
+- ❌ **Auditoria visual de quem gerou cada relatório.** Logs de auditoria cobrem.
+
+### Métrica macro do ciclo 4 (definition of done)
+
+> *"O ciclo 4 é considerado bem-sucedido quando um `FINANCEIRO` consegue, em menos de 2 minutos, gerar o DRE do mês corrente, ver o total de entradas (verde), o total de saídas (vermelho) e o resultado líquido (azul), clicar em uma categoria para abrir o drill-down, e exportar a tabela do Relatório Customizado em CSV."* — `brief-relatorios.md §7.1`
+
+**Testes de borda obrigatórios (12, do brief §7.3):**
+
+- SECRETARIO acessando `/app/financeiro/relatorios` → 403 em Camada 2 (loader) + Camada 3 (helper).
+- SECRETARIO digitando `/app/financeiro/relatorios/dre` direto na URL → 403 (sem fallback).
+- DISCIPULADOR / LIDER_MINISTERIO → 403 em todas as 5 rotas.
+- Mês sem lançamentos no DRE → zeros, listas vazias, sem crash.
+- Mês sem categorias com movimento no Balancete → tabela oculta linhas vazias, totais zerados.
+- Período com 0 resultados no Customizado → "Nenhum lançamento encontrado" + KPIs zerados.
+- Filtro `categoria=BURRO` (inválida) → loader lança `Response(400)`.
+- Filtro `periodo` com `inicio > fim` → loader lança `Response(400)`.
+- Caixa arquivado no DRE → lançamentos continuam aparecendo (regra do ciclo 2).
+- CSV com 1.280 registros → geração completa em < 500ms.
+- CSV com `descricao = 'São Paulo & Cia.'` → escape RFC 4180 correto.
+- 5 usuários logados simultaneamente gerando relatórios → sem contenção (SQLite serializa, latência < 2s).
+- CSV sem BOM → Excel pt-BR reconhece UTF-8 se BOM presente; sem BOM, vira mojibake. Teste confere 3 primeiros bytes (`EF BB BF`).
+
+### Limites conhecidos do Módulo Relatórios Financeiros
+
+| Limite | Onde | Mitigação |
+|---|---|---|
+| **Sem PDF** | Export no Customizado | CSV cobre o caso real (Sheets pivot). PDF em ciclo 6+. |
+| **Sem projeção real** | Cards "Projeção" no Balancete e Fluxo | Placeholder cinza. Depende de `ContaPagar` (ciclo 6+). |
+| **Sem status** | Filtro no Customizado | `<select disabled>`. Depende de refactor de schema. |
+| **Sem drill-down de gráfico** | SVG line chart no Fluxo | Apenas clique em linhas de tabela é navegável. |
+| **Sem cache** | Toda geração on-demand | Sem Redis. Para volume muito alto (> 100k lançamentos), `$queryRaw` em ciclo futuro. |
+| **Fuso do servidor** | `dataCompetencia` filtrada em `Date` local | Assumir fuso único. Migração para UTC puro em ciclo futuro. |
+| **Fluxo de Caixa não escala para > 24 meses** | `findMany` + `Map` em memória | Limitar UI a 24 meses. Migrar para `prisma.$queryRaw` com `strftime` em ciclo 6+. |
+| **SQLite single-writer** | `dev.db` | 1 processo Node + queries read-only (sem `$transaction`). Postgres futuro é mudança aditiva. |
+| **Rota `/app/financeiro/lancamentos` não existe** | Drill-down pendente | Decisão na Fase 3 (Design): criar nova rota (S13) ou redirecionar para `/app/financeiro/caixas/:id` com query params. |
 
 ---
 

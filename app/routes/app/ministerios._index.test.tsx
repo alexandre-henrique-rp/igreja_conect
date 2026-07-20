@@ -33,18 +33,20 @@ type MinisterioListItem = {
   nome: string;
   descricao: string | null;
   totalMembros: number;
-  primeiros5Membros: { id: string; nome: string }[];
+  lider: { id: string; nome: string } | null;
 };
 
 type LoaderData = {
   ministerios: MinisterioListItem[];
+  stats: { total: number; ativos: number; comLider: number };
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
   canEdit: boolean;
 };
 
 let cleanup: () => Promise<void>;
 let loader: typeof import("./ministerios._index").loader;
 let action: typeof import("./ministerios._index").action;
-let DefaultComponent: React.ComponentType<{ loaderData: LoaderData }>;
+let DefaultComponent: React.ComponentType<{ loaderData: LoaderData; actionData?: unknown }>;
 
 beforeAll(async () => {
   cleanup = await setupTestDb("ministerios_index");
@@ -173,7 +175,7 @@ describe("ministerios._index — loader (S03-T10)", () => {
     }
   });
 
-  it("ministério com membros: totalMembros e primeiros5Membros", async () => {
+  it("ministério com membros: totalMembros e lider", async () => {
     const m = await makeMinisterio("Louvor");
     const ana = await makeMembro("Ana");
     const carlos = await makeMembro("Carlos");
@@ -188,7 +190,7 @@ describe("ministerios._index — loader (S03-T10)", () => {
     const result = await loader(args(makeGetRequest(), user));
 
     expect(result.ministerios[0]?.totalMembros).toBe(2);
-    expect(result.ministerios[0]?.primeiros5Membros).toHaveLength(2);
+    expect(result.ministerios[0]?.lider).not.toBeNull();
   });
 });
 
@@ -328,9 +330,11 @@ describe("ministerios._index — render (S03-T10)", () => {
                   nome: "Louvor",
                   descricao: null,
                   totalMembros: 0,
-                  primeiros5Membros: [],
+                  lider: null,
                 },
               ],
+              stats: { total: 1, ativos: 1, comLider: 0 },
+              pagination: { page: 1, pageSize: 6, total: 1, totalPages: 1 },
               canEdit: true,
             }}
           />
@@ -357,9 +361,11 @@ describe("ministerios._index — render (S03-T10)", () => {
                   nome: "Louvor",
                   descricao: null,
                   totalMembros: 0,
-                  primeiros5Membros: [],
+                  lider: null,
                 },
               ],
+              stats: { total: 1, ativos: 1, comLider: 0 },
+              pagination: { page: 1, pageSize: 6, total: 1, totalPages: 1 },
               canEdit: false,
             }}
           />
@@ -379,7 +385,12 @@ describe("ministerios._index — render (S03-T10)", () => {
         path: "/app/ministerios",
         Component: () => (
           <DefaultComponent
-            loaderData={{ ministerios: [], canEdit: true }}
+            loaderData={{
+              ministerios: [],
+              stats: { total: 0, ativos: 0, comLider: 0 },
+              pagination: { page: 1, pageSize: 6, total: 0, totalPages: 0 },
+              canEdit: true,
+            }}
           />
         ),
       },

@@ -18,25 +18,24 @@ import type { SessionUser } from "./session.types";
 import type { ConfigAcolhimentoInput } from "./schemas/config";
 import type { Prisma } from "../../generated/prisma/client";
 
+const CONFIG_ACOLHIMENTO_ID = "singleton";
+
 /**
  * Busca a configuração de acolhimento atual.
  *
- * @description SELECT na tabela `config_acolhimento` onde id='singleton'.
- * @returns {Promise<Prisma.ConfigAcolhimentoGetPayload<{ include: { responsavelMembro: true; responsavelMinisterio: true } }> | null>}
+ * @description SELECT na primeira linha de `configuracoes_gerais`.
+ * @returns {Promise<Prisma.ConfiguracaoGeralGetPayload<{ include: { responsavelMembro: true; responsavelMinisterio: true } }> | null>}
  *   Configuração encontrada ou null se não existir.
  * @example
  *   const config = await getConfigAcolhimento();
- *   if (config) { /* usa config.responsavelMembroId *\/ }
  */
 export async function getConfigAcolhimento() {
-  const config = await prisma.configuracaoGeral.findFirst({
-    where: { id: "singleton" },
+  return prisma.configuracaoGeral.findFirst({
     include: {
       responsavelMembro: true,
       responsavelMinisterio: true,
     },
   });
-  return config;
 }
 
 /**
@@ -46,7 +45,7 @@ export async function getConfigAcolhimento() {
  * Aplica exclusividade: se tipo=MEMBRO, seta responsavelMembroId e zera
  * responsavelMinisterioId. Vice-versa.
  *
- * @description UPSERT em `config_acolhimento` com id='singleton'.
+ * @description UPSERT lógico em `configuracoes_gerais`.
  * @param {ConfigAcolhimentoInput} input - Dados validados (tipo + id do responsável).
  * @param {SessionUser} user - Usuário autenticado (ADMIN).
  * @returns {Promise<object>} Configuração atualizada.
@@ -65,13 +64,10 @@ export async function updateConfigAcolhimento(
   assertIsAdmin(user);
   const validated = ConfigAcolhimentoSchema.parse(input);
 
-  // Usar Unchecked*Input para poder passar as scalar FK diretamente
-  // (ConfigAcolhimentoUpdateInput só aceita relation objects).
   const data: Prisma.ConfiguracaoGeralUncheckedUpdateInput = {
     responsavelVisitanteTipo: validated.responsavelVisitanteTipo ?? null,
   };
 
-  // Exclusividade: seta um campo, zera o outro
   if (validated.responsavelVisitanteTipo === "MEMBRO") {
     data.responsavelMembroId = validated.responsavelId;
     data.responsavelMinisterioId = null;
@@ -80,14 +76,18 @@ export async function updateConfigAcolhimento(
     data.responsavelMembroId = null;
   }
 
-  const config = await prisma.configuracaoGeral.upsert({
-    where: { id: "singleton" },
-    update: data,
-    create: {
-      id: "singleton",
-      ...data,
-    } as Prisma.ConfiguracaoGeralUncheckedCreateInput,
-  });
+  const existing = await getConfigAcolhimento();
+  const config = existing
+    ? await prisma.configuracaoGeral.update({
+        where: { id: existing.id },
+        data,
+      })
+    : await prisma.configuracaoGeral.create({
+        data: {
+          id: CONFIG_ACOLHIMENTO_ID,
+          ...data,
+        } as Prisma.ConfiguracaoGeralUncheckedCreateInput,
+      });
 
   safeLog({
     userId: user.id,

@@ -16,7 +16,7 @@ import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 const KEY = "__prisma" as const;
 const globalForPrisma = globalThis as unknown as { [KEY]?: PrismaClient };
 
-const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+const databaseUrl = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
 
 export const prisma: PrismaClient =
   globalForPrisma[KEY] ??

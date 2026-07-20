@@ -101,21 +101,16 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 }
 
-/**
- * Componente da rota. Em S02, a UI do form é gerada pelo
- * `<FormMembro isEdit={false} />` (S02-T05, frontend). Aqui
- * retornamos um placeholder — o frontend S02-T05 vai substituir.
- */
-export default function MembrosNovo({ loaderData }: Route.ComponentProps) {
+import { FormMembro } from "~/components/FormMembro";
+
+export default function MembrosNovo({ actionData }: Route.ComponentProps) {
   return (
-    <main id="main-content" className="p-4 container mx-auto">
-      <h1 className="text-2xl font-bold">Cadastrar novo membro</h1>
-      <p className="text-slate-600 mt-2">
-        Placeholder — UI do form virá em S02-T05.
-      </p>
-      <pre className="mt-4 text-xs text-slate-500">
-        {JSON.stringify(loaderData, null, 2)}
-      </pre>
-    </main>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <FormMembro
+        isEdit={false}
+        formError={actionData?.formError}
+        fieldErrors={actionData?.fieldErrors}
+      />
+    </div>
   );
 }

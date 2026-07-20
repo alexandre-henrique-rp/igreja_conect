@@ -44,10 +44,16 @@ describe("<FormLogin />", () => {
     expect(html).toContain('id="main-content"');
   });
 
-  it("renderiza h1 'Entrar'", () => {
+  it("renderiza h1 'IgrejaConnect'", () => {
     const html = renderForm();
     expect(html).toContain("<h1");
-    expect(html).toContain("Entrar");
+    expect(html).toContain("IgrejaConnect");
+  });
+
+  it("renderiza h2 'Bem-vindo de volta'", () => {
+    const html = renderForm();
+    expect(html).toContain("<h2");
+    expect(html).toContain("Bem-vindo de volta");
   });
 
   it("renderiza form com method='post' action='/login'", () => {
@@ -80,22 +86,16 @@ describe("<FormLogin />", () => {
     expect(html).toContain('type="submit"');
   });
 
-  it("renderiza checkbox 'Manter-me conectado'", () => {
+  it("renderiza checkbox 'Lembrar de mim'", () => {
     const html = renderForm();
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('name="manterConectado"');
-    expect(html).toContain("Manter-me conectado");
+    expect(html).toContain("Lembrar de mim");
   });
 
-  it("renderiza link 'Esqueceu a senha? Procure o Admin da sua igreja.'", () => {
+  it("renderiza link 'Esqueceu a senha?'", () => {
     const html = renderForm();
-    expect(html).toContain("Procure o Admin da sua igreja");
-  });
-
-  it("renderiza footer com copyright", () => {
-    const html = renderForm();
-    expect(html).toContain("Igreja Conect");
-    expect(html).toContain("2026");
+    expect(html).toContain("Esqueceu a senha?");
   });
 
   it("sem formError: NÃO renderiza <ErrorAlert> de erro", () => {
@@ -140,8 +140,8 @@ describe("<FormLogin />", () => {
     expect(html).toContain('value="user@igreja.local"');
   });
 
-  it("botão submit tem classes primary (bg-cyan-700)", () => {
+  it("botão submit tem classes blue (bg-blue-600)", () => {
     const html = renderForm();
-    expect(html).toContain("bg-cyan-700");
+    expect(html).toContain("bg-blue-600");
   });
 });

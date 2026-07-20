@@ -217,22 +217,22 @@ describe("membros._index — render (S02-T04)", () => {
                   id: "m1",
                   nome: "Maria da Silva",
                   tipo: "MEMBRO_ATIVO",
-                  discipulador: { id: "j1", nome: "João Pastor" },
-                  ministerios: [{ id: "min1", nome: "Louvor" }],
+                  email: "maria@email.com",
+                  createdAt: new Date("2022-03-12T12:00:00Z"),
                 },
               ],
               total: 1,
               page: 1,
               pageSize: 25,
-              ministerios: [{ id: "min1", nome: "Louvor" }],
-              discipuladores: [{ id: "j1", nome: "João Pastor" }],
               filterValues: {
                 q: undefined,
                 tipo: undefined,
-                ministerioId: undefined,
-                discipuladorId: undefined,
               },
               searchParams: new URLSearchParams(""),
+              kpiTotal: 1,
+              kpiAtivos: 1,
+              kpiVisitantes: 0,
+              kpiCongregados: 0,
             }}
           />
         ),
@@ -245,15 +245,12 @@ describe("membros._index — render (S02-T04)", () => {
     expect(html).toContain("Lista de membros");
     // Nome do membro aparece
     expect(html).toContain("Maria da Silva");
-    // Badge de tipo MEMBRO_ATIVO
-    expect(html).toContain("Membro ativo");
-    // Discipulador
-    expect(html).toContain("João Pastor");
-    // Ministério
-    expect(html).toContain("Louvor");
-    // Contagem: "1 membro encontrado" (singular)
-    expect(html).toContain("1");
-    expect(html).toContain("membro encontrado");
+    // Mapped tipo MEMBRO_ATIVO -> Membro Efetivo
+    expect(html).toContain("Membro Efetivo");
+    // Email aparece
+    expect(html).toContain("maria@email.com");
+    // Pagination text is rendered
+    expect(html).toContain("Exibindo 1 a 1 de 1 membros");
   });
 
   it("empty state SEM filtros: mostra 'Nenhum membro por aqui ainda' + botão Cadastrar", async () => {
@@ -267,15 +264,15 @@ describe("membros._index — render (S02-T04)", () => {
               total: 0,
               page: 1,
               pageSize: 25,
-              ministerios: [],
-              discipuladores: [],
               filterValues: {
                 q: undefined,
                 tipo: undefined,
-                ministerioId: undefined,
-                discipuladorId: undefined,
               },
               searchParams: new URLSearchParams(""),
+              kpiTotal: 0,
+              kpiAtivos: 0,
+              kpiVisitantes: 0,
+              kpiCongregados: 0,
             }}
           />
         ),
@@ -284,13 +281,13 @@ describe("membros._index — render (S02-T04)", () => {
     const html = renderToString(<Stub initialEntries={["/app/membros"]} />);
 
     expect(html).toContain("Nenhum membro por aqui ainda");
-    expect(html).toContain("Cadastre o primeiro membro para começar");
-    // Botão "+ Cadastrar membro" leva para /app/membros/novo
-    expect(html).toContain("+ Cadastrar membro");
+    expect(html).toContain("Comece cadastrando o primeiro membro da sua comunidade.");
+    // Botão "Cadastrar membro" leva para /app/membros/novo
+    expect(html).toContain("Cadastrar membro");
     expect(html).toContain('href="/app/membros/novo"');
   });
 
-  it("empty state COM filtros: mostra 'Nenhum membro com esses filtros' + botão Limpar", async () => {
+  it("empty state COM filtros: mostra 'Nenhum membro encontrado com esses filtros' + botão Limpar", async () => {
     const Stub = createRoutesStub([
       {
         path: "/app/membros",
@@ -301,15 +298,15 @@ describe("membros._index — render (S02-T04)", () => {
               total: 0,
               page: 1,
               pageSize: 25,
-              ministerios: [],
-              discipuladores: [],
               filterValues: {
                 q: "maria",
                 tipo: "VISITANTE",
-                ministerioId: undefined,
-                discipuladorId: undefined,
               },
               searchParams: new URLSearchParams("?q=maria&tipo=VISITANTE"),
+              kpiTotal: 0,
+              kpiAtivos: 0,
+              kpiVisitantes: 0,
+              kpiCongregados: 0,
             }}
           />
         ),
@@ -319,15 +316,13 @@ describe("membros._index — render (S02-T04)", () => {
       <Stub initialEntries={["/app/membros?q=maria&tipo=VISITANTE"]} />
     );
 
-    expect(html).toContain("Nenhum membro com esses filtros");
-    expect(html).toContain("Tente ajustar os filtros");
-    // Botão "Limpar filtros" leva para /app/membros (sem query)
-    expect(html).toContain("Limpar filtros");
-    // Contagem "0 membro encontrado" / "Nenhum membro encontrado"
-    expect(html).toContain("Nenhum membro encontrado");
+    expect(html).toContain("Nenhum membro encontrado com esses filtros");
+    expect(html).toContain("Tente ajustar os filtros, limpar a busca ou navegar pelas abas.");
+    // Botão "Limpar busca" leva para /app/membros (sem query)
+    expect(html).toContain("Limpar busca");
   });
 
-  it("contagem plural: '2 membros encontrados' (não 'membro encontrado')", async () => {
+  it("contagem plural: 'Exibindo 1 a 2 de 2 membros'", async () => {
     const Stub = createRoutesStub([
       {
         path: "/app/membros",
@@ -339,29 +334,29 @@ describe("membros._index — render (S02-T04)", () => {
                   id: "m1",
                   nome: "A",
                   tipo: "VISITANTE",
-                  discipulador: null,
-                  ministerios: [],
+                  email: null,
+                  createdAt: new Date("2023-11-05T12:00:00Z"),
                 },
                 {
                   id: "m2",
                   nome: "B",
                   tipo: "VISITANTE",
-                  discipulador: null,
-                  ministerios: [],
+                  email: null,
+                  createdAt: new Date("2023-11-06T12:00:00Z"),
                 },
               ],
               total: 2,
               page: 1,
               pageSize: 25,
-              ministerios: [],
-              discipuladores: [],
               filterValues: {
                 q: undefined,
                 tipo: undefined,
-                ministerioId: undefined,
-                discipuladorId: undefined,
               },
               searchParams: new URLSearchParams(""),
+              kpiTotal: 2,
+              kpiAtivos: 0,
+              kpiVisitantes: 2,
+              kpiCongregados: 0,
             }}
           />
         ),
@@ -369,8 +364,7 @@ describe("membros._index — render (S02-T04)", () => {
     ]);
     const html = renderToString(<Stub initialEntries={["/app/membros"]} />);
 
-    expect(html).toContain("2");
-    expect(html).toContain("membros encontrados");
+    expect(html).toContain("Exibindo 1 a 2 de 2 membros");
   });
 });
 

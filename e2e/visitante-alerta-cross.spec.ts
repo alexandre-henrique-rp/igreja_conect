@@ -202,10 +202,10 @@ async function createMember(input: {
 
 async function cleanupData(ids: { responsavelId?: string; secretarioId?: string; visitanteId?: string }): Promise<void> {
   const memberIds = [ids.responsavelId, ids.secretarioId, ids.visitanteId].filter(Boolean) as string[];
-  await prisma.configAcolhimento.deleteMany({ where: { id: "singleton" } });
+  await prisma.configuracaoGeral.deleteMany({ where: { id: "singleton" } });
   if (memberIds.length > 0) {
     await prisma.alerta.deleteMany({
-      where: { OR: [{ membroId: { in: memberIds } }, { destinatarios: { some: { membroId: { in: memberIds } } } }] },
+      where: { OR: [{ destinatarios: { some: { membroId: { in: memberIds } } } }] },
     });
     await prisma.membro.deleteMany({ where: { id: { in: memberIds } } });
   }

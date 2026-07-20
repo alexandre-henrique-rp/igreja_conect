@@ -25,6 +25,9 @@ export const CATEGORIAS_LANCAMENTO = [
 /** Tipos de lançamento financeiro. */
 export const TIPOS_LANCAMENTO = ["ENTRADA", "SAIDA"] as const;
 
+/** Status de situação do lançamento financeiro. */
+export const STATUS_LANCAMENTO = ["PAGO", "PENDENTE", "AGENDADO"] as const;
+
 /**
  * Schema de criação de Lançamento Financeiro.
  *
@@ -42,11 +45,25 @@ export const LancamentoCreateSchema = z
   .object({
     tipo: z.enum(TIPOS_LANCAMENTO),
     categoria: z.enum(CATEGORIAS_LANCAMENTO),
-    valorCentavos: z.number().int("Valor deve ser inteiro.").positive("Valor deve ser positivo."),
+    status: z.enum(STATUS_LANCAMENTO),
+    valorCentavos: z
+      .number()
+      .int("Valor deve ser inteiro.")
+      .positive("Valor deve ser positivo."),
     caixaId: z.string().uuid("caixaId deve ser um UUID válido."),
-    membroId: z.string().uuid("membroId deve ser um UUID válido.").optional().nullable(),
-    dataCompetencia: z.coerce.date({ message: "Data de competência inválida." }),
-    descricao: z.string().min(1, "Descrição é obrigatória.").max(500, "Descrição deve ter no máximo 500 caracteres."),
+    membroId: z
+      .string()
+      .uuid("membroId deve ser um UUID válido.")
+      .optional()
+      .nullable(),
+    dataCompetencia: z.coerce.date({
+      message: "Data de competência inválida.",
+    }),
+    descricao: z
+      .string()
+      .max(500, "Descrição deve ter no máximo 500 caracteres.")
+      .optional(),
+    // descricao é opcional na UI; armazena vazio como null
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -59,7 +76,10 @@ export const LancamentoCreateSchema = z
       });
     }
     // DESPESA/COMPRA/MANUTENCAO/TRANSFERENCIA não pode ter membroId
-    if (!["DIZIMO", "OFERTA", "CAMPANHA"].includes(data.categoria) && data.membroId) {
+    if (
+      !["DIZIMO", "OFERTA", "CAMPANHA"].includes(data.categoria) &&
+      data.membroId
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["membroId"],
@@ -72,7 +92,12 @@ export const LancamentoCreateSchema = z
 export type LancamentoCreateInput = z.infer<typeof LancamentoCreateSchema>;
 
 /** Períodos pré-definidos para filtro de extrato. */
-export const PERIODOS_FILTRO = ["", "mes_atual", "mes_passado", "ano_atual"] as const;
+export const PERIODOS_FILTRO = [
+  "",
+  "mes_atual",
+  "mes_passado",
+  "ano_atual",
+] as const;
 
 /**
  * Schema de filtros para extrato de caixa.

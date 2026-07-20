@@ -26,37 +26,88 @@ const BCRYPT_COST = 10;
 export async function runSeed(): Promise<void> {
   const prisma = new PrismaClient({
     adapter: new PrismaBetterSqlite3({
-      url: process.env.DATABASE_URL ?? "file:./dev.db",
+      url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
     }),
   });
   try {
-    const existente = await prisma.membro.findUnique({ where: { email: ADMIN_EMAIL } });
-    if (existente) {
-      console.log(`[seed] ADMIN já existe (${ADMIN_EMAIL}). Seed idempotente OK.`);
-      return;
+    const existente = await prisma.membro.findUnique({
+      where: { email: ADMIN_EMAIL },
+    });
+    if (!existente) {
+      const senhaHash = await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_COST);
+      const admin = await prisma.membro.create({
+        data: {
+          nome: "Administrador",
+          email: ADMIN_EMAIL,
+          senhaHash,
+          tipo: "MEMBRO_ATIVO",
+          cargo: "ADMIN",
+        },
+      });
+      console.log(`[seed] ADMIN criado: ${admin.email} (id: ${admin.id})`);
+      console.log(
+        `[seed] Senha inicial: "${ADMIN_PASSWORD}" — TROCAR EM PRODUÇÃO.`,
+      );
+    } else {
+      console.log(
+        `[seed] ADMIN já existe (${ADMIN_EMAIL}). Seed de ADMIN OK.`,
+      );
     }
 
-    const senhaHash = await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_COST);
-
-    const admin = await prisma.membro.create({
-      data: {
-        nome: "Administrador",
-        email: ADMIN_EMAIL,
-        senhaHash,
-        tipo: "MEMBRO_ATIVO",
-        cargo: "ADMIN",
+    // Seeding mock members from screenshot
+    const mockMembros = [
+      {
+        nome: "Ricardo Oliveira",
+        email: "ricardo.o@email.com",
+        tipo: "MEMBRO_ATIVO" as const,
+        createdAt: new Date("2022-03-12T12:00:00Z"),
       },
-    });
+      {
+        nome: "Ana Beatriz Costa",
+        email: "ana.beatriz@email.com",
+        tipo: "VISITANTE" as const,
+        createdAt: new Date("2023-11-05T12:00:00Z"),
+      },
+      {
+        nome: "Marcos Vinícius",
+        email: "m.vinicius@email.com",
+        tipo: "CONGREGADO" as const,
+        createdAt: new Date("2021-01-18T12:00:00Z"),
+      },
+      {
+        nome: "Juliana Santos",
+        email: "juliana.s@email.com",
+        tipo: "MEMBRO_ATIVO" as const,
+        createdAt: new Date("2020-08-30T12:00:00Z"),
+      },
+    ];
 
-    console.log(`[seed] ADMIN criado: ${admin.email} (id: ${admin.id})`);
-    console.log(`[seed] Senha inicial: "${ADMIN_PASSWORD}" — TROCAR EM PRODUÇÃO.`);
+    for (const m of mockMembros) {
+      const existeMembro = await prisma.membro.findUnique({
+        where: { email: m.email },
+      });
+      if (!existeMembro) {
+        await prisma.membro.create({
+          data: {
+            nome: m.nome,
+            email: m.email,
+            tipo: m.tipo,
+            createdAt: m.createdAt,
+          },
+        });
+        console.log(`[seed] Membro criado: ${m.nome}`);
+      }
+    }
   } finally {
     await prisma.$disconnect();
   }
 }
 
 // Executa ao rodar `tsx prisma/seed.ts` (não em test).
-if (process.env.NODE_ENV !== "test" && import.meta.url === `file://${process.argv[1]}`) {
+if (
+  process.env.NODE_ENV !== "test" &&
+  import.meta.url === `file://${process.argv[1]}`
+) {
   runSeed().catch((e) => {
     console.error("[seed] Erro:", e);
     process.exit(1);

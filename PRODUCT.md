@@ -4,7 +4,7 @@
 >
 > **Público-alvo:** devs frontend, designers de produto, novos agentes do Harness, e Product Managers da igreja.
 >
-> **Data:** 2026-06-14 • **Versão:** 0.3 (MVP ciclo 1 + Módulo Financeiro ciclo 2) • **Mantido por:** `designer` agent (Fase 3 do Harness v6).
+> **Data:** 2026-06-20 • **Versão:** 0.4 (MVP ciclo 1 + Módulo Financeiro ciclo 2 + Relatórios Financeiros ciclo 4) • **Mantido por:** `designer` agent (Fase 3 do Harness v6).
 >
 > **Fontes canônicas:**
 > - [`PRD.html`](./PRD.html) — requisitos (inclui Apêndice D — Módulo Financeiro)
@@ -16,7 +16,13 @@
 > - Pacote de designs ciclo 1: [`design/*.DESIGN.md`](./design/) (10 páginas)
 > - Pacote de designs ciclo 2: [`design/private-financeiro*.DESIGN.md`](./design/) (6 páginas)
 >
-> **Mudanças desta versão (0.3, 2026-06-14):**
+> **Mudanças desta versão (0.4, 2026-06-20):**
+> - Adicionada §11 "Módulo Relatórios Financeiros (ciclo 4)" com 5 features, 6 personas (3 perfis com acesso + 3 bloqueados), métrica macro, fora do escopo, cross-refs.
+> - Adicionado índice de 5 novos pares DESIGN+PROMPT em `design/relatorios-*.{DESIGN,PROMPT}.md` (Hub + DRE + Balancete + Fluxo de Caixa + Customizado).
+> - Atualizado roadmap (§10) com S11-S12 (Backend foundation + Frontend integração) + S13 condicional (drill-down).
+> - Matriz RBAC (§3.1) estendida com permissões dos Relatórios — SECRETARIO BLOQUEADO (decisão de produto confirmada).
+>
+> **Mudanças anteriores (0.3, 2026-06-14):**
 > - Adicionada §9 "Módulo Financeiro (ciclo 2)" com 8 features, 6 personas, métrica macro, fora do escopo, cross-refs.
 > - Adicionado índice de 6 novos pares DESIGN+PROMPT em `design/private-financeiro*.{DESIGN,PROMPT}.md`.
 > - Atualizado roadmap (§10) com S06-S08 (Caixa, Transferência, Fidelidade).
@@ -154,14 +160,20 @@ Sidebar fixa em `lg+` (240px), drawer em `sm/md`. Topbar 100% width. **Item novo
 
 ## 3. RBAC e visibilidade na UI
 
-### 3.1 Matriz perfil × visibilidade de UI (ciclo 1 + ciclo 2)
+### 3.1 Matriz perfil × visibilidade de UI (ciclo 1 + ciclo 2 + ciclo 4)
 
 | Tela / Componente | ADMIN | PASTOR | SECRETARIO | DISCIPULADOR | LIDER_MIN. | FINANCEIRO |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
 | **Sidebar — Dashboard, Membros, Ministérios, Alertas, Config** | 👁 | 👁 | 👁 | 👁 | 👁 | 👁 |
 | **Sidebar — Financeiro** (ciclo 2) | 👁 | 👁 | 👁 | 🚫 | 🚫 | 👁 |
+| **Sidebar — Relatórios** (ciclo 4) | 👁 | 👁 | 🚫 | 🚫 | 🚫 | 👁 |
 | **Membros — Fidelidade Financeira** (RN-MEM-03) | 👁 | 👁 | 🚫 | 🚫 | 🚫 | 👁 |
 | **/app/financeiro (dashboard de saldos)** | 👁 | 👁 | 👁 | 🚫 | 🚫 | 👁 |
+| **/app/financeiro/relatorios** (Hub, ciclo 4) | 👁 | 👁 | 🚫 | 🚫 | 🚫 | 👁 |
+| **/app/financeiro/relatorios/dre** (ciclo 4) | 👁 | 👁 | 🚫 | 🚫 | 🚫 | 👁 |
+| **/app/financeiro/relatorios/balancete** (ciclo 4) | 👁 | 👁 | 🚫 | 🚫 | 🚫 | 👁 |
+| **/app/financeiro/relatorios/fluxo-caixa** (ciclo 4) | 👁 | 👁 | 🚫 | 🚫 | 🚫 | 👁 |
+| **/app/financeiro/relatorios/customizado** (ciclo 4) | 👁 | 👁 | 🚫 | 🚫 | 🚫 | 👁 |
 | **Botão "Criar caixa"** | ✅ | ✅ | 🚫 | 🚫 | 🚫 | ✅ |
 | **Botão "Arquivar/Reabrir caixa"** | ✅ | ✅ | 🚫 | 🚫 | 🚫 | ✅ |
 | **Botão "Novo lançamento"** | ✅ | ✅ | ✅ | 🚫 | 🚫 | ✅ |
@@ -170,6 +182,8 @@ Sidebar fixa em `lg+` (240px), drawer em `sm/md`. Topbar 100% width. **Item novo
 | **Botão "Lançar oferta"** (anônima) | ✅ | ✅ | ✅ | 🚫 | 🚫 | ✅ |
 | **Botão "Lançar despesa/saída"** | ✅ | ✅ | ✅ | 🚫 | 🚫 | ✅ |
 | **Ver extrato de caixa alheio** | ✅ | ✅ | ✅ | 🚫 | 🚫 | ✅ |
+| **Botão "Exportar CSV"** (Customizado, ciclo 4) | ✅ | ✅ | 🚫 | 🚫 | 🚫 | ✅ |
+| **Botão "Drill-down em categoria"** (DRE/Balancete, ciclo 4) | ✅ | ✅ | n/a | n/a | n/a | ✅ |
 
 > 👁 = visível (read-only) • ✅ = ação permitida • 🚫 = oculta completamente (defesa em profundidade).
 
@@ -445,6 +459,13 @@ Substitui planilhas paralelas, cadernos físicos ou memória do tesoureiro. Cent
 - S07: `/app/financeiro/transferencias/nova`, `/app/financeiro/transferencias` (lista).
 - S08: atualização da aba Fidelidade Financeira no detalhe do membro.
 
+### 10.2.1 Módulo Relatórios Financeiros (ciclo 4, em andamento 2026-06-20+)
+
+**5 páginas** entregues nesta fase (ver §11.5):
+- S11 (Backend foundation): `app/lib/relatorios.server.ts` (5 services) + `app/lib/relatorios-csv.server.ts` (export CSV) + `app/lib/rbac.server.ts` (helpers `RELATORIOS_CARGOS` + `assertCanSeeRelatorios`) + testes unitários (≥ 100 testes, TDD obrigatório).
+- S12 (Frontend + integração): 5 rotas + 2 componentes compartilhados (`<FiltrosPeriodo>`, `<KpiCard>`) + `Sidebar.tsx` atualizado com item "Relatórios" + ~25 ícones SVG inline + testes E2E.
+- S13 (Drill-down, **condicional**): apenas se a Fase 4 confirmar que a rota `/app/financeiro/lancamentos` (listagem geral) precisa ser criada para suportar o drill-down (decisão §11.7).
+
 ### 10.3 Sprint futura (registro, sem design)
 
 - **Estoque — consumo:** `/app/estoque`, `/app/estoque/itens/:id`, `/app/estoque/movimentacoes`. Quando: ciclo 3+.
@@ -468,7 +489,7 @@ Substitui planilhas paralelas, cadernos físicos ou memória do tesoureiro. Cent
 
 10 páginas (2 públicas + 8 privadas) — preservados em [`design/`](./design/). Ver `design/PRODUCT.md` §índice.
 
-### Ciclo 2 (Módulo Financeiro, EM ANDAMENTO 2026-06-14+)
+### Ciclo 2 (Módulo Financeiro, FECHADO 2026-06-19)
 
 | Rota | Componente | DESIGN | PROMPT | Sprint |
 |---|---|---|---|---|
@@ -479,10 +500,164 @@ Substitui planilhas paralelas, cadernos físicos ou memória do tesoureiro. Cent
 | `/app/financeiro/transferencias/nova` | Nova transferência entre caixas | [design/private-financeiro-transferencia-nova.DESIGN.md](design/private-financeiro-transferencia-nova.DESIGN.md) | [design/private-financeiro-transferencia-nova.PROMPT.md](design/private-financeiro-transferencia-nova.PROMPT.md) | S07 |
 | `/app/membros/:id?tab=fidelidade` | Aba Fidelidade Financeira (atualizar existente) | [design/private-membros-fidelidade-update.DESIGN.md](design/private-membros-fidelidade-update.DESIGN.md) | [design/private-membros-fidelidade-update.PROMPT.md](design/private-membros-fidelidade-update.PROMPT.md) | S08 |
 
+### Ciclo 4 (Módulo Relatórios Financeiros, EM ANDAMENTO 2026-06-20+)
+
+| Rota | Componente | DESIGN | PROMPT | Sprint |
+|---|---|---|---|---|
+| `/app/financeiro/relatorios` | Hub de Relatórios | [design/relatorios-hub.DESIGN.md](design/relatorios-hub.DESIGN.md) | [design/relatorios-hub.PROMPT.md](design/relatorios-hub.PROMPT.md) | S12 |
+| `/app/financeiro/relatorios/dre` | DRE — Demonstração do Resultado | [design/relatorios-dre.DESIGN.md](design/relatorios-dre.DESIGN.md) | [design/relatorios-dre.PROMPT.md](design/relatorios-dre.PROMPT.md) | S11 (backend) + S12 (frontend) |
+| `/app/financeiro/relatorios/balancete` | Balancete Mensal | [design/relatorios-balancete.DESIGN.md](design/relatorios-balancete.DESIGN.md) | [design/relatorios-balancete.PROMPT.md](design/relatorios-balancete.PROMPT.md) | S11 + S12 |
+| `/app/financeiro/relatorios/fluxo-caixa` | Fluxo de Caixa | [design/relatorios-fluxo-caixa.DESIGN.md](design/relatorios-fluxo-caixa.DESIGN.md) | [design/relatorios-fluxo-caixa.PROMPT.md](design/relatorios-fluxo-caixa.PROMPT.md) | S11 + S12 |
+| `/app/financeiro/relatorios/customizado` | Relatório Customizado + Export CSV | [design/relatorios-customizado.DESIGN.md](design/relatorios-customizado.DESIGN.md) | [design/relatorios-customizado.PROMPT.md](design/relatorios-customizado.PROMPT.md) | S11 + S12 |
+
+---
+
+## 11. Módulo Relatórios Financeiros (ciclo 4)
+
+> **Escopo único do ciclo 4 (2026-06-20+):** camada **read-only** sobre o Módulo Financeiro (ciclo 2). 5 relatórios estruturados (Hub + DRE + Balancete + Fluxo de Caixa + Customizado) + Export CSV. **Sem migration, sem novos models Prisma, sem novas regras de negócio.**
+>
+> **Métrica macro (brief §7.1):** *O ciclo 4 é considerado bem-sucedido quando um `FINANCEIRO` consegue, em menos de 2 minutos, gerar o DRE do mês corrente, ver o total de entradas (verde), o total de saídas (vermelho) e o resultado líquido (azul), clicar em uma categoria para abrir o drill-down, e exportar a tabela do Relatório Customizado em CSV.*
+
+### 11.1 Visão de produto
+
+Substitui o trabalho manual do tesoureiro (planilhas paralelas, queries no Excel, memória institucional) por **5 relatórios estruturados** que transformam o repositório bruto de `Lancamento` em **inteligência pastoral/tesouraria**. É uma camada **read-only** sobre o módulo existente — **não** altera schema, **não** adiciona funcionalidades não-ditas e **não** introduz dependências externas.
+
+Diferentemente do ciclo 2 (que entregou operação: CRUD de caixas, lançamentos, transferências, trava de saldo), o ciclo 4 entrega **inteligência**: leitura consolidada, comparativa e auditável dos lançamentos já existentes. As 5 RNs já existentes (`RN-FIN-01` a `RN-FIN-05`) são suficientes — este ciclo **lê** o que já foi escrito.
+
+### 11.2 Personas (3 perfis com acesso + 3 bloqueados)
+
+| Persona | Cargo | Acesso a Relatórios (ciclo 4) | Justificativa |
+|---|---|---|---|
+| **Tesoureiro(a)** | `FINANCEIRO` | ✅ Todos os 5 relatórios + Export CSV | Operador que precisa de visão consolidada para fechamento mensal e prestação de contas ao pastor. |
+| **Pastor** | `PASTOR` | ✅ Todos os 5 relatórios + Export CSV | Visão pastoral estratégica: DRE para aconselhamento, Balancete para conselho, Fluxo de Caixa para tendência. |
+| **Administrador** | `ADMIN` | ✅ Todos os 5 relatórios + Export CSV | Configura regras, audita operações, gera relatórios anuais para assembleia. |
+| **Secretário(a)** | `SECRETARIO` | 🚫 **BLOQUEADO** em todas as 5 rotas | Tem acesso ao módulo financeiro operacional, mas relatórios estruturados são decisão pastoral-administrativa. Decisão LGPD Art. 6°, III + eclesiástica (brief §5.3). |
+| **Discipulador** | `DISCIPULADOR` | 🚫 **BLOQUEADO** | RN-MEM-03: nunca toca dados financeiros. |
+| **Líder de Ministério** | `LIDER_MINISTERIO` | 🚫 **BLOQUEADO** | RN-MEM-03: nunca toca dados financeiros. |
+
+### 11.3 Features (5 entregáveis — PRD §3, SPEC §5)
+
+| # | Feature | RBAC | Sprint |
+|---|---|---|---|
+| **F9** | Hub de Relatórios (`/app/financeiro/relatorios`) — grid 2×2 de cards + bloco secundário "Transparência 2024" placeholder | ADMIN, PASTOR, FINANCEIRO | S12 |
+| **F10** | DRE (`/app/financeiro/relatorios/dre`) — 3 KPIs (Entradas/Saídas/Resultado) + 2 listas por categoria | ADMIN, PASTOR, FINANCEIRO | S11 (backend) + S12 (frontend) |
+| **F11** | Balancete Mensal (`/app/financeiro/relatorios/balancete`) — 4 KPIs + tabela "Resumo por Categoria" + donut SVG | ADMIN, PASTOR, FINANCEIRO | S11 + S12 |
+| **F12** | Fluxo de Caixa (`/app/financeiro/relatorios/fluxo-caixa`) — 4 KPIs + SVG line chart 3 séries + placeholder Projeção | ADMIN, PASTOR, FINANCEIRO | S11 + S12 |
+| **F13** | Relatório Customizado (`/app/financeiro/relatorios/customizado`) — 6 filtros + 2 KPIs + tabela paginada + Export CSV | ADMIN, PASTOR, FINANCEIRO | S11 + S12 |
+| **F14** | Defesa em 3 camadas (RN-REL-01/02) — Sidebar esconde item + loader 403 + service revalida | todas as rotas | S11 + S12 |
+| **F15** | Componentes compartilhados `<FiltrosPeriodo>` + `<KpiCard>` (~120 linhas economizadas) | todas as rotas | S12 |
+| **F16** | ~25 ícones SVG inline em `app/components/icons/FinanceIcons.tsx` (sem lucide-react/recharts) | todas as rotas | S12 |
+
+### 11.4 Métricas de qualidade (gate Phase 5)
+
+- Cobertura ≥ 85% global, **100% em `app/lib/relatorios.server.ts`** (services de regra de negócio) + **100% em `app/lib/relatorios-csv.server.ts`**.
+- 0 vuln critical/high.
+- `planning-reviewer` score ≥ 70.
+- LGPD compliant: `Cache-Control: no-store`, `valorCentavos` proibido em log.
+- **13 testes de borda obrigatórios** (brief §7.3) **todos verdes**:
+  1. SECRETARIO bypass URL → 403 (Camada 2 + 3).
+  2. DISCIPULADOR/LIDER_MINISTERIO → 403 em todas as 5 rotas.
+  3. Mês vazio no DRE: zeros + listas vazias sem null.
+  4. Balancete sem categorias com movimento: tabela oculta linhas vazias.
+  5. Customizado 0 resultados: "Nenhum lançamento encontrado" + KPIs zerados.
+  6. Filtro `categoria=BURRO` → 400 (Zod strict).
+  7. Filtro `periodo` com `inicio > fim` → 400.
+  8. Caixa arquivado no DRE: lançamentos continuam (RN-REL-05).
+  9. CSV 1.280 registros < 500ms (performance).
+  10. CSV com caracteres especiais: escape RFC 4180 (`"São Paulo & Cia."`).
+  11. 5 perfis logados simultaneamente: sem contenção (< 2s latência).
+  12. CSV sem BOM: Excel pt-BR reconhece UTF-8 com BOM (3 primeiros bytes `EF BB BF`).
+  13. RBAC fina: 100% das 5 rotas + 1 action testadas em E2E bypass URL.
+
+### 11.5 Páginas do Módulo Relatórios (entregues nesta fase)
+
+| Rota | Componente | DESIGN | PROMPT | Sprint |
+|---|---|---|---|---|
+| `/app/financeiro/relatorios` | Hub de Relatórios | [design/relatorios-hub.DESIGN.md](design/relatorios-hub.DESIGN.md) | [design/relatorios-hub.PROMPT.md](design/relatorios-hub.PROMPT.md) | S12 |
+| `/app/financeiro/relatorios/dre` | DRE — Demonstração do Resultado | [design/relatorios-dre.DESIGN.md](design/relatorios-dre.DESIGN.md) | [design/relatorios-dre.PROMPT.md](design/relatorios-dre.PROMPT.md) | S11 (backend) + S12 (frontend) |
+| `/app/financeiro/relatorios/balancete` | Balancete Mensal | [design/relatorios-balancete.DESIGN.md](design/relatorios-balancete.DESIGN.md) | [design/relatorios-balancete.PROMPT.md](design/relatorios-balancete.PROMPT.md) | S11 + S12 |
+| `/app/financeiro/relatorios/fluxo-caixa` | Fluxo de Caixa | [design/relatorios-fluxo-caixa.DESIGN.md](design/relatorios-fluxo-caixa.DESIGN.md) | [design/relatorios-fluxo-caixa.PROMPT.md](design/relatorios-fluxo-caixa.PROMPT.md) | S11 + S12 |
+| `/app/financeiro/relatorios/customizado` | Relatório Customizado + Export CSV | [design/relatorios-customizado.DESIGN.md](design/relatorios-customizado.DESIGN.md) | [design/relatorios-customizado.PROMPT.md](design/relatorios-customizado.PROMPT.md) | S11 + S12 |
+
+### 11.6 RBAC fina do módulo (defesa em 3 camadas)
+
+```typescript
+// app/lib/rbac.server.ts (estender ciclo 4)
+export const RELATORIOS_CARGOS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const;
+
+export function assertCanSeeRelatorios(user: SessionUser): void {
+  if (!user.cargo || !(RELATORIOS_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Acesso restrito a ADMIN/PASTOR/FINANCEIRO.", { status: 403 });
+  }
+}
+```
+
+**Camadas:**
+- **Camada 1 — UI:** `app/components/Sidebar.tsx` adiciona item "Relatórios" com `roles: ["ADMIN", "PASTOR", "FINANCEIRO"]`. SECRETARIO NÃO vê.
+- **Camada 2 — Loader:** 5 loaders + 1 action chamam `assertCanSeeRelatorios(user)` como 1ª linha. SECRETARIO bypass URL → 403.
+- **Camada 3 — Service:** `getDRE`, `getBalanceteMensal`, `getFluxoCaixa`, `getRelatorioCustomizado`, `exportarLancamentosCSV` chamam `assertCanSeeRelatorios` como 1ª linha. Defesa em profundidade.
+
+### 11.7 Decisões de design do ciclo 4 (consolidadas)
+
+| Decisão | Origem | Consequência na UI |
+|---|---|---|
+| **CSV em vez de PDF** | brief §5.2 | Export CSV com BOM UTF-8 + `;` + CRLF + escape RFC 4180. PDF diferido. |
+| **SVG inline em vez de lib externa** | brief §5.5 | ~25 SVGs em `FinanceIcons.tsx` (24x24, stroke=currentColor). Sem `lucide-react`/`recharts`/`d3`. |
+| **Placeholder Projeção (YAGNI)** | brief §5.6 | Cards "Projeção Próximo Mês" (Balancete) e "Projeção 30 dias" (Fluxo) renderizam cinza. Depende de `ContaPagar` (ciclo 6+). |
+| **Placeholder Status (YAGNI)** | brief §5.7 | Filtro "Status" no Customizado é `<select disabled>` com 4 opções placeholder. Schema não tem campo. |
+| **Tabs Dia/Semana desabilitadas** | brief §4.2.4 | Apenas Mês funciona no Fluxo de Caixa. Dia/Semana diferidos. |
+| **Drill-down pendente** | brief §5.4 + §9.6 | Rota `/app/financeiro/lancamentos` (listagem) não existe. Decisão S13: Opção A (criar rota) ou B (redirecionar para `/caixas/:id`). |
+| **Soma em `Int` cents** | RAG `convention-monetary-values` | Toda agregação em `Int`. `formatBRLFromCents` só na borda UI. |
+| **Filtros semi-abertos `[gte, lt)`** | RAG `pattern-relatorios-aggregations` | Boundary correto entre meses consecutivos. Nunca `lte`. |
+| **Workaround SQLite (Fluxo de Caixa)** | SPEC §7.1.3 | `findMany` + `Map` em memória. Prisma não suporta `strftime` em `groupBy`. Limite 24 meses. |
+| **Caixa arquivado preservado** | RN-REL-05 | Lançamentos de caixa com `ativo = false` continuam em agregados. |
+
+### 11.8 Fora do escopo (15 itens — não-objetivos do brief §8)
+
+- ❌ Exportação PDF (diferido ciclo 6+, depende de `pdfkit` ~250MB).
+- ❌ Envio de relatório por e-mail (sem SMTP no projeto).
+- ❌ Agendamento de relatórios / cron (sem jobs).
+- ❌ Projeção financeira real (depende de `ContaPagar` — ciclo 6+).
+- ❌ Status de lançamento (depende de migration).
+- ❌ Conciliação bancária (caixas são internos).
+- ❌ Multi-igreja / multi-tenant.
+- ❌ Multi-moeda (apenas BRL).
+- ❌ Cache de relatório (sem Redis; on-demand).
+- ❌ Filtros por centro de custo.
+- ❌ Drill-down em gráficos SVG (apenas linhas de tabela).
+- ❌ Impressão formatada (CSS print + page-break).
+- ❌ Comparativo YoY automático.
+- ❌ Auditoria visual de quem gerou (logs cobrem).
+- ❌ Tabs Dia/Semana no Fluxo de Caixa (YAGNI).
+
+### 11.9 Cross-references obrigatórias (ciclo 4)
+
+- **Brief:** [`brief-relatorios.md`](./brief-relatorios.md) §3 (personas), §4 (escopo), §5 (decisões), §6 (restrições), §7 (sucesso), §8 (não-objetivos).
+- **PRD:** [`PRD.html`](./PRD.html) §3 (user stories US-REL-001 a 021), §4 (RNF: performance/segurança/LGPD), §5 (aceitação).
+- **SPEC:** [`SPEC.html`](./SPEC.html) §3 (personas + US), §4 (arquitetura + ADRs 008-012), §5 (5 endpoints + 1 action), §6 (7 RNs), §7 (componentes), §8 (segurança OWASP), §9 (testes).
+- **AGENTS:** [`agents/AGENTS.md`](./agents/AGENTS.md) §Módulo Relatórios Financeiros (ciclo 4).
+- **ARCH:** [`docs/architecture/ARCH.md`](./docs/architecture/ARCH.md) §10 — Relatórios Financeiros: 10 sub-seções + 4 diagramas mermaid.
+- **RAGs do ciclo 4 (2 novos + 5 transversais):**
+  - **Novos (criados na Fase 1):**
+    - [`.harness/RAG/pattern-relatorios-aggregations.md`](./.harness/RAG/pattern-relatorios-aggregations.md) — padrão `groupBy` + soma em cents.
+    - [`.harness/RAG/convention-relatorios-csv-export.md`](./.harness/RAG/convention-relatorios-csv-export.md) — RFC 4180 + BOM + `;`.
+  - **Transversais (herdados do ciclo 1-2):**
+    - `security-rbac-matrix` (critical) — matriz 6 perfis × domínios.
+    - `convention-monetary-values` (critical) — `Int` em centavos.
+    - `pattern-3-layer-rbac` (critical) — UI / loader / service.
+    - `lgpd-igreja-conect` (critical) — sem PII em log.
+
 ---
 
 ## Próxima revisão
 
-- **Quando:** ao final da Fase 5 (build do Módulo Financeiro) ou se a Fase 4 detectar desvio de PRD/SPEC.
+- **Quando:** ao final da Fase 5 (build do Módulo Relatórios Financeiros — ciclo 4) ou se a Fase 4 detectar desvio de PRD/SPEC.
 - **Por quem:** `designer` agent, a critério do orchestrator.
-- **O que pode mudar:** paleta (se feedback de usuário), padrões de formulário (se react-hook-form mostrar fricção), navegação (se algum fluxo precisar reflow), matriz RBAC do Financeiro (se o usuário adicionar perfil).
+- **O que pode mudar:**
+  - Paleta (se feedback de usuário).
+  - Padrões de formulário (se react-hook-form mostrar fricção).
+  - Navegação (se algum fluxo precisar reflow).
+  - Matriz RBAC dos Relatórios (se usuário liberar SECRETARIO ou criar perfil "auditor").
+  - Pendência de drill-down (S13 — Opção A ou B a decidir).
+  - Decisão sobre placeholder "Projeção" (quando ciclo 6+ entregar `ContaPagar`).
+  - Decisão sobre placeholder "Status" (quando migration adicionar campo).

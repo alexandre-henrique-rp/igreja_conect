@@ -69,7 +69,7 @@ import type { LancamentoCreateInput } from "./schemas/lancamentos";
  */
 export async function criarLancamento(
   input: LancamentoCreateInput,
-  user: SessionUser
+  user: SessionUser,
 ): Promise<unknown> {
   // 1) CAMADA 3 — RBAC PRIMEIRO (SEC-005: assertCanWriteLancamento)
   assertCanWriteLancamento(user);
@@ -78,7 +78,7 @@ export async function criarLancamento(
   if (input.categoria === "TRANSFERENCIA") {
     throw new Response(
       "Categoria TRANSFERENCIA é exclusiva do sistema de transferências. Use a página /app/financeiro/transferencias/nova.",
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -90,7 +90,7 @@ export async function criarLancamento(
     await assertSaldoSuficiente(
       parsed.caixaId,
       parsed.valorCentavos,
-      `Lançamento de saída (${parsed.categoria})`
+      `Lançamento de saída (${parsed.categoria})`,
     );
   }
 
@@ -106,7 +106,7 @@ export async function criarLancamento(
     if (caixa.ativo === false) {
       throw new Response(
         `Caixa "${caixa.nome}" está arquivado e não aceita movimentações.`,
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -114,7 +114,7 @@ export async function criarLancamento(
     if (parsed.tipo === "SAIDA" && caixa.saldoCentavos < parsed.valorCentavos) {
       throw new Response(
         `Saldo insuficiente no caixa de origem. Disponível: R$ ${(caixa.saldoCentavos / 100).toFixed(2)}.`,
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -123,6 +123,7 @@ export async function criarLancamento(
       data: {
         tipo: parsed.tipo,
         categoria: parsed.categoria,
+        status: parsed.status,
         valorCentavos: parsed.valorCentavos,
         caixaId: parsed.caixaId,
         membroId: parsed.membroId ?? null,
@@ -165,17 +166,34 @@ export async function criarLancamento(
  */
 export async function listarPorCaixa(
   caixaId: string,
-  filtros: { periodo?: string; categoria?: string; page?: number; pageSize?: number },
-  user: SessionUser
+  filtros: {
+    periodo?: string;
+    categoria?: string;
+    page?: number;
+    pageSize?: number;
+  },
+  user: SessionUser,
 ): Promise<{
-  caixa: { id: string; nome: string; saldoCentavos: number; ativo: boolean; createdAt: Date };
+  caixa: {
+    id: string;
+    nome: string;
+    saldoCentavos: number;
+    ativo: boolean;
+    createdAt: Date;
+  };
   lancamentos: Array<{
-    id: string; tipo: string; categoria: string; valorCentavos: number;
-    dataCompetencia: Date; descricao: string;
+    id: string;
+    tipo: string;
+    categoria: string;
+    valorCentavos: number;
+    dataCompetencia: Date;
+    descricao: string;
     caixa: { id: string; nome: string };
     membro: { id: string; nome: string } | null;
   }>;
-  total: number; page: number; pageSize: number;
+  total: number;
+  page: number;
+  pageSize: number;
 } | null> {
   // Camada 3 RBAC (SEC-005: assertCanWriteLancamento)
   assertCanWriteLancamento(user);
@@ -183,7 +201,13 @@ export async function listarPorCaixa(
   // Verifica se caixa existe
   const caixa = await prisma.caixa.findUnique({
     where: { id: caixaId },
-    select: { id: true, nome: true, saldoCentavos: true, ativo: true, createdAt: true },
+    select: {
+      id: true,
+      nome: true,
+      saldoCentavos: true,
+      ativo: true,
+      createdAt: true,
+    },
   });
   if (!caixa) return null;
 
@@ -191,27 +215,36 @@ export async function listarPorCaixa(
   const where: Record<string, unknown> = { caixaId };
 
   // Filtro período
-  if (filtros.periodo && filtros.periodo !== 'todos') {
+  if (filtros.periodo && filtros.periodo !== "todos") {
     const now = new Date();
     let startDate: Date;
     switch (filtros.periodo) {
-      case 'mes_atual': startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
-      case 'mes_passado': startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1); break;
-      case 'trimestre': startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); break;
-      case 'ano_atual': startDate = new Date(now.getFullYear(), 0, 1); break;
-      default: startDate = new Date(0);
+      case "mes_atual":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "mes_passado":
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        break;
+      case "trimestre":
+        startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        break;
+      case "ano_atual":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        startDate = new Date(0);
     }
     where.dataCompetencia = { gte: startDate };
   }
 
   // Filtro categoria
-  if (filtros.categoria && filtros.categoria !== 'todas') {
+  if (filtros.categoria && filtros.categoria !== "todas") {
     where.categoria = filtros.categoria;
   }
 
   // Filtro DIZIMO para SECRETARIO (RBAC fina service-side)
-  if (user.cargo === 'SECRETARIO') {
-    where.categoria = { not: 'DIZIMO' };
+  if (user.cargo === "SECRETARIO") {
+    where.categoria = { not: "DIZIMO" };
   }
 
   const page = filtros.page ?? 1;
@@ -221,7 +254,7 @@ export async function listarPorCaixa(
     prisma.lancamento.count({ where: where as any }),
     prisma.lancamento.findMany({
       where: where as any,
-      orderBy: [{ dataCompetencia: 'desc' }, { id: 'asc' }],
+      orderBy: [{ dataCompetencia: "desc" }, { id: "asc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: {
@@ -231,15 +264,27 @@ export async function listarPorCaixa(
     }),
   ]);
 
-  safeLog({ action: 'view_extrato', resource: `caixa:${caixaId}`, userId: user.id, result: 'ok' });
+  safeLog({
+    action: "view_extrato",
+    resource: `caixa:${caixaId}`,
+    userId: user.id,
+    result: "ok",
+  });
 
   return {
     caixa,
-    lancamentos: lancamentosRaw.map(l => ({
-      id: l.id, tipo: l.tipo, categoria: l.categoria,
-      valorCentavos: l.valorCentavos, dataCompetencia: l.dataCompetencia,
-      descricao: l.descricao, caixa: l.caixa, membro: l.membro,
+    lancamentos: lancamentosRaw.map((l) => ({
+      id: l.id,
+      tipo: l.tipo,
+      categoria: l.categoria,
+      valorCentavos: l.valorCentavos,
+      dataCompetencia: l.dataCompetencia,
+      descricao: l.descricao,
+      caixa: l.caixa,
+      membro: l.membro,
     })),
-    total, page, pageSize,
+    total,
+    page,
+    pageSize,
   };
 }

@@ -79,10 +79,14 @@ export async function setupTestDb(): Promise<() => Promise<void>> {
   });
 
   // Limpa cache do singleton (caso já tenha sido importado com dev.db)
-  const g = globalThis as unknown as { prisma?: PrismaClient };
+  const g = globalThis as unknown as { prisma?: PrismaClient; __prisma?: PrismaClient };
   if (g.prisma) {
     await g.prisma.$disconnect().catch(() => {});
     g.prisma = undefined;
+  }
+  if (g.__prisma) {
+    await g.__prisma.$disconnect().catch(() => {});
+    g.__prisma = undefined;
   }
   if (_client) {
     await _client.$disconnect().catch(() => {});
@@ -93,6 +97,10 @@ export async function setupTestDb(): Promise<() => Promise<void>> {
     if (g.prisma) {
       await g.prisma.$disconnect().catch(() => {});
       g.prisma = undefined;
+    }
+    if (g.__prisma) {
+      await g.__prisma.$disconnect().catch(() => {});
+      g.__prisma = undefined;
     }
     if (_client) {
       await _client.$disconnect().catch(() => {});

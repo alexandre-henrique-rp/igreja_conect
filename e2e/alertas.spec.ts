@@ -214,7 +214,7 @@ async function cleanupData(ids: SeedIds): Promise<void> {
   if (ids.alertaIds.length > 0) {
     await prisma.alerta.deleteMany({ where: { id: { in: ids.alertaIds } } });
   }
-  await prisma.configAcolhimento.deleteMany({ where: { id: "singleton" } });
+  await prisma.configuracaoGeral.deleteMany({ where: { id: "singleton" } });
   if (memberIds.length > 0) {
     await prisma.membro.deleteMany({ where: { id: { in: memberIds } } });
   }

@@ -27,6 +27,7 @@
  * @returns Elemento JSX do checkbox.
  */
 import type { InputHTMLAttributes } from "react";
+import { cn } from "~/lib/cn";
 
 /**
  * Props aceitas pelo `<Checkbox>`. Aceita props nativas de `<input>`
@@ -40,6 +41,8 @@ export type CheckboxProps = Omit<
   label: string;
   /** `name` do input — enviado no FormData. */
   name: string;
+  /** Variante visual. Default: `default`. */
+  variant?: "default" | "dark";
 };
 
 /**
@@ -47,20 +50,23 @@ export type CheckboxProps = Omit<
  * @param {CheckboxProps} props - Veja `CheckboxProps`.
  * @returns {JSX.Element} Elemento do checkbox.
  */
-export function Checkbox({ label, className, ...rest }: CheckboxProps) {
+export function Checkbox({ label, className, variant = "default", ...rest }: CheckboxProps) {
+  const isDark = variant === "dark";
+
   return (
     <label className="flex items-center gap-2 cursor-pointer select-none">
       <input
         type="checkbox"
-        className={
-          "h-4 w-4 rounded border-slate-300 text-cyan-700 " +
-          "focus-visible:outline-none focus-visible:ring-2 " +
-          "focus-visible:ring-cyan-700 focus-visible:ring-offset-2 " +
-          (className ?? "")
-        }
+        className={cn(
+          "h-4 w-4 rounded focus-visible:outline-none focus-visible:ring-2",
+          isDark
+            ? "border-[#253551] bg-[#131d30] text-blue-600 focus-visible:ring-blue-500 focus-visible:ring-offset-0 accent-blue-500"
+            : "border-slate-300 text-cyan-700 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+          className
+        )}
         {...rest}
       />
-      <span className="text-sm text-slate-700">{label}</span>
+      <span className={cn("text-sm", isDark ? "text-slate-400" : "text-slate-700")}>{label}</span>
     </label>
   );
 }

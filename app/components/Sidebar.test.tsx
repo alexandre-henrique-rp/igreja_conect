@@ -1,7 +1,7 @@
 /**
  * Teste do componente <Sidebar /> (S02-T09 / S06-T09).
  *
- * Valida 6 itens de menu (incluindo Financeiro com RBAC condicional),
+ * Valida itens de menu (incluindo Financeiro com RBAC condicional),
  * item ativo destacado (bg-cyan-50), link de Sair e responsividade (lg:block).
  */
 import { describe, it, expect } from "vitest";
@@ -33,13 +33,12 @@ describe("<Sidebar />", () => {
     expect(html).toContain('aria-label="Menu principal"');
   });
 
-  it("renderiza 6 itens do menu principal para ADMIN", () => {
+  it("renderiza Configurações visíveis para ADMIN", () => {
     const html = renderSidebar("/app");
     expect(html).toContain("Dashboard");
     expect(html).toContain("Membros");
     expect(html).toContain("Financeiro");
     expect(html).toContain("Ministérios");
-    expect(html).toContain("Alertas");
     expect(html).toContain("Configurações");
   });
 
@@ -77,7 +76,6 @@ describe("<Sidebar />", () => {
     expect(html).toContain('href="/app/membros"');
     expect(html).toContain('href="/app/financeiro"');
     expect(html).toContain('href="/app/ministerios"');
-    expect(html).toContain('href="/app/alertas"');
     expect(html).toContain('href="/app/config/acolhimento"');
   });
 

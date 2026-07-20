@@ -30,9 +30,6 @@ export default defineConfig({
       "tests/**/*.test.ts",
       "prisma/**/*.test.ts",
     ],
-    environmentMatchGlobs: [
-      ["app/**/*.test.tsx", "jsdom"],
-    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json-summary"],

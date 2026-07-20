@@ -12,215 +12,227 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/app/financeiro
-Call log:
-  - navigating to "http://127.0.0.1:3000/app/financeiro", waiting until "load"
-
+Test timeout of 30000ms exceeded.
 ```
 
-# Test source
+# Page snapshot
 
-```ts
-  13  |  * Cada `test()` é 1 chain. O bloco `finally` registra response/result e
-  14  |  * executa cleanup mesmo quando uma assertion falha. Resultados ficam em
-  15  |  * `e2e/results/` para cumprir o path allowlist desta task.
-  16  |  */
-  17  | import {
-  18  |   expect,
-  19  |   test,
-  20  |   type APIRequestContext,
-  21  |   type Browser,
-  22  |   type BrowserContext,
-  23  |   type Page,
-  24  | } from "@playwright/test";
-  25  | import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-  26  | import { PrismaClient } from "../generated/prisma/client";
-  27  | import { sessionCookie } from "../app/lib/session.server";
-  28  | import { randomUUID } from "node:crypto";
-  29  | import { promises as fs } from "node:fs";
-  30  | import path from "node:path";
-  31  | import { fileURLToPath } from "node:url";
-  32  | 
-  33  | const __filename = fileURLToPath(import.meta.url);
-  34  | const __dirname = path.dirname(__filename);
-  35  | const BASE_URL = process.env.BASE_URL ?? "http://127.0.0.1:3000";
-  36  | const RESULTS_DIR = path.join(__dirname, "results");
-  37  | const RESPONSES_DIR = path.join(RESULTS_DIR, "responses");
-  38  | const prisma = new PrismaClient({
-  39  |   adapter: new PrismaBetterSqlite3({ url: "file:./dev.db" }),
-  40  | });
-  41  | 
-  42  | type LoginResult = {
-  43  |   page: Page;
-  44  |   context: BrowserContext;
-  45  |   request: APIRequestContext;
-  46  |   cookies: Awaited<ReturnType<BrowserContext["cookies"]>>;
-  47  |   ip: string;
-  48  | };
-  49  | 
-  50  | type ChainState = {
-  51  |   failedAtStep?: number;
-  52  |   failedReason?: string;
-  53  |   cleanedUp?: boolean;
-  54  |   cleanupError?: string;
-  55  | };
-  56  | 
-  57  | const USERS = {
-  58  |   admin: { email: "admin@igreja.local", cargo: "ADMIN" as const, nome: "Administrador" },
-  59  |   financeiro: { email: "financeiro+e2e@igreja.local", cargo: "FINANCEIRO" as const, nome: "Financeiro E2E" },
-  60  |   secretario: { email: "secretario+e2e@igreja.local", cargo: "SECRETARIO" as const, nome: "Secretario E2E" },
-  61  |   discipulador: { email: "discipulador+e2e@igreja.local", cargo: "DISCIPULADOR" as const, nome: "Discipulador E2E" },
-  62  | } as const;
-  63  | 
-  64  | test.beforeAll(async () => {
-  65  |   const caixa = await prisma.caixa.upsert({
-  66  |     where: { nome: "Caixa Geral" },
-  67  |     update: { ativo: true, saldoCentavos: 0 },
-  68  |     create: {
-  69  |       nome: "Caixa Geral",
-  70  |       ativo: true,
-  71  |       saldoCentavos: 0,
-  72  |     },
-  73  |   });
-  74  |   await prisma.lancamento.deleteMany({ where: { caixaId: caixa.id } });
-  75  |   await prisma.membro.upsert({
-  76  |     where: { email: USERS.discipulador.email },
-  77  |     update: {},
-  78  |     create: {
-  79  |       email: USERS.discipulador.email,
-  80  |       nome: USERS.discipulador.nome,
-  81  |       cargo: USERS.discipulador.cargo,
-  82  |       tipo: "MEMBRO_ATIVO",
-  83  |     },
-  84  |   });
-  85  |   await prisma.membro.upsert({
-  86  |     where: { email: "maria+e2e@igreja.local" },
-  87  |     update: {},
-  88  |     create: {
-  89  |       email: "maria+e2e@igreja.local",
-  90  |       nome: "Maria",
-  91  |       tipo: "MEMBRO_ATIVO",
-  92  |     },
-  93  |   });
-  94  | });
-  95  | 
-  96  | test.afterAll(async () => {
-  97  |   await prisma.$disconnect();
-  98  | });
-  99  | 
-  100 | test.describe.serial("Financeiro básico — S06", () => {
-  101 |   test("Chain 1: FINANCEIRO registra DÍZIMO e vê +R$ 50,00 no extrato", async ({
-  102 |     browser,
-  103 |     playwright,
-  104 |   }) => {
-  105 |     const chainId = "E2E-FIN-CHAIN-1";
-  106 |     const startedAt = Date.now();
-  107 |     const state: ChainState = {};
-  108 |     const login = await loginAs(browser, playwright, "financeiro", "10.6.1");
-  109 |     let caixaId = "";
-  110 |     let caixaArquivadoNoCleanup = false;
-  111 | 
-  112 |     try {
-> 113 |       const response = await login.page.goto("/app/financeiro");
-      |                                         ^ Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/app/financeiro
-  114 |       await recordPage(chainId, 1, login.page, response, "dashboard");
-  115 |       expect(response?.status(), "FINANCEIRO acessa dashboard").toBe(200);
-  116 |       await expect(login.page.getByRole("heading", { name: "Financeiro" })).toBeVisible();
-  117 |       await expect(login.page.getByTestId("card-saldo-caixa").filter({ hasText: "Caixa Geral" })).toContainText("R$ 0,00");
-  118 |       caixaId = await caixaIdByName(login.page, "Caixa Geral");
-  119 |       expect(caixaId, "Caixa Geral id extraído").toBeTruthy();
-  120 | 
-  121 |       await login.page.getByRole("link", { name: "+ Lançar" }).first().click();
-  122 |       await expect(login.page).toHaveURL(/\/app\/financeiro\/lancamentos\/novo\?caixaId=/);
-  123 |       await expect(login.page.getByLabel("Caixa")).toHaveValue(caixaId);
-  124 | 
-  125 |       await login.page.getByLabel("Tipo").selectOption("ENTRADA");
-  126 |       await login.page.getByLabel("Categoria").selectOption("Dízimo");
-  127 |       await login.page.getByLabel("Valor").fill("50,00");
-  128 |       await login.page.getByLabel("Membro").selectOption({ label: "Maria" });
-  129 |       await login.page.getByLabel("Data de Competência").fill(todayIsoDate());
-  130 |       await login.page.getByLabel("Descrição").fill(`Dízimo E2E Chain 1 ${Date.now()}`);
-  131 |       await login.page.getByRole("button", { name: "Criar Lançamento" }).click();
-  132 |       await expect(login.page).toHaveURL(new RegExp(`/app/financeiro/caixas/${caixaId}$`));
-  133 |       await expect(login.page.getByText("+ R$ 50,00")).toBeVisible();
-  134 |       await expect(login.page.getByText("Dízimo")).toBeVisible();
-  135 |       await recordPage(chainId, 2, login.page, null, "extrato-pos-dizimo");
-  136 | 
-  137 |       await dbSettle(100);
-  138 |     } catch (error) {
-  139 |       state.failedAtStep = 1;
-  140 |       state.failedReason = error instanceof Error ? error.message : String(error);
-  141 |       throw error;
-  142 |     } finally {
-  143 |       try {
-  144 |         if (caixaId) {
-  145 |           await createLancamentoViaRequest(login.request, login.cookies, {
-  146 |             tipo: "SAIDA",
-  147 |             categoria: "DESPESA_OPERACIONAL",
-  148 |             valorDisplay: "50,00",
-  149 |             caixaId,
-  150 |             membroId: "",
-  151 |             descricao: `Cleanup reverso Chain 1 ${Date.now()}`,
-  152 |           });
-  153 |           await dbSettle(100);
-  154 |         }
-  155 |         if (caixaArquivadoNoCleanup) {
-  156 |           await reabrirCaixaViaUi(login.page, "Caixa Geral");
-  157 |         }
-  158 |         state.cleanedUp = true;
-  159 |       } catch (cleanupError) {
-  160 |         state.cleanupError = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
-  161 |       }
-  162 |       await recordResult(chainId, {
-  163 |         id: chainId,
-  164 |         status: state.failedReason ? "failed" : "passed",
-  165 |         caixaId,
-  166 |         durationMs: Date.now() - startedAt,
-  167 |         ...state,
-  168 |       });
-  169 |       await disposeLogin(login);
-  170 |     }
-  171 |   });
-  172 | 
-  173 |   test("Chain 2: SECRETARIO vê financeiro sem DÍZIMOS", async ({
-  174 |     browser,
-  175 |     playwright,
-  176 |   }) => {
-  177 |     const chainId = "E2E-FIN-CHAIN-2";
-  178 |     const startedAt = Date.now();
-  179 |     const state: ChainState = {};
-  180 |     const login = await loginAs(browser, playwright, "secretario", "10.6.2");
-  181 | 
-  182 |     try {
-  183 |       const dashboard = await login.page.goto("/app/financeiro");
-  184 |       await recordPage(chainId, 1, login.page, dashboard, "dashboard-secretario");
-  185 |       expect(dashboard?.status(), "SECRETARIO acessa dashboard").toBe(200);
-  186 |       const dashboardBody = await login.page.locator("body").innerText();
-  187 |       expect(dashboardBody, "dashboard sem DÍZIMO para SECRETARIO").not.toContain("Dízimo");
-  188 | 
-  189 |       await login.page.getByRole("link", { name: "Caixas" }).click();
-  190 |       await expect(login.page).toHaveURL(/\/app\/financeiro\/caixas$/);
-  191 |       await expect(login.page.getByText("Caixas", { exact: true })).toBeVisible();
-  192 | 
-  193 |       const caixaId = await caixaIdByName(login.page, "Caixa Geral");
-  194 |       await login.page.goto(`/app/financeiro/caixas/${caixaId}`);
-  195 |       const extratoBody = await login.page.locator("body").innerText();
-  196 |       await recordPage(chainId, 2, login.page, null, "extrato-secretario");
-  197 |       expect(extratoBody, "extrato sem DÍZIMO para SECRETARIO").not.toContain("Dízimo");
-  198 |     } catch (error) {
-  199 |       state.failedAtStep = 1;
-  200 |       state.failedReason = error instanceof Error ? error.message : String(error);
-  201 |       throw error;
-  202 |     } finally {
-  203 |       try {
-  204 |         state.cleanedUp = true;
-  205 |       } catch (cleanupError) {
-  206 |         state.cleanupError = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
-  207 |       }
-  208 |       await recordResult(chainId, {
-  209 |         id: chainId,
-  210 |         status: state.failedReason ? "failed" : "passed",
-  211 |         durationMs: Date.now() - startedAt,
-  212 |         ...state,
-  213 |       });
+```yaml
+- generic [ref=e2]:
+  - navigation "Menu principal" [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: IgrejaConnect
+        - generic [ref=e7]: GESTÃO ECLESIÁSTICA
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - link "Dashboard" [ref=e10] [cursor=pointer]:
+            - /url: /app
+            - img [ref=e11]
+            - generic [ref=e16]: Dashboard
+        - listitem [ref=e17]:
+          - link "Membros" [ref=e18] [cursor=pointer]:
+            - /url: /app/membros
+            - img [ref=e19]
+            - generic [ref=e24]: Membros
+        - listitem [ref=e25]:
+          - link "Financeiro" [ref=e26] [cursor=pointer]:
+            - /url: /app/financeiro
+            - img [ref=e27]
+            - generic [ref=e29]: Financeiro
+        - listitem [ref=e30]:
+          - link "Células" [ref=e31] [cursor=pointer]:
+            - /url: /app/celulas
+            - img [ref=e32]
+            - generic [ref=e34]: Células
+        - listitem [ref=e35]:
+          - link "Ministérios" [ref=e36] [cursor=pointer]:
+            - /url: /app/ministerios
+            - img [ref=e37]
+            - generic [ref=e39]: Ministérios
+        - listitem [ref=e40]:
+          - link "Escalas" [ref=e41] [cursor=pointer]:
+            - /url: /app/escalas
+            - img [ref=e42]
+            - generic [ref=e45]: Escalas
+        - listitem [ref=e46]:
+          - link "Cultos" [ref=e47] [cursor=pointer]:
+            - /url: /app/cultos
+            - img [ref=e48]
+            - generic [ref=e50]: Cultos
+        - listitem [ref=e51]:
+          - link "Eventos" [ref=e52] [cursor=pointer]:
+            - /url: /app/eventos
+            - img [ref=e53]
+            - generic [ref=e56]: Eventos
+        - listitem [ref=e57]:
+          - link "Estoque" [ref=e58] [cursor=pointer]:
+            - /url: /app/estoque
+            - img [ref=e59]
+            - generic [ref=e64]: Estoque
+      - button "Sair" [ref=e67]:
+        - img [ref=e68]
+        - generic [ref=e70]: Sair
+  - generic [ref=e71]:
+    - link "Pular para o conteúdo" [ref=e72] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=e73]:
+      - generic [ref=e75]:
+        - link "Alertas" [ref=e76] [cursor=pointer]:
+          - /url: /app/alertas
+          - img [ref=e77]
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - generic [ref=e83]: Financeiro E2E
+            - generic [ref=e84]: FINANCEIRO
+          - img "Financeiro E2E" [ref=e86]
+    - main [ref=e87]:
+      - generic [ref=e88]:
+        - generic [ref=e90]:
+          - heading "Financeiro" [level=1]
+          - heading "Gestão Financeira" [level=2] [ref=e91]
+          - paragraph [ref=e92]: Monitore e gerencie a saúde financeira da sua comunidade.
+        - generic [ref=e93]:
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - img [ref=e98]
+              - generic [ref=e100]: +12% vs abr
+            - paragraph [ref=e101]: Entradas
+            - paragraph [ref=e102]: R$ 0,00
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - img [ref=e109]
+              - generic [ref=e111]: Estável
+            - paragraph [ref=e112]: Saídas
+            - paragraph [ref=e113]: R$ 0,00
+          - generic [ref=e116]:
+            - generic [ref=e117]:
+              - generic [ref=e118]:
+                - img [ref=e120]
+                - generic [ref=e122]: Atualizado agora
+              - paragraph [ref=e123]: Saldo Disponível
+              - paragraph [ref=e124]: R$ 0,00
+            - generic [ref=e125]:
+              - img [ref=e126]
+              - generic [ref=e128]: Consolidado em Junho 2026
+        - generic [ref=e129]:
+          - generic [ref=e130]:
+            - heading "Caixas Ativos" [level=2] [ref=e131]
+            - generic [ref=e132]: 1 Caixa
+          - generic "Caixa Caixa Geral, saldo R$ 0,00" [ref=e134]:
+            - generic [ref=e135]:
+              - link "Caixa Geral" [ref=e136] [cursor=pointer]:
+                - /url: /app/financeiro/caixas/846ca3ff-55b4-4447-8d00-5f30cbe6f0f3
+              - generic [ref=e137]: 0 lançamentos (mês)
+            - paragraph [ref=e138]: R$ 0,00
+            - link "Lançar movimentação em Caixa Geral" [ref=e140] [cursor=pointer]:
+              - /url: /app/financeiro/lancamentos/novo?caixaId=846ca3ff-55b4-4447-8d00-5f30cbe6f0f3
+              - text: + Lançar
+        - generic [ref=e141]:
+          - generic [ref=e142]:
+            - generic [ref=e143]:
+              - button "Contribuições" [ref=e144] [cursor=pointer]
+              - button "Despesas" [ref=e145] [cursor=pointer]
+              - button "Aprovações 3" [ref=e146] [cursor=pointer]:
+                - text: Aprovações
+                - generic [ref=e147]: "3"
+              - button "Solicitações" [ref=e148] [cursor=pointer]
+            - button "Novo" [ref=e150] [cursor=pointer]:
+              - img [ref=e151]
+              - text: Novo
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - img [ref=e155]
+              - textbox "Buscar lançamentos..." [ref=e157]
+            - generic [ref=e158]:
+              - button [ref=e159] [cursor=pointer]:
+                - img [ref=e160]
+              - button "A-Z" [ref=e162] [cursor=pointer]:
+                - generic [ref=e163]: A-Z
+                - img [ref=e164]
+          - generic [ref=e166]:
+            - table [ref=e168]:
+              - rowgroup [ref=e169]:
+                - row "Descrição Categoria Data Valor Status Ações" [ref=e170]:
+                  - columnheader "Descrição" [ref=e171]
+                  - columnheader "Categoria" [ref=e172]
+                  - columnheader "Data" [ref=e173]
+                  - columnheader "Valor" [ref=e174]
+                  - columnheader "Status" [ref=e175]
+                  - columnheader "Ações" [ref=e176]
+              - rowgroup [ref=e177]:
+                - 'row "Dízimo - João Silva ID: #49201 Dízimo 12/05/2026 + R$ 500,00 Confirmado" [ref=e178]':
+                  - 'cell "Dízimo - João Silva ID: #49201" [ref=e179]':
+                    - generic [ref=e180]:
+                      - img [ref=e182]
+                      - generic [ref=e184]:
+                        - paragraph [ref=e185]: Dízimo - João Silva
+                        - generic [ref=e186]: "ID: #49201"
+                  - cell "Dízimo" [ref=e187]
+                  - cell "12/05/2026" [ref=e188]
+                  - cell "+ R$ 500,00" [ref=e189]
+                  - cell "Confirmado" [ref=e190]:
+                    - generic [ref=e191]: Confirmado
+                  - cell [ref=e192]:
+                    - img [ref=e195]
+                - 'row "Oferta Especial Missões ID: #49188 Oferta 08/05/2026 + R$ 2.450,00 Confirmado" [ref=e198]':
+                  - 'cell "Oferta Especial Missões ID: #49188" [ref=e199]':
+                    - generic [ref=e200]:
+                      - img [ref=e202]
+                      - generic [ref=e204]:
+                        - paragraph [ref=e205]: Oferta Especial Missões
+                        - generic [ref=e206]: "ID: #49188"
+                  - cell "Oferta" [ref=e207]
+                  - cell "08/05/2026" [ref=e208]
+                  - cell "+ R$ 2.450,00" [ref=e209]
+                  - cell "Confirmado" [ref=e210]:
+                    - generic [ref=e211]: Confirmado
+                  - cell [ref=e212]:
+                    - img [ref=e215]
+            - generic [ref=e218]:
+              - generic [ref=e219]: Mostrando 1-2 de 2 resultados
+              - generic [ref=e220]:
+                - button "Anterior" [disabled] [ref=e221] [cursor=pointer]
+                - button "1" [ref=e222] [cursor=pointer]
+                - button "Próximo" [disabled] [ref=e223] [cursor=pointer]
+        - generic [ref=e224]:
+          - generic [ref=e225]:
+            - generic [ref=e226]:
+              - heading "Resumo Anual" [level=3] [ref=e227]
+              - paragraph [ref=e228]: Acompanhamento de fluxo de caixa projetado para o exercício de 2026.
+            - generic [ref=e229]:
+              - generic [ref=e230]:
+                - generic:
+                  - generic: Projetado
+                - generic [ref=e231]: JAN
+              - generic [ref=e232]:
+                - generic:
+                  - generic: Projetado
+                - generic [ref=e233]: FEV
+              - generic [ref=e234]:
+                - generic:
+                  - generic: Ativo
+                - generic [ref=e235]: MAR
+              - generic [ref=e236]:
+                - generic:
+                  - generic: Projetado
+                - generic [ref=e237]: ABR
+              - generic [ref=e238]:
+                - generic:
+                  - generic: Projetado
+                - generic [ref=e239]: MAI
+              - generic [ref=e240]:
+                - generic:
+                  - generic: Projetado
+                - generic [ref=e241]: JUN
+          - generic [ref=e242]:
+            - generic [ref=e243]:
+              - img [ref=e245]
+              - generic [ref=e247]:
+                - heading "Relatórios Inteligentes" [level=3] [ref=e248]
+                - paragraph [ref=e249]: Gere insights automáticos sobre as contribuições e despesas da igreja.
+            - link "Acessar Central de Relatórios" [ref=e251] [cursor=pointer]:
+              - /url: /app/financeiro
+              - text: Acessar Central de Relatórios
+              - img [ref=e252]
 ```

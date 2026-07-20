@@ -36,6 +36,12 @@ enum TipoLancamento {
   SAIDA
 }
 
+enum StatusLancamento {
+  PAGO
+  PENDENTE
+  AGENDADO
+}
+
 enum CategoriaLancamento {
   DIZIMO
   OFERTA
@@ -105,6 +111,15 @@ model Membro {
   // Relação com Configuração de Acolhimento (1 ConfiguracaoGeral pode ter 1 membro responsável)
   configuracoesAcolhimento ConfiguracaoGeral[] @relation("ResponsavelVisitante")
 
+  // Relacionamentos — Cultos, Escalas, Células, Eventos
+  cultosCriados      Culto[]
+  escalasCriadas     Escala[]
+  escalasVoluntario  EscalaVoluntario[]
+  celulaLiderada     Celula?
+  celulas            MembroCelula[]
+  eventosResponsavel Evento[]
+  eventosCriados     Evento[] @relation("EventoCriador")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -113,10 +128,8 @@ model Membro {
 
 /**
  * Sessão de login server-side (S00-T02).
- *
  * Cada `createSession(membroId)` insere um registro aqui; o `sid` (UUID)
  * é o valor do cookie httpOnly. Logout = `deleteSession(sid)`.
- *
  * Sliding renewal: a cada request autenticado, `expiresAt` é atualizado
  * para `min(now + 7d, absoluteExpiresAt)`. Após `absoluteExpiresAt`,
  * o cookie é considerado expirado mesmo se o cliente ainda o enviar.
@@ -142,6 +155,7 @@ model Ministerio {
   descricao   String?
   membros     MinisterioMembro[]
   configGeral ConfiguracaoGeral[] @relation("MinisterioResponsavel")
+  escalas     Escala[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -165,9 +179,9 @@ model MinisterioMembro {
 // ==========================================
 
 model Caixa {
-  id            String @id @default(uuid())
-  nome          String @unique // Ex: "Caixa Geral", "Caixa da Cantina"
-  saldoCentavos Int    @default(0) // Armazenado em centavos para evitar erros de ponto flutuante
+  id            String  @id @default(uuid())
+  nome          String  @unique // Ex: "Caixa Geral", "Caixa da Cantina"
+  saldoCentavos Int     @default(0) // Armazenado em centavos para evitar erros de ponto flutuante
   ativo         Boolean @default(true) // Soft-delete / arquivamento (T01)
 
   lancamentos   Lancamento[]
@@ -190,8 +204,10 @@ model TransferenciaCaixa {
   dataHora       DateTime @default(now())
   descricao      String?
 
-  /** UUID v4 opcional — previne double-submit/race (SEC-S07-003). */
-  idempotencyKey String?  @unique
+  /**
+   * UUID v4 opcional — previne double-submit/race (SEC-S07-003).
+   */
+  idempotencyKey String? @unique
 
   caixaOrigem  Caixa  @relation("CaixaOrigem", fields: [caixaOrigemId], references: [id], onDelete: Restrict)
   caixaDestino Caixa  @relation("CaixaDestino", fields: [caixaDestinoId], references: [id], onDelete: Restrict)
@@ -204,8 +220,9 @@ model Lancamento {
   id              String              @id @default(uuid())
   tipo            TipoLancamento
   categoria       CategoriaLancamento
+  status          StatusLancamento    @default(PENDENTE)
   valorCentavos   Int
-  descricao       String
+  descricao       String?
   dataCompetencia DateTime            @default(now())
 
   caixaId String
@@ -233,13 +250,17 @@ model ItemEstoque {
   id         String          @id @default(uuid())
   nome       String
   descricao  String?
-  tipo       TipoItemEstoque @default(CONSUMO)
-  quantidade Int             @default(0) // Para consumo, incrementa/decrementa. Para patrimônio, geralmente é 1 por unidade física
+  tipo             TipoItemEstoque @default(CONSUMO)
+  quantidade       Int             @default(0) // Para consumo, incrementa/decrementa. Para patrimônio, geralmente é 1 por unidade física
+  quantidadeMinima Int             @default(5) // Quantidade mínima para alerta de estoque baixo
 
   // Campos específicos de Bens Patrimoniais
   numeroSerie       String?               @unique
   statusPatrimonio  StatusItemPatrimonio? @default(DISPONIVEL)
   localizacaoFisica String?
+
+  // Soft-delete: false = arquivado (não aparece nas listas padrão)
+  ativo Boolean @default(true)
 
   movimentacoes MovimentacaoEstoque[]
   manutencoes   ManutencaoAtivo[]
@@ -247,6 +268,7 @@ model ItemEstoque {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tipo, ativo])
   @@map("itens_estoque")
 }
 
@@ -288,6 +310,155 @@ model ManutencaoAtivo {
   updatedAt DateTime @updatedAt
 
   @@map("manutencoes_ativo")
+}
+
+// ==========================================
+// MÓDULO 4: CULTOS
+// ==========================================
+
+enum TipoCulto {
+  PRESENCIAL
+  HIBRIDO
+  ONLINE
+}
+
+enum StatusCulto {
+  AGENDADO
+  CONFIRMADO
+  REALIZADO
+  CANCELADO
+}
+
+model Culto {
+  id          String      @id @default(uuid())
+  titulo      String
+  descricao   String?
+  tipo        TipoCulto   @default(PRESENCIAL)
+  status      StatusCulto @default(AGENDADO)
+  data        DateTime
+  horario     String
+  local       String?
+  preletor    String?
+  createdById String?
+  createdBy   Membro?     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("cultos")
+}
+
+// ==========================================
+// MÓDULO 5: ESCALAS
+// ==========================================
+
+enum StatusEscala {
+  PENDENTE
+  CONFIRMADA
+  REALIZADA
+  CANCELADA
+}
+
+model Escala {
+  id            String            @id @default(uuid())
+  ministerioId  String
+  ministerio    Ministerio        @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  titulo        String
+  data          DateTime
+  observacao    String?
+  status        StatusEscala      @default(PENDENTE)
+  createdById   String?
+  createdBy     Membro?           @relation(fields: [createdById], references: [id])
+  voluntarios   EscalaVoluntario[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([ministerioId])
+  @@map("escalas")
+}
+
+model EscalaVoluntario {
+  id         String  @id @default(uuid())
+  escalaId   String
+  membroId   String
+  funcao     String
+  status     String  @default("CONFIRMADO")
+  observacao String?
+
+  escala Escala @relation(fields: [escalaId], references: [id], onDelete: Cascade)
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Restrict)
+
+  @@unique([escalaId, membroId, funcao])
+  @@map("escala_voluntarios")
+}
+
+// ==========================================
+// MÓDULO 6: CÉLULAS
+// ==========================================
+
+model Celula {
+  id        String   @id @default(uuid())
+  nome      String   @unique
+  descricao String?
+  liderId   String?   @unique
+  lider     Membro?  @relation(fields: [liderId], references: [id], onDelete: SetNull)
+  endereco  String?
+  diaSemana String?
+  horario   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  membros   MembroCelula[]
+
+  @@map("celulas")
+}
+
+model MembroCelula {
+  id       String @id @default(uuid())
+  celulaId String
+  membroId String
+
+  celula Celula @relation(fields: [celulaId], references: [id], onDelete: Cascade)
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@unique([membroId, celulaId])
+  @@map("membro_celulas")
+}
+
+// ==========================================
+// MÓDULO 7: EVENTOS
+// ==========================================
+
+enum TipoEvento {
+  ESPECIAL
+  CAMPANHA
+  CONFRATERNIZACAO
+  RETIRO
+  OUTRO
+}
+
+enum StatusEvento {
+  RASCUNHO
+  PUBLICADO
+  REALIZADO
+  CANCELADO
+}
+
+model Evento {
+  id            String      @id @default(uuid())
+  titulo        String
+  descricao     String?
+  tipo          TipoEvento  @default(ESPECIAL)
+  status        StatusEvento @default(RASCUNHO)
+  dataInicio    DateTime
+  dataFim       DateTime?
+  local         String?
+  responsavelId String?
+  responsavel   Membro?     @relation(fields: [responsavelId], references: [id], onDelete: SetNull)
+  createdById   String?
+  createdBy     Membro?     @relation("EventoCriador", fields: [createdById], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("eventos")
 }
 
 // ==========================================

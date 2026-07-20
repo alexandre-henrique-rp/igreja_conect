@@ -53,7 +53,7 @@ import { cn } from "~/lib/cn";
  */
 export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
   /** Texto do label (sempre visível). */
-  label: string;
+  label: ReactNode;
   /** `name` do campo — também usado no `id` quando não fornecido. */
   name: string;
   /** Tipo do input. Default: `text`. */
@@ -68,6 +68,10 @@ export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
   leadingIcon?: ReactNode;
   /** Botão de ação à direita (ex: toggle de visibilidade). */
   trailingAction?: ReactNode;
+  /** Variante visual. Default: `default`. */
+  variant?: "default" | "dark";
+  /** Oculta o asterisco visual de campo obrigatório. */
+  hideAsterisk?: boolean;
 };
 
 /**
@@ -86,21 +90,27 @@ export function Input({
   trailingAction,
   className,
   required,
+  variant = "default",
+  hideAsterisk = false,
   ...rest
 }: InputProps) {
   const inputId = id ?? name;
   const descId = `${inputId}-desc`;
   const hasError = Boolean(error);
+  const isDark = variant === "dark";
 
   return (
     <div className="space-y-1">
       <label
         htmlFor={inputId}
-        className="block text-sm font-medium text-slate-700"
+        className={cn(
+          "block text-sm font-medium",
+          isDark ? "text-slate-400" : "text-slate-700"
+        )}
       >
         {label}
-        {required && (
-          <span aria-hidden="true" className="text-red-700 ml-1">
+        {required && !hideAsterisk && (
+          <span aria-hidden="true" className={cn("ml-1", isDark ? "text-red-400" : "text-red-700")}>
             *
           </span>
         )}
@@ -123,11 +133,13 @@ export function Input({
           aria-invalid={hasError || undefined}
           aria-describedby={hint || error ? descId : undefined}
           className={cn(
-            "w-full h-11 px-3 rounded-md border bg-white text-slate-900",
-            "placeholder:text-slate-400",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "w-full h-11 px-3 rounded-md border",
+            isDark
+              ? "bg-[#131d30] border-[#253551] text-white placeholder:text-slate-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0"
+              : "bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "focus-visible:outline-none focus-visible:ring-2",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            hasError ? "border-red-700" : "border-slate-300",
+            hasError ? "border-red-700" : "",
             Boolean(leadingIcon) && "pl-10",
             Boolean(trailingAction) && "pr-12",
             className
@@ -144,12 +156,12 @@ export function Input({
         <p
           id={descId}
           role="alert"
-          className="text-sm text-red-700"
+          className={cn("text-sm", isDark ? "text-red-400" : "text-red-700")}
         >
           {error}
         </p>
       ) : hint ? (
-        <p id={descId} className="text-sm text-slate-500">
+        <p id={descId} className={cn("text-sm", isDark ? "text-slate-400" : "text-slate-500")}>
           {hint}
         </p>
       ) : null}

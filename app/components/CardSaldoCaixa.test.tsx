@@ -47,7 +47,7 @@ describe("<CardSaldoCaixa />", () => {
       podeCriarLancamento: false,
       user: { id: "u1", nome: "Admin", cargo: "ADMIN" },
     });
-    expect(html).toContain("R$ 500,00");
+    expect(html.replace(/\u00a0/g, " ")).toContain("R$ 500,00");
   });
 
   it("link do nome aponta para /app/financeiro/caixas/cx-1", () => {

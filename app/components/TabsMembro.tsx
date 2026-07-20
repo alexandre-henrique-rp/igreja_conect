@@ -222,7 +222,7 @@ export function TabsMembro({
           />
         )}
         {effectiveTab === "fidelidade" && canSeeFinancials && (
-          <TabFidelidadeFinanceira membroId={membro.id} />
+          <TabFidelidadeFinanceira />
         )}
       </div>
 

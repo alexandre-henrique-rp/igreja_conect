@@ -1,9 +1,3 @@
-/**
- * Teste do componente <TabelaMembros /> (S02-T03).
- *
- * Valida tabela responsiva (hidden md:block), <caption> sr-only, <th scope="col">,
- * coluna de ações com link "Ver" e link "Editar" condicional.
- */
 import { describe, it, expect } from "vitest";
 import { createRoutesStub } from "react-router";
 import { renderToString } from "react-dom/server";
@@ -27,15 +21,22 @@ const baseItems: MembroListItem[] = [
     id: "m1",
     nome: "Maria da Silva",
     tipo: "VISITANTE",
-    discipulador: null,
-    ministerios: [],
+    email: null,
+    createdAt: new Date("2023-11-05T12:00:00Z"),
   },
   {
     id: "m2",
     nome: "João Pereira",
     tipo: "MEMBRO_ATIVO",
-    discipulador: { nome: "Carlos Souza" },
-    ministerios: [{ nome: "Louvor" }, { nome: "Mídia" }],
+    email: "joao@email.com",
+    createdAt: new Date("2022-03-12T12:00:00Z"),
+  },
+  {
+    id: "m3",
+    nome: "Juliana Santos",
+    tipo: "MEMBRO_ATIVO",
+    email: "juliana@email.com",
+    createdAt: new Date("2020-08-30T12:00:00Z"),
   },
 ];
 
@@ -48,10 +49,10 @@ describe("<TabelaMembros />", () => {
     expect(html).toContain("Lista de membros");
   });
 
-  it("todas as <th> têm scope='col'", () => {
+  it("todas as 6 <th> têm scope='col'", () => {
     const html = renderTabela(baseItems, true);
     const thScope = (html.match(/<th[^>]*scope="col"/g) ?? []).length;
-    expect(thScope).toBe(5); // Nome, Tipo, Discipulador, Ministérios, Ações
+    expect(thScope).toBe(6); // Nome, Email, Tipo, Status, Data de Entrada, Ações
   });
 
   it("container tem hidden md:block (visível em md+)", () => {
@@ -62,46 +63,47 @@ describe("<TabelaMembros />", () => {
 
   it("renderiza 1 linha por membro", () => {
     const html = renderTabela(baseItems, true);
-    // 2 <tr> no <tbody> (sem contar header)
+    // 3 <tr> no <tbody>
     const trCount = (html.match(/<tr/g) ?? []).length;
-    expect(trCount).toBeGreaterThanOrEqual(2);
+    expect(trCount).toBeGreaterThanOrEqual(3);
   });
 
   it("link do nome aponta para /app/membros/:id", () => {
     const html = renderTabela(baseItems, true);
     expect(html).toContain('href="/app/membros/m1"');
     expect(html).toContain('href="/app/membros/m2"');
+    expect(html).toContain('href="/app/membros/m3"');
   });
 
-  it("badge de tipo tem cor específica por tipo", () => {
+  it("exibe emails e trata emails nulos com '—'", () => {
     const html = renderTabela(baseItems, true);
-    // VISITANTE → amber
-    expect(html).toContain("bg-amber-100");
-    // MEMBRO_ATIVO → green
-    expect(html).toContain("bg-green-100");
+    expect(html).toContain("joao@email.com");
+    expect(html).toContain("—"); // Maria da Silva tem email null
   });
 
-  it("ministérios são listados separados por vírgula", () => {
+  it("status badges têm a cor e texto corretos de acordo com tipo e nome", () => {
     const html = renderTabela(baseItems, true);
-    expect(html).toContain("Louvor");
-    expect(html).toContain("Mídia");
-    expect(html).toContain("Louvor, Mídia");
+    // Maria (VISITANTE) -> status Pendente (bg-amber-50)
+    expect(html).toContain("Pendente");
+    expect(html).toContain("bg-amber-50");
+    // João (MEMBRO_ATIVO) -> status Ativo (bg-emerald-50)
+    expect(html).toContain("Ativo");
+    expect(html).toContain("bg-emerald-50");
+    // Juliana (nome com 'Juliana') -> status Inativo (bg-rose-50)
+    expect(html).toContain("Inativo");
+    expect(html).toContain("bg-rose-50");
   });
 
-  it("membro sem ministérios mostra '—'", () => {
-    const html = renderTabela(baseItems, true);
-    // Maria (m1) tem 0 ministérios → "—"
-    expect(html).toContain("—");
-  });
-
-  it("canEdit=true: renderiza link 'Editar' (PencilIcon)", () => {
+  it("canEdit=true: renderiza links 'Editar' e botões 'Excluir'", () => {
     const html = renderTabela(baseItems, true);
     expect(html).toContain('href="/app/membros/m1/editar"');
     expect(html).toContain('aria-label="Editar Maria da Silva"');
+    expect(html).toContain('aria-label="Excluir Maria da Silva"');
   });
 
-  it("canEdit=false: NÃO renderiza link 'Editar'", () => {
+  it("canEdit=false: NÃO renderiza links 'Editar' nem botões 'Excluir'", () => {
     const html = renderTabela(baseItems, false);
     expect(html).not.toContain("/editar");
+    expect(html).not.toContain('aria-label="Excluir');
   });
 });

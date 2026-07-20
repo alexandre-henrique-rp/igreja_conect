@@ -52,7 +52,7 @@ import { cn } from "~/lib/cn";
  */
 export type ButtonProps = {
   /** Variante visual. Default: `primary`. */
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "blue";
   /** Tamanho. Default: `md`. */
   size?: "sm" | "md";
   /** Faz o botão ocupar 100% da largura do container. */
@@ -75,6 +75,8 @@ export type ButtonProps = {
   className?: string;
   /** `aria-label` para screen readers quando o conteúdo visual é ambíguo. */
   "aria-label"?: string;
+  /** ID do formulário HTML que este botão submete (HTML `form` attribute). */
+  form?: string;
 };
 
 /** Mapa de classes por variante (mantém o JSX limpo). */
@@ -85,6 +87,7 @@ const VARIANT_CLASSES = {
     "bg-slate-200 text-slate-900 hover:bg-slate-300 border border-transparent",
   ghost: "bg-transparent text-slate-700 hover:bg-slate-100 border border-transparent",
   danger: "bg-red-700 text-white hover:bg-red-800 border border-transparent",
+  blue: "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 border border-transparent shadow-lg shadow-blue-500/20",
 } as const;
 
 /** Mapa de classes por tamanho. */
@@ -147,7 +150,10 @@ export function Button({
     // Base sempre presente
     "inline-flex items-center justify-center gap-2 rounded-md font-medium",
     "transition-colors select-none",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2",
+    variant === "blue"
+      ? "focus-visible:ring-blue-500 focus-visible:ring-offset-0"
+      : "focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
     "disabled:opacity-50 disabled:cursor-not-allowed",
     fullWidth && "w-full",
     // Variante + tamanho
@@ -160,7 +166,7 @@ export function Button({
   // Não validamos em runtime — TypeScript pega em build.
   const extraProps =
     Component === "button"
-      ? { type, disabled: disabled || loading, onClick }
+      ? { type, disabled: disabled || loading, onClick, form }
       : { to, onClick };
 
   return (

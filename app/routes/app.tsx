@@ -65,13 +65,13 @@ export async function loader({ context }: LoaderFunctionArgs) {
 export default function AppShell() {
   const { user, alertasNaoLidos } = useLoaderData<typeof loader>();
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <TopbarAutenticada user={user} alertasNaoLidos={alertasNaoLidos} />
-      <div className="flex flex-1">
-        <Sidebar user={user} />
+    <div className="h-screen flex bg-slate-50">
+      <Sidebar user={user} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopbarAutenticada user={user} alertasNaoLidos={alertasNaoLidos} />
         <main
           id="main-content"
-          className="flex-1 min-w-0"
+          className="flex-1 min-w-0 overflow-y-auto"
         >
           <Outlet />
         </main>

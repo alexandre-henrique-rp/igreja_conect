@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../generated/prisma/client";
 
-const prisma = new PrismaClient();
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+
+const prisma = new PrismaClient({
+  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./dev.db" }),
+});
 
 describe("debug MINISTERIO", () => {
   beforeAll(async () => {
@@ -37,7 +41,7 @@ describe("debug MINISTERIO", () => {
     });
     console.log("ministerioMembro count:", membros.length);
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: typeof prisma) => {
       const visitante = await tx.membro.create({
         data: { nome: "Visitante Min", tipo: "VISITANTE" },
         select: { id: true, nome: true },

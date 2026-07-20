@@ -1,0 +1,157 @@
+{
+  "reviewer": "code-reviewer",
+  "phase": "phase.5.build",
+  "cycle": 4,
+  "sprint": "S14",
+  "timestamp": "2026-06-20T19:40:32Z",
+  "score": 0,
+  "gate": {
+    "min": 70,
+    "passed": false
+  },
+  "breakdown": {
+    "tdd_compliance": 0,
+    "documentacao": 0,
+    "simplicidade": 0,
+    "defesa_profundidade": 0,
+    "padroes_monetarios": 0,
+    "padroes_agregacao": 0,
+    "cross_refs": 0
+  },
+  "stats": {
+    "filesChecked": 0,
+    "filesFoundInScope": 0,
+    "filesExpectedInScope": 8,
+    "expectedFiles": [
+      "app/lib/rbac.server.ts (estender com RELATORIOS_CARGOS + assertCanSeeRelatorios)",
+      "app/lib/schemas/relatorios.ts (novo — 4 schemas Zod + 3 helpers de parse)",
+      "app/lib/relatorios-helpers.server.ts (novo — assertPeriodoValido, mapCategorias, buildWhere)",
+      "app/lib/relatorios.server.ts (novo — 5 services read-only)",
+      "app/lib/relatorios-csv.server.ts (novo — escapeCsvField + formatValorCsv + montarCabecalhoCsv + exportarLancamentosCSV)",
+      "app/lib/relatorios.server.test.ts (novo — testes integração dos 5 services)",
+      "app/lib/relatorios-csv.server.test.ts (novo — 10 testes borda CSV)",
+      "app/lib/schemas/relatorios.test.ts (novo — 12 cenários Zod)"
+    ],
+    "tddRatio": "0:0",
+    "documentedRatio": "0%",
+    "simplicityScore": 0,
+    "s14FilesFound": 0,
+    "s14FilesExpected": 8
+  },
+  "context": {
+    "sprintStartTime": "2026-06-20T19:36:29.053446Z",
+    "reviewTime": "2026-06-20T19:40:32Z",
+    "elapsedMinutes": 10.6,
+    "fanOutBatch": "batch 1 (backend + code-reviewer paralelos)",
+    "fanOutReason": "build + review enquanto constrói",
+    "expectedTasks": 12,
+    "expectedHours": 72,
+    "codeReviewerMode": "paralelo (não bloqueia backend)"
+  },
+  "strengths": [
+    "Sprint S14 está bem planejado: sprints/S14.json tem 12 tasks, 7 RAGs referenciados, 13 testes de borda especificados (brief §7.3), 7/7 RN-REL mapeados, 6/6 endpoints SPEC §5 mapeados.",
+    "Cycle 1-2 baseline reutilizável: rbac.server.ts já tem 11 helpers assertCan* com JSDoc canônico (assertCanSeeFinancialModule, assertCanSeeDizimos, assertCanManageCaixa, assertCanTransferir, etc.) — pattern copy-paste-ready para RELATORIOS_CARGOS + assertCanSeeRelatorios.",
+    "Cycle 1 baseline: formatBRLFromCents(cents) e parseBRLToCents(raw) já existem em app/lib/money-format.ts (linhas 25 e 45) — services podem chamar diretamente sem redefinir.",
+    "Cycle 1 baseline: Lancamento.valorCentavos Int + Caixa.saldoCentavos Int (prisma/schema.prisma) já bloqueia uso de Float — convention-monetary-values pré-implementado.",
+    "RAGs de cycle 4 já estão prontos: pattern-relatorios-aggregations.md (19.452 bytes) + convention-relatorios-csv-export.md (20.083 bytes) + pattern-3-layer-rbac.md + security-rbac-matrix.md. Backend agent tem documentação suficiente para implementar sem ambiguidade.",
+    "SPEC.html §5 (6 endpoints) e §6 (7 RNs) estão detalhados com exemplos de código (linhas 676-686 mostram RELATORIOS_CARGOS já no spec — copy-paste). PRD §5.3 cita testes #7 (categoria=BURRO).",
+    "Brief §7.3 lista os 13 testes de borda obrigatórios com critérios verdes — ambiguidade zero.",
+    "PROMPTs de design existem (10 arquivos em design/relatorios-*.{DESIGN,PROMPT}.md) com fluxos de sequence e acceptance criteria granulares por task."
+  ],
+  "weaknesses": [
+    "ZERO código de S14 foi produzido em ~10 min desde sprint.started (19:36:29 → 19:39:05). Nenhum dos 8 arquivos esperados foi criado.",
+    "app/lib/rbac.server.ts NÃO foi estendido com RELATORIOS_CARGOS nem assertCanSeeRelatorios (S14-T01 — bloqueio de 5 services + 1 CSV). Última edição foi em jun 19 18:03 (cycle 2).",
+    "app/lib/schemas/relatorios.ts NÃO existe (S14-T02 — 4 schemas Zod + 3 helpers de parse).",
+    "app/lib/relatorios-helpers.server.ts NÃO existe (S14-T03 — assertPeriodoValido, mapCategorias, buildWhere).",
+    "app/lib/relatorios.server.ts NÃO existe (S14-T04/05/06/07/08 — 5 services: getHubRelatorios, getDRE, getBalanceteMensal, getFluxoCaixa, getRelatorioCustomizado).",
+    "app/lib/relatorios-csv.server.ts NÃO existe (S14-T09 — escapeCsvField, formatValorCsv, montarCabecalhoCsv, exportarLancamentosCSV).",
+    "Nenhum teste novo de S14 foi escrito (relatorios.server.test.ts, relatorios-csv.server.test.ts, schemas/relatorios.test.ts, relatorios-helpers.server.test.ts, extensão de rbac.server.test.ts — todos ausentes).",
+    "Routes /app/financeiro/relatorios/* NÃO existem (S14 é backend only, então esperado, mas S15 frontend depende dos services).",
+    "13 testes de borda do brief §7.3 #1-13 NÃO foram implementados (RBAC SECRETARIO 403, DRE mês vazio, CSV BOM EF BB BF, CSV 1280 reg < 500ms, etc.).",
+    "Gate phase.5.build all-of: coverage ≥85%, 0 critical/high security, review ≥70, LGPD ≥warning. Nenhum pode ser avaliado sem código novo de S14."
+  ],
+  "blockers": [
+    "Sprint S14 está em 0% de implementação. ~10 min desde sprint.started e nenhum arquivo novo existe em app/lib/. Fan-out batch 1 (backend + code-reviewer) está rodando em paralelo, mas só code-reviewer (eu) produziu output (este relatório).",
+    "Backend agent (worker) pode estar em uma das situações: (a) ainda não foi despachado pelo orchestrator, (b) está em execução mas sem commits intermediários visíveis, (c) timeout, (d) erro de capability grant/permission, (e) bloqueado por dependência externa.",
+    "Como code-reviewer estou rodando em paralelo com backend (intencional, vide state.json fanOutBatches batch 1). Este relatório é PRELIMINAR — vou re-executar quando backend reportar conclusão."
+  ],
+  "antipatternsFound": [
+    "Nenhum antipattern encontrado em código de S14 — porque não há código de S14.",
+    "ANTIPATTERN WORKER (observação): elapsed ~10 min vs expected 72h estimated. 72h é para TODA sprint; workers devem produzir iteração visível em janelas de 30-60 min para validar progresso. Recomendo orchestrator adicionar checkpoints intermediários."
+  ],
+  "rbacCheck": {
+    "relatoriosCargos": false,
+    "assertCanSeeRelatorios": false,
+    "uiCanGuards": false,
+    "serviceCanGuards": false,
+    "details": "rbac.server.ts tem 11 helpers assertCan* canônicos de cycles 1-2 (assertCanSeeFinancials, assertCanSeeFinancialModule, assertCanSeeDizimos, assertCanWriteLancamento, assertCanManageCaixa, assertCanTransferir, assertCanManageMinisterios, assertCanWriteMembers, assertIsAdmin, assertCanManageConfiguracaoGeral, canSeeFinancials), mas nenhum do escopo Relatórios. RELATORIOS_CARGOS e assertCanSeeRelatorios precisam ser adicionados entre MANAGE_CAIXA_CARGOS (linha 147) e TRANSFERENCIA_CARGOS (linha 166), conforme especificado em sprints/S14.json acceptance criteria."
+  },
+  "tddCheck": {
+    "testsForPublicFunctions": 0,
+    "coverage": 0,
+    "redGreenRefactor": false,
+    "details": "Nenhum teste novo de S14 foi escrito. Última cobertura (cycle 2 / S08) é 96% em finance.server.test.ts e 92% em rbac.server.test.ts. Coverage de S14 é 0% por ausência de arquivos. Impossível verificar red-green-refactor sem testes."
+  },
+  "codeCheck": {
+    "publicFunctionsS14": 0,
+    "documentedFunctionsS14": 0,
+    "functionsOver30LinesS14": 0,
+    "filesOver300LinesS14": 0,
+    "nestingOver3LevelsS14": 0,
+    "floatForMoneyS14": 0,
+    "prismaInRouteS14": 0,
+    "consoleLogS14": 0,
+    "defaultExportS14": 0,
+    "anyTypeS14": 0,
+    "details": "Métricas todas zero porque nenhum arquivo S14 existe. Impossível auditar TDD, docstrings, YAGNI/KISS, padrões monetários, agregações, RBAC 3 camadas sem código para auditar."
+  },
+  "monetaryCheck": {
+    "formatBRLFromCentsUsed": "N/A (sem código S14)",
+    "parseBRLToCentsUsed": "N/A (sem código S14)",
+    "floatForMoney": "N/A (sem código S14)",
+    "details": "Helpers canônicos formatBRLFromCents (money-format.ts:25) e parseBRLToCents (money-format.ts:45) já existem e estão disponíveis. Backend deve importar de ~/lib/money-format diretamente sem redefinir."
+  },
+  "aggregationCheck": {
+    "groupByUsage": "N/A (sem código S14)",
+    "semiOpenFilters": "N/A (sem código S14)",
+    "intCentsSum": "N/A (sem código S14)",
+    "performance": "N/A (sem código S14)",
+    "details": "RAG pattern-relatorios-aggregations.md já está pronto e define o padrão: Promise.all para queries paralelas, dataCompetencia { gte, lt }, soma via reduce em Int cents. Backend precisa apenas seguir o RAG — implementação direta, sem invenção."
+  },
+  "ragReferenceCheck": {
+    "relatoriosCargosImplemented": false,
+    "assertPeriodoValidoImplemented": false,
+    "mapCategoriasImplemented": false,
+    "buildWhereImplemented": false,
+    "getDREImplemented": false,
+    "getBalanceteMensalImplemented": false,
+    "getFluxoCaixaImplemented": false,
+    "getRelatorioCustomizadoImplemented": false,
+    "getHubRelatoriosImplemented": false,
+    "exportarLancamentosCSVImplemented": false,
+    "details": "11 helpers/services especificados em sprints/S14.json, nenhum implementado. RAGs pattern-relatorios-aggregations, convention-relatorios-csv-export, pattern-3-layer-rbac, security-rbac-matrix já estão prontos e devem ser referenciados em JSDoc dos services."
+  },
+  "reportPath": ".harness/reviews/code-review-S14-20260620T194003Z.json",
+  "recommendation": "rework (preliminary — aguardando output de backend agent)",
+  "readyForNextSprint": false,
+  "isPreliminary": true,
+  "preliminaryReason": "code-reviewer foi despachado em paralelo com backend (fan-out batch 1). Reportar conclusão parcial agora; re-executar review completo quando backend agent sinalizar done.",
+  "contextForOrchestrator": {
+    "elapsedMinutes": 10.6,
+    "expectedS14Artifacts": 8,
+    "foundS14Artifacts": 0,
+    "completionRate": "0%",
+    "fanOutBatch": "batch 1 (backend + code-reviewer paralelos)",
+    "actionRequired": "Verificar status do backend agent worker: (a) se foi despachado, (b) se está executando, (c) se há erro de capability grant. Re-despachar se necessário. Re-executar code-review após output existir.",
+    "baselineAvailable": [
+      "rbac.server.ts: 11 helpers assertCan* canônicos (cycles 1-2)",
+      "money-format.ts: formatBRLFromCents + parseBRLToCents (Int cents)",
+      "prisma/schema.prisma: Lancamento.valorCentavos Int + Caixa.saldoCentavos Int",
+      "RAG pattern-relatorios-aggregations.md: padrão Promise.all + gte/lt + reduce Int cents",
+      "RAG convention-relatorios-csv-export.md: BOM + ; + CRLF + escape RFC 4180",
+      "RAG pattern-3-layer-rbac.md: UI <Can> + loader assertCanSeeRelatorios + service assertCanSeeRelatorios",
+      "SPEC.html §5-6: 6 endpoints + 7 RNs com exemplo de código para RELATORIOS_CARGOS",
+      "sprints/S14.json: 12 tasks com TDD testFirst, acceptance criteria granulares, 13 testes de borda"
+    ]
+  }
+}

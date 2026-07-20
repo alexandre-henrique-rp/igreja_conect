@@ -13,3 +13,9 @@ body {
     color-scheme: dark;
   }
 }
+
+/* Custom styling for active menu items in dark sidebar */
+nav[aria-label="Menu principal"] .bg-cyan-50 {
+  background-color: #2563EB !important;
+  color: #ffffff !important;
+}
