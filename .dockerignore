@@ -2,3 +2,11 @@
 build
 node_modules
 README.md
+.env
+.env.development
+prisma/dev.db
+dev.db
+generated
+coverage
+test-results
+.playwright-mcp
