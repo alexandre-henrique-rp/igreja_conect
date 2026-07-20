@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "db:reset": "DATABASE_URL='file:./prisma/dev.db' sh -c 'rm -f prisma/dev.db && prisma migrate deploy && pnpm db:seed'",
     "db:seed": "DATABASE_URL='file:./prisma/dev.db' tsx prisma/seed.ts",
+    "db:seed:prod": "NODE_ENV=production tsx prisma/seed.ts",
     "db:backup": "tsx scripts/backup-db.ts",
     "db:cleanup-sessions": "tsx scripts/cleanup-sessions.ts"
   },
