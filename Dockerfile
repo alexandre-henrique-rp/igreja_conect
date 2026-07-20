@@ -1,4 +1,4 @@
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN npm install -g pnpm@11.6.0
@@ -11,11 +11,17 @@ RUN pnpm install --frozen-lockfile
 FROM base AS build
 COPY --from=deps /app/node_modules /app/node_modules
 COPY . /app
+RUN pnpm exec prisma generate
 RUN pnpm run build
 
 FROM base AS runtime
 ENV NODE_ENV=production
+ENV DATABASE_URL="file:/app/data/prod.db"
 COPY --from=deps /app/node_modules /app/node_modules
 COPY --from=build /app/build /app/build
-COPY package.json ./
-CMD ["pnpm", "start"]
+COPY --from=build /app/generated /app/generated
+COPY --from=build /app/prisma /app/prisma
+COPY --from=build /app/prisma.config.ts /app/prisma.config.ts
+COPY package.json pnpm-workspace.yaml .npmrc docker-entrypoint.sh ./
+RUN mkdir -p /app/data
+ENTRYPOINT ["./docker-entrypoint.sh"]
