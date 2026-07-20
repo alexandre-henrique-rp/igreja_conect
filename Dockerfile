@@ -11,6 +11,7 @@ RUN pnpm install --frozen-lockfile
 FROM base AS build
 COPY --from=deps /app/node_modules /app/node_modules
 COPY . /app
+ENV DATABASE_URL="file:/app/data/prod.db"
 RUN pnpm exec prisma generate
 RUN pnpm run build
 
