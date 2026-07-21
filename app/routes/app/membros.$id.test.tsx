@@ -28,7 +28,7 @@ type Cargo =
   | "ADMIN"
   | "PASTOR"
   | "SECRETARIO"
-  | "DISCIPULADOR"
+  | "LIDER_MINISTERIO"
   | "FINANCEIRO"
   | "LIDER_MINISTERIO";
 
@@ -222,7 +222,7 @@ describe("membros.$id — loader (S02-T07)", () => {
   });
 
   it("DISCIPULADOR + membro de outro: throw 404 (não 403 — não vaza existência)", async () => {
-    const disc = await makeAuthUser("DISCIPULADOR", "Disc Test");
+    const disc = await makeAuthUser("LIDER_MINISTERIO", "Disc Test");
     const outro = await makeMembro("Fora de Escopo");
 
     await expect(
@@ -231,7 +231,7 @@ describe("membros.$id — loader (S02-T07)", () => {
   });
 
   it("DISCIPULADOR + seu próprio discípulo: retorna dados (escopo OK)", async () => {
-    const disc = await makeAuthUser("DISCIPULADOR", "Disc OK");
+    const disc = await makeAuthUser("LIDER_MINISTERIO", "Disc OK");
     const aluno = await makeMembro("Aluno do Disc", { discipuladorId: disc.id });
 
     const result = await loader(args(makeGetRequest(aluno.id), disc, { id: aluno.id }));
@@ -259,7 +259,7 @@ describe("membros.$id — action (S02-T07)", () => {
     const user = await makeAuthUser("ADMIN");
     const request = makePostRequest(m.id, { intent: "delete" });
 
-    const res = await action(args(request, user, { id: m.id }));
+    const res = await action(args(request, user, { id: m.id })) as Response;
 
     expect(res).toBeInstanceOf(Response);
     expect(res.status).toBe(302);
@@ -276,7 +276,7 @@ describe("membros.$id — action (S02-T07)", () => {
     const user = await makeAuthUser("ADMIN");
     const request = makePostRequest(pai.id, { intent: "delete" });
 
-    const res = await action(args(request, user, { id: pai.id }));
+    const res = await action(args(request, user, { id: pai.id })) as Response;
 
     expect(res).toBeInstanceOf(Response);
     expect(res.status).toBe(409);
@@ -300,7 +300,7 @@ describe("membros.$id — action (S02-T07)", () => {
     const user = await makeAuthUser("ADMIN");
     const request = makePostRequest(m.id, { intent: "qualquer-coisa" });
 
-    const res = await action(args(request, user, { id: m.id }));
+    const res = await action(args(request, user, { id: m.id })) as Response;
     expect(res).toBeInstanceOf(Response);
     expect(res.status).toBe(400);
   });
@@ -313,7 +313,7 @@ describe("membros.$id — action (S02-T07)", () => {
 
     const res = await action(
       args(request, user, { id: "00000000-0000-0000-0000-000000000000" })
-    );
+    ) as Response;
     expect(res).toBeInstanceOf(Response);
     expect(res.status).toBe(404);
   });
@@ -432,7 +432,7 @@ describe("membros.$id — render (S02-T07 + S03-T07)", () => {
           <DefaultComponent
             loaderData={makeLoaderData({
               canSeeFinancials: false,
-              user: { id: "u1", nome: "Auth", cargo: "DISCIPULADOR" },
+              user: { id: "u1", nome: "Auth", cargo: "LIDER_MINISTERIO" },
             }) as unknown as LoaderData}
           />
         ),

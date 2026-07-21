@@ -8,6 +8,7 @@ if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 32) {
 
 import { prisma } from "~/db/prisma.server";
 import { createCookie } from "react-router";
+import type { PrismaClient } from "../../generated/prisma/client";
 
 /** TTL sliding: 7 dias. Cada request autenticado estende o cookie. */
 export const SLIDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -62,7 +63,7 @@ export type SessionUser = {
  */
 export async function createSession(
   membroId: string,
-  prismaClient?: typeof import("../../generated/prisma/client").PrismaClient
+  prismaClient?: PrismaClient
 ): Promise<string> {
   const p = prismaClient ?? prisma;
   const now = Date.now();
@@ -92,7 +93,7 @@ export async function createSession(
  */
 export async function getUserFromRequest(
   request: Request,
-  prismaClient?: typeof import("../../generated/prisma/client").PrismaClient
+  prismaClient?: PrismaClient
 ): Promise<SessionUser | null> {
   const p = prismaClient ?? prisma;
   const sid = await sessionCookie.parse(request.headers.get("Cookie"));
@@ -141,7 +142,7 @@ export async function getUserFromRequest(
  */
 export async function deleteSession(
   sid: string,
-  prismaClient?: typeof import("../../generated/prisma/client").PrismaClient
+  prismaClient?: PrismaClient
 ): Promise<void> {
   if (!sid) return;
   const p = prismaClient ?? prisma;

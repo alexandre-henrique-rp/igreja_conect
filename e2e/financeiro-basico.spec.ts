@@ -58,7 +58,7 @@ const USERS = {
   admin: { email: "admin@igreja.local", cargo: "ADMIN" as const, nome: "Administrador" },
   financeiro: { email: "financeiro+e2e@igreja.local", cargo: "FINANCEIRO" as const, nome: "Financeiro E2E" },
   secretario: { email: "secretario+e2e@igreja.local", cargo: "SECRETARIO" as const, nome: "Secretario E2E" },
-  discipulador: { email: "discipulador+e2e@igreja.local", cargo: "DISCIPULADOR" as const, nome: "Discipulador E2E" },
+  discipulador: { email: "discipulador+e2e@igreja.local", cargo: "LIDER_MINISTERIO" as const, nome: "Discipulador E2E" },
 } as const;
 
 test.beforeAll(async () => {

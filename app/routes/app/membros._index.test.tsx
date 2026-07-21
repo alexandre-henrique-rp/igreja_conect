@@ -25,7 +25,7 @@ type Cargo =
   | "ADMIN"
   | "PASTOR"
   | "SECRETARIO"
-  | "DISCIPULADOR"
+  | "LIDER_MINISTERIO"
   | "FINANCEIRO"
   | "LIDER_MINISTERIO";
 
@@ -35,8 +35,10 @@ type MembroListItem = {
   id: string;
   nome: string;
   tipo: "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
-  discipulador: { id: string; nome: string } | null;
-  ministerios: { id: string; nome: string }[];
+  email?: string | null;
+  createdAt?: Date;
+  discipulador?: { id: string; nome: string } | null;
+  ministerios?: { id: string; nome: string }[];
 };
 
 type LoaderData = {
@@ -44,15 +46,19 @@ type LoaderData = {
   total: number;
   page: number;
   pageSize: number;
-  ministerios: { id: string; nome: string }[];
-  discipuladores: { id: string; nome: string }[];
+  ministerios?: { id: string; nome: string }[];
+  discipuladores?: { id: string; nome: string }[];
   filterValues: {
-    q?: string;
+    q?: string | null;
     tipo?: "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
     ministerioId?: string;
     discipuladorId?: string;
   };
   searchParams: URLSearchParams;
+  kpiTotal?: number;
+  kpiAtivos?: number;
+  kpiVisitantes?: number;
+  kpiCongregados?: number;
 };
 
 let cleanup: () => Promise<void>;
@@ -153,7 +159,7 @@ describe("membros._index — loader (S02-T04)", () => {
   });
 
   it("DISCIPULADOR: força discipuladorId = user.id (RBAC fina, ignora query string)", async () => {
-    const disc = await makeAuthUser("DISCIPULADOR", "Disc Test");
+    const disc = await makeAuthUser("LIDER_MINISTERIO", "Disc Test");
     // Cria 2 discípulos do "disc" + 1 membro sem discipulador (que não deveria aparecer)
     const aluno1 = await makeMembro("Aluno 1");
     const aluno2 = await makeMembro("Aluno 2");

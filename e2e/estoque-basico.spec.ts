@@ -41,7 +41,7 @@ type ChainState = {
 const USERS = {
   admin: { email: "admin@igreja.local", cargo: "ADMIN" as const, nome: "Administrador" },
   secretario: { email: "secretario@igreja.local", cargo: "SECRETARIO" as const, nome: "Secretario" },
-  discipulador: { email: "discipulador@igreja.local", cargo: "DISCIPULADOR" as const, nome: "Discipulador" },
+  discipulador: { email: "discipulador@igreja.local", cargo: "LIDER_MINISTERIO" as const, nome: "Discipulador" },
   financeiro: { email: "financeiro@igreja.local", cargo: "FINANCEIRO" as const, nome: "Financeiro" },
 } as const;
 

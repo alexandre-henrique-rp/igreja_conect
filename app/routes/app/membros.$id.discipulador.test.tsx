@@ -136,14 +136,14 @@ describe("membros.$id.discipulador — action (S03-T13)", () => {
 
   it("DISCIPULADOR pode desvincular (camada 3 RBAC — assertCanWriteMembers)", async () => {
     const disc = await prismaTest.membro.create({
-      data: { nome: "Disc", cargo: "DISCIPULADOR" },
+      data: { nome: "Disc", cargo: "LIDER_MINISTERIO" },
     });
     const aluno = await makeMembro({ nome: "Filho", discipuladorId: disc.id });
     const res = await action(
       actionArgs(aluno.id, "POST", {
         id: disc.id,
         nome: "Disc",
-        cargo: "DISCIPULADOR",
+        cargo: "LIDER_MINISTERIO",
       })
     );
     expect(res.status).toBe(302);

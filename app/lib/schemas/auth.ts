@@ -3,12 +3,12 @@
  *
  * Diferem de `app/lib/validators/auth.ts` (que serve a API `/api/auth/login`
  * via JSON). Aqui o input vem de um `<form>` HTML — `manterConectado` é uma
- * string de checkbox que precisa ser coagida para boolean, e a senha não
- * precisa de mínimo de 8 chars (validação defensiva: a UX do form
- * não deve forçar complexidade no reset; regras de complexidade são
- * responsabilidade do ADMIN ao criar o membro).
+ * string de checkbox que precisa ser coagida para boolean.
  */
 import { z } from "zod";
+
+const SENHA_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,128}$/;
+const SENHA_ERRO = "A senha deve ter no mínimo 8 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial (!@#$%^&*...).";
 
 /**
  * Schema do payload de login (form HTML).
@@ -45,3 +45,19 @@ export const LoginSchema = z.object({
  * `validators/auth.ts` (usado pela API JSON `/api/auth/login`).
  */
 export type LoginFormInput = z.infer<typeof LoginSchema>;
+
+/**
+ * Schema para criação de senha via convite (form HTML).
+ * Valida complexidade: 1 maiúscula, 1 número, 1 especial, ≥ 8 chars.
+ */
+export const SenhaConviteSchema = z
+  .object({
+    senha: z.string().regex(SENHA_REGEX, SENHA_ERRO),
+    confirmarSenha: z.string().min(1, "Confirmação de senha obrigatória."),
+  })
+  .refine((data) => data.senha === data.confirmarSenha, {
+    message: "As senhas não conferem.",
+    path: ["confirmarSenha"],
+  });
+
+export type SenhaConviteInput = z.infer<typeof SenhaConviteSchema>;

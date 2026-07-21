@@ -93,7 +93,7 @@ describe("<Can /> (helper RBAC client-side)", () => {
     ).toContain("Y");
     expect(
       renderCan({
-        user: { cargo: "DISCIPULADOR" },
+        user: { cargo: "LIDER_MINISTERIO" },
         allow: ["ADMIN", "PASTOR", "FINANCEIRO"],
         children: <span>Z</span>,
       })

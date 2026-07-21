@@ -1,6 +1,12 @@
 import { PrismaClient } from "../../generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
+// Side-effect: garante que o worker de storage (processa uploads async)
+// está rodando. Idempotente — chama uma vez por processo (globalThis flag).
+// Carregado aqui porque `prisma.server.ts` é importado por TODA rota
+// server-side, então o worker inicia no primeiro request.
+import "./../lib/storage/startup.server";
+
 /**
  * Singleton do Prisma Client (S00-T01).
  *

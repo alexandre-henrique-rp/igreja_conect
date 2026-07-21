@@ -187,7 +187,7 @@ export default function HubRelatorios({ loaderData }: Route.ComponentProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 bg-slate-900 text-white rounded-xl p-6 relative overflow-hidden flex items-center">
           <div className="z-10 max-w-lg">
-            <h4 className="text-xl font-bold mb-2">Relatório de Transparência 2024</h4>
+            <h4 className="text-xl font-bold mb-2">Relatório de Transparência {new Date().getFullYear() - 1}</h4>
             <p className="text-slate-300 text-sm mb-6">
               Nosso compromisso é com a clareza e honestidade. Acesse o demonstrativo anual consolidado para apresentação à assembleia geral.
             </p>

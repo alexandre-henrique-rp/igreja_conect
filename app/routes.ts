@@ -39,6 +39,25 @@ export default [
   // Public
   route("/login", "routes/public/login.tsx"),
   route("/logout", "routes/logout.tsx"),
+  route("/convite/:token", "routes/public/convite.$token.tsx"),
+
+  // API — uploads (autenticado, ver middleware via context)
+  route("/api/uploads", "routes/api/uploads.ts"),
+  route("/api/uploads/:id", "routes/api/uploads.$id.ts"),
+  route("/api/uploads/:id/delete", "routes/api/uploads.$id.delete.ts"),
+
+  // API — anexos de lançamentos (comprovantes)
+  route("/api/lancamentos/:id/anexo", "routes/api/lancamentos.$id.anexo.ts"),
+
+  // API — avatar de membros
+  route("/api/membros/:id/avatar", "routes/api/membros.$id.avatar.ts"),
+
+  // API — busca para autocomplete (células, membros)
+  route("/api/search", "routes/api/search.ts"),
+
+  // API — serving de arquivos do driver local (STORAGE_PROVIDER=local).
+  // URL sempre vem assinada (query params exp+sig) via getSignedPreviewUrl/getSignedDownloadUrl.
+  route("/api/files/:bucket/*", "routes/api/files.$bucket.$.ts"),
 
   // /app/** — autenticado. O middleware de auth vive em
   // `routes/app/_middleware.tsx` e é aplicado a TODAS as rotas filhas.
@@ -60,6 +79,12 @@ export default [
       // S02-T08: editar membro (loader+action)
       route("membros/:id/editar", "routes/app/membros.$id.editar.tsx"),
 
+      // Sub-rotas do membro
+      route("membros/:id/discipulado", "routes/app/membros.$id.discipulado.tsx"),
+      route("membros/:id/discipulador", "routes/app/membros.$id.discipulador.tsx"),
+      route("membros/:id/ministerios", "routes/app/membros.$id.ministerios.tsx"),
+      route("membros/:id/tipo", "routes/app/membros.$id.tipo.tsx"),
+
       // S06 — Módulo Financeiro
       route("financeiro", "routes/app/financeiro._index.tsx"),
       route("financeiro/caixas", "routes/app/financeiro.caixas._index.tsx"),
@@ -70,8 +95,16 @@ export default [
         "routes/app/financeiro.lancamentos.novo.tsx",
       ),
       route(
+        "financeiro/lancamentos/:id",
+        "routes/app/financeiro.lancamentos.$id.tsx",
+      ),
+      route(
         "financeiro/transferencias/nova",
         "routes/app/financeiro.transferencia-nova.tsx",
+      ),
+      route(
+        "financeiro/transferencias/:id",
+        "routes/app/financeiro.transferencias.$id.tsx",
       ),
 
       // S15 (cycle 4) — Relatórios Financeiros (5 páginas, dados mock)

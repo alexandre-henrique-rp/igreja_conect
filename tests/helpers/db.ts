@@ -66,7 +66,7 @@ export async function resetTestDb(): Promise<void> {
  * banco errado. Limpamos o cache para que o próximo import crie
  * um client novo com a URL de teste.
  */
-export async function setupTestDb(): Promise<() => Promise<void>> {
+export async function setupTestDb(_label?: string): Promise<() => Promise<void>> {
   mkdirSync(TEST_DB_DIR, { recursive: true });
   if (existsSync(TEST_DB_PATH)) unlinkSync(TEST_DB_PATH);
 

@@ -25,15 +25,22 @@ function soDigitos(s: string): string {
 }
 
 /**
- * Aplica máscara de telefone BR: `(11) 98765-4321` (11 dígitos) ou
- * `(11) 1234-5678` (10 dígitos).
+ * Aplica máscara de telefone BR com **detecção automática** entre fixo e
+ * celular baseado na quantidade de dígitos:
+ *
+ * - **≤ 10 dígitos** → fixo `(99) 9999-9999` (`(11) 1234-5678`)
+ * - **11 dígitos**   → celular `(99) 9 9999-9999` (`(11) 9 8765-4321`)
+ *
+ * A diferenciação por contagem de dígitos reflete o padrão brasileiro:
+ * celulares têm o `9` à frente do número (DDD + 9 + 8 dígitos = 11 total),
+ * enquanto fixos têm apenas DDD + 8 dígitos (10 total).
  *
  * @param raw - Texto digitado pelo usuário (pode conter lixo).
- * @returns Telefone formatado (pode ser parcial enquanto digita).
+ * @returns Telefone formatado (parcial enquanto digita).
  * @example
- *   mascaraTelefone("11987654321"); // "(11) 98765-4321"
- *   mascaraTelefone("1112345678");  // "(11) 1234-5678"
- *   mascaraTelefone("11");          // "(11"
+ *   mascaraTelefone("11987654321"); // "(11) 9 8765-4321"  (celular, 11 dígitos)
+ *   mascaraTelefone("1112345678");  // "(11) 1234-5678"   (fixo, 10 dígitos)
+ *   mascaraTelefone("11");          // "(11"               (parcial)
  */
 export function mascaraTelefone(raw: string): string {
   const digitos = soDigitos(raw).slice(0, TELEFONE_MAX_DIGITOS);
@@ -42,15 +49,15 @@ export function mascaraTelefone(raw: string): string {
     return `(${digitos}`;
   }
   if (digitos.length <= 6) {
-    // (11) 1234
+    // Parcial: (11) 1234 (sem hífen ainda — não dá pra saber se é fixo ou cel)
     return `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
   }
   if (digitos.length <= 10) {
     // Fixo: (11) 1234-5678
     return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
   }
-  // Celular: (11) 98765-4321
-  return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
+  // Celular (11 dígitos): (11) 9 8765-4321 — espaço após o 9 separador
+  return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 3)} ${digitos.slice(3, 7)}-${digitos.slice(7)}`;
 }
 
 /**

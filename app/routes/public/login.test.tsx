@@ -6,13 +6,13 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 import { prismaTest, setupTestDb } from "../../../tests/helpers/db";
-import { resetRateLimit } from "~/lib/rate-limit.server";
 import { hashPassword } from "~/lib/auth.server";
 import type { UNSAFE_DataWithResponseInit } from "react-router";
 
 let cleanup: () => Promise<void>;
 let action: typeof import("./login").action;
 let loader: typeof import("./login").loader;
+let resetRateLimit: () => void;
 
 beforeAll(async () => {
   cleanup = await setupTestDb("login");
@@ -26,6 +26,8 @@ beforeAll(async () => {
     },
   });
   vi.resetModules();
+  const rlMod = await import("~/lib/rate-limit.server");
+  resetRateLimit = rlMod.resetRateLimit;
   const mod = await import("./login");
   action = mod.action;
   loader = mod.loader;
@@ -163,23 +165,31 @@ describe("login — action", () => {
     expect(headers.get("Location")).toBe("/app");
   });
 
-  it("5 falhas do mesmo IP → 6ª chamada retorna 429", async () => {
-    for (let i = 0; i < 5; i++) {
-      const r = await action({
-        request: makeFormRequest(
-          { email: "x@x.com", senha: "errada-999" },
-          "http://localhost/login"
-        ),
-      } as Parameters<typeof action>[0]);
+  it("3 falhas do mesmo IP → 4ª chamada retorna 429", async () => {
+    for (let i = 0; i < 3; i++) {
+      const body = new URLSearchParams({ email: "x@x.com", senha: "errada-999" });
+      const req = new Request("http://localhost/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "x-forwarded-for": "10.0.0.99",
+        },
+        body: body.toString(),
+      });
+      const r = await action({ request: req } as Parameters<typeof action>[0]);
       const { status } = unwrap(r);
       expect(status).toBe(401);
     }
-    const blocked = await action({
-      request: makeFormRequest(
-        { email: "admin-test@igreja.local", senha: "senha-correta-123" },
-        "http://localhost/login"
-      ),
-    } as Parameters<typeof action>[0]);
+    const body = new URLSearchParams({ email: "admin-test@igreja.local", senha: "senha-correta-123" });
+    const blockedReq = new Request("http://localhost/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "x-forwarded-for": "10.0.0.99",
+      },
+      body: body.toString(),
+    });
+    const blocked = await action({ request: blockedReq } as Parameters<typeof action>[0]);
     const { status } = unwrap(blocked);
     expect(status).toBe(429);
   });

@@ -228,7 +228,7 @@ describe("finance.server — getDashboardFinanceiro (S06-T10)", () => {
   it("DISCIPULADOR: lança Response 403 (Camada 3 bloqueia)", async () => {
     let caught: unknown = null;
     try {
-      await getDashboardFinanceiro(userWith("DISCIPULADOR"));
+      await getDashboardFinanceiro(userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }
@@ -338,7 +338,7 @@ describe("finance.server — getDizimosByMembro (S08-T01)", () => {
     const membro = await makeMembro("Dizimista Disc");
     let caught: unknown = null;
     try {
-      await getDizimosByMembro(membro.id, userWith("DISCIPULADOR"));
+      await getDizimosByMembro(membro.id, userWith("LIDER_MINISTERIO"));
     } catch (e) { caught = e; }
     expect(caught).toBeInstanceOf(Response);
     if (caught instanceof Response) expect(caught.status).toBe(403);

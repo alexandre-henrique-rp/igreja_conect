@@ -45,12 +45,18 @@ export async function loader({ context }: Route.LoaderArgs) {
   // Dados do dashboard
   const data = await getDashboardFinanceiro(user);
 
+  // Filtro RBAC: SECRETARIO não vê DÍZIMO (aplicado em todas as queries)
+  const whereLancamento = user.cargo === "SECRETARIO"
+    ? { categoria: { not: "DIZIMO" as const } }
+    : {};
+
   // Agregações extras para os KPI cards de Entradas e Saídas do mês
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const entradasMes = await prisma.lancamento.aggregate({
     where: {
+      ...whereLancamento,
       tipo: "ENTRADA",
       dataCompetencia: { gte: firstDayOfMonth },
     },
@@ -59,17 +65,14 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   const saidasMes = await prisma.lancamento.aggregate({
     where: {
+      ...whereLancamento,
       tipo: "SAIDA",
       dataCompetencia: { gte: firstDayOfMonth },
     },
     _sum: { valorCentavos: true },
   });
 
-  // Busca lançamentos para visualização interativa (filtra dízimos para SECRETARIO)
-  const whereLancamento = user.cargo === "SECRETARIO"
-    ? { categoria: { not: "DIZIMO" as const } }
-    : {};
-
+  // Busca lançamentos para visualização interativa
   const todosLancamentosRaw = await prisma.lancamento.findMany({
     where: whereLancamento,
     orderBy: { dataCompetencia: "desc" },
@@ -91,12 +94,64 @@ export async function loader({ context }: Route.LoaderArgs) {
     membro: l.membro,
   }));
 
+  // Aprovações = lançamentos reais com status PENDENTE (substitui mock antigo)
+  const lancamentosPendentesRaw = await prisma.lancamento.findMany({
+    where: { ...whereLancamento, status: "PENDENTE" },
+    orderBy: { dataCompetencia: "desc" },
+    take: 100,
+    include: {
+      caixa: { select: { id: true, nome: true } },
+      membro: { select: { id: true, nome: true } },
+    },
+  });
+
+  const lancamentosPendentes = lancamentosPendentesRaw.map((l) => ({
+    id: l.id.slice(-5).toUpperCase(),
+    dbId: l.id,
+    tipo: l.tipo,
+    categoria: l.categoria,
+    valorCentavos: l.valorCentavos,
+    dataCompetencia: new Date(l.dataCompetencia),
+    descricao: l.descricao,
+    caixa: l.caixa,
+    membro: l.membro,
+    status: "Pendente",
+  }));
+
+  // Resumo Anual — agrega saldo líquido (entradas − saídas) por mês nos últimos 12 meses.
+  const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const lancamentos12m = await prisma.lancamento.findMany({
+    where: { ...whereLancamento, dataCompetencia: { gte: twelveMonthsAgo } },
+    select: { tipo: true, valorCentavos: true, dataCompetencia: true },
+  });
+
+  // Inicializa 12 meses (do mais antigo pro mais recente)
+  const monthlyNet: { key: string; label: string; saldoCentavos: number; isCurrent: boolean }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toUpperCase();
+    monthlyNet.push({ key, label, saldoCentavos: 0, isCurrent: i === 0 });
+  }
+  const keyIndex = new Map(monthlyNet.map((m, idx) => [m.key, idx]));
+  for (const l of lancamentos12m) {
+    const d = new Date(l.dataCompetencia);
+    const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const idx = keyIndex.get(k);
+    if (idx === undefined) continue;
+    const sign = l.tipo === "ENTRADA" ? 1 : -1;
+    monthlyNet[idx].saldoCentavos += l.valorCentavos * sign;
+  }
+
   return {
     user,
     ...data,
     totalEntradasMesCentavos: entradasMes._sum.valorCentavos ?? 0,
     totalSaidasMesCentavos: saidasMes._sum.valorCentavos ?? 0,
     todosLancamentos,
+    lancamentosPendentes,
+    totalPendentes: lancamentosPendentesRaw.length,
+    monthlyNet,
   };
 }
 
@@ -128,6 +183,9 @@ export default function DashboardFinanceiro({
     totalEntradasMesCentavos,
     totalSaidasMesCentavos,
     todosLancamentos,
+    lancamentosPendentes,
+    totalPendentes,
+    monthlyNet,
   } = loaderData;
 
   const podeCriarLancamento = user.cargo
@@ -164,142 +222,33 @@ export default function DashboardFinanceiro({
     });
   }, [todosLancamentos]);
 
-  // Registros de demonstração de alta fidelidade
-  const mockContribuiçoesList = useMemo(() => [
-    {
-      id: "49201",
-      tipo: "ENTRADA",
-      categoria: "DIZIMO",
-      valorCentavos: 50000,
-      dataCompetencia: new Date("2026-05-12T12:00:00Z"),
-      descricao: "Dízimo - João Silva",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: { id: "joao", nome: "João Silva" },
-      status: "Confirmado",
-    },
-    {
-      id: "49188",
-      tipo: "ENTRADA",
-      categoria: "OFERTA",
-      valorCentavos: 245000,
-      dataCompetencia: new Date("2026-05-08T12:00:00Z"),
-      descricao: "Oferta Especial Missões",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: null,
-      status: "Confirmado",
-    },
-  ], []);
-
-  const mockDespesasList = useMemo(() => [
-    {
-      id: "49195",
-      tipo: "SAIDA",
-      categoria: "MANUTENCAO",
-      valorCentavos: 120000,
-      dataCompetencia: new Date("2026-05-10T12:00:00Z"),
-      descricao: "Manutenção Ar Condicionado",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: null,
-      status: "Pendente",
-    },
-    {
-      id: "49172",
-      tipo: "SAIDA",
-      categoria: "DESPESA_OPERACIONAL",
-      valorCentavos: 84250,
-      dataCompetencia: new Date("2026-05-05T12:00:00Z"),
-      descricao: "Conta de Energia - Templo Central",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: null,
-      status: "Confirmado",
-    },
-  ], []);
-
-  const mockAprovacoesList = useMemo(() => [
-    {
-      id: "49195",
-      tipo: "SAIDA",
-      categoria: "MANUTENCAO",
-      valorCentavos: 120000,
-      dataCompetencia: new Date("2026-05-10T12:00:00Z"),
-      descricao: "Manutenção Ar Condicionado",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: null,
-      status: "Pendente",
-    },
-    {
-      id: "49204",
-      tipo: "SAIDA",
-      categoria: "DESPESA_OPERACIONAL",
-      valorCentavos: 345000,
-      dataCompetencia: new Date("2026-05-15T12:00:00Z"),
-      descricao: "Reforma do Altar - Material de Pintura",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: null,
-      status: "Pendente",
-    },
-    {
-      id: "49211",
-      tipo: "SAIDA",
-      categoria: "COMPRA_ESTOQUE",
-      valorCentavos: 65000,
-      dataCompetencia: new Date("2026-05-18T12:00:00Z"),
-      descricao: "Compra de Bíblias para Evangelismo",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: null,
-      status: "Pendente",
-    },
-  ], []);
-
-  const mockSolicitacoesList = useMemo(() => [
-    {
-      id: "49215",
-      tipo: "SAIDA",
-      categoria: "DESPESA_OPERACIONAL",
-      valorCentavos: 18000,
-      dataCompetencia: new Date("2026-05-19T12:00:00Z"),
-      descricao: "Reembolso Flores Culto das Mulheres",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: null,
-      status: "Pendente",
-    },
-    {
-      id: "49220",
-      tipo: "SAIDA",
-      categoria: "DESPESA_OPERACIONAL",
-      valorCentavos: 150000,
-      dataCompetencia: new Date("2026-05-20T12:00:00Z"),
-      descricao: "Verba Lanche Retiro de Jovens",
-      caixa: { id: "1", nome: "Caixa Geral" },
-      membro: null,
-      status: "Pendente",
-    },
-  ], []);
 
   // Consolidação por tab, busca e ordenação
   const filteredItems = useMemo(() => {
-    let baseList: typeof mockContribuiçoesList = [];
+    let baseList: typeof databaseEntries = [];
     if (activeTab === "contribuicoes") {
-      baseList = [...databaseEntries.filter((e) => e.tipo === "ENTRADA"), ...mockContribuiçoesList];
+      baseList = databaseEntries.filter((e) => e.tipo === "ENTRADA");
     } else if (activeTab === "despesas") {
-      baseList = [...databaseEntries.filter((e) => e.tipo === "SAIDA"), ...mockDespesasList];
+      baseList = databaseEntries.filter((e) => e.tipo === "SAIDA");
     } else if (activeTab === "aprovacoes") {
-      baseList = mockAprovacoesList;
+      // Dados reais: lançamentos com status PENDENTE.
+      baseList = lancamentosPendentes;
     } else if (activeTab === "solicitacoes") {
-      baseList = mockSolicitacoesList;
+      // Sem backend — mostra empty state.
+      baseList = [];
     }
 
     if (searchText.trim() !== "") {
       const query = searchText.toLowerCase();
       baseList = baseList.filter(
         (item) =>
-          item.descricao.toLowerCase().includes(query) ||
+          (item.descricao?.toLowerCase() ?? "").includes(query) ||
           (item.membro?.nome || "").toLowerCase().includes(query) ||
           (CategoriaLabels[item.categoria] || item.categoria).toLowerCase().includes(query)
       );
     }
     return baseList;
-  }, [activeTab, databaseEntries, mockContribuiçoesList, mockDespesasList, mockAprovacoesList, mockSolicitacoesList, searchText]);
+  }, [activeTab, databaseEntries, lancamentosPendentes, searchText]);
 
   const sortedItems = useMemo(() => {
     return [...filteredItems].sort((a, b) => {
@@ -363,8 +312,8 @@ export default function DashboardFinanceiro({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
-              <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-2 py-1 rounded-lg">
-                +12% vs abr
+              <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-lg">
+                {currentMonthName}
               </span>
             </div>
             <p className="text-sm font-medium text-slate-500 mt-4">Entradas</p>
@@ -387,7 +336,7 @@ export default function DashboardFinanceiro({
                 </svg>
               </div>
               <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-lg">
-                Estável
+                {currentMonthName}
               </span>
             </div>
             <p className="text-sm font-medium text-slate-500 mt-4">Saídas</p>
@@ -480,9 +429,11 @@ export default function DashboardFinanceiro({
                 }`}
             >
               Aprovações
-              <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                3
-              </span>
+              {totalPendentes > 0 && (
+                <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {totalPendentes}
+                </span>
+              )}
             </button>
             <button
               onClick={() => handleTabChange("solicitacoes")}
@@ -717,43 +668,56 @@ export default function DashboardFinanceiro({
 
       {/* Grid Inferior: Gráfico de Fluxo e Relatórios Inteligentes */}
       <div className="grid gap-6 md:grid-cols-12">
-        {/* Resumo Anual (Gráfico de Barras) */}
+        {/* Resumo Anual (Gráfico de Barras) — dados reais dos últimos 12 meses */}
         <div className="bg-[#0f172a] text-white rounded-3xl p-6 shadow-sm md:col-span-5 flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-bold">Resumo Anual</h3>
             <p className="text-slate-400 text-xs mt-1">
-              Acompanhamento de fluxo de caixa projetado para o exercício de 2026.
+              Saldo líquido mensal (entradas − saídas) dos últimos 12 meses.
             </p>
           </div>
-          {/* Gráfico */}
-          <div className="flex justify-between items-end h-40 mt-8 px-2">
-            {[
-              { month: "JAN", h: "30%", active: false },
-              { month: "FEV", h: "45%", active: false },
-              { month: "MAR", h: "80%", active: true },
-              { month: "ABR", h: "50%", active: false },
-              { month: "MAI", h: "65%", active: false },
-              { month: "JUN", h: "40%", active: false },
-            ].map((col) => (
-              <div key={col.month} className="flex flex-col items-center gap-2 flex-1">
-                <div
-                  style={{ height: col.h }}
-                  className={`w-8 rounded-lg transition-all duration-300 relative group cursor-pointer ${col.active
-                      ? "bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]"
-                      : "bg-slate-800 hover:bg-slate-700"
-                    }`}
-                >
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-slate-900 border border-slate-750 text-[10px] font-bold text-white px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                    {col.active ? "Ativo" : "Projetado"}
-                  </div>
-                </div>
-                <span className="text-[10px] text-slate-500 font-semibold tracking-wider">
-                  {col.month}
-                </span>
+          {(() => {
+            const maxAbs = Math.max(
+              ...monthlyNet.map((m) => Math.abs(m.saldoCentavos)),
+              1,
+            );
+            return (
+              <div className="flex justify-between items-end h-40 mt-8 px-2">
+                {monthlyNet.map((m) => {
+                  const heightPct =
+                    m.saldoCentavos === 0
+                      ? 4 // barra mínima visível
+                      : Math.max(
+                          6,
+                          Math.round((Math.abs(m.saldoCentavos) / maxAbs) * 100),
+                        );
+                  const isPositive = m.saldoCentavos >= 0;
+                  return (
+                    <div key={m.key} className="flex flex-col items-center gap-2 flex-1">
+                      <div
+                        style={{ height: `${heightPct}%` }}
+                        className={`w-8 rounded-lg transition-all duration-300 relative group cursor-pointer ${m.isCurrent
+                            ? "bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]"
+                            : isPositive
+                              ? "bg-emerald-600 hover:bg-emerald-500"
+                              : "bg-rose-600 hover:bg-rose-500"
+                          }`}
+                      >
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-slate-900 border border-slate-700 text-[10px] font-bold text-white px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                          {formatBRLFromCents(m.saldoCentavos)}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-semibold tracking-wider ${m.isCurrent ? "text-blue-400" : "text-slate-500"}`}
+                      >
+                        {m.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
 
         {/* Relatórios Inteligentes */}

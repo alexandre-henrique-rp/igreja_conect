@@ -219,9 +219,27 @@ export type LancamentoResumo = {
   categoria: string;
   valorCentavos: number;
   dataCompetencia: Date;
-  descricao: string;
+  descricao: string | null;
   caixa: { id: string; nome: string };
   membro: { id: string; nome: string } | null;
+  /** Comprovante anexo (1:1). Null se sem anexo. */
+  attachmentUploadId: string | null;
+  attachmentUpload: {
+    id: string;
+    status: string;
+    bucket: string;
+    storageKeyPrefix: string;
+    ext: string | null;
+    detectedMime: string | null;
+    deletedAt: Date | null;
+  } | null;
+};
+
+/** Subset de Lancamento usado no extrato do caixa — inclui signed URL do
+ *  comprovante (15min expiry) resolvida no loader (server-side). */
+export type LancamentoExtratoItem = LancamentoResumo & {
+  /** URL signed do comprovante (null se sem anexo, ainda processando, ou erro). */
+  comprovanteUrl: string | null;
 };
 
 /** Tipo de retorno de `getDashboardFinanceiro`. */
@@ -268,12 +286,16 @@ export async function getDashboardFinanceiro(
   });
 
   // 2) Lançamentos do mês atual (agregado por caixa — 1 query).
+  //    Filtro RBAC: SECRETARIO não vê DÍZIMO.
+  const whereRbac = user.cargo === "SECRETARIO"
+    ? { categoria: { not: "DIZIMO" as const } }
+    : {};
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const lancamentosMesByCaixa = await prisma.lancamento.groupBy({
     by: ["caixaId"],
-    where: { dataCompetencia: { gte: firstDayOfMonth } },
+    where: { ...whereRbac, dataCompetencia: { gte: firstDayOfMonth } },
     _count: { _all: true },
   });
   const lancamentosMesMap = new Map<string, number>();
@@ -298,16 +320,24 @@ export async function getDashboardFinanceiro(
   const saldoAgregadoCentavos = agregado._sum.saldoCentavos ?? 0;
 
   // 4) Últimos 5 lançamentos, com filtro DIZIMO para SECRETARIO.
-  const whereLancamento = user.cargo === "SECRETARIO"
-    ? { categoria: { not: "DIZIMO" as const } }
-    : {};
   const ultimosLancamentosRaw = await prisma.lancamento.findMany({
-    where: whereLancamento,
+    where: whereRbac,
     orderBy: { dataCompetencia: "desc" },
     take: 5,
     include: {
       caixa: { select: { id: true, nome: true } },
       membro: { select: { id: true, nome: true } },
+      attachmentUpload: {
+        select: {
+          id: true,
+          status: true,
+          bucket: true,
+          storageKeyPrefix: true,
+          ext: true,
+          detectedMime: true,
+          deletedAt: true,
+        },
+      },
     },
   });
 
@@ -320,6 +350,8 @@ export async function getDashboardFinanceiro(
     descricao: l.descricao,
     caixa: l.caixa,
     membro: l.membro,
+    attachmentUploadId: l.attachmentUploadId,
+    attachmentUpload: l.attachmentUpload,
   }));
 
   safeLog({

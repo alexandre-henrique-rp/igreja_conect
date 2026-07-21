@@ -1,22 +1,60 @@
 /**
- * Rota /app/financeiro/relatorios/customizado — Relatório Customizado (cycle 4, S15).
+ * Rota /app/financeiro/relatorios/customizado — Relatório Customizado.
  *
- * Dados MOCK. Quando S14 for implementado, action "export-csv" chamará
- * exportarLancamentosCSV(user, filtros) e retornará Response com
- * Content-Type: text/csv; charset=utf-8.
+ * Dados reais do banco. Action "export-csv" chama exportarLancamentosCSV.
  *
  * @see design/relatorios-customizado.DESIGN.md
- * @see .harness/RAG/convention-relatorios-csv-export.md
  */
-import { Form, Link, useLoaderData } from "react-router";
+import { Form, Link } from "react-router";
 import type { Route } from "./+types/financeiro.relatorios.customizado";
 import { userContext } from "~/lib/user-context";
 import { assertCanSeeRelatorios } from "~/lib/rbac.server";
 import { formatBRLFromCents } from "~/lib/money-format";
-import { getRelatorioCustomizado } from "~/lib/relatorios.server";
+import {
+  exportarLancamentosCSV,
+  getRelatorioCustomizado,
+} from "~/lib/relatorios.server";
+import { listarCaixasParaSelect } from "~/lib/caixas.server";
+import { CATEGORIAS_LANCAMENTO } from "~/lib/schemas/lancamentos";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Relatório Customizado — Igreja Conect" }];
+}
+
+/**
+ * Action: exporta os lançamentos filtrados como CSV (download).
+ *
+ * Lê os mesmos filtros da URL (dataInicio, dataFim, caixaId, categoria, tipo)
+ * e retorna `text/csv; charset=utf-8` com `Content-Disposition: attachment`.
+ */
+export async function action({ request, context }: Route.ActionArgs) {
+  const user = context.get(userContext);
+  if (!user) throw new Response("Não autenticado.", { status: 401 });
+  assertCanSeeRelatorios(user);
+
+  const formData = await request.formData();
+  const dataInicio = formData.get("dataInicio");
+  const dataFim = formData.get("dataFim");
+  const caixaId = formData.get("caixaId");
+  const categoria = formData.get("categoria");
+  const tipo = formData.get("tipo");
+
+  const csv = await exportarLancamentosCSV(user, {
+    dataInicio: typeof dataInicio === "string" && dataInicio ? new Date(dataInicio) : undefined,
+    dataFim: typeof dataFim === "string" && dataFim ? new Date(dataFim) : undefined,
+    caixaId: typeof caixaId === "string" && caixaId ? caixaId : undefined,
+    categoria: typeof categoria === "string" && categoria ? categoria : undefined,
+    tipo: tipo === "ENTRADA" || tipo === "SAIDA" ? tipo : undefined,
+  });
+
+  const filename = `lancamentos-${new Date().toISOString().split("T")[0]}.csv`;
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
 }
 
 export async function loader({ context, request }: Route.LoaderArgs) {
@@ -35,16 +73,25 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const dataInicio = dataInicioParam ? new Date(dataInicioParam) : new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   const dataFim = dataFimParam ? new Date(dataFimParam) : new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
 
-  const dados = await getRelatorioCustomizado(user, {
-    dataInicio,
-    dataFim,
-    caixaId: caixaIdParam || undefined,
-    categoria: categoriaParam || undefined,
-    tipo: tipoParam || undefined,
-  });
+  const [dados, caixas] = await Promise.all([
+    getRelatorioCustomizado(user, {
+      dataInicio,
+      dataFim,
+      caixaId: caixaIdParam || undefined,
+      categoria: categoriaParam || undefined,
+      tipo: tipoParam || undefined,
+    }),
+    listarCaixasParaSelect(user),
+  ]);
 
   return {
     user,
+    dataInicioISO: dataInicio.toISOString().split("T")[0],
+    dataFimISO: dataFim.toISOString().split("T")[0],
+    caixaSelecionado: caixaIdParam ?? "",
+    categoriaSelecionada: categoriaParam ?? "",
+    tipoSelecionado: tipoParam ?? "",
+    caixas,
     kpis: {
       totalEntradasCentavos: dados.totais.entradasCentavos,
       totalSaidasCentavos: dados.totais.saidasCentavos,
@@ -54,12 +101,11 @@ export async function loader({ context, request }: Route.LoaderArgs) {
       id: l.id,
       data: l.data,
       descricao: l.descricao,
-      membro: l.caixa,
-      categoria: l.categoria,
       conta: l.caixa,
+      categoria: l.categoria,
       valorCentavos: l.valorCentavos,
       tipo: l.tipo,
-      status: "Confirmado",
+      status: l.status,
     })),
   };
 }
@@ -78,20 +124,32 @@ const IconWallet = (
 );
 
 const STATUS_STYLES: Record<string, string> = {
-  Confirmado: "bg-emerald-50 text-emerald-700 border border-emerald-100",
-  Pendente: "bg-amber-50 text-amber-700 border border-amber-100",
-  Cancelado: "bg-red-50 text-red-700 border border-red-100",
+  PAGO: "bg-emerald-50 text-emerald-700 border border-emerald-100",
+  PENDENTE: "bg-amber-50 text-amber-700 border border-amber-100",
+  AGENDADO: "bg-blue-50 text-blue-700 border border-blue-100",
 };
 
 const CATEGORIA_STYLES: Record<string, string> = {
   Dízimo: "bg-blue-50 text-blue-600",
-  Utilidades: "bg-amber-50 text-amber-600",
-  Missões: "bg-indigo-50 text-indigo-600",
-  Manutenção: "bg-slate-100 text-slate-600",
+  Oferta: "bg-indigo-50 text-indigo-600",
+  Campanha: "bg-emerald-50 text-emerald-600",
+  "Despesa Operacional": "bg-red-50 text-red-600",
+  "Compra de Estoque": "bg-orange-50 text-orange-600",
+  Manutenção: "bg-amber-50 text-amber-600",
+  Transferência: "bg-slate-100 text-slate-600",
 };
 
 export default function RelatorioCustomizadoPage({ loaderData }: Route.ComponentProps) {
-  const { kpis, lancamentos } = loaderData;
+  const {
+    kpis,
+    lancamentos,
+    dataInicioISO,
+    dataFimISO,
+    caixaSelecionado,
+    categoriaSelecionada,
+    tipoSelecionado,
+    caixas,
+  } = loaderData;
 
   return (
     <main className="p-8 bg-slate-50 min-h-[calc(100vh-64px)]">
@@ -109,19 +167,28 @@ export default function RelatorioCustomizadoPage({ loaderData }: Route.Component
           <p className="text-slate-600 mt-1">Gere relatórios detalhados de entradas e saídas com filtros avançados.</p>
         </div>
         <div className="flex space-x-3">
-          <button className="flex items-center bg-white border border-slate-200 text-slate-700 rounded-lg h-10 px-4 font-medium hover:shadow-md transition-all" type="button">
-            <span className="text-slate-500 mr-2">{IconCloudDownload}</span>
-            Exportar CSV
-          </button>
-          <button className="flex items-center bg-blue-500 text-white rounded-lg h-10 px-6 font-medium hover:bg-blue-600 shadow-sm transition-all" type="button">
-            <span className="text-white mr-2">{IconFilter}</span>
-            Aplicar Filtros
-          </button>
+          {/* Exporta os filtros atuais (mesma URL) como CSV — Form separado pra não
+              interferir com o GET do filtro principal. */}
+          <Form method="post" className="inline-flex">
+            <input type="hidden" name="dataInicio" value={dataInicioISO} />
+            <input type="hidden" name="dataFim" value={dataFimISO} />
+            <input type="hidden" name="caixaId" value={caixaSelecionado} />
+            <input type="hidden" name="categoria" value={categoriaSelecionada} />
+            <input type="hidden" name="tipo" value={tipoSelecionado} />
+            <button
+              type="submit"
+              className="flex items-center bg-white border border-slate-200 text-slate-700 rounded-lg h-10 px-4 font-medium hover:bg-slate-50 transition-colors shadow-sm"
+              title={`Baixar ${lancamentos.length} lançamentos em CSV`}
+            >
+              <span className="text-slate-500 mr-2">{IconCloudDownload}</span>
+              Exportar CSV ({lancamentos.length})
+            </button>
+          </Form>
         </div>
       </div>
 
       {/* Bento Grid Filtros + KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8">
+      <Form method="get" className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8">
         <div className="md:col-span-8 bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
           <div className="flex items-center space-x-2 mb-6">
             <span className="text-blue-500">{IconFilter}</span>
@@ -129,18 +196,15 @@ export default function RelatorioCustomizadoPage({ loaderData }: Route.Component
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-600">Período</label>
-              <select className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue="30d">
-                <option value="7d">Últimos 7 dias</option>
-                <option value="30d">Últimos 30 dias</option>
-                <option value="month">Mês Atual</option>
-                <option value="year">Ano Corrente</option>
-                <option value="custom">Personalizado</option>
-              </select>
+              <label className="text-xs font-medium text-slate-600">Período (datas)</label>
+              <div className="flex gap-2">
+                <input name="dataInicio" type="date" defaultValue={dataInicioISO} className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                <input name="dataFim" type="date" defaultValue={dataFimISO} className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-600">Tipo de Lançamento</label>
-              <select className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue="all">
+              <select name="tipo" className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue={tipoSelecionado || "all"}>
                 <option value="all">Todos os tipos</option>
                 <option value="ENTRADA">Entradas</option>
                 <option value="SAIDA">Saídas</option>
@@ -148,12 +212,11 @@ export default function RelatorioCustomizadoPage({ loaderData }: Route.Component
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-600">Categoria</label>
-              <select className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue="all">
+              <select name="categoria" className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue={categoriaSelecionada || "all"}>
                 <option value="all">Todas as categorias</option>
-                <option value="DIZIMO">Dízimos</option>
-                <option value="OFERTA">Ofertas</option>
-                <option value="DESPESA_OPERACIONAL">Despesas</option>
-                <option value="MANUTENCAO">Manutenção</option>
+                {CATEGORIAS_LANCAMENTO.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-1.5">
@@ -161,21 +224,21 @@ export default function RelatorioCustomizadoPage({ loaderData }: Route.Component
               <input className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Nome do membro..." type="text" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-600">Conta Bancária</label>
-              <select className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue="all">
-                <option value="all">Todas as contas</option>
-                <option value="caixa-geral">Caixa Geral</option>
-                <option value="cantina">Cantina</option>
-                <option value="missoes">Missões</option>
+              <label className="text-xs font-medium text-slate-600">Conta / Caixa</label>
+              <select name="caixaId" className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue={caixaSelecionado || "all"}>
+                <option value="all">Todos os caixas</option>
+                {caixas.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-600">Status</label>
-              <select className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue="all">
+              <select name="status" className="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" defaultValue="all">
                 <option value="all">Todos os status</option>
-                <option value="Confirmado">Confirmado</option>
-                <option value="Pendente">Pendente</option>
-                <option value="Cancelado">Cancelado</option>
+                <option value="PAGO">Pago</option>
+                <option value="PENDENTE">Pendente</option>
+                <option value="AGENDADO">Agendado</option>
               </select>
             </div>
           </div>
@@ -207,13 +270,13 @@ export default function RelatorioCustomizadoPage({ loaderData }: Route.Component
             </div>
           </div>
         </div>
-      </div>
+      </Form>
 
       {/* Tabela Lançamentos Consolidados */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
           <h3 className="font-semibold text-slate-900">Lançamentos Consolidados</h3>
-          <span className="text-xs text-slate-500">Exibindo {lancamentos.length} de 1.280 registros</span>
+          <span className="text-xs text-slate-500">Exibindo {lancamentos.length} registros</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -233,7 +296,7 @@ export default function RelatorioCustomizadoPage({ loaderData }: Route.Component
                   <td className="px-6 py-4 text-sm font-mono text-slate-600">{l.data}</td>
                   <td className="px-6 py-4">
                     <p className="text-sm font-medium text-slate-900">{l.descricao}</p>
-                    <p className="text-xs text-slate-400">{l.membro}</p>
+                    <p className="text-xs text-slate-400">{l.conta}</p>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${CATEGORIA_STYLES[l.categoria] || "bg-slate-100 text-slate-600"}`}>{l.categoria}</span>
@@ -251,17 +314,7 @@ export default function RelatorioCustomizadoPage({ loaderData }: Route.Component
           </table>
         </div>
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
-          <button className="text-sm text-slate-500 hover:text-blue-600 disabled:opacity-50 flex items-center" disabled type="button">
-            <span className="mr-1">‹</span> Anterior
-          </button>
-          <div className="flex space-x-2">
-            <span className="w-8 h-8 flex items-center justify-center rounded bg-blue-500 text-white text-xs font-bold">1</span>
-            <span className="w-8 h-8 flex items-center justify-center rounded text-slate-600 hover:bg-slate-100 text-xs cursor-pointer">2</span>
-            <span className="w-8 h-8 flex items-center justify-center rounded text-slate-600 hover:bg-slate-100 text-xs cursor-pointer">3</span>
-          </div>
-          <button className="text-sm text-slate-600 hover:text-blue-600 flex items-center" type="button">
-            Próximo <span className="ml-1">›</span>
-          </button>
+          <span className="text-sm text-slate-500">Total: {lancamentos.length} lançamentos</span>
         </div>
       </div>
 
@@ -275,14 +328,18 @@ export default function RelatorioCustomizadoPage({ loaderData }: Route.Component
             </div>
             <div className="mt-8 flex items-center space-x-4">
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase opacity-60 font-bold tracking-widest">Taxa de Conversão</span>
-                <span className="text-lg font-semibold">14.2% Acima da média</span>
+                <span className="text-[10px] uppercase opacity-60 font-bold tracking-widest">Saldo do Período</span>
+                <span className="text-lg font-semibold">{formatBRLFromCents(kpis.saldoConsolidadoCentavos)}</span>
               </div>
-              <div className="h-8 w-px bg-white/20"></div>
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase opacity-60 font-bold tracking-widest">Crescimento Mensal</span>
-                <span className="text-lg font-semibold">+8.5% YoY</span>
-              </div>
+              {kpis.totalEntradasCentavos > 0 && (
+                <>
+                  <div className="h-8 w-px bg-white/20"></div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase opacity-60 font-bold tracking-widest">Margem</span>
+                    <span className="text-lg font-semibold">{Math.round((kpis.saldoConsolidadoCentavos / kpis.totalEntradasCentavos) * 100)}%</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <span className="text-white/10 absolute -right-8 -bottom-8 pointer-events-none">{IconWallet}</span>

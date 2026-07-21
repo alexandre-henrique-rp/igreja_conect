@@ -12,6 +12,7 @@ export type MembroListItem = {
   createdAt: Date | string;
   discipulador?: { nome: string } | null;
   ministerios?: { nome: string }[];
+  avatarUrl?: string | null;
 };
 
 export type TabelaMembrosProps = {
@@ -50,8 +51,8 @@ function formatDate(iso: string | Date | null | undefined): string {
   });
 }
 
-/** Renderiza avatar com imagem para os mocks e iniciais para novos membros. */
-function Avatar({ email, nome }: { email: string | null; nome: string }) {
+/** Renderiza o avatar relacionado ao membro e usa iniciais como fallback. */
+function Avatar({ avatarUrl, nome }: { avatarUrl?: string | null; nome: string }) {
   const initials = nome
     .split(" ")
     .map((n) => n[0])
@@ -59,21 +60,10 @@ function Avatar({ email, nome }: { email: string | null; nome: string }) {
     .join("")
     .toUpperCase();
 
-  let src: string | null = null;
-  if (email === "ricardo.o@email.com") {
-    src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80";
-  } else if (email === "ana.beatriz@email.com") {
-    src = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80";
-  } else if (email === "m.vinicius@email.com") {
-    src = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80";
-  } else if (email === "juliana.s@email.com") {
-    src = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&h=120&q=80";
-  }
-
-  if (src) {
+  if (avatarUrl) {
     return (
       <img
-        src={src}
+        src={avatarUrl}
         alt={nome}
         className="h-10 w-10 rounded-full object-cover border border-slate-100 flex-shrink-0"
       />
@@ -153,7 +143,7 @@ export function TabelaMembros({ items, canEdit }: TabelaMembrosProps) {
               <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <Avatar email={m.email} nome={m.nome} />
+                    <Avatar avatarUrl={m.avatarUrl} nome={m.nome} />
                     <Link
                       to={`/app/membros/${m.id}`}
                       className="text-slate-900 font-bold hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"

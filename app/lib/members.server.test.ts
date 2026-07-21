@@ -86,7 +86,7 @@ function secretarioUser(): SessionUser {
   return { id: "u-secretario", nome: "Secretário", cargo: "SECRETARIO" };
 }
 function discipuladorUser(): SessionUser {
-  return { id: "u-disc", nome: "Discipulador", cargo: "DISCIPULADOR" };
+  return { id: "u-disc", nome: "Discipulador", cargo: "LIDER_MINISTERIO" };
 }
 function liderUser(): SessionUser {
   return { id: "u-lider", nome: "Líder", cargo: "LIDER_MINISTERIO" };
@@ -95,7 +95,7 @@ function liderUser(): SessionUser {
 async function makeMembro(opts: {
   nome: string;
   tipo?: "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
-  cargo?: "ADMIN" | "PASTOR" | "SECRETARIO" | "DISCIPULADOR" | "FINANCEIRO" | "LIDER_MINISTERIO" | null;
+  cargo?: "ADMIN" | "PASTOR" | "SECRETARIO" | "LIDER_MINISTERIO" | "FINANCEIRO" | "LIDER_MINISTERIO" | null;
   email?: string;
   discipuladorId?: string | null;
 }): Promise<{ id: string }> {
@@ -179,27 +179,27 @@ describe("members.server — listMembros", () => {
   });
 
   it("RBAC fina: DISCIPULADOR vê APENAS seus discípulos", async () => {
-    const disc = await makeMembro({ nome: "Discipulador X", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Discipulador X", cargo: "LIDER_MINISTERIO" });
     await makeMembro({ nome: "Discípulo A", discipuladorId: disc.id });
     await makeMembro({ nome: "Discípulo B", discipuladorId: disc.id });
     await makeMembro({ nome: "Outro Sem Vínculo" });
 
     const res = await listMembros(
       {},
-      { id: disc.id, nome: "Discipulador X", cargo: "DISCIPULADOR" }
+      { id: disc.id, nome: "Discipulador X", cargo: "LIDER_MINISTERIO" }
     );
     expect(res.items.length).toBe(2);
     expect(res.items.every((m) => m.discipuladorId === disc.id)).toBe(true);
   });
 
   it("RBAC fina: DISCIPULADOR com filtro tipo — escopo continua restrito", async () => {
-    const disc = await makeMembro({ nome: "Discipulador Y", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Discipulador Y", cargo: "LIDER_MINISTERIO" });
     await makeMembro({ nome: "Discípulo V", discipuladorId: disc.id, tipo: "VISITANTE" });
     await makeMembro({ nome: "Discípulo M", discipuladorId: disc.id, tipo: "MEMBRO_ATIVO" });
 
     const res = await listMembros(
       { tipo: "MEMBRO_ATIVO" },
-      { id: disc.id, nome: "Discipulador Y", cargo: "DISCIPULADOR" }
+      { id: disc.id, nome: "Discipulador Y", cargo: "LIDER_MINISTERIO" }
     );
     expect(res.items.length).toBe(1);
     expect(res.items[0].nome).toBe("Discípulo M");
@@ -221,22 +221,22 @@ describe("members.server — getMembroById", () => {
   });
 
   it("DISCIPULADOR: pode ver seu próprio registro", async () => {
-    const disc = await makeMembro({ nome: "Eu", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Eu", cargo: "LIDER_MINISTERIO" });
     const found = await getMembroById(disc.id, {
       id: disc.id,
       nome: "Eu",
-      cargo: "DISCIPULADOR",
+      cargo: "LIDER_MINISTERIO",
     });
     expect(found.id).toBe(disc.id);
   });
 
   it("DISCIPULADOR: pode ver discípulo vinculado", async () => {
-    const disc = await makeMembro({ nome: "Disc", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc", cargo: "LIDER_MINISTERIO" });
     const filho = await makeMembro({ nome: "Filho", discipuladorId: disc.id });
     const found = await getMembroById(filho.id, {
       id: disc.id,
       nome: "Disc",
-      cargo: "DISCIPULADOR",
+      cargo: "LIDER_MINISTERIO",
     });
     expect(found.id).toBe(filho.id);
   });
@@ -390,10 +390,10 @@ describe("members.server — createMembro", () => {
   });
 
   it("DISCIPULADOR pode criar (RN-MEM-01: qualquer autenticado escreve)", async () => {
-    const disc = await makeMembro({ nome: "Disc", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc", cargo: "LIDER_MINISTERIO" });
     const created = await createMembro(
       { nome: "Discípulo Novo", tipo: "VISITANTE" },
-      { id: disc.id, nome: "Disc", cargo: "DISCIPULADOR" }
+      { id: disc.id, nome: "Disc", cargo: "LIDER_MINISTERIO" }
     );
     expect(created.nome).toBe("Discípulo Novo");
   });
@@ -414,12 +414,12 @@ describe("members.server — updateMembro", () => {
   });
 
   it("DISCIPULADOR pode editar discípulo vinculado", async () => {
-    const disc = await makeMembro({ nome: "Disc", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc", cargo: "LIDER_MINISTERIO" });
     const filho = await makeMembro({ nome: "Filho", discipuladorId: disc.id });
     const updated = await updateMembro(
       filho.id,
       { nome: "Filho Atualizado" },
-      { id: disc.id, nome: "Disc", cargo: "DISCIPULADOR" }
+      { id: disc.id, nome: "Disc", cargo: "LIDER_MINISTERIO" }
     );
     expect(updated.nome).toBe("Filho Atualizado");
   });
@@ -514,7 +514,7 @@ describe("members.server — promoverTipo (RN-MEM-06)", () => {
 
   it("DISCIPULADOR pode promover (RN-MEM-01: qualquer autenticado escreve)", async () => {
     // Membro precisa estar no escopo do DISCIPULADOR (ser filho dele OU ser ele próprio)
-    const disc = await makeMembro({ nome: "Disc Master", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc Master", cargo: "LIDER_MINISTERIO" });
     const m = await makeMembro({
       nome: "Ana D",
       tipo: "VISITANTE",
@@ -523,7 +523,7 @@ describe("members.server — promoverTipo (RN-MEM-06)", () => {
     const updated = await promoverTipo(m.id, "CONGREGADO", {
       id: disc.id,
       nome: "Disc Master",
-      cargo: "DISCIPULADOR",
+      cargo: "LIDER_MINISTERIO",
     });
     expect(updated.tipo).toBe("CONGREGADO");
   });

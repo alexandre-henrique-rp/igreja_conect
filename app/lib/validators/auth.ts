@@ -1,9 +1,12 @@
 /**
- * Schemas Zod para o domínio de autenticação (S00-T07).
+ * Schemas Zod para o domínio de autenticação.
  *
- * Política de senha: ≥ 8 chars, sem forçar complexidade (decisão §3.1 do design).
+ * Política de senha: ≥ 8 chars, 1 maiúscula, 1 número, 1 caractere especial.
  */
 import { z } from "zod";
+
+const SENHA_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,128}$/;
+const SENHA_ERRO = "A senha deve ter no mínimo 8 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial (!@#$%^&*...).";
 
 /** Schema do payload de login. */
 export const LoginInputSchema = z.object({
@@ -12,6 +15,22 @@ export const LoginInputSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof LoginInputSchema>;
+
+/** Schema para criação de senha (fluxo de convite). Valida complexidade. */
+export const SenhaSchema = z.object({
+  senha: z.string().regex(SENHA_REGEX, SENHA_ERRO),
+});
+
+/** Schema para confirmação de senha. */
+export const ConfirmarSenhaSchema = z
+  .object({
+    senha: z.string().regex(SENHA_REGEX, SENHA_ERRO),
+    confirmarSenha: z.string().min(1, "Confirmação de senha obrigatória."),
+  })
+  .refine((data) => data.senha === data.confirmarSenha, {
+    message: "As senhas não conferem.",
+    path: ["confirmarSenha"],
+  });
 
 /** Schema do payload de criação de membro. */
 export const MembroCreateSchema = z.object({

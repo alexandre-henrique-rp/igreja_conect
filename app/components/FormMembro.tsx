@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Form, Link, useNavigation } from "react-router";
 import type { FormEvent } from "react";
 import { Button } from "./Button";
@@ -7,13 +7,15 @@ import { ErrorAlert } from "./ErrorAlert";
 import { Input } from "./Input";
 import { Select } from "./Select";
 import { AvatarUpload } from "./AvatarUpload";
+import { AutocompleteInput } from "./AutocompleteInput";
+import { useToast } from "./ToastProvider";
 import { mascaraCep, mascaraTelefone } from "~/lib/masks";
 import { cn } from "~/lib/cn";
 import { getMembroStatus } from "./TabelaMembros";
 
 export type TipoMembroValue = "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
 
-export type CargoValue = "ADMIN" | "PASTOR" | "SECRETARIO" | "DISCIPULADOR" | "FINANCEIRO" | "LIDER_MINISTERIO" | "";
+export type CargoValue = "ADMIN" | "PASTOR" | "SECRETARIO" | "FINANCEIRO" | "LIDER_MINISTERIO" | "";
 
 export type FormMembroDefaultValues = {
   id?: string;
@@ -95,7 +97,6 @@ const CARGO_OPTIONS = [
   { value: "ADMIN", label: "Administrador" },
   { value: "PASTOR", label: "Pastor(a)" },
   { value: "SECRETARIO", label: "Secretário(a)" },
-  { value: "DISCIPULADOR", label: "Discipulador(a)" },
   { value: "FINANCEIRO", label: "Financeiro" },
   { value: "LIDER_MINISTERIO", label: "Líder de Ministério" },
 ];
@@ -120,6 +121,14 @@ export function FormMembro({
 }: FormMembroProps) {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const { toast } = useToast();
+
+  // Mostra toast quando há erros de validação do action
+  useEffect(() => {
+    if (formError) {
+      toast(formError, "error");
+    }
+  }, [formError, toast]);
 
   // Telefone/CEP são controlados (precisam de máscara progressiva).
   // Máscara no init para que o form exiba "(11) 98765-4321" / "01310-100"
@@ -139,6 +148,8 @@ export function FormMembro({
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
   const [temAcesso, setTemAcesso] = useState(!!defaultValues?.cargo);
+  // Upload de avatar em modo criação (sem membroId ainda).
+  const [novoAvatarUploadId, setNovoAvatarUploadId] = useState<string | null>(null);
   // `cargo` é `CargoValue` (sem `""`); defaultValues vem como `string | null`
   // do Prisma, então validamos em runtime com `CARGO_OPTIONS` para evitar
   // valor lixo no state.
@@ -247,17 +258,14 @@ export function FormMembro({
                   currentStatus={defaultValues.avatarStatus ?? null}
                 />
               ) : (
-                <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 border border-dashed border-slate-300 rounded-full flex items-center justify-center bg-slate-50 text-slate-400">
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900">Foto de Perfil</p>
-                    <p className="text-xs text-slate-500">Disponível após salvar o membro.</p>
-                  </div>
-                </div>
+                <>
+                  <AvatarUpload
+                    onUploadReady={(uploadId) => setNovoAvatarUploadId(uploadId)}
+                    onRemove={() => setNovoAvatarUploadId(null)}
+                    currentUploadId={novoAvatarUploadId}
+                  />
+                  <input type="hidden" name="avatarUploadId" value={novoAvatarUploadId ?? ""} />
+                </>
               )}
 
               <Input
@@ -408,23 +416,25 @@ export function FormMembro({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
+              <AutocompleteInput
                 label="Grupo / Célula"
                 name="grupo"
                 defaultValue={defaultValues?.grupo ?? ""}
                 error={fieldErrors?.grupo?.[0]}
                 placeholder="Buscar grupo..."
+                searchType="celulas"
                 leadingIcon={
                   <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 }
               />
-              <Input
+              <AutocompleteInput
                 label="Discipulador / Líder"
                 name="discipuladorNome"
                 defaultValue={defaultValues?.discipuladorNome ?? ""}
                 placeholder="Buscar líder..."
+                searchType="members"
                 leadingIcon={
                   <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

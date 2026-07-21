@@ -5,15 +5,39 @@
  *
  * @see design/relatorios-fluxo-caixa.DESIGN.md
  */
-import { Link } from "react-router";
+import { Form, Link } from "react-router";
 import type { Route } from "./+types/financeiro.relatorios.fluxo-caixa";
 import { userContext } from "~/lib/user-context";
 import { assertCanSeeRelatorios } from "~/lib/rbac.server";
 import { formatBRLFromCents } from "~/lib/money-format";
-import { getFluxoCaixa } from "~/lib/relatorios.server";
+import { getFluxoCaixa, exportarFluxoCaixaCSV, getContasAPagar, getProjecao3Meses, getFluxoMensal } from "~/lib/relatorios.server";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Fluxo de Caixa — Igreja Conect" }];
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
+  const user = context.get(userContext);
+  if (!user) throw new Response("Não autenticado.", { status: 401 });
+  assertCanSeeRelatorios(user);
+
+  const formData = await request.formData();
+  const dataInicio = formData.get("dataInicio");
+  const dataFim = formData.get("dataFim");
+
+  const hoje = new Date();
+  const dtInicio = typeof dataInicio === "string" && dataInicio ? new Date(dataInicio) : new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const dtFim = typeof dataFim === "string" && dataFim ? new Date(dataFim) : new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+  const csv = await exportarFluxoCaixaCSV(user, dtInicio, dtFim);
+  const filename = `fluxo-caixa-${dtInicio.toISOString().split("T")[0]}-a-${dtFim.toISOString().split("T")[0]}.csv`;
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
 }
 
 export async function loader({ context, request }: Route.LoaderArgs) {
@@ -29,19 +53,27 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const dataInicio = dataInicioParam ? new Date(dataInicioParam) : new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   const dataFim = dataFimParam ? new Date(dataFimParam) : new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
 
-  const dados = await getFluxoCaixa(user, dataInicio, dataFim);
+  const [dados, contasAPagarCentavos, projecao, fluxoMensal] = await Promise.all([
+    getFluxoCaixa(user, dataInicio, dataFim),
+    getContasAPagar(user),
+    getProjecao3Meses(user, dataFim),
+    getFluxoMensal(user, dataInicio, dataFim),
+  ]);
 
   return {
     user,
     ...dados,
     periodo: `${dados.periodo.dataInicio} - ${dados.periodo.dataFim}`,
+    periodoIni: dados.periodo.dataInicio,
+    periodoFim: dados.periodo.dataFim,
     kpis: {
       entradasCentavos: dados.entradas.reduce((sum: number, e: any) => sum + e.valorCentavos, 0),
       saidasCentavos: dados.saidas.reduce((sum: number, s: any) => sum + s.valorCentavos, 0),
       saldoCentavos: dados.saldoFinalCentavos,
-      contasAPagarCentavos: 0,
+      contasAPagarCentavos,
     },
-    projecao: [],
+    projecao,
+    fluxoMensal,
   };
 }
 
@@ -56,10 +88,15 @@ const IconDownload = (
 );
 
 export default function FluxoCaixaPage({ loaderData }: Route.ComponentProps) {
-  const { periodo, kpis, projecao } = loaderData;
+  const { periodo, periodoIni, periodoFim, kpis, projecao, fluxoMensal } = loaderData;
   const totalProjEntradas = projecao.reduce((s, p) => s + p.entradasCentavos, 0);
   const totalProjSaidas = projecao.reduce((s, p) => s + p.saidasCentavos, 0);
   const totalProjSaldo = totalProjEntradas - totalProjSaidas;
+
+  const maxValor = Math.max(...fluxoMensal.map((m) => Math.max(m.entradasCentavos, m.saidasCentavos)), 1);
+  const maxSaldo = Math.max(...fluxoMensal.map((m) => Math.abs(m.saldoCentavos)), 1);
+  const isSuperavit = kpis.saldoCentavos >= 0;
+  const percentualSaldo = kpis.entradasCentavos > 0 ? Math.round((kpis.saldoCentavos / kpis.entradasCentavos) * 100) : 0;
 
   return (
     <main className="p-6 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
@@ -74,21 +111,49 @@ export default function FluxoCaixaPage({ loaderData }: Route.ComponentProps) {
           <h2 className="text-3xl font-bold text-slate-900">Fluxo de Caixa</h2>
           <p className="text-slate-500 mt-1">Monitore as entradas e saídas consolidadas da sua igreja.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-white border border-slate-200 p-1 rounded-lg">
-            <button className="px-4 py-1.5 text-xs font-medium rounded-md text-slate-600 hover:bg-slate-50 transition-colors" type="button">Dia</button>
-            <button className="px-4 py-1.5 text-xs font-medium rounded-md text-slate-600 hover:bg-slate-50 transition-colors" type="button">Semana</button>
-            <button className="px-4 py-1.5 text-xs font-medium rounded-md bg-blue-500 text-white shadow-sm transition-colors" type="button">Mês</button>
+        <Form method="get" className="flex items-center gap-3">
+          <div className="flex flex-col">
+            <label htmlFor="dataInicio" className="text-[10px] uppercase font-bold text-slate-400 px-1">Início</label>
+            <input
+              id="dataInicio"
+              name="dataInicio"
+              aria-label="Data inicial"
+              type="date"
+              defaultValue={periodoIni}
+              className="bg-white border border-slate-200 rounded-lg h-10 px-3 text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+            />
           </div>
-          <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all" type="button">
-            <span className="text-slate-500">{IconCalendar}</span>
-            <span>{periodo}</span>
+          <div className="flex flex-col">
+            <label htmlFor="dataFim" className="text-[10px] uppercase font-bold text-slate-400 px-1">Fim</label>
+            <input
+              id="dataFim"
+              name="dataFim"
+              aria-label="Data final"
+              type="date"
+              defaultValue={periodoFim}
+              className="bg-white border border-slate-200 rounded-lg h-10 px-3 text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+            />
+          </div>
+          <button
+            type="submit"
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all h-10"
+          >
+            <span className="text-white">{IconCalendar}</span>
+            <span>Aplicar</span>
           </button>
-          <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all" type="button">
-            <span className="text-white">{IconDownload}</span>
-            <span>Exportar</span>
+        </Form>
+        <Form method="post" className="inline-flex">
+          <input type="hidden" name="dataInicio" value={periodoIni} />
+          <input type="hidden" name="dataFim" value={periodoFim} />
+          <button
+            type="submit"
+            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors h-10"
+            title="Exportar Fluxo de Caixa em CSV"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
+            Exportar CSV
           </button>
-        </div>
+        </Form>
       </div>
 
       {/* 4 KPI Cards */}
@@ -98,7 +163,7 @@ export default function FluxoCaixaPage({ loaderData }: Route.ComponentProps) {
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
             </div>
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+12.5%</span>
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{percentualSaldo}% margem</span>
           </div>
           <p className="text-slate-500 text-xs font-medium">Entradas Totais</p>
           <h4 className="text-2xl font-bold text-slate-900 mt-1">{formatBRLFromCents(kpis.entradasCentavos)}</h4>
@@ -108,7 +173,7 @@ export default function FluxoCaixaPage({ loaderData }: Route.ComponentProps) {
             <div className="p-2 bg-red-50 text-red-600 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" /></svg>
             </div>
-            <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">-3.2%</span>
+            <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">{kpis.entradasCentavos > 0 ? Math.round((kpis.saidasCentavos / kpis.entradasCentavos) * 100) : 0}% das entradas</span>
           </div>
           <p className="text-slate-500 text-xs font-medium">Saídas Totais</p>
           <h4 className="text-2xl font-bold text-slate-900 mt-1">{formatBRLFromCents(kpis.saidasCentavos)}</h4>
@@ -118,7 +183,7 @@ export default function FluxoCaixaPage({ loaderData }: Route.ComponentProps) {
             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
             </div>
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Meta 85%</span>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{isSuperavit ? "Superávit" : "Déficit"}</span>
           </div>
           <p className="text-slate-500 text-xs font-medium">Saldo Acumulado</p>
           <h4 className="text-2xl font-bold text-slate-900 mt-1">{formatBRLFromCents(kpis.saldoCentavos)}</h4>
@@ -159,20 +224,41 @@ export default function FluxoCaixaPage({ loaderData }: Route.ComponentProps) {
         </div>
         <div className="p-8">
           <div className="relative h-[300px] w-full">
-            <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1000 300">
-              <g className="grid-lines">
-                <line x1="0" x2="1000" y1="50" y2="50" stroke="#E2E8F0" strokeWidth="1"></line>
-                <line x1="0" x2="1000" y1="125" y2="125" stroke="#E2E8F0" strokeWidth="1"></line>
-                <line x1="0" x2="1000" y1="200" y2="200" stroke="#E2E8F0" strokeWidth="1"></line>
-                <line x1="0" x2="1000" y1="275" y2="275" stroke="#E2E8F0" strokeWidth="1"></line>
-              </g>
-              <path d="M0,200 Q150,120 250,150 T450,100 T650,130 T850,70 T1000,90" stroke="#10B981" strokeWidth="3" fill="none" strokeLinecap="round"></path>
-              <path d="M0,250 Q150,230 250,210 T450,240 T650,200 T850,220 T1000,210" stroke="#EF4444" strokeWidth="3" fill="none" strokeLinecap="round"></path>
-              <path d="M0,270 Q150,250 250,240 T450,220 T650,230 T850,200 T1000,180" stroke="#3B82F6" strokeWidth="3" fill="none" strokeDasharray="6 4" strokeLinecap="round"></path>
-            </svg>
+            {fluxoMensal.length > 0 ? (
+              <svg className="w-full h-full" preserveAspectRatio="none" viewBox={`0 0 ${fluxoMensal.length * 100} 300`}>
+                <g className="grid-lines">
+                  {[50, 125, 200, 275].map((y) => (
+                    <line key={y} x1="0" x2={fluxoMensal.length * 100} y1={y} y2={y} stroke="#E2E8F0" strokeWidth="1" />
+                  ))}
+                </g>
+                {fluxoMensal.map((m, i) => {
+                  const x = i * 100 + 50;
+                  const yEntrada = 275 - (m.entradasCentavos / maxValor) * 225;
+                  const ySaida = 275 - (m.saidasCentavos / maxValor) * 225;
+                  const ySaldo = 275 - (Math.abs(m.saldoCentavos) / maxSaldo) * 225;
+                  return (
+                    <g key={i}>
+                      {i > 0 && (
+                        <>
+                          <line x1={(i - 1) * 100 + 50} y1={275 - (fluxoMensal[i - 1].entradasCentavos / maxValor) * 225} x2={x} y2={yEntrada} stroke="#10B981" strokeWidth="3" />
+                          <line x1={(i - 1) * 100 + 50} y1={275 - (fluxoMensal[i - 1].saidasCentavos / maxValor) * 225} x2={x} y2={ySaida} stroke="#EF4444" strokeWidth="3" />
+                          <line x1={(i - 1) * 100 + 50} y1={275 - (Math.abs(fluxoMensal[i - 1].saldoCentavos) / maxSaldo) * 225} x2={x} y2={ySaldo} stroke="#3B82F6" strokeWidth="3" strokeDasharray="6 4" />
+                        </>
+                      )}
+                      <circle cx={x} cy={yEntrada} r="3" fill="#10B981" />
+                      <circle cx={x} cy={ySaida} r="3" fill="#EF4444" />
+                      <circle cx={x} cy={ySaldo} r="3" fill="#3B82F6" />
+                    </g>
+                  );
+                })}
+              </svg>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-400 text-sm">Sem dados para o período selecionado</div>
+            )}
             <div className="flex justify-between mt-4 text-[10px] text-slate-400 font-medium px-2">
-              <span>JAN</span><span>FEV</span><span>MAR</span><span>ABR</span><span>MAI</span><span>JUN</span>
-              <span>JUL</span><span>AGO</span><span>SET</span><span>OUT</span><span>NOV</span><span>DEZ</span>
+              {fluxoMensal.map((m, i) => (
+                <span key={i}>{m.mes}</span>
+              ))}
             </div>
           </div>
         </div>
@@ -225,26 +311,33 @@ export default function FluxoCaixaPage({ loaderData }: Route.ComponentProps) {
           <div className="space-y-6 flex-1">
             <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-emerald-400">✓</span>
-                <span className="text-sm font-medium">Superavit Saudável</span>
+                <span className={isSuperavit ? "text-emerald-400" : "text-red-400"}>{isSuperavit ? "✓" : "⚠"}</span>
+                <span className="text-sm font-medium">{isSuperavit ? "Superávit no Período" : "Déficit no Período"}</span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">As entradas superaram as saídas em 32% este mês. Recomendamos alocar R$ 10k no fundo de reserva.</p>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {isSuperavit
+                  ? `As entradas superaram as saídas em ${percentualSaldo}% no período. Saldo final de ${formatBRLFromCents(kpis.saldoCentavos)}.`
+                  : `As saídas superaram as entradas. Saldo negativo de ${formatBRLFromCents(Math.abs(kpis.saldoCentavos))}.`
+                }
+              </p>
             </div>
-            <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-amber-400">⚠</span>
-                <span className="text-sm font-medium">Atenção Próxima Semana</span>
+            {kpis.contasAPagarCentavos > 0 && (
+              <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-amber-400">⚠</span>
+                  <span className="text-sm font-medium">Contas Pendentes</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">Há ${formatBRLFromCents(kpis.contasAPagarCentavos)} em lançamentos pendentes ou agendados a serem processados.</p>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">Concentração de 65% das despesas operacionais entre os dias 10 e 15. Saldo atual cobre com folga.</p>
-            </div>
+            )}
           </div>
           <div className="mt-8">
             <div className="flex justify-between text-xs mb-2">
               <span className="text-slate-400">Saúde Financeira</span>
-              <span className="text-emerald-400 font-bold">Excelente</span>
+              <span className={isSuperavit ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>{isSuperavit ? "Saudável" : "Atenção"}</span>
             </div>
             <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: "92%" }}></div>
+              <div className={`${isSuperavit ? "bg-emerald-500" : "bg-red-500"} h-full transition-all duration-1000`} style={{ width: `${Math.min(100, Math.max(5, percentualSaldo))}%` }}></div>
             </div>
           </div>
         </div>

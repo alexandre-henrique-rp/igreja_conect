@@ -3,23 +3,28 @@
  *
  * Exibe a lista de lançamentos em formato de tabela (desktop) ou cards (mobile).
  *
- * **Colunas (desktop):** Data | Tipo | Categoria | Valor (+/-) | Membro | Descrição
+ * **Colunas (desktop):** Data | Tipo | Categoria | Valor (+/-) | Membro | Descrição | Comprovante
  * **SECRETARIO:** coluna Membro oculta se `podeVerMembro=false`.
  *
  * **Dízimo órfão (membro=null):** exibe "(membro removido)".
+ *
+ * **Comprovante (1:1):** coluna final mostra `<ComprovanteUpload>` (upload
+ * inline + preview + download). Comprovantes são privados (LGPD art. 46) —
+ * sempre via signed URL (15min).
  *
  * @example
  *   <ExtratoCaixa items={lancamentos} podeVerMembro={true} />
  *
  * @param props - Props do componente.
- * @param props.items - Lista de lançamentos.
+ * @param props.items - Lista de lançamentos (já com `comprovanteUrl` resolvida).
  * @param props.podeVerMembro - Se true, exibe coluna Membro.
  * @returns Elemento JSX do extrato.
  */
-import type { LancamentoResumo } from "~/lib/finance.server";
+import type { LancamentoExtratoItem } from "~/lib/finance.server";
 import { cn } from "~/lib/cn";
 import { formatBRLFromCents } from "~/lib/money-format";
 import { CardLancamento } from "./CardLancamento";
+import { ComprovanteUpload } from "./ComprovanteUpload";
 import { EmptyState } from "./EmptyState";
 
 /** Mapa de categorias para label legível. */
@@ -39,8 +44,8 @@ const CATEGORIA_LABEL: Record<string, string> = {
  * Props aceitas pelo `<ExtratoCaixa>`.
  */
 export type ExtratoCaixaProps = {
-  /** Lista de lançamentos. */
-  items: LancamentoResumo[];
+  /** Lista de lançamentos (com `comprovanteUrl` resolvida no loader). */
+  items: LancamentoExtratoItem[];
   /** Se true, exibe coluna Membro. */
   podeVerMembro: boolean;
 };
@@ -53,7 +58,8 @@ function formatDateShort(date: Date): string {
 }
 
 /**
- * @description Extrato de lançamentos com tabela responsiva e formatação condicional.
+ * @description Extrato de lançamentos com tabela responsiva, formatação condicional
+ *   e coluna de comprovante (upload inline).
  * @param {ExtratoCaixaProps} props - items, podeVerMembro.
  * @returns {JSX.Element} Tabela ou cards do extrato.
  */
@@ -83,6 +89,7 @@ export function ExtratoCaixa({
               <th className="pb-2 pr-3">Valor</th>
               {podeVerMembro && <th className="pb-2 pr-3">Membro</th>}
               <th className="pb-2 pr-3">Descrição</th>
+              <th className="pb-2 pr-3">Comprovante</th>
             </tr>
           </thead>
           <tbody>
@@ -95,7 +102,7 @@ export function ExtratoCaixa({
               return (
                 <tr
                   key={item.id}
-                  className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                  className="border-b border-slate-100 hover:bg-slate-50 transition-colors align-middle"
                   data-testid={`extrato-row-${item.id}`}
                 >
                   <td className="py-2 pr-3 text-sm text-slate-600 tabular-nums whitespace-nowrap">
@@ -143,6 +150,16 @@ export function ExtratoCaixa({
                     {item.descricao || (
                       <span className="text-slate-300">—</span>
                     )}
+                  </td>
+                  <td className="py-2 min-w-[260px]">
+                    <ComprovanteUpload
+                      lancamentoId={item.id}
+                      currentUrl={item.comprovanteUrl}
+                      currentFilename={item.attachmentUpload ? null : null}
+                      currentUploadId={item.attachmentUploadId}
+                      currentStatus={item.attachmentUpload?.status ?? null}
+                      currentMime={item.attachmentUpload?.detectedMime ?? null}
+                    />
                   </td>
                 </tr>
               );

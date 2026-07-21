@@ -33,13 +33,17 @@ describe("<Sidebar />", () => {
     expect(html).toContain('aria-label="Menu principal"');
   });
 
-  it("renderiza Configurações visíveis para ADMIN", () => {
+  it("renderiza itens principais para ADMIN", () => {
     const html = renderSidebar("/app");
     expect(html).toContain("Dashboard");
     expect(html).toContain("Membros");
     expect(html).toContain("Financeiro");
     expect(html).toContain("Ministérios");
-    expect(html).toContain("Configurações");
+  });
+
+  it("Configurações está oculta no menu", () => {
+    const html = renderSidebar("/app");
+    expect(html).not.toContain("Configurações");
   });
 
   it("Financeiro aparece para cargos autorizados", () => {
@@ -54,7 +58,7 @@ describe("<Sidebar />", () => {
   });
 
   it("Financeiro NÃO aparece para cargos sem permissão", () => {
-    const html = renderSidebar("/app", { id: "u1", nome: "User", cargo: "DISCIPULADOR" });
+    const html = renderSidebar("/app", { id: "u1", nome: "User", cargo: "LIDER_MINISTERIO" });
     expect(html).not.toContain("Financeiro");
   });
 
@@ -76,7 +80,6 @@ describe("<Sidebar />", () => {
     expect(html).toContain('href="/app/membros"');
     expect(html).toContain('href="/app/financeiro"');
     expect(html).toContain('href="/app/ministerios"');
-    expect(html).toContain('href="/app/config/acolhimento"');
   });
 
   it("sidebar tem classe lg:block (visível em lg+, escondida em <lg)", () => {

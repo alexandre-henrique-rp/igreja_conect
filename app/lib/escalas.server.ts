@@ -54,7 +54,7 @@ export type AdicionarVoluntarioInput = {
   observacao?: string;
 };
 
-const CARGO_LEITURA = ["ADMIN", "PASTOR", "SECRETARIO", "DISCIPULADOR", "FINANCEIRO", "LIDER_MINISTERIO"] as const;
+const CARGO_LEITURA = ["ADMIN", "PASTOR", "SECRETARIO", "FINANCEIRO", "LIDER_MINISTERIO"] as const;
 
 function assertPodeLer(user: SessionUser): void {
   if (!user.cargo || !(CARGO_LEITURA as readonly string[]).includes(user.cargo)) {

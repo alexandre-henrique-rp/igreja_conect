@@ -26,7 +26,6 @@ export const ALL_ADMIN_CARGOS = [
   "ADMIN",
   "PASTOR",
   "SECRETARIO",
-  "DISCIPULADOR",
   "FINANCEIRO",
   "LIDER_MINISTERIO",
 ] as const;
@@ -238,7 +237,6 @@ export const ESTOQUE_READ_CARGOS = [
   "SECRETARIO",
   "FINANCEIRO",
   "LIDER_MINISTERIO",
-  "DISCIPULADOR",
 ] as const;
 
 /**

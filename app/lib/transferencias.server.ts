@@ -63,7 +63,7 @@ async function validarTransferencia(input: TransferenciaCreate, user: SessionUse
  * Idempotency: se key ja existe, retorna resultado cacheado.
  */
 async function executarTransferenciaAtomica(
-  tx: Parameters<Exclude<Parameters<typeof prisma.$transaction>[0], undefined>>,
+  tx: Parameters<Exclude<Parameters<typeof prisma.$transaction>[0], undefined>>[0],
   input: { origemId: string; destinoId: string; valorCentavos: number; descricao?: string; data: Date },
   user: SessionUser,
   transferenciaId: string,

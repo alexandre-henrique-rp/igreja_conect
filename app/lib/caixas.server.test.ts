@@ -104,7 +104,7 @@ describe("caixas.server — listarCaixas (T02)", () => {
   it("DISCIPULADOR: 403 (assertCanSeeFinancials bloqueia)", async () => {
     let caught: unknown = null;
     try {
-      await listarCaixas({}, userWith("DISCIPULADOR"));
+      await listarCaixas({}, userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }
@@ -155,7 +155,7 @@ describe("caixas.server — criarCaixa (T03)", () => {
   it("DISCIPULADOR NÃO pode criar caixa (403)", async () => {
     let caught: unknown = null;
     try {
-      await criarCaixa({ nome: "Cantina" }, userWith("DISCIPULADOR"));
+      await criarCaixa({ nome: "Cantina" }, userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }
@@ -408,7 +408,7 @@ describe("caixas.server — listarCaixasParaTransferencia (S07-T07)", () => {
   it("DISCIPULADOR NAO pode listar caixas para transferencia (403)", async () => {
     let caught: unknown = null;
     try {
-      await listarCaixasParaTransferencia(userWith("DISCIPULADOR"));
+      await listarCaixasParaTransferencia(userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }

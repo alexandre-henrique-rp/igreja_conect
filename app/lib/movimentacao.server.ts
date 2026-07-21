@@ -102,7 +102,7 @@ export async function criarMovimentacao(
       data: {
         itemEstoqueId: input.itemId,
         quantidade: parsed.quantidade,
-        nomeRetirante: parsed.nomeRetirante ?? null,
+        nomeRetirante: parsed.nomeRetirante ?? "",
         justificativa: parsed.justificativa ?? null,
         autorizadoPorId: user.id,
       },

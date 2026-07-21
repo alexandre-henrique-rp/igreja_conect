@@ -37,23 +37,14 @@ export default function AppIndex({ loaderData }: Route.ComponentProps) {
   const displayVisitantes = stats.visitantesMes.toString();
   const displayAlertasEstoque = `${stats.alertasEstoque} crítico${stats.alertasEstoque === 1 ? "" : "s"}`;
 
-  // Formatar as últimas contribuições, incluindo mocks caso não haja registros suficientes
-  const MOCK_CONTRIBUICOES = [
-    { id: "mock-1", contribuinte: "João Santos", tipo: "DÍZIMO", dataStr: "Hoje, 09:42", valor: "R$ 450,00" },
-    { id: "mock-2", contribuinte: "Maria Oliveira", tipo: "OFERTA", dataStr: "Ontem, 18:20", valor: "R$ 120,00" },
-    { id: "mock-3", contribuinte: "Paulo Rocha", tipo: "DÍZIMO", dataStr: "Ontem, 14:15", valor: "R$ 2.100,00" },
-    { id: "mock-4", contribuinte: "Ana Ferreira", tipo: "MISSÕES", dataStr: "12 Mai, 2024", valor: "R$ 50,00" },
-  ];
-
-  const contribuidos = stats.ultimasContribuicoes.length > 0
-    ? stats.ultimasContribuicoes.map((c) => ({
-        id: c.id,
-        contribuinte: c.contribuinte,
-        tipo: c.tipo,
-        dataStr: new Date(c.data).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + ", " + new Date(c.data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-        valor: `R$ ${(c.valorCentavos / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-      }))
-    : MOCK_CONTRIBUICOES;
+  // Formatar as últimas contribuições a partir dos dados reais do banco
+  const contribuidos = stats.ultimasContribuicoes.map((c) => ({
+    id: c.id,
+    contribuinte: c.contribuinte,
+    tipo: c.tipo,
+    dataStr: new Date(c.data).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + ", " + new Date(c.data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    valor: `R$ ${(c.valorCentavos / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+  }));
 
   // Iniciais para avatar
   const getInitials = (name: string) => {
@@ -160,46 +151,55 @@ export default function AppIndex({ loaderData }: Route.ComponentProps) {
           </div>
           
           <div className="overflow-x-auto -mx-6 sm:mx-0">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="pb-3 px-6 sm:px-0">Contribuinte</th>
-                  <th className="pb-3 px-3">Tipo</th>
-                  <th className="pb-3 px-3">Data</th>
-                  <th className="pb-3 text-right px-6 sm:px-0">Valor</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-                {contribuidos.map((c) => {
-                  let badgeStyles = "bg-blue-50 text-blue-600 border border-blue-100";
-                  if (c.tipo === "OFERTA") {
-                    badgeStyles = "bg-emerald-50 text-emerald-600 border border-emerald-100";
-                  } else if (c.tipo === "MISSÕES") {
-                    badgeStyles = "bg-purple-50 text-purple-600 border border-purple-100";
-                  } else if (c.tipo === "CAMPANHA") {
-                    badgeStyles = "bg-amber-50 text-amber-600 border border-amber-100";
-                  }
+            {contribuidos.length > 0 ? (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <th className="pb-3 px-6 sm:px-0">Contribuinte</th>
+                    <th className="pb-3 px-3">Tipo</th>
+                    <th className="pb-3 px-3">Data</th>
+                    <th className="pb-3 text-right px-6 sm:px-0">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                  {contribuidos.map((c) => {
+                    let badgeStyles = "bg-blue-50 text-blue-600 border border-blue-100";
+                    if (c.tipo === "OFERTA") {
+                      badgeStyles = "bg-emerald-50 text-emerald-600 border border-emerald-100";
+                    } else if (c.tipo === "MISSÕES") {
+                      badgeStyles = "bg-purple-50 text-purple-600 border border-purple-100";
+                    } else if (c.tipo === "CAMPANHA") {
+                      badgeStyles = "bg-amber-50 text-amber-600 border border-amber-100";
+                    }
 
-                  return (
-                    <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-6 sm:px-0 flex items-center gap-3">
-                        <span className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-xs border border-slate-200">
-                          {getInitials(c.contribuinte)}
-                        </span>
-                        <span className="font-semibold text-slate-900">{c.contribuinte}</span>
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className={`inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyles}`}>
-                          {c.tipo}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-slate-500">{c.dataStr}</td>
-                      <td className="py-3 text-right font-bold text-slate-950 px-6 sm:px-0">{c.valor}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    return (
+                      <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-3 px-6 sm:px-0 flex items-center gap-3">
+                          <span className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-xs border border-slate-200">
+                            {getInitials(c.contribuinte)}
+                          </span>
+                          <span className="font-semibold text-slate-900">{c.contribuinte}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className={`inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyles}`}>
+                            {c.tipo}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-500">{c.dataStr}</td>
+                        <td className="py-3 text-right font-bold text-slate-950 px-6 sm:px-0">{c.valor}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <svg className="w-12 h-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                <p className="text-sm text-slate-400 font-medium">Nenhuma contribuição registrada ainda.</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -289,24 +289,6 @@ export default function AppIndex({ loaderData }: Route.ComponentProps) {
         </section>
       </div>
 
-      {/* Banner Inferior: Otimização do Sistema Concluída */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-white shadow-md">
-        {/* Elemento de background decorativo */}
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 opacity-10 pointer-events-none">
-          <svg className="w-64 h-64" fill="currentColor" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" /></svg>
-        </div>
-        
-        <div className="space-y-1 text-center sm:text-left z-10">
-          <h3 className="text-lg sm:text-xl font-bold">Otimização do Sistema Concluída</h3>
-          <p className="text-sm text-blue-100">
-            Seu banco de dados foi atualizado. 12 novos cadastros foram validados hoje.
-          </p>
-        </div>
-        
-        <button className="bg-white hover:bg-slate-50 text-blue-600 font-semibold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow active:scale-[0.98] z-10 shrink-0">
-          Ver Relatório Geral
-        </button>
-      </section>
     </main>
   );
 }

@@ -2,14 +2,14 @@ import { z } from "zod";
 import type { Route } from "./+types/membros._index";
 import { Link, Form } from "react-router";
 import { prisma } from "~/db/prisma.server";
-import { listMembros } from "~/lib/members.server";
+import { getMembroAvatarSignedUrl, listMembros } from "~/lib/members.server";
 import { userContext } from "~/lib/user-context";
 import { Button } from "~/components/Button";
 import { TabelaMembros } from "~/components/TabelaMembros";
 import { CardMembro } from "~/components/CardMembro";
 import { Pagination } from "~/components/Pagination";
 import { cn } from "~/lib/cn";
-import type { Prisma } from "../../generated/prisma/client";
+import type { Prisma } from "../../../generated/prisma/client";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Membros — Igreja Conect" }];
@@ -73,11 +73,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     user
   );
 
-  // Scoped count queries for KPI cards matching user RBAC scope
+  const itemsWithAvatars = await Promise.all(
+    items.map(async (item) => ({
+      ...item,
+      avatarUrl: (await getMembroAvatarSignedUrl(item))?.url ?? null,
+    }))
+  );
+
+  // Scoped count queries for KPI cards
   const baseWhere: Prisma.MembroWhereInput = {};
-  if (user.cargo === "DISCIPULADOR") {
-    baseWhere.discipuladorId = user.id;
-  }
 
   const [kpiTotal, kpiAtivos, kpiVisitantes, kpiCongregados] = await Promise.all([
     prisma.membro.count({ where: baseWhere }),
@@ -89,7 +93,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const searchParamsOut = new URLSearchParams(url.searchParams);
 
   return {
-    items,
+    items: itemsWithAvatars,
     total,
     page,
     pageSize,

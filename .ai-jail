@@ -1,0 +1,12 @@
+# ai-jail sandbox configuration
+# https://github.com/akitaonrails/ai-jail
+# Edit freely. Regenerate with: ai-jail --clean --init
+
+command = ["/home/kingdev/.opencode/bin/opencode"]
+rw_maps = ["~/.opencode"]
+hide_dotdirs = [
+    ".netrc",
+    ".kube",
+]
+no_docker = true
+private_home = false

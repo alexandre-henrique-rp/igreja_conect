@@ -38,7 +38,7 @@ describe("rbac.server — assertCanSeeFinancials (legado)", () => {
     }
   );
 
-  it.each(["SECRETARIO", "DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+  it.each(["SECRETARIO", "LIDER_MINISTERIO", "LIDER_MINISTERIO", null] as const)(
     "%s NÃO pode ver dados financeiros (lança Response 403)",
     (cargo) => {
       try {
@@ -62,7 +62,7 @@ describe("rbac.server — assertCanSeeFinancialModule (SEC-001/002)", () => {
     }
   );
 
-  it.each(["DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+  it.each(["LIDER_MINISTERIO", "LIDER_MINISTERIO", null] as const)(
     "%s NÃO pode ver módulo financeiro (lança Response 403)",
     (cargo) => {
       try {
@@ -86,7 +86,7 @@ describe("rbac.server — assertCanSeeDizimos (SEC-001/002)", () => {
     }
   );
 
-  it.each(["SECRETARIO", "DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+  it.each(["SECRETARIO", "LIDER_MINISTERIO", "LIDER_MINISTERIO", null] as const)(
     "%s NÃO pode ver dízimos (lança Response 403)",
     (cargo) => {
       try {
@@ -110,7 +110,7 @@ describe("rbac.server — assertCanWriteLancamento (SEC-005)", () => {
     }
   );
 
-  it.each(["DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+  it.each(["LIDER_MINISTERIO", "LIDER_MINISTERIO", null] as const)(
     "%s NÃO pode criar lançamentos (lança Response 403)",
     (cargo) => {
       try {
@@ -127,7 +127,7 @@ describe("rbac.server — assertCanWriteLancamento (SEC-005)", () => {
 // ==================== assertCanWriteMembers ====================
 
 describe("rbac.server — assertCanWriteMembers", () => {
-  it.each(["ADMIN", "PASTOR", "SECRETARIO", "DISCIPULADOR", "FINANCEIRO", "LIDER_MINISTERIO"] as const)(
+  it.each(["ADMIN", "PASTOR", "SECRETARIO", "LIDER_MINISTERIO", "FINANCEIRO", "LIDER_MINISTERIO"] as const)(
     "%s pode escrever membros",
     (cargo) => {
       expect(() => assertCanWriteMembers(u(cargo))).not.toThrow();
@@ -152,7 +152,7 @@ describe("rbac.server — assertIsAdmin", () => {
     expect(() => assertIsAdmin(u("ADMIN"))).not.toThrow();
   });
 
-  it.each(["PASTOR", "SECRETARIO", "DISCIPULADOR", "FINANCEIRO", "LIDER_MINISTERIO", null] as const)(
+  it.each(["PASTOR", "SECRETARIO", "LIDER_MINISTERIO", "FINANCEIRO", "LIDER_MINISTERIO", null] as const)(
     "%s NÃO pode",
     (cargo) => {
       try {
@@ -173,7 +173,7 @@ describe("rbac.server — assertCanManageConfiguracaoGeral", () => {
     expect(() => assertCanManageConfiguracaoGeral(u("ADMIN"))).not.toThrow();
   });
 
-  it.each(["PASTOR", "SECRETARIO", "DISCIPULADOR", "FINANCEIRO", "LIDER_MINISTERIO", null] as const)(
+  it.each(["PASTOR", "SECRETARIO", "LIDER_MINISTERIO", "FINANCEIRO", "LIDER_MINISTERIO", null] as const)(
     "%s NÃO pode",
     (cargo) => {
       try {
@@ -198,7 +198,7 @@ describe("rbac.server — canSeeFinancials (S08-T02)", () => {
     }
   );
 
-  it.each(["SECRETARIO", "DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+  it.each(["SECRETARIO", "LIDER_MINISTERIO", "LIDER_MINISTERIO", null] as const)(
     "%s NÃO pode ver dados financeiros → false",
     (cargo) => {
       expect(canSeeFinancials(u(cargo))).toBe(false);
@@ -215,7 +215,7 @@ describe("rbac.server — assertCanTransferir (S07-T07)", () => {
     }
   );
 
-  it.each(["SECRETARIO", "DISCIPULADOR", "LIDER_MINISTERIO", null] as const)(
+  it.each(["SECRETARIO", "LIDER_MINISTERIO", "LIDER_MINISTERIO", null] as const)(
     "%s NAO pode realizar transferencias (lança Response 403)",
     (cargo) => {
       try {

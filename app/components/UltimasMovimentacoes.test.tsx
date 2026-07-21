@@ -28,6 +28,8 @@ const itemBase = {
   descricao: "Dízimo mensal",
   caixa: { id: "cx-1", nome: "Caixa Principal" },
   membro: { id: "m1", nome: "João Silva" },
+  attachmentUploadId: null,
+  attachmentUpload: null,
 };
 
 describe("<UltimasMovimentacoes />", () => {

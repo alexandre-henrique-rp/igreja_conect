@@ -45,9 +45,9 @@ export type CriarCelulaInput = {
 /** Input para editar célula (parcial). */
 export type EditarCelulaInput = Partial<CriarCelulaInput>;
 
-const CARGO_LEITURA = ["ADMIN", "PASTOR", "SECRETARIO", "DISCIPULADOR", "FINANCEIRO", "LIDER_MINISTERIO"] as const;
+const CARGO_LEITURA = ["ADMIN", "PASTOR", "SECRETARIO", "FINANCEIRO", "LIDER_MINISTERIO"] as const;
 const CARGO_ESCRITA = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
-const CARGO_VINCULAR = ["ADMIN", "PASTOR", "SECRETARIO", "DISCIPULADOR"] as const;
+const CARGO_VINCULAR = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
 
 function assertPodeLer(user: SessionUser): void {
   if (!user.cargo || !(CARGO_LEITURA as readonly string[]).includes(user.cargo)) {

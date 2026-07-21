@@ -177,7 +177,7 @@ describe("membros.$id.tipo — action (S03-T08)", () => {
     const m = await makeMembro({ nome: "Fora" });
     let caught: unknown = null;
     try {
-      await action(actionArgs(m.id, "CONGREGADO", userWith("DISCIPULADOR")));
+      await action(actionArgs(m.id, "CONGREGADO", userWith("LIDER_MINISTERIO")));
     } catch (e) {
       caught = e;
     }

@@ -84,7 +84,7 @@ describe("ministries.server — canManageMinisterios (helper)", () => {
     expect(canManageMinisterios(userWith("SECRETARIO"))).toBe(true);
   });
   it("DISCIPULADOR NÃO pode", () => {
-    expect(canManageMinisterios(userWith("DISCIPULADOR"))).toBe(false);
+    expect(canManageMinisterios(userWith("LIDER_MINISTERIO"))).toBe(false);
   });
   it("FINANCEIRO NÃO pode", () => {
     expect(canManageMinisterios(userWith("FINANCEIRO"))).toBe(false);
@@ -139,7 +139,7 @@ describe("ministries.server — createMinisterio", () => {
   it("DISCIPULADOR tenta criar → 403", async () => {
     let caught: unknown = null;
     try {
-      await createMinisterio({ nome: "X" }, userWith("DISCIPULADOR"));
+      await createMinisterio({ nome: "X" }, userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }
@@ -180,7 +180,7 @@ describe("ministries.server — updateMinisterio", () => {
     const min = await makeMinisterio("Louvor");
     let caught: unknown = null;
     try {
-      await updateMinisterio(min.id, { nome: "X" }, userWith("DISCIPULADOR"));
+      await updateMinisterio(min.id, { nome: "X" }, userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }
@@ -213,7 +213,7 @@ describe("ministries.server — deleteMinisterio", () => {
     const min = await makeMinisterio("Louvor");
     let caught: unknown = null;
     try {
-      await deleteMinisterio(min.id, userWith("DISCIPULADOR"));
+      await deleteMinisterio(min.id, userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }
@@ -248,7 +248,7 @@ describe("ministries.server — addMembroToMinisterio", () => {
     const m = await makeMembro("Membro");
     let caught: unknown = null;
     try {
-      await addMembroToMinisterio(min.id, m.id, userWith("DISCIPULADOR"));
+      await addMembroToMinisterio(min.id, m.id, userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }

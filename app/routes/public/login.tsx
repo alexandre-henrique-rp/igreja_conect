@@ -19,7 +19,7 @@ import { data, redirect } from "react-router";
 import { verifyCredentials } from "~/lib/auth.server";
 import { LoginSchema } from "~/lib/schemas/auth";
 import { checkRateLimit } from "~/lib/rate-limit.server";
-import { safeLog } from "~/lib/audit.server";
+import { safeLog, logAction } from "~/lib/audit.server";
 import { createSession, getUserFromRequest, sessionCookie } from "~/lib/session.server";
 
 /**
@@ -50,12 +50,14 @@ export async function loader({ request }: Route.LoaderArgs) {
  *    maxAge=7d), redirect para `?next` (validado) ou `/app`.
  */
 export async function action({ request }: Route.ActionArgs) {
-  // Identifica o IP para rate limit. Em produção, atrás de proxy, o
-  // `x-forwarded-for` é a fonte da verdade. Em dev local, cai para
-  // "unknown" (compartilhado, sem rate limit efetivo — aceitável).
+  const formData = await request.formData();
+
+  // Identifica o IP para rate limit.
+  // Prioridade: x-forwarded-for > x-real-ip > clientIP (enviado pelo frontend) > "unknown"
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     request.headers.get("x-real-ip") ??
+    (formData.get("clientIP") as string) ??
     "unknown";
 
   // 1. Rate limit
@@ -67,14 +69,18 @@ export async function action({ request }: Route.ActionArgs) {
       ip,
       timestamp: Date.now(),
     });
+    await logAction({
+      event: "login.rate_limited",
+      ip,
+      details: JSON.stringify({ reason: "rate_limit" }),
+    });
     return data(
-      { formError: "Muitas tentativas. Tente novamente em alguns minutos." },
+      { formError: "Muitas tentativas. Tente novamente em 1 hora." },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter ?? 60) } }
     );
   }
 
   // 2. Parse + Zod
-  const formData = await request.formData();
   const parsed = LoginSchema.safeParse({
     email: formData.get("email"),
     senha: formData.get("senha"),
@@ -93,6 +99,11 @@ export async function action({ request }: Route.ActionArgs) {
       ip,
       timestamp: Date.now(),
     });
+    await logAction({
+      event: "login.invalid_payload",
+      ip,
+      details: JSON.stringify({ errors: parsed.error.issues.map((i) => i.message) }),
+    });
     return data({ fieldErrors }, { status: 422 });
   }
 
@@ -105,6 +116,10 @@ export async function action({ request }: Route.ActionArgs) {
       result: "invalid_credentials",
       ip,
       timestamp: Date.now(),
+    });
+    await logAction({
+      event: "login.invalid_credentials",
+      ip,
     });
     return data(
       { formError: "E-mail ou senha incorretos." },
@@ -121,6 +136,13 @@ export async function action({ request }: Route.ActionArgs) {
     result: "ok",
     ip,
     timestamp: Date.now(),
+  });
+  await logAction({
+    membroId: user.id,
+    event: "login.success",
+    actorId: user.id,
+    actorRole: user.cargo,
+    ip,
   });
 
   // `manterConectado` por enquanto é apenas persistido (não muda TTL).

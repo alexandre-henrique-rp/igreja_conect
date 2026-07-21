@@ -44,6 +44,7 @@ import { Button } from "./Button";
 import { Checkbox } from "./Checkbox";
 import { ErrorAlert } from "./ErrorAlert";
 import { Input } from "./Input";
+import { useClientIP } from "~/lib/hooks/useClientIP";
 
 /**
  * Props aceitas pelo `<FormLogin />`. Tipadas com `Record<string, string>`
@@ -145,12 +146,10 @@ export function FormLogin({
   motivo,
 }: FormLoginProps) {
   const navigation = useNavigation();
-  // Mantém useSearchParams importado para futuras props baseadas em query;
-  // hoje o componente recebe `motivo` direto do loader via props, mas
-  // mantemos o import para uso futuro sem refactor.
   void useSearchParams;
   const isSubmitting = navigation.state === "submitting";
   const [showForgotMsg, setShowForgotMsg] = useState(false);
+  const clientIP = useClientIP();
 
   // SVGs dos ícones
   const mailIcon = (
@@ -272,6 +271,7 @@ export function FormLogin({
             className="space-y-5"
             noValidate
           >
+            <input type="hidden" name="clientIP" value={clientIP} />
             <Input
               id="email"
               label={emailLabel}

@@ -21,13 +21,12 @@ import { createRoutesStub } from "react-router";
 import { renderToString } from "react-dom/server";
 import { TabFidelidadeFinanceira } from "./TabFidelidadeFinanceira";
 
-function renderTab(
-  props: Parameters<typeof TabFidelidadeFinanceira>[0]
-): string {
+function renderTab(): string {
   const Stub = createRoutesStub([
     {
       path: "/app/membros/:id",
-      Component: () => <TabFidelidadeFinanceira {...props} />,
+      Component: () => <TabFidelidadeFinanceira />,
+      loader: () => ({}) as any,
     },
   ]);
   return renderToString(<Stub initialEntries={["/app/membros/m1"]} />);
@@ -35,22 +34,22 @@ function renderTab(
 
 describe("<TabFidelidadeFinanceira /> (gate LGPD — RN-MEM-03)", () => {
   it("renderiza placeholder com role='status'", () => {
-    const html = renderTab({ membroId: "m1" });
+    const html = renderTab();
     expect(html).toContain('role="status"');
   });
 
   it("placeholder contém 'Módulo Financeiro'", () => {
-    const html = renderTab({ membroId: "m1" });
+    const html = renderTab();
     expect(html).toContain("Módulo Financeiro");
   });
 
   it("placeholder contém 'ainda não disponível' (PT-BR)", () => {
-    const html = renderTab({ membroId: "m1" });
+    const html = renderTab();
     expect(html).toContain("ainda não disponível");
   });
 
   it("renderiza ícone de cadeado (RN-MEM-03 — dado sensível)", () => {
-    const html = renderTab({ membroId: "m1" });
+    const html = renderTab();
     // SVG com aria-hidden
     expect(html).toContain("<svg");
     // Pode ser um cadeado — procura por palavras-chave no path
@@ -58,7 +57,7 @@ describe("<TabFidelidadeFinanceira /> (gate LGPD — RN-MEM-03)", () => {
   });
 
   it("NÃO renderiza nenhuma referência a 'valorCentavos' ou 'Lancamento' (LGPD)", () => {
-    const html = renderTab({ membroId: "m1" });
+    const html = renderTab();
     // Componente é placeholder — não tem dados financeiros.
     // (Campos do schema Prisma nunca aparecem — apenas texto explicativo.)
     expect(html).not.toContain("valorCentavos");
@@ -68,7 +67,7 @@ describe("<TabFidelidadeFinanceira /> (gate LGPD — RN-MEM-03)", () => {
   });
 
   it("componente tem data-testid para identificar a tab em testes E2E", () => {
-    const html = renderTab({ membroId: "m1" });
+    const html = renderTab();
     expect(html).toContain("tab-fidelidade");
   });
 });

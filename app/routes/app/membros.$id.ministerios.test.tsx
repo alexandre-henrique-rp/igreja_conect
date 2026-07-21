@@ -150,7 +150,7 @@ describe("membros.$id.ministerios — loader (S04-T12)", () => {
   });
 
   it("DISCIPULADOR: fora de escopo → 404", async () => {
-    const user = await makeAuthUser("DISCIPULADOR");
+    const user = await makeAuthUser("LIDER_MINISTERIO");
     const membro = await makeMembro("Pedro");
 
     await expect(
@@ -165,7 +165,7 @@ describe("membros.$id.ministerios — loader (S04-T12)", () => {
   });
 
   it("DISCIPULADOR: em escopo canEdit=false", async () => {
-    const user = await makeAuthUser("DISCIPULADOR");
+    const user = await makeAuthUser("LIDER_MINISTERIO");
     const membro = await prismaTest.membro.create({
       data: {
         nome: "Discípulo",
@@ -286,7 +286,7 @@ describe("membros.$id.ministerios — action (S04-T12)", () => {
   });
 
   it("DISCIPULADOR: POST add → 403", async () => {
-    const user = await makeAuthUser("DISCIPULADOR");
+    const user = await makeAuthUser("LIDER_MINISTERIO");
     const membro = await makeMembro("Pedro");
     const min = await makeMinisterio("Ensino");
 

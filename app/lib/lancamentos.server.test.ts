@@ -75,6 +75,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const res = await catchResponse(criarLancamento({
       tipo: "SAIDA",
       categoria: "DESPESA_OPERACIONAL",
+      status: "PAGO",
       valorCentavos: 1,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
@@ -92,6 +93,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     await expect(criarLancamento({
       tipo: "ENTRADA",
       categoria: "DIZIMO",
+      status: "PAGO",
       valorCentavos: 500,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
@@ -105,6 +107,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const result = await criarLancamento({
       tipo: "ENTRADA",
       categoria: "OFERTA",
+      status: "PAGO",
       valorCentavos: 1000,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
@@ -125,6 +128,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const res = await catchResponse(criarLancamento({
       tipo: "ENTRADA",
       categoria: "OFERTA",
+      status: "PAGO",
       valorCentavos: 100,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
@@ -140,6 +144,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const result = await criarLancamento({
       tipo: "SAIDA",
       categoria: "DESPESA_OPERACIONAL",
+      status: "PAGO",
       valorCentavos: 1000,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
@@ -157,6 +162,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const res = await catchResponse(criarLancamento({
       tipo: "SAIDA",
       categoria: "TRANSFERENCIA",
+      status: "PAGO",
       valorCentavos: 1000,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
@@ -175,6 +181,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     await expect(criarLancamento({
       tipo: "SAIDA",
       categoria: "DESPESA_OPERACIONAL",
+      status: "PAGO",
       valorCentavos: 1000,
       caixaId: caixa.id,
       membroId: membro.id,
@@ -190,6 +197,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const result = await criarLancamento({
       tipo: "ENTRADA",
       categoria: "DIZIMO",
+      status: "PAGO",
       valorCentavos: 5000,
       caixaId: caixa.id,
       membroId: membro.id,
@@ -211,6 +219,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const result = await criarLancamento({
       tipo: "ENTRADA",
       categoria: "OFERTA",
+      status: "PAGO",
       valorCentavos: 100,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
@@ -224,11 +233,12 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const res = await catchResponse(criarLancamento({
       tipo: "ENTRADA",
       categoria: "OFERTA",
+      status: "PAGO",
       valorCentavos: 100,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
       descricao: "Inválido",
-    }, userWith("DISCIPULADOR")));
+    }, userWith("LIDER_MINISTERIO")));
     expect(res).not.toBeNull();
     expect(res!.status).toBe(403);
   });
@@ -239,6 +249,7 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     const res = await catchResponse(criarLancamento({
       tipo: "SAIDA",
       categoria: "DESPESA_OPERACIONAL",
+      status: "PAGO",
       valorCentavos: 200,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
@@ -267,6 +278,7 @@ describe("lancamentos.server — listarPorCaixa (T08)", () => {
     await criarLancamento({
       tipo: "ENTRADA",
       categoria: "DIZIMO",
+      status: "PAGO",
       valorCentavos: 1000,
       caixaId: caixa.id,
       membroId: membro.id,
@@ -276,6 +288,7 @@ describe("lancamentos.server — listarPorCaixa (T08)", () => {
     await criarLancamento({
       tipo: "ENTRADA",
       categoria: "OFERTA",
+      status: "PAGO",
       valorCentavos: 500,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-02"),
@@ -296,6 +309,7 @@ describe("lancamentos.server — listarPorCaixa (T08)", () => {
     await criarLancamento({
       tipo: "ENTRADA",
       categoria: "DIZIMO",
+      status: "PAGO",
       valorCentavos: 1000,
       caixaId: caixa.id,
       membroId: membro.id,
@@ -305,6 +319,7 @@ describe("lancamentos.server — listarPorCaixa (T08)", () => {
     await criarLancamento({
       tipo: "ENTRADA",
       categoria: "OFERTA",
+      status: "PAGO",
       valorCentavos: 500,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-02"),
@@ -325,6 +340,7 @@ describe("lancamentos.server — listarPorCaixa (T08)", () => {
     await criarLancamento({
       tipo: "ENTRADA",
       categoria: "OFERTA",
+      status: "PAGO",
       valorCentavos: 100,
       caixaId: caixa.id,
       dataCompetencia: new Date(now.getFullYear(), now.getMonth(), 15),
@@ -342,6 +358,7 @@ describe("lancamentos.server — listarPorCaixa (T08)", () => {
     await criarLancamento({
       tipo: "ENTRADA",
       categoria: "DIZIMO",
+      status: "PAGO",
       valorCentavos: 1000,
       caixaId: caixa.id,
       membroId: (await makeMembro()).id,
@@ -351,6 +368,7 @@ describe("lancamentos.server — listarPorCaixa (T08)", () => {
     await criarLancamento({
       tipo: "ENTRADA",
       categoria: "OFERTA",
+      status: "PAGO",
       valorCentavos: 500,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-02"),
@@ -383,7 +401,7 @@ describe("lancamentos.server — listarPorCaixa (T08)", () => {
     const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 0 });
     let caught: unknown = null;
     try {
-      await listarPorCaixa(caixa.id, {}, userWith("DISCIPULADOR"));
+      await listarPorCaixa(caixa.id, {}, userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }

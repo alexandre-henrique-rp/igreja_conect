@@ -56,13 +56,13 @@ function pastorUser(): SessionUser {
   return { id: "u-pastor", nome: "Pastor", cargo: "PASTOR" };
 }
 function discipuladorUser(id: string): SessionUser {
-  return { id, nome: "Disc", cargo: "DISCIPULADOR" };
+  return { id, nome: "Disc", cargo: "LIDER_MINISTERIO" };
 }
 
 async function makeMembro(opts: {
   nome: string;
   tipo?: "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
-  cargo?: "ADMIN" | "PASTOR" | "SECRETARIO" | "DISCIPULADOR" | "FINANCEIRO" | "LIDER_MINISTERIO" | null;
+  cargo?: "ADMIN" | "PASTOR" | "SECRETARIO" | "LIDER_MINISTERIO" | "FINANCEIRO" | "LIDER_MINISTERIO" | null;
   discipuladorId?: string | null;
 }): Promise<{ id: string }> {
   const m = await prismaTest.membro.create({
@@ -157,7 +157,7 @@ describe("discipleship.server — isDescendantOf (pure, sem DB)", () => {
 
 describe("discipleship.server — assignDisciple", () => {
   it("boundary 12: vincular 12 discípulos OK (RN-MEM-04)", async () => {
-    const disc = await makeMembro({ nome: "Disc 1", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc 1", cargo: "LIDER_MINISTERIO" });
     for (let i = 0; i < 12; i++) {
       const aluno = await makeMembro({ nome: `Aluno ${i}` });
       await assignDisciple(disc.id, aluno.id, adminUser());
@@ -167,7 +167,7 @@ describe("discipleship.server — assignDisciple", () => {
   });
 
   it("boundary 13: 13º vinculado → BusinessRuleError 409", async () => {
-    const disc = await makeMembro({ nome: "Disc 1", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc 1", cargo: "LIDER_MINISTERIO" });
     for (let i = 0; i < 12; i++) {
       const aluno = await makeMembro({ nome: `Aluno ${i}` });
       await assignDisciple(disc.id, aluno.id, adminUser());
@@ -179,15 +179,15 @@ describe("discipleship.server — assignDisciple", () => {
   });
 
   it("auto-vínculo (disc === discipulador) → BusinessRuleError 400", async () => {
-    const m = await makeMembro({ nome: "Self", cargo: "DISCIPULADOR" });
+    const m = await makeMembro({ nome: "Self", cargo: "LIDER_MINISTERIO" });
     await expect(
       assignDisciple(m.id, m.id, adminUser())
     ).rejects.toThrow(/próprio discipulador|auto/i);
   });
 
   it("loop A→B→A: candidato B é descendente de A → BusinessRuleError 422", async () => {
-    const a = await makeMembro({ nome: "A", cargo: "DISCIPULADOR" });
-    const b = await makeMembro({ nome: "B", cargo: "DISCIPULADOR", discipuladorId: a.id });
+    const a = await makeMembro({ nome: "A", cargo: "LIDER_MINISTERIO" });
+    const b = await makeMembro({ nome: "B", cargo: "LIDER_MINISTERIO", discipuladorId: a.id });
     // Tentar atribuir A como discípulo de B = loop
     await expect(
       assignDisciple(b.id, a.id, adminUser())
@@ -195,9 +195,9 @@ describe("discipleship.server — assignDisciple", () => {
   });
 
   it("loop profundo A→B→C→A: 3 níveis de loop", async () => {
-    const a = await makeMembro({ nome: "A", cargo: "DISCIPULADOR" });
-    const b = await makeMembro({ nome: "B", cargo: "DISCIPULADOR", discipuladorId: a.id });
-    const c = await makeMembro({ nome: "C", cargo: "DISCIPULADOR", discipuladorId: b.id });
+    const a = await makeMembro({ nome: "A", cargo: "LIDER_MINISTERIO" });
+    const b = await makeMembro({ nome: "B", cargo: "LIDER_MINISTERIO", discipuladorId: a.id });
+    const c = await makeMembro({ nome: "C", cargo: "LIDER_MINISTERIO", discipuladorId: b.id });
     // Tentar fazer A ser discípulo de C = loop
     await expect(
       assignDisciple(c.id, a.id, adminUser())
@@ -205,15 +205,15 @@ describe("discipleship.server — assignDisciple", () => {
   });
 
   it("happy path: vincular 1 discípulo OK", async () => {
-    const disc = await makeMembro({ nome: "Disc", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc", cargo: "LIDER_MINISTERIO" });
     const aluno = await makeMembro({ nome: "Aluno" });
     const result = await assignDisciple(disc.id, aluno.id, adminUser());
     expect(result.discipuladorId).toBe(disc.id);
   });
 
   it("re-atribuição: trocar discipulador de um membro funciona", async () => {
-    const disc1 = await makeMembro({ nome: "Disc 1", cargo: "DISCIPULADOR" });
-    const disc2 = await makeMembro({ nome: "Disc 2", cargo: "DISCIPULADOR" });
+    const disc1 = await makeMembro({ nome: "Disc 1", cargo: "LIDER_MINISTERIO" });
+    const disc2 = await makeMembro({ nome: "Disc 2", cargo: "LIDER_MINISTERIO" });
     const aluno = await makeMembro({ nome: "Aluno", discipuladorId: disc1.id });
     await assignDisciple(disc2.id, aluno.id, adminUser());
     const updated = await prismaTest.membro.findUnique({ where: { id: aluno.id } });
@@ -221,8 +221,8 @@ describe("discipleship.server — assignDisciple", () => {
   });
 
   it("re-atribuição NÃO conta para o limite de 12 do novo discipulador (boundary 12, não 13)", async () => {
-    const disc1 = await makeMembro({ nome: "Disc 1", cargo: "DISCIPULADOR" });
-    const disc2 = await makeMembro({ nome: "Disc 2", cargo: "DISCIPULADOR" });
+    const disc1 = await makeMembro({ nome: "Disc 1", cargo: "LIDER_MINISTERIO" });
+    const disc2 = await makeMembro({ nome: "Disc 2", cargo: "LIDER_MINISTERIO" });
     // disc1 já tem 12 discípulos
     for (let i = 0; i < 12; i++) {
       await makeMembro({ nome: `A1-${i}`, discipuladorId: disc1.id });
@@ -236,8 +236,8 @@ describe("discipleship.server — assignDisciple", () => {
   });
 
   it("re-atribuição: trocar para discipulador no limite 12 → 409", async () => {
-    const disc1 = await makeMembro({ nome: "Disc 1", cargo: "DISCIPULADOR" });
-    const disc2 = await makeMembro({ nome: "Disc 2", cargo: "DISCIPULADOR" });
+    const disc1 = await makeMembro({ nome: "Disc 1", cargo: "LIDER_MINISTERIO" });
+    const disc2 = await makeMembro({ nome: "Disc 2", cargo: "LIDER_MINISTERIO" });
     for (let i = 0; i < 12; i++) {
       await makeMembro({ nome: `A1-${i}`, discipuladorId: disc2.id });
     }
@@ -274,7 +274,7 @@ describe("discipleship.server — assignDisciple", () => {
 
 describe("discipleship.server — unassignDisciple", () => {
   it("desvincula discípulo existente (RN-MEM-04 helper)", async () => {
-    const disc = await makeMembro({ nome: "Disc", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc", cargo: "LIDER_MINISTERIO" });
     const aluno = await makeMembro({ nome: "Aluno", discipuladorId: disc.id });
     const result = await unassignDisciple(aluno.id, adminUser());
     expect(result.discipuladorId).toBeNull();
@@ -297,7 +297,7 @@ describe("discipleship.server — unassignDisciple", () => {
 
 describe("discipleship.server — getDiscipuladoData", () => {
   it("retorna estrutura completa para membro com discipulador", async () => {
-    const disc = await makeMembro({ nome: "Disc X", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc X", cargo: "LIDER_MINISTERIO" });
     const aluno = await makeMembro({ nome: "Aluno Y", discipuladorId: disc.id });
     const data = await getDiscipuladoData(aluno.id, adminUser());
     expect(data.membro.id).toBe(aluno.id);
@@ -314,7 +314,7 @@ describe("discipleship.server — getDiscipuladoData", () => {
   });
 
   it("discipulador pode se ver na lista de disponíveis (própria conta)", async () => {
-    const m = await makeMembro({ nome: "M", cargo: "DISCIPULADOR" });
+    const m = await makeMembro({ nome: "M", cargo: "LIDER_MINISTERIO" });
     const data = await getDiscipuladoData(m.id, adminUser());
     // O próprio m.id está excluído (seria auto-vínculo)
     expect(data.discipuladoresDisponiveis.some((d: { id: string }) => d.id === m.id)).toBe(false);

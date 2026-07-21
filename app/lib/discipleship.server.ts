@@ -133,7 +133,7 @@ export async function assignDisciple(
 
   // Carrega ambos para validar existência
   const [alvo, candidato] = await Promise.all([
-    prisma.membro.findUnique({ where: { id: discipuladorId }, select: { id: true } }),
+    prisma.membro.findUnique({ where: { id: discipuladorId }, select: { id: true, isDiscipulador: true } }),
     prisma.membro.findUnique({ where: { id: discipuloId }, select: { id: true } }),
   ]);
   if (!alvo) {
@@ -141,6 +141,11 @@ export async function assignDisciple(
   }
   if (!candidato) {
     throw new NotFoundError("Discípulo não encontrado.");
+  }
+  if (!alvo.isDiscipulador) {
+    throw new BusinessRuleError(
+      "Este membro não está marcado como discipulador. Ative a flag de discipulador primeiro."
+    );
   }
 
   // Regra 4: anti-loop — verifica se o NOVO discipulador (alvo) é
@@ -293,11 +298,12 @@ export async function getDiscipuladoData(
   // - Exclui descendentes do próprio membro (anti-loop)
   // - Inclui contagem de discípulos para a UI exibir quem está no limite
   const allRows = await prisma.membro.findMany({
-    select: { id: true, nome: true, discipuladorId: true, _count: { select: { discipulos: true } } },
+    select: { id: true, nome: true, discipuladorId: true, isDiscipulador: true, _count: { select: { discipulos: true } } },
     orderBy: { nome: "asc" },
   });
   const discipuladoresDisponiveis = allRows
     .filter((r) => r.id !== membroId)
+    .filter((r) => r.isDiscipulador)
     .filter((r) => !isDescendantOfPure(r.id, membroId, parentMap))
     .map((r) => ({
       id: r.id,

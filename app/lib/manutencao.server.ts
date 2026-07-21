@@ -162,8 +162,6 @@ export async function retornarDeManutencao(
       itemEstoqueId: true,
       dataEnvio: true,
       dataRetorno: true,
-    },
-    include: {
       itemEstoque: {
         select: { id: true, statusPatrimonio: true },
       },
@@ -180,7 +178,7 @@ export async function retornarDeManutencao(
 
   // 4. Assert transição de status (409 se inválida)
   assertTransicaoPatrimonioValida(
-    manutencao.itemEstoque.statusPatrimonio,
+    manutencao.itemEstoque.statusPatrimonio!,
     "DISPONIVEL",
     "retornarDeManutencao"
   );

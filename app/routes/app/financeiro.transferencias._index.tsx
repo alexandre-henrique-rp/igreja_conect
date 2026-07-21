@@ -24,12 +24,12 @@ export async function loader({ context }: LoaderFunctionArgs) {
   assertCanSeeFinancialModule(user);
 
   const transferencias = await prisma.transferenciaCaixa.findMany({
-    orderBy: { data: "desc" },
+    orderBy: { dataHora: "desc" },
     take: 50,
     include: {
-      origem: { select: { id: true, nome: true } },
-      destino: { select: { id: true, nome: true } },
-      operador: { select: { id: true, nome: true } },
+      caixaOrigem: { select: { id: true, nome: true } },
+      caixaDestino: { select: { id: true, nome: true } },
+      executadoPor: { select: { id: true, nome: true } },
     },
   });
 
@@ -88,16 +88,16 @@ export default function ListaTransferencias() {
                       {formatDate(t.dataHora)}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                      {t.caixaOrigem.nome}
+                      {t.caixaOrigem?.nome ?? "—"}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                      {t.caixaDestino.nome}
+                      {t.caixaDestino?.nome ?? "—"}
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-slate-900">
                       {formatBRLFromCents(t.valorCentavos)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {t.executadoPor.nome}
+                      {t.executadoPor?.nome ?? "—"}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {t.descricao || "-"}

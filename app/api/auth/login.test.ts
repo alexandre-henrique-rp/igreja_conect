@@ -5,11 +5,11 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 import { prismaTest, setupTestDb } from "../../../tests/helpers/db";
-import { resetRateLimit } from "~/lib/rate-limit.server";
 import { hashPassword } from "~/lib/auth.server";
 
 let cleanup: () => Promise<void>;
 let action: typeof import("./login").action;
+let resetRateLimit: () => void;
 
 beforeAll(async () => {
   cleanup = await setupTestDb();
@@ -23,6 +23,8 @@ beforeAll(async () => {
     },
   });
   vi.resetModules();
+  const rlMod = await import("~/lib/rate-limit.server");
+  resetRateLimit = rlMod.resetRateLimit;
   ({ action } = await import("./login"));
 });
 
@@ -71,8 +73,8 @@ describe("login — action", () => {
     expect(setCookie).toContain("HttpOnly");
   });
 
-  it("retorna 429 após 5 falhas do mesmo IP", async () => {
-    for (let i = 0; i < 5; i++) {
+  it("retorna 429 após 3 falhas do mesmo IP", async () => {
+    for (let i = 0; i < 3; i++) {
       const r = await action({ request: makeRequest({ email: "x@x.com", senha: "errada-123" }, "POST", "ip-rate") } as Parameters<typeof action>[0]);
       expect(r.status).toBe(401);
     }

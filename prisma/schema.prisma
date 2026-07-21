@@ -20,7 +20,6 @@ enum Cargo {
   ADMIN
   PASTOR
   SECRETARIO
-  DISCIPULADOR
   FINANCEIRO
   LIDER_MINISTERIO
 }
@@ -80,6 +79,16 @@ model Membro {
   dataConversao DateTime?
   dataBatismo   DateTime?
 
+  // Campos pessoais adicionais (S02-T05/S02-T08 — wire-up de _dummy placeholders)
+  dataNascimento   DateTime?
+  sexo             String? // Validado em Zod: "Masculino" | "Feminino" | "Outro"
+  status           String? // Validado em Zod: "Ativo" | "Pendente" | "Inativo"
+  grupo            String? // Texto livre (placeholder — futuro: FK para Celula)
+  // `discipuladorNome` evita colisão com a relation `discipulador` (FK).
+  // Vínculo real continua em `discipuladorId` (aba Discipulado).
+  discipuladorNome String?
+  complemento      String? // Complemento de endereço (Apto, Bloco, etc.)
+
   // Endereço Residencial
   logradouro String?
   numero     String?
@@ -87,6 +96,9 @@ model Membro {
   cidade     String?
   estado     String?
   cep        String?
+
+  // Flag que indica se o membro pode ser discipulador de outros membros
+  isDiscipulador Boolean @default(false)
 
   // Relacionamento de Discipulado (Auto-relacionamento 1:N)
   // RN-MEM-04: 1 membro tem apenas 1 discipulador. 1 discipulador tem até 12 discípulos (validado via service)
@@ -103,6 +115,9 @@ model Membro {
   // Sessões de login (httpOnly cookie). Cascade no membro = logout automático ao excluir.
   sessions Session[]
 
+  // Convites de acesso ao sistema (token temporário para criar senha)
+  conviteTokens ConviteToken[]
+
   // Auditoria e Controle
   transferenciasFeitas TransferenciaCaixa[]
   estoquesRetirados    MovimentacaoEstoque[]
@@ -111,6 +126,9 @@ model Membro {
   // Relação com Configuração de Acolhimento (1 ConfiguracaoGeral pode ter 1 membro responsável)
   configuracoesAcolhimento ConfiguracaoGeral[] @relation("ResponsavelVisitante")
 
+  // Logs de auditoria (LGPD art. 46)
+  auditLogs AuditLog[] @relation("AuditLogs")
+
   // Relacionamentos — Cultos, Escalas, Células, Eventos
   cultosCriados      Culto[]
   escalasCriadas     Escala[]
@@ -118,7 +136,11 @@ model Membro {
   celulaLiderada     Celula?
   celulas            MembroCelula[]
   eventosResponsavel Evento[]
-  eventosCriados     Evento[] @relation("EventoCriador")
+  eventosCriados     Evento[]           @relation("EventoCriador")
+
+  // Upload de avatar (S3-compatible / Garage)
+  avatarUploadId String?
+  avatarUpload   Upload? @relation("MembroAvatar", fields: [avatarUploadId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -149,6 +171,26 @@ model Session {
   @@map("sessions")
 }
 
+/**
+ * Token de convite para criação de senha (fluxo de onboarding).
+ * Quando um admin cadastra um membro com cargo e email, um token
+ * temporário é gerado. O membro acessa a URL pública /convite/:token
+ * para criar sua senha. Token expira em 2 horas.
+ */
+model ConviteToken {
+  id        String    @id @default(uuid())
+  membroId  String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("convite_tokens")
+}
+
 model Ministerio {
   id          String              @id @default(uuid())
   nome        String              @unique
@@ -167,6 +209,7 @@ model MinisterioMembro {
   id           String     @id @default(uuid())
   membroId     String
   ministerioId String
+  lider        Boolean    @default(false)
   membro       Membro     @relation(fields: [membroId], references: [id], onDelete: Cascade)
   ministerio   Ministerio @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
 
@@ -235,6 +278,10 @@ model Lancamento {
   // RN-FIN-02: UUID que agrupa os dois lançamentos de uma transferência atômica
   transferenciaGrupoId String?
 
+  // Comprovante anexo (NF, recibo, cupom) — 1:1 com Upload
+  attachmentUploadId String?
+  attachmentUpload   Upload? @relation("LancamentoAnexo", fields: [attachmentUploadId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -247,9 +294,9 @@ model Lancamento {
 // ==========================================
 
 model ItemEstoque {
-  id         String          @id @default(uuid())
-  nome       String
-  descricao  String?
+  id               String          @id @default(uuid())
+  nome             String
+  descricao        String?
   tipo             TipoItemEstoque @default(CONSUMO)
   quantidade       Int             @default(0) // Para consumo, incrementa/decrementa. Para patrimônio, geralmente é 1 por unidade física
   quantidadeMinima Int             @default(5) // Quantidade mínima para alerta de estoque baixo
@@ -303,6 +350,7 @@ model ManutencaoAtivo {
   // Caso dê Perda Total (RN-EST-05)
   foiPerdaTotal   Boolean @default(false)
   urlLaudoTecnico String? // Link do arquivo armazenado no MinIO
+  motivo          String? // Motivo da baixa por perda (RN-EST-05)
 
   itemEstoque ItemEstoque @relation(fields: [itemEstoqueId], references: [id], onDelete: Restrict)
 
@@ -359,18 +407,18 @@ enum StatusEscala {
 }
 
 model Escala {
-  id            String            @id @default(uuid())
-  ministerioId  String
-  ministerio    Ministerio        @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
-  titulo        String
-  data          DateTime
-  observacao    String?
-  status        StatusEscala      @default(PENDENTE)
-  createdById   String?
-  createdBy     Membro?           @relation(fields: [createdById], references: [id])
-  voluntarios   EscalaVoluntario[]
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id           String             @id @default(uuid())
+  ministerioId String
+  ministerio   Ministerio         @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  titulo       String
+  data         DateTime
+  observacao   String?
+  status       StatusEscala       @default(PENDENTE)
+  createdById  String?
+  createdBy    Membro?            @relation(fields: [createdById], references: [id])
+  voluntarios  EscalaVoluntario[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@index([ministerioId])
   @@map("escalas")
@@ -396,16 +444,16 @@ model EscalaVoluntario {
 // ==========================================
 
 model Celula {
-  id        String   @id @default(uuid())
-  nome      String   @unique
+  id        String         @id @default(uuid())
+  nome      String         @unique
   descricao String?
-  liderId   String?   @unique
-  lider     Membro?  @relation(fields: [liderId], references: [id], onDelete: SetNull)
+  liderId   String?        @unique
+  lider     Membro?        @relation(fields: [liderId], references: [id], onDelete: SetNull)
   endereco  String?
   diaSemana String?
   horario   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   membros   MembroCelula[]
 
   @@map("celulas")
@@ -443,20 +491,20 @@ enum StatusEvento {
 }
 
 model Evento {
-  id            String      @id @default(uuid())
+  id            String       @id @default(uuid())
   titulo        String
   descricao     String?
-  tipo          TipoEvento  @default(ESPECIAL)
+  tipo          TipoEvento   @default(ESPECIAL)
   status        StatusEvento @default(RASCUNHO)
   dataInicio    DateTime
   dataFim       DateTime?
   local         String?
   responsavelId String?
-  responsavel   Membro?     @relation(fields: [responsavelId], references: [id], onDelete: SetNull)
+  responsavel   Membro?      @relation(fields: [responsavelId], references: [id], onDelete: SetNull)
   createdById   String?
-  createdBy     Membro?     @relation("EventoCriador", fields: [createdById], references: [id])
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdBy     Membro?      @relation("EventoCriador", fields: [createdById], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@map("eventos")
 }
@@ -502,4 +550,104 @@ model ConfiguracaoGeral {
   responsavelMinisterio Ministerio? @relation("MinisterioResponsavel", fields: [responsavelMinisterioId], references: [id])
 
   @@map("configuracoes_gerais")
+}
+
+// ==========================================
+// MÓDULO 8: STORAGE / UPLOADS (Garage S3-compat)
+// ==========================================
+//
+// Segue `training/object-storage-standard.md` (perfil "Completo" adaptado
+// para SQLite + Garage). Pipeline: Cliente → POST /api/uploads → bucket
+// staging → worker (magic bytes → ClamAV → variants lg/md/sm) → bucket
+// final → delete staging → status READY. Soft delete LGPD.
+
+/// Metadata de um upload (imagem/vídeo/áudio/documento).
+/// Storage real fica no Garage; aqui guardamos só o tracking.
+model Upload {
+  id          String  @id @default(uuid())
+  userId      String? // Quem subiu (admin que fez upload)
+  kind        String // 'image' | 'video' | 'audio' | 'document'
+  contextId   String? // ID do objeto relacionado (membroId, etc)
+  contextType String? // 'membro.avatar' | 'membro.document' | etc
+  isPublic    Boolean @default(false)
+
+  // Identificação do arquivo
+  originalFilename String
+  declaredMime     String // Content-Type enviado pelo client (NÃO confiar)
+  detectedMime     String? // Magic bytes (verdade)
+  sizeBytes        Int
+  sha256           String? // Hash do original (quando worker processa)
+  ext              String? // Extensão inferida do MIME detectado
+
+  // Storage (S3-compatible / Garage)
+  bucket           String // Bucket final (ex: "igreja-conect-images")
+  storageKeyPrefix String // "<contextId>/<uploadId>" (sem extensão)
+
+  // Variants (JSON string array; SQLite não tem TEXT[])
+  // Ex: '["lg","md","sm"]' para image; NULL para document
+  variants String?
+
+  // Status: PROCESSING → SCANNING → TRANSCODING → READY | REJECTED | FAILED
+  status           String  @default("PROCESSING")
+  rejectionReason  String? // 'virus_detected' | 'mime_mismatch' | 'too_large' | etc
+  rejectionDetails String? // JSON string com detalhes do erro
+
+  // Audit / Lifecycle
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
+  failedAt       DateTime?
+  deletedAt      DateTime? // Soft delete (LGPD art. 18, VI)
+  retentionUntil DateTime? // Hard delete agendado
+  isPii          Boolean   @default(false)
+
+  // Relations
+  membrosAvatar    Membro[]     @relation("MembroAvatar")
+  lancamentosAnexo Lancamento[] @relation("LancamentoAnexo")
+
+  @@index([userId])
+  @@index([contextType, contextId])
+  @@index([status])
+  @@index([deletedAt])
+  @@index([sha256, kind])
+  @@map("uploads")
+}
+
+/// Log de auditoria LGPD (art. 46 — controle de acesso).
+/// Eventos: login, logout, membro.create, membro.update, etc.
+model AuditLog {
+  id        String   @id @default(uuid())
+  membroId  String? // alvo da ação (ex: membro sendo editado)
+  event     String
+  actorId   String? // quem executou
+  actorRole String?
+  details   String? // JSON string
+  ipHash    String? // SHA-256 do IP (LGPD)
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  membro Membro? @relation("AuditLogs", fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([membroId])
+  @@index([event, createdAt])
+  @@map("audit_log")
+}
+
+/// Fila assíncrona SQLite-based (sem Redis/BullMQ).
+/// Worker polling loop processa jobs em ordem FIFO por queue.
+/// `payload` é JSON string com dados específicos do job.
+model Job {
+  id          String    @id @default(uuid())
+  queue       String // 'media.process' | 'media.cleanup' | etc
+  payload     String // JSON string
+  status      String    @default("PENDING") // PENDING | RUNNING | DONE | FAILED | DEAD
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  lastError   String?
+  scheduledAt DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([queue, status, scheduledAt])
+  @@map("jobs")
 }

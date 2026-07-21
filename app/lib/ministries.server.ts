@@ -24,6 +24,7 @@ import { Prisma, type PrismaClient } from "../../generated/prisma/client";
 import { prisma } from "~/db/prisma.server";
 import { assertCanManageMinisterios, canManageMinisterios } from "./rbac.server";
 import { ConflictError, NomeDuplicadoError, NotFoundError } from "./errors";
+import { logAction } from "./audit.server";
 import type { SessionUser } from "./session.types";
 import {
   MinisterioCreateSchema,
@@ -264,5 +265,46 @@ export async function removeMembroFromMinisterio(
   // deleteMany não lança se nada bateu (idempotente).
   await prisma.ministerioMembro.deleteMany({
     where: { ministerioId, membroId },
+  });
+}
+
+/**
+ * Alterna a flag `lider` de um membro em um ministério (true ↔ false).
+ *
+ * @description UPDATE em `ministerio_membros.lider` + log de auditoria.
+ * @param {string} ministerioId - UUID do ministério.
+ * @param {string} membroId - UUID do membro.
+ * @param {SessionUser} user - Usuário autenticado.
+ * @throws {Response} 403 se não é gestor.
+ * @throws {NotFoundError} 404 se o vínculo não existe.
+ */
+export async function toggleLiderMinisterio(
+  ministerioId: string,
+  membroId: string,
+  user: SessionUser
+): Promise<void> {
+  assertCanManageMinisterios(user);
+
+  const vinculo = await prisma.ministerioMembro.findUnique({
+    where: { membroId_ministerioId: { membroId, ministerioId } },
+  });
+  if (!vinculo) {
+    throw new NotFoundError("Membro não vinculado a este ministério.");
+  }
+
+  await prisma.ministerioMembro.update({
+    where: { membroId_ministerioId: { membroId, ministerioId } },
+    data: { lider: !vinculo.lider },
+  });
+
+  await logAction({
+    membroId,
+    event: "ministerio.toggle_lider",
+    actorId: user.id,
+    actorRole: user.cargo,
+    details: JSON.stringify({
+      ministerioId,
+      novoValor: !vinculo.lider,
+    }),
   });
 }

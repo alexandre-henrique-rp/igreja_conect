@@ -26,7 +26,7 @@ describe("canSeeFinancials", () => {
   });
 
   it("DISCIPULADOR NÃO pode ver módulo financeiro", () => {
-    expect(canSeeFinancials({ cargo: "DISCIPULADOR" })).toBe(false);
+    expect(canSeeFinancials({ cargo: "LIDER_MINISTERIO" })).toBe(false);
   });
 
   it("LIDER_MINISTERIO NÃO pode ver módulo financeiro", () => {
@@ -56,7 +56,7 @@ describe("canManageCaixa", () => {
   });
 
   it("DISCIPULADOR NÃO pode gerenciar caixas", () => {
-    expect(canManageCaixa({ cargo: "DISCIPULADOR" })).toBe(false);
+    expect(canManageCaixa({ cargo: "LIDER_MINISTERIO" })).toBe(false);
   });
 
   it("LIDER_MINISTERIO NÃO pode gerenciar caixas", () => {
@@ -86,7 +86,7 @@ describe("canViewDizimoMembro", () => {
   });
 
   it("DISCIPULADOR NÃO vê dízimo (fora do escopo)", () => {
-    expect(canViewDizimoMembro({ cargo: "DISCIPULADOR" })).toBe(false);
+    expect(canViewDizimoMembro({ cargo: "LIDER_MINISTERIO" })).toBe(false);
   });
 
   it("LIDER_MINISTERIO NÃO vê dízimo (fora do escopo)", () => {

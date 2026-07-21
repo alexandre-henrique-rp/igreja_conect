@@ -5,7 +5,7 @@
  * Resposta OK: 204 No Content + Set-Cookie __session
  * Resposta fail: 401 Unauthorized com mensagem genérica (anti-enumeração)
  *
- * Rate limit: 5 tentativas / 15min / IP (in-memory).
+ * Rate limit: 3 tentativas / 1h / IP (in-memory).
  *
  * @see app/lib/session.server.ts
  * @see app/lib/auth.server.ts
@@ -31,28 +31,30 @@ export async function action({ request }: ActionFunctionArgs): Promise<Response>
     return new Response("Método não permitido", { status: 405 });
   }
 
+  // Parse + valida payload
+  let body: { email?: string; senha?: string; clientIP?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("JSON inválido", { status: 400 });
+  }
+
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     request.headers.get("x-real-ip") ??
+    body.clientIP ??
     "unknown";
 
   // Rate limit
   const rl = checkRateLimit(ip);
   if (!rl.allowed) {
     safeLog({ action: "login", result: "rate_limited", ip, timestamp: Date.now() });
-    return new Response("Muitas tentativas. Tente novamente em alguns minutos.", {
+    return new Response("Muitas tentativas. Tente novamente em 1 hora.", {
       status: 429,
       headers: { "Retry-After": String(rl.retryAfter) },
     });
   }
 
-  // Parse + valida payload
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return new Response("JSON inválido", { status: 400 });
-  }
   const parsed = LoginInputSchema.safeParse(body);
   if (!parsed.success) {
     checkRateLimit(ip, "fail");

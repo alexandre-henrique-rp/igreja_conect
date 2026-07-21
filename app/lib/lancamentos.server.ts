@@ -187,9 +187,19 @@ export async function listarPorCaixa(
     categoria: string;
     valorCentavos: number;
     dataCompetencia: Date;
-    descricao: string;
+    descricao: string | null;
     caixa: { id: string; nome: string };
     membro: { id: string; nome: string } | null;
+    attachmentUploadId: string | null;
+    attachmentUpload: {
+      id: string;
+      status: string;
+      bucket: string;
+      storageKeyPrefix: string;
+      ext: string | null;
+      detectedMime: string | null;
+      deletedAt: Date | null;
+    } | null;
   }>;
   total: number;
   page: number;
@@ -260,6 +270,17 @@ export async function listarPorCaixa(
       include: {
         caixa: { select: { id: true, nome: true } },
         membro: { select: { id: true, nome: true } },
+        attachmentUpload: {
+          select: {
+            id: true,
+            status: true,
+            bucket: true,
+            storageKeyPrefix: true,
+            ext: true,
+            detectedMime: true,
+            deletedAt: true,
+          },
+        },
       },
     }),
   ]);
@@ -282,6 +303,8 @@ export async function listarPorCaixa(
       descricao: l.descricao,
       caixa: l.caixa,
       membro: l.membro,
+      attachmentUploadId: l.attachmentUploadId,
+      attachmentUpload: l.attachmentUpload,
     })),
     total,
     page,

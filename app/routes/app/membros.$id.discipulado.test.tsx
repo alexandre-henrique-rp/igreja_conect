@@ -42,7 +42,7 @@ function userWith(cargo: string | null, id = "u-" + cargo): SessionUser {
   return { id, nome: `User ${cargo}`, cargo };
 }
 
-async function makeMembro(opts: { nome: string; cargo?: "DISCIPULADOR" | "ADMIN" | "PASTOR" | "SECRETARIO" | "FINANCEIRO" | "LIDER_MINISTERIO" | null; discipuladorId?: string | null }) {
+async function makeMembro(opts: { nome: string; cargo?: "LIDER_MINISTERIO" | "ADMIN" | "PASTOR" | "SECRETARIO" | "FINANCEIRO" | "LIDER_MINISTERIO" | null; discipuladorId?: string | null }) {
   const m = await prismaTest.membro.create({
     data: {
       nome: opts.nome,
@@ -91,7 +91,7 @@ describe("membros.$id.discipulado — loader (S03-T06)", () => {
     const m = await makeMembro({ nome: "Fora" });
     let caught: unknown = null;
     try {
-      await loader(loaderArgs(m.id, userWith("DISCIPULADOR")));
+      await loader(loaderArgs(m.id, userWith("LIDER_MINISTERIO")));
     } catch (e) {
       caught = e;
     }
@@ -240,7 +240,7 @@ describe("membros.$id.discipulado — action: assign (S03-T06)", () => {
     const m = await makeMembro({ nome: "M" });
     let caught: unknown = null;
     try {
-      await action(actionArgs(m.id, "assign", { discipuladorId: m.id }, userWith("DISCIPULADOR")));
+      await action(actionArgs(m.id, "assign", { discipuladorId: m.id }, userWith("LIDER_MINISTERIO")));
     } catch (e) {
       caught = e;
     }

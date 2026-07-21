@@ -18,6 +18,7 @@
  */
 import type { Route } from "./+types/uploads";
 import { data } from "react-router";
+import { createHash } from "node:crypto";
 import { getUserFromRequest } from "~/lib/session.server";
 import { prisma } from "~/db/prisma.server";
 import { STORAGE_CONFIG, type StorageKind } from "~/lib/storage/config.server";
@@ -82,12 +83,48 @@ export async function action({ request }: Route.ActionArgs) {
     }
   }
 
+  // === Ler buffer e calcular SHA-256 para dedup ===
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const sha256 = createHash("sha256").update(buffer).digest("hex");
+
+  // === Dedup: se já existe um upload READY com mesmo sha256+kind, reutiliza ===
+  const existing = await prisma.upload.findFirst({
+    where: {
+      sha256,
+      kind,
+      status: "READY",
+      deletedAt: null,
+    },
+  });
+  if (existing) {
+    await prisma.auditLog.create({
+      data: {
+        event: "upload.deduped",
+        actorId: user.id,
+        actorRole: user.cargo,
+        details: JSON.stringify({
+          uploadId: existing.id,
+          originalFilename: file.name,
+          contextId,
+          contextType,
+        }),
+      },
+    });
+    return data(
+      {
+        uploadId: existing.id,
+        status: "READY",
+        deduped: true,
+        statusUrl: `/api/uploads/${existing.id}`,
+      },
+      { status: 200 },
+    );
+  }
+
   // === Persistir metadata ANTES de subir ===
   const uploadId = crypto.randomUUID();
-  const storageKeyPrefix =
-    typeof contextId === "string" && contextId.length > 0
-      ? `${contextId}/${uploadId}`
-      : `misc/${uploadId}`;
+  const storageKeyPrefix = sha256;
 
   await prisma.upload.create({
     data: {
@@ -100,6 +137,7 @@ export async function action({ request }: Route.ActionArgs) {
       originalFilename: file.name,
       declaredMime: file.type || "application/octet-stream",
       sizeBytes: fileSize,
+      sha256,
       bucket: STORAGE_CONFIG.buckets.staging,
       storageKeyPrefix,
       // isPii heuristic: avatars e documentos pessoais são PII
@@ -110,9 +148,6 @@ export async function action({ request }: Route.ActionArgs) {
   });
 
   // === Upload pro staging (streaming via PutObject — small files) ===
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
   const stagingKey = `${storageKeyPrefix}/original`;
 
   try {
@@ -169,13 +204,13 @@ export async function action({ request }: Route.ActionArgs) {
   });
 
   // === Audit log ===
-  await prisma.uploadAuditLog.create({
+  await prisma.auditLog.create({
     data: {
-      uploadId,
       event: "upload.requested",
       actorId: user.id,
       actorRole: user.cargo,
       details: JSON.stringify({
+        uploadId,
         sizeBytes: fileSize,
         kind,
         contextId,

@@ -5,15 +5,38 @@
  *
  * @see design/relatorios-balancete.DESIGN.md
  */
-import { Link } from "react-router";
+import { Form, Link } from "react-router";
 import type { Route } from "./+types/financeiro.relatorios.balancete";
 import { userContext } from "~/lib/user-context";
 import { assertCanSeeRelatorios } from "~/lib/rbac.server";
 import { formatBRLFromCents } from "~/lib/money-format";
-import { getBalanceteMensal } from "~/lib/relatorios.server";
+import { getBalanceteMensal, exportarBalanceteCSV } from "~/lib/relatorios.server";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Balancete Mensal — Igreja Conect" }];
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
+  const user = context.get(userContext);
+  if (!user) throw new Response("Não autenticado.", { status: 401 });
+  assertCanSeeRelatorios(user);
+
+  const formData = await request.formData();
+  const periodo = formData.get("periodo") as string | null;
+
+  const hoje = new Date();
+  const ano = periodo ? parseInt(periodo.split("-")[0]) : hoje.getFullYear();
+  const mes = periodo ? parseInt(periodo.split("-")[1]) : hoje.getMonth() + 1;
+
+  const csv = await exportarBalanceteCSV(user, ano, mes);
+  const filename = `balancete-${ano}-${String(mes).padStart(2, "0")}.csv`;
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
 }
 
 export async function loader({ context, request }: Route.LoaderArgs) {
@@ -63,6 +86,29 @@ export default function BalancetePage({ loaderData }: Route.ComponentProps) {
   const totalSaidas = categorias.reduce((s, c) => s + c.saidasCentavos, 0);
   const totalLiquido = totalEntradas - totalSaidas;
 
+  const mesStr = periodo.split("-")[1];
+  const mesNum = parseInt(mesStr);
+  const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const nomeMesAnterior = mesNum > 1 ? nomesMeses[mesNum - 2] : "Dezembro";
+
+  const saidasComPercentual = categorias
+    .filter((c) => c.saidasCentavos > 0)
+    .map((c) => ({
+      nome: c.nome,
+      cor: c.cor,
+      valor: c.saidasCentavos,
+      percentual: totalSaidas > 0 ? Math.round((c.saidasCentavos / totalSaidas) * 100) : 0,
+    }));
+  const donutColors: Record<string, string> = {
+    "bg-blue-500": "#3b82f6",
+    "bg-indigo-500": "#6366f1",
+    "bg-emerald-500": "#10b981",
+    "bg-red-400": "#f87171",
+    "bg-orange-400": "#fb923c",
+    "bg-amber-400": "#fbbf24",
+    "bg-slate-300": "#cbd5e1",
+  };
+
   return (
     <main className="p-6 max-w-7xl mx-auto space-y-6 bg-slate-50 min-h-screen">
       {/* Breadcrumb + Header + Seletor de Mês */}
@@ -78,13 +124,33 @@ export default function BalancetePage({ loaderData }: Route.ComponentProps) {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Balancete Mensal</h1>
           <p className="text-slate-600 text-sm mt-1">Resumo detalhado das movimentações financeiras do período.</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <input className="bg-white border border-slate-200 rounded-lg h-10 px-4 text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" type="month" defaultValue={periodo} />
-          <button type="button" className="bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg h-10 px-6 flex items-center space-x-2 transition-all shadow-sm active:scale-95">
+        <Form method="get" className="flex items-center space-x-3">
+          <input
+            name="periodo"
+            aria-label="Período"
+            className="bg-white border border-slate-200 rounded-lg h-10 px-4 text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+            type="month"
+            defaultValue={periodo}
+          />
+          <button
+            type="submit"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg h-10 px-6 flex items-center space-x-2 transition-all shadow-sm active:scale-95"
+          >
             <span className="text-white">{IconPrint}</span>
-            <span>Imprimir Balancete</span>
+            <span>Atualizar</span>
           </button>
-        </div>
+        </Form>
+        <Form method="post" className="inline-flex">
+          <input type="hidden" name="periodo" value={periodo} />
+          <button
+            type="submit"
+            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors h-10"
+            title="Exportar Balancete em CSV"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
+            Exportar CSV
+          </button>
+        </Form>
       </div>
 
       {/* 4 KPI Cards */}
@@ -95,7 +161,7 @@ export default function BalancetePage({ loaderData }: Route.ComponentProps) {
           </div>
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Saldo Anterior</p>
           <h3 className="text-2xl font-bold text-slate-900 mt-1 font-mono">{formatBRLFromCents(kpis.saldoAnteriorCentavos)}</h3>
-          <p className="mt-4 text-[11px] font-medium text-slate-400">Referente a Setembro</p>
+          <p className="mt-4 text-[11px] font-medium text-slate-400">Referente a {nomeMesAnterior}</p>
         </div>
         <div className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-all">
           <div className="flex justify-between items-start mb-4">
@@ -192,28 +258,40 @@ export default function BalancetePage({ loaderData }: Route.ComponentProps) {
             <div className="relative w-40 h-40 mx-auto mb-6">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                 <circle cx="18" cy="18" fill="none" r="15.915" stroke="#f1f5f9" strokeWidth="3"></circle>
-                <circle cx="18" cy="18" fill="none" r="15.915" stroke="#3b82f6" strokeDasharray="35 100" strokeWidth="3"></circle>
-                <circle cx="18" cy="18" fill="none" r="15.915" stroke="#f59e0b" strokeDasharray="45 100" strokeDashoffset="-35" strokeWidth="3"></circle>
-                <circle cx="18" cy="18" fill="none" r="15.915" stroke="#8b5cf6" strokeDasharray="20 100" strokeDashoffset="-80" strokeWidth="3"></circle>
+                {(() => {
+                  let offset = 0;
+                  return saidasComPercentual.map((s) => {
+                    const dash = s.percentual;
+                    const color = donutColors[s.cor] || "#94a3b8";
+                    const elem = (
+                      <circle
+                        key={s.nome}
+                        cx="18" cy="18" fill="none" r="15.915"
+                        stroke={color}
+                        strokeDasharray={`${dash} 100`}
+                        strokeDashoffset={-offset}
+                        strokeWidth="3"
+                      />
+                    );
+                    offset += dash;
+                    return elem;
+                  });
+                })()}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-slate-900">{formatBRLFromCents(kpis.saidasCentavos).replace("R$", "R$").split(",")[0]}k</span>
+                <span className="text-xl font-bold text-slate-900">{formatBRLFromCents(kpis.saidasCentavos).split(",")[0]}</span>
                 <span className="text-[10px] text-slate-500 uppercase">Total Saídas</span>
               </div>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span> Manutenção</div>
-                <span className="font-semibold">35%</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> Pessoal</div>
-                <span className="font-semibold">45%</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-purple-500 mr-2"></span> Outros</div>
-                <span className="font-semibold">20%</span>
-              </div>
+              {saidasComPercentual.length > 0 ? saidasComPercentual.map((s) => (
+                <div key={s.nome} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center"><span className={`w-2 h-2 rounded-full ${s.cor} mr-2`}></span> {s.nome}</div>
+                  <span className="font-semibold">{s.percentual}%</span>
+                </div>
+              )) : (
+                <div className="text-xs text-slate-400 text-center py-4">Sem saídas no período</div>
+              )}
             </div>
           </div>
 

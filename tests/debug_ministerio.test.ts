@@ -41,7 +41,7 @@ describe("debug MINISTERIO", () => {
     });
     console.log("ministerioMembro count:", membros.length);
 
-    const result = await prisma.$transaction(async (tx: typeof prisma) => {
+    const result = await prisma.$transaction(async (tx) => {
       const visitante = await tx.membro.create({
         data: { nome: "Visitante Min", tipo: "VISITANTE" },
         select: { id: true, nome: true },
@@ -81,7 +81,7 @@ describe("debug MINISTERIO", () => {
     console.log("Alertas by visitante as destinatario:", alertasByVisitante.length);
 
     const alertasByMembers = await prisma.alerta.findMany({
-      where: { destinatarios: { some: { membroId: { in: result.memberIds } } } },
+      where: { destinatarios: { some: { membroId: { in: result.memberIds! } } } },
     });
     console.log("Alertas by members as destinatarios:", alertasByMembers.length);
 

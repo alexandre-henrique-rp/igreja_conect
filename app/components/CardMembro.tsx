@@ -10,6 +10,7 @@ export type MembroListItem = {
   createdAt: Date | string;
   discipulador?: { nome: string } | null;
   ministerios?: { nome: string }[];
+  avatarUrl?: string | null;
 };
 
 export type CardMembroProps = {
@@ -23,7 +24,7 @@ const TIPO_LABELS = {
   MEMBRO_ATIVO: "Membro Efetivo",
 } as const;
 
-function Avatar({ email, nome }: { email: string | null; nome: string }) {
+function Avatar({ avatarUrl, nome }: { avatarUrl?: string | null; nome: string }) {
   const initials = nome
     .split(" ")
     .map((n) => n[0])
@@ -31,21 +32,10 @@ function Avatar({ email, nome }: { email: string | null; nome: string }) {
     .join("")
     .toUpperCase();
 
-  let src: string | null = null;
-  if (email === "ricardo.o@email.com") {
-    src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80";
-  } else if (email === "ana.beatriz@email.com") {
-    src = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80";
-  } else if (email === "m.vinicius@email.com") {
-    src = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80";
-  } else if (email === "juliana.s@email.com") {
-    src = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&h=120&q=80";
-  }
-
-  if (src) {
+  if (avatarUrl) {
     return (
       <img
-        src={src}
+        src={avatarUrl}
         alt={nome}
         className="h-10 w-10 rounded-full object-cover border border-slate-100 flex-shrink-0"
       />
@@ -112,7 +102,7 @@ export function CardMembro({ items, canEdit }: CardMembroProps) {
             className="border border-slate-200 rounded-lg bg-white p-4 shadow-2xs space-y-3"
           >
             <div className="flex items-center gap-3">
-              <Avatar email={m.email} nome={m.nome} />
+              <Avatar avatarUrl={m.avatarUrl} nome={m.nome} />
               <div className="min-w-0 flex-1">
                 <h3 className="text-base font-bold text-slate-900 truncate">
                   <Link

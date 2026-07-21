@@ -56,7 +56,7 @@ function makeGetRequest(): Request {
   });
 }
 
-type Cargo = "ADMIN" | "PASTOR" | "SECRETARIO" | "DISCIPULADOR" | "FINANCEIRO" | "LIDER_MINISTERIO";
+type Cargo = "ADMIN" | "PASTOR" | "SECRETARIO" | "LIDER_MINISTERIO" | "FINANCEIRO" | "LIDER_MINISTERIO";
 
 function args(
   request: Request,
@@ -118,7 +118,7 @@ describe("membros.$id.editar — loader (S02-T08)", () => {
 
   it("DISCIPULADOR: 404 (não 403) para membro fora de escopo (não vaza existência)", async () => {
     const m = await makeMembro({ nome: "Fora de Escopo" });
-    const disc = await makeAuthUser("DISCIPULADOR");
+    const disc = await makeAuthUser("LIDER_MINISTERIO");
     await expect(
       loader(args(makeGetRequest(), disc, { id: m.id }))
     ).rejects.toThrow();
@@ -153,12 +153,12 @@ describe("membros.$id.editar — action (S02-T08)", () => {
   });
 
   it("DISCIPULADOR pode atualizar discípulo vinculado", async () => {
-    const disc = await makeMembro({ nome: "Disc", cargo: "DISCIPULADOR" });
+    const disc = await makeMembro({ nome: "Disc", cargo: "LIDER_MINISTERIO" });
     const filho = await makeMembro({ nome: "Filho", discipuladorId: disc.id });
     const request = makePostRequest({ nome: "Filho Atualizado" });
 
     const res = await action(
-      args(request, { id: disc.id, nome: "Disc", cargo: "DISCIPULADOR" }, { id: filho.id })
+      args(request, { id: disc.id, nome: "Disc", cargo: "LIDER_MINISTERIO" }, { id: filho.id })
     );
     expect((res as Response).status).toBe(302);
 
@@ -168,7 +168,7 @@ describe("membros.$id.editar — action (S02-T08)", () => {
 
   it("DISCIPULADOR fora de escopo → 404", async () => {
     const m = await makeMembro({ nome: "Fora" });
-    const disc = await makeAuthUser("DISCIPULADOR");
+    const disc = await makeAuthUser("LIDER_MINISTERIO");
     const request = makePostRequest({ nome: "Hacked" });
 
     await expect(

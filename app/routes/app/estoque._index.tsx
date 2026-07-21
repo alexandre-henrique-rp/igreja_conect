@@ -231,18 +231,26 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
 
     try {
-      const item = await criarItem(
-        {
-          nome: parsed.data.nome,
-          tipo: parsed.data.tipo,
-          quantidade: parsed.data.quantidade,
-          quantidadeMinima: parsed.data.quantidadeMinima,
-          localizacaoFisica: parsed.data.localizacaoFisica,
-          descricao: parsed.data.descricao,
-          numeroSerie: raw.numeroSerie ? String(raw.numeroSerie) : undefined,
-        },
-        user
-      );
+      const itemData = parsed.data.tipo === "PATRIMONIO"
+        ? {
+            nome: parsed.data.nome,
+            tipo: "PATRIMONIO" as const,
+            quantidade: parsed.data.quantidade,
+            quantidadeMinima: parsed.data.quantidadeMinima,
+            localizacaoFisica: parsed.data.localizacaoFisica,
+            descricao: parsed.data.descricao,
+            numeroSerie: raw.numeroSerie ? String(raw.numeroSerie) : "",
+            statusPatrimonio: "DISPONIVEL" as const,
+          }
+        : {
+            nome: parsed.data.nome,
+            tipo: "CONSUMO" as const,
+            quantidade: parsed.data.quantidade,
+            quantidadeMinima: parsed.data.quantidadeMinima,
+            localizacaoFisica: parsed.data.localizacaoFisica,
+            descricao: parsed.data.descricao,
+          };
+      const item = await criarItem(itemData, user);
       return { success: true, message: "Produto cadastrado com sucesso!", intent: "criar", id: item.id };
     } catch (err: any) {
       if (err instanceof Response) throw err;
@@ -277,7 +285,6 @@ export async function action({ request, context }: Route.ActionArgs) {
         parsed.data.id,
         {
           nome: parsed.data.nome,
-          tipo: parsed.data.tipo,
           quantidade: parsed.data.quantidade,
           quantidadeMinima: parsed.data.quantidadeMinima,
           localizacaoFisica: parsed.data.localizacaoFisica,

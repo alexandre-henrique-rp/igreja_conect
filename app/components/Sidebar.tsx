@@ -23,6 +23,8 @@ type MenuItem = {
   icon: React.ReactNode | null;
   /** Cargos com permissão de ver este item (opcional, default = todos). */
   roles?: string[];
+  /** Se `true`, item não é renderizado (oculto temporariamente). */
+  hidden?: boolean;
 };
 
 const ICON_DASHBOARD = (
@@ -265,7 +267,7 @@ const MENU_ITEMS: MenuItem[] = [
   { label: "Alertas", to: "/app/alertas", icon: ICON_ALERTAS },
   { label: "Eventos", to: "/app/eventos", icon: ICON_EVENTOS },
   { label: "Estoque", to: "/app/estoque", icon: ICON_ESTOQUE },
-  { label: "Configurações", to: "/app/config/acolhimento", icon: ICON_CONFIG },
+  { label: "Configurações", to: "/app/config/acolhimento", icon: ICON_CONFIG, hidden: true },
 ];
 
 /**
@@ -307,7 +309,7 @@ export function Sidebar({ currentPath: currentPathProp, user, alertasNaoLidos = 
 
         {/* Lista de itens */}
         <ul className="flex-1 py-4 px-2 space-y-1">
-          {MENU_ITEMS.map((item) => {
+          {MENU_ITEMS.filter((item) => !item.hidden).map((item) => {
             const active = isItemActive(item, currentPath);
 
             const linkElement = (

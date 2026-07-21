@@ -163,7 +163,7 @@ export default function NovoProduto({ loaderData, actionData }: Route.ComponentP
                   className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-mono uppercase"
                   placeholder="Ex: PJ-001"
                 />
-                {actionData?.fieldErrors?.numeroSerie && (
+                {actionData?.fieldErrors && 'numeroSerie' in actionData.fieldErrors && actionData.fieldErrors.numeroSerie && (
                   <p className="text-xs text-red-500 mt-1">{actionData.fieldErrors.numeroSerie}</p>
                 )}
               </div>

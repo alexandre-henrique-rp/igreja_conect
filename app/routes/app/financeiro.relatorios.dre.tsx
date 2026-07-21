@@ -1,20 +1,43 @@
 /**
- * Rota /app/financeiro/relatorios/dre — DRE (Demonstração de Resultado) (cycle 4, S15).
+ * Rota /app/financeiro/relatorios/dre — DRE (Demonstração de Resultado).
  *
- * Dados MOCK (S14 backend halted). Quando S14 for implementado,
- * substituir por getDRE(user, periodo).
+ * Dados reais do banco via getDRE(). Action exporta CSV via exportarDRECSV().
  *
  * @see design/relatorios-dre.DESIGN.md
  */
-import { Link } from "react-router";
+import { Form, Link } from "react-router";
 import type { Route } from "./+types/financeiro.relatorios.dre";
 import { userContext } from "~/lib/user-context";
 import { assertCanSeeRelatorios } from "~/lib/rbac.server";
 import { formatBRLFromCents } from "~/lib/money-format";
-import { getDRE } from "~/lib/relatorios.server";
+import { getDRE, exportarDRECSV } from "~/lib/relatorios.server";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "DRE — Igreja Conect" }];
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
+  const user = context.get(userContext);
+  if (!user) throw new Response("Não autenticado.", { status: 401 });
+  assertCanSeeRelatorios(user);
+
+  const formData = await request.formData();
+  const dataInicio = formData.get("dataInicio");
+  const dataFim = formData.get("dataFim");
+
+  const hoje = new Date();
+  const dtInicio = typeof dataInicio === "string" && dataInicio ? new Date(dataInicio) : new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const dtFim = typeof dataFim === "string" && dataFim ? new Date(dataFim) : new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+  const csv = await exportarDRECSV(user, dtInicio, dtFim);
+  const filename = `dre-${dtInicio.toISOString().split("T")[0]}-a-${dtFim.toISOString().split("T")[0]}.csv`;
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
 }
 
 export async function loader({ context, request }: Route.LoaderArgs) {
@@ -35,6 +58,8 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   return {
     user,
     ...dados,
+    dataInicioISO: dataInicio.toISOString().split("T")[0],
+    dataFimISO: dataFim.toISOString().split("T")[0],
   };
 }
 
@@ -65,8 +90,11 @@ const IconWallet = (
 );
 
 export default function DREPage({ loaderData }: Route.ComponentProps) {
-  const { periodo, kpis, entradasPorTipo, saidasPorCategoria } = loaderData;
+  const { periodo, kpis, entradasPorTipo, saidasPorCategoria, dataInicioISO, dataFimISO } = loaderData;
   const isLucro = kpis.resultadoCentavos >= 0;
+  const percentualResultado = kpis.totalEntradasCentavos > 0
+    ? Math.round((kpis.resultadoCentavos / kpis.totalEntradasCentavos) * 100)
+    : 0;
 
   return (
     <main className="p-6 max-w-7xl mx-auto space-y-6 bg-white min-h-screen">
@@ -84,19 +112,49 @@ export default function DREPage({ loaderData }: Route.ComponentProps) {
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">DRE - Demonstração do Resultado</h1>
             <p className="text-slate-600 mt-1">Análise detalhada de performance financeira do período.</p>
           </div>
-          <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold text-slate-400 px-3">Início</span>
-              <input className="border-none focus:ring-0 text-sm py-0 font-medium text-slate-700 bg-transparent" type="date" defaultValue={periodo.dataInicio} />
-            </div>
-            <div className="h-8 w-px bg-slate-200"></div>
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold text-slate-400 px-3">Fim</span>
-              <input className="border-none focus:ring-0 text-sm py-0 font-medium text-slate-700 bg-transparent" type="date" defaultValue={periodo.dataFim} />
-            </div>
-            <button type="button" className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors">
-              <span className="text-white">{IconRefresh}</span>
-            </button>
+          <div className="flex items-center gap-3">
+            <Form method="get" className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+              <div className="flex flex-col">
+                <label htmlFor="dataInicio" className="text-[10px] uppercase font-bold text-slate-400 px-3">Início</label>
+                <input
+                  id="dataInicio"
+                  name="dataInicio"
+                  className="border-none focus:ring-0 text-sm py-0 font-medium text-slate-700 bg-transparent"
+                  type="date"
+                  defaultValue={periodo.dataInicio}
+                />
+              </div>
+              <div className="h-8 w-px bg-slate-200"></div>
+              <div className="flex flex-col">
+                <label htmlFor="dataFim" className="text-[10px] uppercase font-bold text-slate-400 px-3">Fim</label>
+                <input
+                  id="dataFim"
+                  name="dataFim"
+                  className="border-none focus:ring-0 text-sm py-0 font-medium text-slate-700 bg-transparent"
+                  type="date"
+                  defaultValue={periodo.dataFim}
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors"
+                title="Atualizar período"
+              >
+                <span className="text-white">{IconRefresh}</span>
+              </button>
+            </Form>
+            <Form method="post" className="inline-flex">
+              <input type="hidden" name="dataInicio" value={dataInicioISO} />
+              <input type="hidden" name="dataFim" value={dataFimISO} />
+              <button
+                type="submit"
+                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                title="Exportar DRE em CSV"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
+                Exportar CSV
+              </button>
+            </Form>
           </div>
         </div>
       </div>
@@ -106,7 +164,7 @@ export default function DREPage({ loaderData }: Route.ComponentProps) {
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-emerald-50 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">{IconTrendingUp}</div>
-            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">+12.5%</span>
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">{percentualResultado}% margem</span>
           </div>
           <p className="text-slate-500 text-sm font-medium">Total de Entradas</p>
           <h3 className="text-2xl font-bold text-slate-900 mt-1">{formatBRLFromCents(kpis.totalEntradasCentavos)}</h3>
@@ -114,7 +172,7 @@ export default function DREPage({ loaderData }: Route.ComponentProps) {
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-red-50 rounded-lg text-red-600 group-hover:scale-110 transition-transform">{IconTrendingDown}</div>
-            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">+4.2%</span>
+            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">{kpis.totalSaidasCentavos > 0 ? Math.round((kpis.totalSaidasCentavos / kpis.totalEntradasCentavos) * 100) : 0}% das entradas</span>
           </div>
           <p className="text-slate-500 text-sm font-medium">Total de Saídas</p>
           <h3 className="text-2xl font-bold text-slate-900 mt-1">{formatBRLFromCents(kpis.totalSaidasCentavos)}</h3>
@@ -208,7 +266,10 @@ export default function DREPage({ loaderData }: Route.ComponentProps) {
         <div className="relative z-10 max-w-3xl">
           <h4 className="text-xl font-bold mb-2">Resumo de Saúde Financeira</h4>
           <p className="text-blue-100 text-sm leading-relaxed opacity-90">
-            Seu resultado líquido este mês está 14% acima da média trimestral. A retenção de entradas por Dízimo continua sendo a principal âncora de estabilidade da congregação.
+            {isLucro
+              ? `Resultado líquido positivo de ${formatBRLFromCents(kpis.resultadoCentavos)} no período (${percentualResultado}% de margem). ${entradasPorTipo.length > 0 ? `Maior fonte de entradas: ${entradasPorTipo[0].tipo}.` : ""}`
+              : `Déficit de ${formatBRLFromCents(Math.abs(kpis.resultadoCentavos))} no período. Recomenda-se revisar despesas operacionais.`
+            }
           </p>
           <button type="button" className="mt-6 px-6 py-2 bg-white text-blue-600 rounded-lg text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
             Imprimir Relatório Anual

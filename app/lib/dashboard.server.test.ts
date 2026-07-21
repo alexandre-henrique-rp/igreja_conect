@@ -40,7 +40,7 @@ function adminUser(): SessionUser {
 }
 
 function discipuladorUser(id: string): SessionUser {
-  return { id, nome: "Discipulador", cargo: "DISCIPULADOR" };
+  return { id, nome: "Discipulador", cargo: "LIDER_MINISTERIO" };
 }
 
 async function makeMembro(
@@ -161,7 +161,7 @@ describe("dashboard.server — getDashboardData", () => {
       },
     });
 
-    const data = await getDashboardData({ id: disc.id, nome: "Disc", cargo: "DISCIPULADOR" });
+    const data = await getDashboardData({ id: disc.id, nome: "Disc", cargo: "LIDER_MINISTERIO" });
 
     expect(data.alertasNaoLidos).toBe(1);
   });

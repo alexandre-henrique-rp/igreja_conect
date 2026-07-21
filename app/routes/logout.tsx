@@ -17,7 +17,8 @@
 import type { Route } from "./+types/logout";
 import { redirect } from "react-router";
 import { deleteSession, sessionCookie } from "~/lib/session.server";
-import { safeLog } from "~/lib/audit.server";
+import { safeLog, logAction } from "~/lib/audit.server";
+import { getUserFromRequest } from "~/lib/session.server";
 
 /**
  * Action: deleta a sessão do DB (se houver) e redireciona para /login
@@ -29,6 +30,12 @@ import { safeLog } from "~/lib/audit.server";
  */
 export async function action({ request }: Route.ActionArgs): Promise<Response> {
   const sid = await sessionCookie.parse(request.headers.get("Cookie"));
+  const user = await getUserFromRequest(request);
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
   if (typeof sid === "string" && sid) {
     await deleteSession(sid);
     safeLog({
@@ -36,6 +43,13 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
       result: "ok",
       resource: "session",
       timestamp: Date.now(),
+    });
+    await logAction({
+      membroId: user?.id,
+      event: "logout",
+      actorId: user?.id,
+      actorRole: user?.cargo,
+      ip,
     });
   }
 

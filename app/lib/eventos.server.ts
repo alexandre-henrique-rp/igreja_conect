@@ -46,7 +46,7 @@ export type EventoComResponsavel = Evento & {
   responsavel: { id: string; nome: string } | null;
 };
 
-const CARGO_LEITURA = ["ADMIN", "PASTOR", "SECRETARIO", "DISCIPULADOR", "FINANCEIRO", "LIDER_MINISTERIO"] as const;
+const CARGO_LEITURA = ["ADMIN", "PASTOR", "SECRETARIO", "FINANCEIRO", "LIDER_MINISTERIO"] as const;
 const CARGO_ESCRITA = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
 
 function assertPodeLer(user: SessionUser): void {

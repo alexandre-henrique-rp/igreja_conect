@@ -244,7 +244,7 @@ async function acquireLock(chainId: string): Promise<() => Promise<void>> {
 async function createTestMember(input: {
   nome: string;
   email: string;
-  cargo: "ADMIN" | "SECRETARIO" | "PASTOR" | "FINANCEIRO" | "DISCIPULADOR" | "LIDER_MINISTERIO" | null;
+  cargo: "ADMIN" | "SECRETARIO" | "PASTOR" | "FINANCEIRO" | "LIDER_MINISTERIO" | "LIDER_MINISTERIO" | null;
   withPassword?: boolean;
 }): Promise<string> {
   const senhaHash = input.withPassword

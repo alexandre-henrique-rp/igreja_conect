@@ -49,15 +49,11 @@ export type DashboardData = {
 export async function getDashboardData(
   user: SessionUser
 ): Promise<DashboardData> {
-  const isDiscipulador = user.cargo === "DISCIPULADOR";
   const canSeeFinance = user.cargo && ["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"].includes(user.cargo);
   const canSeeDizimos = user.cargo && ["ADMIN", "PASTOR", "FINANCEIRO"].includes(user.cargo);
 
-  // Where base para membros (RBAC fina)
-  const membroWhere: { OR?: Array<{ id: string } | { discipuladorId: string }> } =
-    isDiscipulador
-      ? { OR: [{ id: user.id }, { discipuladorId: user.id }] }
-      : {};
+  // Where base para membros
+  const membroWhere: Record<string, unknown> = {};
 
   // Where para visitantes
   const visitanteWhere = {

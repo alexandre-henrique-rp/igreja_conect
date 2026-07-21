@@ -33,7 +33,7 @@ import { z } from "zod";
 import { prisma } from "~/db/prisma.server";
 import { assertCanWriteMembers } from "./rbac.server";
 import { EmailDuplicadoError, NotFoundError, BusinessRuleError } from "./errors";
-import { safeLog } from "./audit.server";
+import { safeLog, logAction } from "./audit.server";
 import { criarAlertaVisitante } from "./alerts.server";
 import type { SessionUser } from "./session.types";
 import type { MembroCreateInput, MembroUpdateInput } from "./schemas/membros";
@@ -58,6 +58,13 @@ export const MEMBRO_SAFE_SELECT = {
   estadoCivil: true,
   dataConversao: true,
   dataBatismo: true,
+  dataNascimento: true,
+  sexo: true,
+  status: true,
+  grupo: true,
+  discipuladorNome: true,
+  isDiscipulador: true,
+  complemento: true,
   logradouro: true,
   numero: true,
   bairro: true,
@@ -66,6 +73,18 @@ export const MEMBRO_SAFE_SELECT = {
   cep: true,
   discipuladorId: true,
   cargo: true,
+  avatarUploadId: true,
+  avatarUpload: {
+    select: {
+      id: true,
+      status: true,
+      bucket: true,
+      storageKeyPrefix: true,
+      ext: true,
+      detectedMime: true,
+      deletedAt: true,
+    },
+  },
   createdAt: true,
   updatedAt: true,
   // intencionalmente SEM senhaHash, SEM sessions, SEM ministerios
@@ -82,6 +101,7 @@ export type ListMembrosFilter = {
   pageSize?: number;
   discipuladorId?: string;
   ministerioId?: string;
+  isDiscipulador?: boolean;
 };
 
 /** Resultado paginado. */
@@ -104,9 +124,7 @@ function normalizeQ(q: string | undefined): string | undefined {
 }
 
 /**
- * Lista membros com filtros e paginação. Aplica RBAC fina:
- * se `user.cargo === "DISCIPULADOR"`, força `discipuladorId = user.id`
- * (não permite bypass via query string).
+ * Lista membros com filtros e paginação.
  *
  * @description SELECT via `MEMBRO_SAFE_SELECT` (LGPD AC-16).
  * @param {ListMembrosFilter} filter - Filtros da query string.
@@ -127,14 +145,13 @@ export async function listMembros(
   const q = normalizeQ(filter.q);
   const skip = (page - 1) * pageSize;
 
-  // RBAC fina: DISCIPULADOR vê apenas seus discípulos (RN-MEM-01 + matriz §3)
+  // RBAC fina: membros com isDiscipulador=true podem ser filtrados
   const where: Prisma.MembroWhereInput = {};
-  if (user.cargo === "DISCIPULADOR") {
-    where.discipuladorId = user.id;
-  } else if (filter.discipuladorId) {
+  if (filter.discipuladorId) {
     where.discipuladorId = filter.discipuladorId;
   }
   if (filter.tipo) where.tipo = filter.tipo;
+  if (filter.isDiscipulador !== undefined) where.isDiscipulador = filter.isDiscipulador;
   if (q) {
     where.nome = { contains: q.toLowerCase() };
   }
@@ -157,17 +174,13 @@ export async function listMembros(
 }
 
 /**
- * Busca membro por ID com escopo de RBAC fina.
- *
- * **DISCIPULADOR:** se o membro não tem `discipuladorId === user.id`,
- * lança `NotFoundError` (404) — não 403, para não vazar a existência
- * do recurso (RAG §3.3).
+ * Busca membro por ID.
  *
  * @description SELECT via `MEMBRO_SAFE_SELECT`.
  * @param {string} id - UUID do membro.
  * @param {SessionUser} user - Usuário autenticado.
  * @returns {Promise<MembroSafe>} Membro encontrado.
- * @throws {NotFoundError} Quando não existe OU está fora de escopo.
+ * @throws {NotFoundError} Quando não existe.
  * @example
  *   const membro = await getMembroById(params.id, user);
  */
@@ -180,15 +193,6 @@ export async function getMembroById(
     select: MEMBRO_SAFE_SELECT,
   });
   if (!membro) {
-    throw new NotFoundError("Membro não encontrado.");
-  }
-  if (
-    user.cargo === "DISCIPULADOR" &&
-    membro.id !== user.id &&
-    membro.discipuladorId !== user.id
-  ) {
-    // NÃO 403 — proteje contra enumeração (RAG §3.3)
-    // Exceção: o próprio usuário pode ver seu próprio registro.
     throw new NotFoundError("Membro não encontrado.");
   }
   return membro;
@@ -255,6 +259,7 @@ export async function createMembro(
         data: {
           nome: input.nome,
           tipo: input.tipo,
+          cargo: input.cargo ?? null,
           email: input.email ?? null,
           telefone: input.telefone ?? null,
           profissao: input.profissao ?? null,
@@ -312,6 +317,14 @@ export async function createMembro(
       return membro;
     });
 
+    await logAction({
+      membroId: created.id,
+      event: "membro.create",
+      actorId: user.id,
+      actorRole: user.cargo,
+      details: JSON.stringify({ nome: created.nome, tipo: created.tipo }),
+    });
+
     return created;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -324,8 +337,8 @@ export async function createMembro(
 /**
  * Atualiza um membro (parcial).
  *
- * **RBAC:** `assertCanWriteMembers` + `getMembroById` (escopo). Se
- * DISCIPULADOR tentando editar membro fora de escopo → 404.
+ * **RBAC:** `assertCanWriteMembers` + `getMembroById`. Se
+ * sem permissão → 404.
  *
  * **Filtra campos undefined:** Prisma ignora `undefined` em `data`,
  * então spread direto funciona — mas explicitamos cada campo para
@@ -347,12 +360,13 @@ export async function updateMembro(
   user: SessionUser
 ): Promise<MembroSafe> {
   assertCanWriteMembers(user);
-  // getMembroById já aplica escopo + 404 para DISCIPULADOR fora
+  // getMembroById valida existência
   await getMembroById(id, user);
 
   const data: Prisma.MembroUpdateInput = {};
   if (input.nome !== undefined) data.nome = input.nome;
   if (input.tipo !== undefined) data.tipo = input.tipo;
+  if (input.cargo !== undefined) data.cargo = input.cargo;
   if (input.email !== undefined) data.email = input.email;
   if (input.telefone !== undefined) data.telefone = input.telefone;
   if (input.profissao !== undefined) data.profissao = input.profissao;
@@ -366,11 +380,21 @@ export async function updateMembro(
   if (input.estado !== undefined) data.estado = input.estado;
   if (input.cep !== undefined) data.cep = input.cep;
 
-  return prisma.membro.update({
+  const updated = await prisma.membro.update({
     where: { id },
     data,
     select: MEMBRO_SAFE_SELECT,
   });
+
+  await logAction({
+    membroId: id,
+    event: "membro.update",
+    actorId: user.id,
+    actorRole: user.cargo,
+    details: JSON.stringify({ campos: Object.keys(data) }),
+  });
+
+  return updated;
 }
 
 /**
@@ -415,6 +439,13 @@ export async function deleteMembro(id: string, user: SessionUser): Promise<void>
   }
 
   await prisma.membro.delete({ where: { id } });
+
+  await logAction({
+    membroId: id,
+    event: "membro.delete",
+    actorId: user.id,
+    actorRole: user.cargo,
+  });
 }
 
 /**
@@ -453,7 +484,7 @@ export async function promoverTipo(
   // Zod enum (lança ZodError se inválido)
   const validated = TipoMembroSchema.parse(novoTipo);
 
-  // getMembroById aplica escopo (DISCIPULADOR fora de escopo → 404)
+  // getMembroById valida existência
   await getMembroById(id, user);
 
   const updated = await prisma.membro.update({
@@ -469,6 +500,14 @@ export async function promoverTipo(
     resource: "membro",
     result: "ok",
     timestamp: Date.now(),
+  });
+
+  await logAction({
+    membroId: id,
+    event: "membro.promote_type",
+    actorId: user.id,
+    actorRole: user.cargo,
+    details: JSON.stringify({ novoTipo: validated }),
   });
 
   return updated;
@@ -502,4 +541,92 @@ export async function listarMembrosParaSelect(
     orderBy: { nome: "asc" },
     take: 50,
   });
+}
+
+/**
+ * Helper: retorna URL signed do avatar (preview inline) + status do Upload.
+ *
+ * Retorna `null` se o membro não tem avatar ou se o Upload foi deletado.
+ * Retorna `{ status: "PROCESSING" }` se o avatar existe mas ainda está
+ * sendo processado (worker em ação).
+ *
+ * @description Resolve avatar do membro para exibição (listas, detalhe).
+ * @param {Pick<MembroSafe, "avatarUploadId" | "avatarUpload"> | null} membro
+ *   Membro retornado por `getMembroById` / `listMembros`. Aceita null.
+ * @returns {Promise<{url: string, status: string, uploadId: string} | null>}
+ */
+export async function getMembroAvatarSignedUrl(
+  membro:
+    | {
+        avatarUploadId: string | null;
+        avatarUpload?: {
+          id: string;
+          status: string;
+          bucket: string;
+          storageKeyPrefix: string;
+          ext: string | null;
+          detectedMime: string | null;
+          deletedAt: Date | null;
+        } | null;
+      }
+    | null
+    | undefined,
+): Promise<{ url: string; status: string; uploadId: string } | null> {
+  if (!membro?.avatarUploadId || !membro.avatarUpload) return null;
+  const upload = membro.avatarUpload;
+  if (upload.deletedAt) return null;
+  if (upload.status !== "READY") {
+    return {
+      url: "",
+      status: upload.status,
+      uploadId: upload.id,
+    };
+  }
+
+  const { getSignedPreviewUrl } = await import("./storage/signed-url.server");
+  const key = `${upload.storageKeyPrefix}${upload.ext ?? ""}`;
+  const url = await getSignedPreviewUrl({
+    bucket: upload.bucket,
+    key,
+  });
+  return { url, status: upload.status, uploadId: upload.id };
+}
+
+/**
+ * Alterna a flag `isDiscipulador` de um membro (true ↔ false).
+ *
+ * Quando `isDiscipulador = true`, o membro aparece na lista de
+ * discipuladores disponíveis para atribuição de discípulos.
+ *
+ * @description UPDATE em `membros.isDiscipulador` + log de auditoria.
+ * @param {string} id - UUID do membro.
+ * @param {SessionUser} user - Usuário autenticado.
+ * @returns {Promise<MembroSafe>} Membro atualizado.
+ * @throws {NotFoundError} 404 se não existe ou fora de escopo.
+ * @throws {Response} 403 se usuário sem cargo.
+ */
+export async function toggleDiscipulador(
+  id: string,
+  user: SessionUser
+): Promise<MembroSafe> {
+  if (!user.cargo || !["ADMIN", "PASTOR", "SECRETARIO"].includes(user.cargo)) {
+    throw new Response("Apenas ADMIN, PASTOR ou SECRETARIO podem gerenciar discipuladores.", { status: 403 });
+  }
+  const membro = await getMembroById(id, user);
+
+  const updated = await prisma.membro.update({
+    where: { id },
+    data: { isDiscipulador: !membro.isDiscipulador },
+    select: MEMBRO_SAFE_SELECT,
+  });
+
+  await logAction({
+    membroId: id,
+    event: "membro.toggle_discipulador",
+    actorId: user.id,
+    actorRole: user.cargo,
+    details: JSON.stringify({ novoValor: !membro.isDiscipulador }),
+  });
+
+  return updated;
 }

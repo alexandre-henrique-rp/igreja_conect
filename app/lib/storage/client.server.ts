@@ -31,7 +31,9 @@ export function createStorageClient(): S3Client {
   if (globalThis[GLOBAL_KEY]) return globalThis[GLOBAL_KEY]!;
 
   const usesPathStyle =
-    STORAGE_CONFIG.provider === "garage" || STORAGE_CONFIG.provider === "minio";
+    STORAGE_CONFIG.provider === "garage" ||
+    STORAGE_CONFIG.provider === "minio" ||
+    STORAGE_CONFIG.provider === "rustfs";
 
   const endpointIsHttps =
     typeof STORAGE_CONFIG.endpoint === "string" &&
@@ -49,12 +51,14 @@ export function createStorageClient(): S3Client {
       secretAccessKey: STORAGE_CONFIG.secretAccessKey,
     },
     forcePathStyle: usesPathStyle,
-    requestHandler:
-      endpointIsHttps && disableTlsVerification
-        ? new NodeHttpHandler({
-            httpsAgent: new HttpsAgent({ rejectUnauthorized: false }),
-          })
-        : undefined,
+    requestHandler: new NodeHttpHandler({
+      connectionTimeout: 5_000,
+      requestTimeout: 15_000,
+      httpsAgent:
+        endpointIsHttps && disableTlsVerification
+          ? new HttpsAgent({ rejectUnauthorized: false })
+          : undefined,
+    }),
   });
 
   globalThis[GLOBAL_KEY] = client;

@@ -30,7 +30,7 @@ beforeAll(async () => {
       { id: "u-PASTOR", nome: "Pastor", email: "pastor@test.com", tipo: "MEMBRO_ATIVO", cargo: "PASTOR" },
       { id: "u-FINANCEIRO", nome: "Financeiro", email: "financ@test.com", tipo: "MEMBRO_ATIVO", cargo: "FINANCEIRO" },
       { id: "u-SECRETARIO", nome: "Secretario", email: "sec@test.com", tipo: "MEMBRO_ATIVO", cargo: "SECRETARIO" },
-      { id: "u-DISCIPULADOR", nome: "Discipulador", email: "disc@test.com", tipo: "MEMBRO_ATIVO", cargo: "DISCIPULADOR" },
+      { id: "u-DISCIPULADOR", nome: "Discipulador", email: "disc@test.com", tipo: "MEMBRO_ATIVO", cargo: "LIDER_MINISTERIO" },
       { id: "u-LIDER_MINISTERIO", nome: "Lider", email: "lider@test.com", tipo: "MEMBRO_ATIVO", cargo: "LIDER_MINISTERIO" },
     ]
   });
@@ -156,7 +156,7 @@ describe("transferencias.server — transferirEntreCaixas (T02)", () => {
         origemId: origem.id,
         destinoId: destino.id,
         valorCentavos: 500,
-      }, userWith("DISCIPULADOR"));
+      }, userWith("LIDER_MINISTERIO"));
     } catch (e) {
       caught = e;
     }

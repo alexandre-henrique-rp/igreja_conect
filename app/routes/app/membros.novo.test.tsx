@@ -58,7 +58,7 @@ function makePostRequest(data: Record<string, string>): Request {
 /** Helper: cria args para o action (request + context com user injetado). */
 function actionArgs(
   request: Request,
-  user: { id: string; nome: string; cargo: "ADMIN" | "PASTOR" | "SECRETARIO" | "DISCIPULADOR" | "FINANCEIRO" | "LIDER_MINISTERIO" | null } | null
+  user: { id: string; nome: string; cargo: "ADMIN" | "PASTOR" | "SECRETARIO" | "LIDER_MINISTERIO" | "FINANCEIRO" | "LIDER_MINISTERIO" | null } | null
 ) {
   return {
     request,
@@ -72,10 +72,10 @@ function actionArgs(
   } as unknown as Parameters<typeof action>[0];
 }
 
-async function makeAuthUser(cargo: "ADMIN" | "DISCIPULADOR" = "ADMIN"): Promise<{
+async function makeAuthUser(cargo: "ADMIN" | "LIDER_MINISTERIO" = "ADMIN"): Promise<{
   id: string;
   nome: string;
-  cargo: "ADMIN" | "DISCIPULADOR";
+  cargo: "ADMIN" | "LIDER_MINISTERIO";
 }> {
   const m = await prismaTest.membro.create({
     data: {

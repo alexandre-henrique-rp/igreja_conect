@@ -23,7 +23,8 @@ import { ExtratoFiltros } from "~/components/ExtratoFiltros";
 import { ExtratoCaixa } from "~/components/ExtratoCaixa";
 import { Pagination } from "~/components/Pagination";
 import { Can } from "~/components/Can";
-import type { LancamentoResumo } from "~/lib/finance.server";
+import type { LancamentoExtratoItem } from "~/lib/finance.server";
+import { getSignedPreviewUrl } from "~/lib/storage/signed-url.server";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Detalhe do Caixa — Igreja Conect" }];
@@ -89,10 +90,34 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const { caixa, lancamentos, total, page, pageSize } = result;
   const totalPages = Math.ceil(total / pageSize);
 
+  // Resolver signed URL do comprovante (15min) pra cada lançamento.
+  // Comprovantes são privados (LGPD) — sempre signed URL.
+  const lancamentosComComprovante = await Promise.all(
+    (lancamentos as LancamentoExtratoItem[]).map(async (l) => {
+      let comprovanteUrl: string | null = null;
+      if (l.attachmentUpload && l.attachmentUpload.status === "READY") {
+        const ext = l.attachmentUpload.ext ?? "";
+        const key = `${l.attachmentUpload.storageKeyPrefix}${ext}`;
+        try {
+          comprovanteUrl = await getSignedPreviewUrl({
+            bucket: l.attachmentUpload.bucket,
+            key,
+          });
+        } catch {
+          comprovanteUrl = null;
+        }
+      }
+      return {
+        ...l,
+        comprovanteUrl,
+      };
+    }),
+  );
+
   return {
     user,
     caixa,
-    lancamentos: lancamentos as LancamentoResumo[],
+    lancamentos: lancamentosComComprovante,
     total,
     page,
     pageSize,
