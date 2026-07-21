@@ -208,84 +208,67 @@ export default function AppIndex({ loaderData }: Route.ComponentProps) {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold text-slate-900">Agenda & Escalas</h3>
-              <button aria-label="Abrir agenda" className="p-1.5 hover:bg-slate-100 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 transition-colors">
+              <Link to="/app/cultos" aria-label="Abrir agenda" className="p-1.5 hover:bg-slate-100 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
-              </button>
+              </Link>
             </div>
 
-            <div className="space-y-4">
-              {/* Evento 1 */}
-              <div className="flex gap-4 items-start pb-4 border-b border-slate-100">
-                <div className="bg-slate-100 rounded-lg p-2.5 flex flex-col items-center justify-center shrink-0 w-12 text-center">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block leading-none">MAI</span>
-                  <span className="text-lg font-bold text-slate-800 block mt-0.5 leading-none">15</span>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-bold text-slate-900 text-sm">Culto de Celebração</h4>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                    <span>19:30 - Templo Sede</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <span className="text-[10px] text-slate-400 font-semibold">Escala:</span>
-                    <div className="flex -space-x-1">
-                      <span className="h-5 w-5 rounded-full bg-slate-200 border border-white text-[8px] font-bold text-slate-600 flex items-center justify-center">JS</span>
-                      <span className="h-5 w-5 rounded-full bg-slate-200 border border-white text-[8px] font-bold text-slate-600 flex items-center justify-center">MO</span>
-                      <span className="h-5 w-5 rounded-full bg-slate-300 border border-white text-[8px] font-bold text-slate-700 flex items-center justify-center">+2</span>
+            {stats.proximosCultos.length > 0 ? (
+              <div className="space-y-4">
+                {stats.proximosCultos.map((culto, idx) => {
+                  const data = new Date(culto.data);
+                  const mes = data.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toUpperCase();
+                  const dia = data.toLocaleDateString("pt-BR", { day: "2-digit" });
+                  const isLast = idx === stats.proximosCultos.length - 1;
+                  return (
+                    <div
+                      key={culto.id}
+                      className={`flex gap-4 items-start ${isLast ? "pb-2" : "pb-4 border-b border-slate-100"}`}
+                    >
+                      <div className="bg-slate-100 rounded-lg p-2.5 flex flex-col items-center justify-center shrink-0 w-12 text-center">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block leading-none">{mes}</span>
+                        <span className="text-lg font-bold text-slate-800 block mt-0.5 leading-none">{dia}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-slate-900 text-sm">{culto.titulo}</h4>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                          <span>{culto.horario}{culto.local ? ` - ${culto.local}` : ""}</span>
+                        </div>
+                        {culto.status === "CONFIRMADO" && (
+                          <span className="inline-flex text-[9px] font-extrabold text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5 border border-emerald-100 uppercase tracking-wider mt-1">
+                            Confirmado
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
-
-              {/* Evento 2 */}
-              <div className="flex gap-4 items-start pb-4 border-b border-slate-100">
-                <div className="bg-slate-100 rounded-lg p-2.5 flex flex-col items-center justify-center shrink-0 w-12 text-center">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block leading-none">MAI</span>
-                  <span className="text-lg font-bold text-slate-800 block mt-0.5 leading-none">17</span>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-bold text-slate-900 text-sm">Reunião de Líderes</h4>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                    <span>20:00 - Sala de Atos</span>
-                  </div>
-                  <span className="inline-flex text-[9px] font-extrabold text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 border border-amber-100 uppercase tracking-wider mt-1">
-                    Importante
-                  </span>
-                </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <svg className="w-10 h-10 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <p className="text-sm text-slate-400 font-medium">Nenhum culto agendado.</p>
               </div>
-
-              {/* Evento 3 */}
-              <div className="flex gap-4 items-start pb-2">
-                <div className="bg-slate-100 rounded-lg p-2.5 flex flex-col items-center justify-center shrink-0 w-12 text-center">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block leading-none">MAI</span>
-                  <span className="text-lg font-bold text-slate-800 block mt-0.5 leading-none">19</span>
-                </div>
-                <div className="space-y-1.5 flex-1 min-w-0">
-                  <h4 className="font-bold text-slate-900 text-sm">Escola Bíblica Dominical</h4>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                    <span>09:00 - Todas as Salas</span>
-                  </div>
-                  <div className="space-y-1 pt-0.5 w-full">
-                    <div className="w-full bg-slate-100 rounded-full h-1.5">
-                      <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: "75%" }}></div>
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-medium block">75% dos professores confirmados</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
-          <button className="w-full border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 py-3 rounded-lg text-sm font-semibold transition-colors mt-6 text-center block">
+          <Link
+            to="/app/cultos"
+            className="w-full border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 py-3 rounded-lg text-sm font-semibold transition-colors mt-6 text-center block"
+          >
             Ver Calendário Completo
-          </button>
+          </Link>
         </section>
       </div>
 

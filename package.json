@@ -19,9 +19,6 @@
     "db:cleanup-sessions": "tsx scripts/cleanup-sessions.ts",
     "storage:test": "tsx scripts/test-storage.ts"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "engines": {
     "node": "24"
   },

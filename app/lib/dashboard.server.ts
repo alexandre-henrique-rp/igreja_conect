@@ -26,6 +26,16 @@ export type ContribuicaoResumo = {
   valorCentavos: number;
 };
 
+/** Culto resumido para o painel "Agenda & Escalas" do dashboard. */
+export type CultoResumo = {
+  id: string;
+  titulo: string;
+  data: Date;
+  horario: string;
+  local: string | null;
+  status: "AGENDADO" | "CONFIRMADO" | "REALIZADO" | "CANCELADO";
+};
+
 /** Dados do dashboard retornados ao cliente. */
 export type DashboardData = {
   membrosAtivos: number;
@@ -35,6 +45,7 @@ export type DashboardData = {
   alertasEstoque: number;
   ultimasContribuicoes: ContribuicaoResumo[];
   ultimosVisitantes: Array<{ id: string; nome: string; createdAt: Date }>;
+  proximosCultos: CultoResumo[];
 };
 
 /**
@@ -85,7 +96,8 @@ export async function getDashboardData(
     Promise<number>,
     Promise<number>,
     Promise<any[]>,
-    Promise<any>
+    Promise<any>,
+    Promise<any[]>
   ] = [
     prisma.membro.count({ where: membroWhere }),
     prisma.membro.count({ where: visitantesMesWhere }),
@@ -111,6 +123,15 @@ export async function getDashboardData(
           _sum: { saldoCentavos: true },
         })
       : Promise.resolve({ _sum: { saldoCentavos: 0 } }),
+    prisma.culto.findMany({
+      where: {
+        data: { gte: now },
+        status: { in: ["AGENDADO", "CONFIRMADO"] },
+      },
+      orderBy: { data: "asc" },
+      take: 3,
+      select: { id: true, titulo: true, data: true, horario: true, local: true, status: true },
+    }),
   ];
 
   const [
@@ -121,6 +142,7 @@ export async function getDashboardData(
     manutencaoAtrasada,
     ultimosVisitantes,
     caixaAgregado,
+    proximosCultos,
   ] = await Promise.all(queries);
 
   const saldoTotalCentavos = caixaAgregado._sum.saldoCentavos ?? 0;
@@ -169,5 +191,6 @@ export async function getDashboardData(
     alertasEstoque,
     ultimasContribuicoes,
     ultimosVisitantes,
+    proximosCultos,
   };
 }
