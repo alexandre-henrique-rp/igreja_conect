@@ -16,7 +16,8 @@
     "db:seed:prod": "NODE_ENV=production tsx prisma/seed.ts",
     "db:seed-if-empty": "NODE_ENV=production tsx scripts/seed-if-empty.ts",
     "db:backup": "tsx scripts/backup-db.ts",
-    "db:cleanup-sessions": "tsx scripts/cleanup-sessions.ts"
+    "db:cleanup-sessions": "tsx scripts/cleanup-sessions.ts",
+    "storage:test": "tsx scripts/test-storage.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
