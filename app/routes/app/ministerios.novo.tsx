@@ -11,6 +11,7 @@ import { Button } from "~/components/Button";
 import { Input } from "~/components/Input";
 import { Select } from "~/components/Select";
 import { NomeDuplicadoError } from "~/lib/errors";
+import { createMinisterio } from "~/lib/ministries.server";
 
 /** Cargos que podem gerenciar ministérios. */
 const CAN_MANAGE = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
@@ -109,12 +110,10 @@ export async function action({ context, request }: Route.ActionArgs) {
   }
 
   try {
-    await prisma.ministerio.create({
-      data: {
-        nome: parsed.data.nome,
-        descricao: parsed.data.descricao ?? null,
-      },
-    });
+    await createMinisterio(
+      { nome: parsed.data.nome, descricao: parsed.data.descricao },
+      user
+    );
     return new Response(null, { status: 302, headers: { Location: "/app/ministerios" } });
   } catch (e) {
     if (

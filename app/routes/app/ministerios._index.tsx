@@ -7,13 +7,18 @@
  * - Erro: capturado via ErrorBoundary
  */
 import { useState } from "react";
-import { Link, useNavigation } from "react-router";
+import { Link } from "react-router";
 import { Form } from "react-router";
 import type { Route } from "./+types/ministerios._index";
 import { userContext } from "~/lib/user-context";
 import { prisma } from "~/db/prisma.server";
 import { z } from "zod";
-import { BusinessRuleError, NomeDuplicadoError, NotFoundError } from "~/lib/errors";
+import {
+  addMembroToMinisterio,
+  createMinisterio,
+  deleteMinisterio,
+  removeMembroFromMinisterio,
+} from "~/lib/ministries.server";
 import { Button } from "~/components/Button";
 import { ErrorAlert } from "~/components/ErrorAlert";
 import { ModalVincularMembro } from "~/components/ModalVincularMembro";
@@ -42,7 +47,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
 
-  const [total, rows] = await Promise.all([
+  const [total, rows, membros] = await Promise.all([
     prisma.ministerio.count(),
     prisma.ministerio.findMany({
       skip: (page - 1) * PAGE_SIZE,
@@ -53,6 +58,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
         descricao: true,
         _count: { select: { membros: true } },
         membros: {
+          where: { lider: true },
           take: 1,
           orderBy: { membro: { nome: "asc" } },
           select: { membro: { select: { id: true, nome: true } } },
@@ -60,9 +66,25 @@ export async function loader({ context, request }: Route.LoaderArgs) {
       },
       orderBy: { nome: "asc" },
     }),
+    prisma.membro.findMany({
+      select: { id: true, nome: true },
+      orderBy: { nome: "asc" },
+      take: 100,
+    }),
   ]);
 
-  const ativos = total; // sem campo status real; assumimos todos ativos
+  const vinculados = await prisma.ministerioMembro.findMany({
+    where: { ministerioId: { in: rows.map((row) => row.id) } },
+    select: { ministerioId: true, membroId: true },
+  });
+  const vinculadosPorMinisterio = new Map<string, Set<string>>();
+  for (const vinculo of vinculados) {
+    const ids = vinculadosPorMinisterio.get(vinculo.ministerioId) ?? new Set<string>();
+    ids.add(vinculo.membroId);
+    vinculadosPorMinisterio.set(vinculo.ministerioId, ids);
+  }
+
+  const ativos = total;
 
   return {
     ministerios: rows.map((m) => ({
@@ -71,6 +93,9 @@ export async function loader({ context, request }: Route.LoaderArgs) {
       descricao: m.descricao,
       totalMembros: m._count.membros,
       lider: m.membros[0]?.membro ?? null,
+      membrosDisponiveis: membros.filter(
+        (membro) => !vinculadosPorMinisterio.get(m.id)?.has(membro.id)
+      ),
     })),
     stats: {
       total,
@@ -118,27 +143,17 @@ export async function action({ context, request }: Route.ActionArgs) {
         headers: { "Content-Type": "application/json" },
       });
     }
-    try {
-      await prisma.ministerio.create({
-        data: { nome: parsed.data.nome, descricao: parsed.data.descricao ?? null },
-      });
-      return new Response(null, { status: 302, headers: { Location: "/app/ministerios" } });
-    } catch (e) {
-      if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "P2002")
-        throw new NomeDuplicadoError("Já existe um ministério com este nome.");
-      throw e;
-    }
+    await createMinisterio(
+      { nome: parsed.data.nome, descricao: parsed.data.descricao },
+      user
+    );
+    return new Response(null, { status: 302, headers: { Location: "/app/ministerios" } });
   }
 
   if (intent === "delete") {
     const ministerioId = String(formData.get("ministerioId") ?? "");
     if (!ministerioId) throw new Response("ministerioId obrigatório.", { status: 400 });
-    const count = await prisma.ministerioMembro.count({ where: { ministerioId } });
-    if (count > 0)
-      throw new BusinessRuleError("Desvincule os membros antes de excluir este ministério.");
-    const existing = await prisma.ministerio.findUnique({ where: { id: ministerioId } });
-    if (!existing) throw new NotFoundError("Ministério não encontrado.");
-    await prisma.ministerio.delete({ where: { id: ministerioId } });
+    await deleteMinisterio(ministerioId, user);
     return new Response(null, { status: 302, headers: { Location: "/app/ministerios" } });
   }
 
@@ -147,13 +162,7 @@ export async function action({ context, request }: Route.ActionArgs) {
     const membroId = String(formData.get("membroId") ?? "");
     if (!ministerioId || !membroId)
       throw new Response("ministerioId e membroId obrigatórios.", { status: 400 });
-    try {
-      await prisma.ministerioMembro.create({ data: { ministerioId, membroId } });
-    } catch (e) {
-      if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "P2002")
-        throw new BusinessRuleError("Este membro já está neste ministério.");
-      throw e;
-    }
+    await addMembroToMinisterio(ministerioId, membroId, user);
     return new Response(null, { status: 302, headers: { Location: "/app/ministerios" } });
   }
 
@@ -162,7 +171,7 @@ export async function action({ context, request }: Route.ActionArgs) {
     const membroId = String(formData.get("membroId") ?? "");
     if (!ministerioId || !membroId)
       throw new Response("ministerioId e membroId obrigatórios.", { status: 400 });
-    await prisma.ministerioMembro.deleteMany({ where: { ministerioId, membroId } });
+    await removeMembroFromMinisterio(ministerioId, membroId, user);
     return new Response(null, { status: 302, headers: { Location: "/app/ministerios" } });
   }
 
@@ -203,8 +212,6 @@ function IconLeader() {
 // ─── Componente Principal ───
 export default function MinisteriosIndex({ loaderData, actionData }: Route.ComponentProps) {
   const { ministerios, stats, pagination, canEdit } = loaderData;
-  const navigation = useNavigation();
-
   const [modalVincular, setModalVincular] = useState<{
     ministerioId: string;
     ministerioNome: string;
@@ -413,6 +420,13 @@ export default function MinisteriosIndex({ loaderData, actionData }: Route.Compo
                     {/* Ações */}
                     {canEdit && (
                       <div className="flex items-center gap-1 mt-3 pt-3 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => setModalVincular({ ministerioId: m.id, ministerioNome: m.nome })}
+                          className="px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                        >
+                          Adicionar membro
+                        </button>
                         <Link
                           to={`/app/ministerios/${m.id}`}
                           className="p-1.5 text-slate-400 hover:text-blue-600 rounded-md hover:bg-blue-50 transition-colors"
@@ -531,7 +545,9 @@ export default function MinisteriosIndex({ loaderData, actionData }: Route.Compo
           open={!!modalVincular}
           onClose={() => setModalVincular(null)}
           ministerioId={modalVincular.ministerioId}
-          membrosDisponiveis={[]}
+          membrosDisponiveis={
+            ministerios.find((ministerio) => ministerio.id === modalVincular.ministerioId)?.membrosDisponiveis ?? []
+          }
         />
       )}
     </div>

@@ -22,7 +22,7 @@ type Cargo =
   | "ADMIN"
   | "PASTOR"
   | "SECRETARIO"
-  | "DISCIPULADOR"
+  | "LIDER_MINISTERIO"
   | "FINANCEIRO"
   | "LIDER_MINISTERIO";
 
@@ -149,7 +149,7 @@ describe("ministerios._index — loader (S03-T10)", () => {
 
   it("DISCIPULADOR: canEdit=false (read-only)", async () => {
     await makeMinisterio("Louvor");
-    const user = await makeAuthUser("DISCIPULADOR");
+    const user = await makeAuthUser("LIDER_MINISTERIO");
 
     const result = await loader(args(makeGetRequest(), user));
 
@@ -180,7 +180,7 @@ describe("ministerios._index — loader (S03-T10)", () => {
     const ana = await makeMembro("Ana");
     const carlos = await makeMembro("Carlos");
     await prismaTest.ministerioMembro.create({
-      data: { ministerioId: m.id, membroId: ana.id },
+      data: { ministerioId: m.id, membroId: ana.id, lider: true },
     });
     await prismaTest.ministerioMembro.create({
       data: { ministerioId: m.id, membroId: carlos.id },
@@ -216,7 +216,7 @@ describe("ministerios._index — action (S03-T10)", () => {
   });
 
   it("DISCIPULADOR + intent=create: throw 403 (não pode criar)", async () => {
-    const user = await makeAuthUser("DISCIPULADOR");
+    const user = await makeAuthUser("LIDER_MINISTERIO");
     const request = makePostRequest({ intent: "create", nome: "Louvor" });
 
     await expect(action(args(request, user))).rejects.toThrow();
@@ -344,7 +344,7 @@ describe("ministerios._index — render (S03-T10)", () => {
     const html = renderToString(<Stub initialEntries={["/app/ministerios"]} />);
 
     expect(html).toContain("Ministérios");
-    expect(html).toContain("Novo minist");
+    expect(html).toContain("Novo Ministério");
     expect(html).toContain("Louvor");
   });
 
