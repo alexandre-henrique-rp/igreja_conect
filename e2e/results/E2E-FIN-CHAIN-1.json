@@ -1,9 +1,0 @@
-{
-  "id": "E2E-FIN-CHAIN-1",
-  "status": "failed",
-  "caixaId": "846ca3ff-55b4-4447-8d00-5f30cbe6f0f3",
-  "durationMs": 30135,
-  "failedAtStep": 1,
-  "failedReason": "locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: '+ Lançar' }).first()\u001b[22m\n",
-  "cleanupError": "createLancamentoViaRequest 409: <!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"/><link rel=\""
-}
