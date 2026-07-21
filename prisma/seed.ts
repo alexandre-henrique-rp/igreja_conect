@@ -312,12 +312,24 @@ export async function runSeed(): Promise<void> {
     });
     console.log(`[seed] ADMIN: ${admin.email} (id: ${admin.id})`);
 
+    // ── 2. Ministérios (criados em qualquer ambiente) ──
+    const ministerioIds: Record<string, string> = {};
+    for (const min of MOCK_MINISTERIOS) {
+      const created = await prisma.ministerio.upsert({
+        where: { nome: min.nome },
+        update: {},
+        create: { nome: min.nome, descricao: min.descricao },
+      });
+      ministerioIds[min.nome] = created.id;
+      console.log(`[seed] Ministério: ${min.nome}`);
+    }
+
     if (process.env.NODE_ENV === "production") {
       console.log("[seed] Ambiente de produção — pulando dados de desenvolvimento.");
       return;
     }
 
-    // ── 2. Membros completos ──────────────────────────
+    // ── 3. Membros completos ──────────────────────────
     const membroIds: Record<string, string> = {};
     for (const m of MOCK_MEMBROS) {
       const hash = m.senha ? await bcrypt.hash(m.senha, BCRYPT_COST) : null;
@@ -354,7 +366,7 @@ export async function runSeed(): Promise<void> {
       console.log(`[seed] Membro: ${m.nome} (${m.tipo})`);
     }
 
-    // ── 3. Discipulado (auto-relacionamento) ─────────
+    // ── 4. Discipulado (auto-relacionamento) ─────────
     // Ricardo discipula Pedro e Fernanda
     // Beatriz discipula Lucas
     await prisma.membro.update({
@@ -371,17 +383,8 @@ export async function runSeed(): Promise<void> {
     }).catch(() => {});
     console.log("[seed] Discipulado: 3 vínculos criados");
 
-    // ── 4. Ministérios + Líderes ─────────────────────
-    const ministerioIds: Record<string, string> = {};
-    for (const min of MOCK_MINISTERIOS) {
-      const created = await prisma.ministerio.upsert({
-        where: { nome: min.nome },
-        update: {},
-        create: { nome: min.nome, descricao: min.descricao },
-      });
-      ministerioIds[min.nome] = created.id;
-      console.log(`[seed] Ministério: ${min.nome}`);
-    }
+    // ── 5. Vínculos de Ministérios + Líderes ──────────
+    // (ministérios já criados no passo 2)
 
     // Vincular membros a ministérios com flag lider
     const vinculos = [
@@ -406,7 +409,7 @@ export async function runSeed(): Promise<void> {
     }
     console.log(`[seed] Ministério-Membro: ${vinculos.length} vínculos`);
 
-    // ── 5. Caixas ────────────────────────────────────
+    // ── 6. Caixas ────────────────────────────────────
     const caixaIds: Record<string, string> = {};
     for (const c of MOCK_CAIXAS) {
       const created = await prisma.caixa.upsert({
@@ -418,7 +421,7 @@ export async function runSeed(): Promise<void> {
       console.log(`[seed] Caixa: ${c.nome}`);
     }
 
-    // ── 6. Lançamentos financeiros (18+ meses) ───────
+    // ── 7. Lançamentos financeiros (18+ meses) ───────
     // Gera dízimos e ofertas mensais + despesas para 18 meses
     const inicio = d("2024-06-01T00:00:00Z");
     const meses = 19; // 19 meses = junho/2024 a dezembro/2025
@@ -527,7 +530,7 @@ export async function runSeed(): Promise<void> {
     }
     console.log(`[seed] Lançamentos: ${countLanc} registros (${meses} meses)`);
 
-    // ── 7. Estoque + Movimentações ───────────────────
+    // ── 8. Estoque + Movimentações ───────────────────
     const estoqueIds: Record<string, string> = {};
     for (const item of MOCK_ESTOQUE) {
       let existing: { id: string } | null = null;
@@ -583,7 +586,7 @@ export async function runSeed(): Promise<void> {
     }
     console.log(`[seed] Movimentações de estoque: ${movimentacoes.length}`);
 
-    // ── 8. Logs de Auditoria ─────────────────────────
+    // ── 9. Logs de Auditoria ─────────────────────────
     const auditEvents = [
       { membroId: admin.id, event: "login.success", actorId: admin.id, actorRole: "ADMIN", createdAt: d("2025-01-15T08:30:00Z") },
       { membroId: admin.id, event: "login.success", actorId: admin.id, actorRole: "ADMIN", createdAt: d("2025-03-20T14:22:00Z") },
