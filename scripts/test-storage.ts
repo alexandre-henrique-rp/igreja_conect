@@ -2,6 +2,7 @@
  * Script de diagnostico de conexão S3/Garage.
  * Roda: pnpm tsx scripts/test-storage.ts
  */
+import "dotenv/config";
 import {
   S3Client,
   ListBucketsCommand,
