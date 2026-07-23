@@ -433,15 +433,6 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                 </svg>
                 {mostrarArquivados ? "Ver Ativos" : "Arquivados"}
               </button>
-              <Link
-                to="/app/estoque/novo"
-                className="flex items-center justify-center gap-2 px-4 h-10 border border-slate-200 text-slate-700 bg-white rounded-lg font-semibold hover:bg-slate-50 transition-all text-sm"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                Novo Produto
-              </Link>
               <button
                 type="button"
                 className="flex items-center justify-center gap-2 px-5 h-10 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 shadow-sm shadow-blue-500/20 transition-all text-sm cursor-pointer"
@@ -578,7 +569,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                       name="itemEstoqueId"
                       required
                       defaultValue={selectedItem?.id || ""}
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
                     >
                       <option value="">Selecione um produto...</option>
                       {items.map((item: any) => (
@@ -620,7 +611,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Quantidade</label>
                     <input
                       name="quantidade"
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                       min="1"
                       type="number"
                       defaultValue="1"
@@ -630,7 +621,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Data</label>
                     <input
                       name="data"
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                       type="date"
                       defaultValue={todayStr}
                     />
@@ -641,7 +632,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Observação</label>
                   <textarea
                     name="observacao"
-                    className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm"
+                    className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm"
                     placeholder="Ex: Reposição mensal para o setor de cozinha..."
                     rows={3}
                   />
@@ -707,7 +698,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                     type="text"
                     required
                     placeholder="Ex: Copo Descartável 200ml"
-                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                   />
                 </div>
 
@@ -717,7 +708,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                     <div className="relative">
                       <select
                         name="tipo"
-                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
+                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
                       >
                         <option value="CONSUMO">Consumo</option>
                         <option value="PATRIMONIO">Patrimônio</option>
@@ -734,7 +725,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                     <div className="relative">
                       <select
                         name="localizacaoFisica"
-                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
+                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
                       >
                         <option value="Cozinha">Cozinha</option>
                         <option value="Limpeza">Limpeza</option>
@@ -758,7 +749,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                       type="number"
                       min="0"
                       defaultValue="0"
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                     />
                   </div>
                   <div>
@@ -768,7 +759,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                       type="number"
                       min="0"
                       defaultValue="5"
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                     />
                   </div>
                 </div>
@@ -777,7 +768,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Descrição</label>
                   <textarea
                     name="descricao"
-                    className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm"
+                    className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm"
                     placeholder="Descreva brevemente a finalidade ou especificações..."
                     rows={3}
                   />
@@ -844,7 +835,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                     type="text"
                     required
                     defaultValue={editingProduct.nome}
-                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                   />
                 </div>
 
@@ -855,7 +846,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                       <select
                         name="tipo"
                         defaultValue={editingProduct.tipo}
-                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
+                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
                       >
                         <option value="CONSUMO">Consumo</option>
                         <option value="PATRIMONIO">Patrimônio</option>
@@ -873,7 +864,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                       <select
                         name="localizacaoFisica"
                         defaultValue={editingProduct.localizacaoFisica}
-                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
+                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none text-sm cursor-pointer"
                       >
                         <option value="Cozinha">Cozinha</option>
                         <option value="Limpeza">Limpeza</option>
@@ -897,7 +888,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                       type="number"
                       min="0"
                       defaultValue={editingProduct.quantidade}
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                     />
                   </div>
                   <div>
@@ -907,7 +898,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                       type="number"
                       min="0"
                       defaultValue={editingProduct.quantidadeMinima}
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
                     />
                   </div>
                 </div>
@@ -917,7 +908,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                   <textarea
                     name="descricao"
                     defaultValue={editingProduct.descricao}
-                    className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm"
+                    className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm"
                     placeholder="Descrição física ou observações do produto..."
                     rows={3}
                   />

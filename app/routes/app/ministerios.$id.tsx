@@ -6,8 +6,8 @@
  * - Detalhes Operacionais (líder, capacidade, dias, horário, turno)
  * - Membros do Ministério (tabela com add/remove)
  */
-import { useState } from "react";
-import { Form, Link, useNavigation } from "react-router";
+import { useState, useMemo } from "react";
+import { Form, Link, useNavigation, useFetcher } from "react-router";
 import type { Route } from "./+types/ministerios.$id";
 import { userContext } from "~/lib/user-context";
 import { prisma } from "~/db/prisma.server";
@@ -18,15 +18,28 @@ import {
   toggleLiderMinisterio,
   updateMinisterio,
 } from "~/lib/ministries.server";
+import { criarFuncao, removerFuncao, atribuirFuncaoMembro } from "~/lib/funcoesMinisterio.server";
+import {
+  listarAtividades,
+  criarAtividade,
+  removerAtividade,
+  criarIndisponibilidade,
+  removerIndisponibilidade,
+  gerarCultosRecorrentes,
+} from "~/lib/disponibilidades.server";
+import { gerarEscalasMes } from "~/lib/gerarEscalas.server";
 import { Button } from "~/components/Button";
 import { Input } from "~/components/Input";
 import { Select } from "~/components/Select";
 import { Breadcrumb } from "~/components/Breadcrumb";
 import { ErrorAlert } from "~/components/ErrorAlert";
 import { ConflictError, NomeDuplicadoError } from "~/lib/errors";
+import { GerenciarFuncoes } from "~/components/GerenciarFuncoes";
+import { ModalDisponibilidade } from "~/components/ModalDisponibilidade";
+import type { AtividadeCalendario, IndisponibilidadeCalendario } from "~/components/CalendarioDisponibilidade";
 
 /** Cargos que podem gerenciar ministérios. */
-const CAN_MANAGE = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
+const CAN_MANAGE = ["ADMIN", "PASTOR", "SECRETARIO", "LIDER_MINISTERIO"] as const;
 
 export function meta({ data }: Route.MetaArgs) {
   const nome = (data as { ministerio?: { nome?: string } } | undefined)?.ministerio?.nome ?? "Ministério";
@@ -64,9 +77,11 @@ export async function loader({ context, params }: Route.LoaderArgs) {
           membro: {
             select: { id: true, nome: true, tipo: true, cargo: true },
           },
+          funcao: { select: { id: true, nome: true, cor: true } },
         },
         orderBy: { membro: { nome: "asc" } },
       },
+      funcoes: { orderBy: { nome: "asc" } },
     },
   });
 
@@ -83,6 +98,24 @@ export async function loader({ context, params }: Route.LoaderArgs) {
     orderBy: { nome: "asc" },
     take: 100,
   });
+
+  // Buscar atividades e indisponibilidades do mês atual
+  const agora = new Date();
+  const mes = agora.getMonth() + 1;
+  const ano = agora.getFullYear();
+
+  const [atividadesRaw, indisponibilidadesRaw] = await Promise.all([
+    listarAtividades(ministerioId, undefined, mes, ano),
+    Promise.resolve([] as Array<{ id: string; dataInicio: string; dataFim: string; motivo: string | null }>),
+  ]);
+
+  const atividades: AtividadeCalendario[] = atividadesRaw.map((a) => ({
+    id: a.id,
+    tipo: a.tipo,
+    data: a.data.toISOString(),
+    horario: a.horario,
+    descricao: a.descricao,
+  }));
 
   return {
     ministerio: {
@@ -106,9 +139,17 @@ export async function loader({ context, params }: Route.LoaderArgs) {
       tipo: mm.membro.tipo,
       cargo: mm.membro.cargo,
       lider: mm.lider,
+      funcaoId: mm.funcao?.id ?? null,
+      funcaoNome: mm.funcao?.nome ?? null,
+    })),
+    funcoes: ministerio.funcoes.map((f) => ({
+      id: f.id,
+      nome: f.nome,
+      cor: f.cor,
     })),
     membrosDisponiveis,
     canEdit,
+    atividades,
   };
 }
 
@@ -248,6 +289,118 @@ export async function action({ context, request, params }: Route.ActionArgs) {
     });
   }
 
+  // ── Adicionar função ──
+  if (intent === "add-funcao") {
+    const nome = String(formData.get("nome") ?? "");
+    const cor = String(formData.get("cor") ?? "");
+    if (!nome) throw new Response("Nome da função é obrigatório.", { status: 400 });
+    try {
+      await criarFuncao(ministerioId, { nome, cor: cor || undefined }, user);
+    } catch (e) {
+      if (e instanceof ConflictError) {
+        throw new Response("Já existe uma função com este nome.", { status: 409 });
+      }
+      throw e;
+    }
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/app/ministerios/${ministerioId}` },
+    });
+  }
+
+  // ── Remover função ──
+  if (intent === "remove-funcao") {
+    const funcaoId = String(formData.get("funcaoId") ?? "");
+    if (!funcaoId) throw new Response("funcaoId obrigatório.", { status: 400 });
+    await removerFuncao(funcaoId, user);
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/app/ministerios/${ministerioId}` },
+    });
+  }
+
+  // ── Atribuir função a membro ──
+  if (intent === "atribuir-funcao") {
+    const vinculoId = String(formData.get("vinculoId") ?? "");
+    const funcaoId = String(formData.get("funcaoId") ?? "") || null;
+    if (!vinculoId) throw new Response("vinculoId obrigatório.", { status: 400 });
+    await atribuirFuncaoMembro({ vinculoId, funcaoId }, user);
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/app/ministerios/${ministerioId}` },
+    });
+  }
+
+  // ── Adicionar atividade (ensaio ou atividade extra) ──
+  if (intent === "add-atividade") {
+    const tipo = String(formData.get("tipo") ?? "ENSAIO");
+    const data = String(formData.get("data") ?? "");
+    const horario = String(formData.get("horario") ?? "19:30");
+    const descricao = String(formData.get("descricao") ?? "");
+    const membroId = String(formData.get("membroId") ?? "") || undefined;
+    if (!data) throw new Response("Data é obrigatória.", { status: 400 });
+    await criarAtividade(
+      { ministerioId, membroId, tipo: tipo as "ENSAIO" | "ATIVIDADE_EXTRA", data, horario, descricao: descricao || undefined },
+      user,
+    );
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/app/ministerios/${ministerioId}` },
+    });
+  }
+
+  // ── Remover atividade ──
+  if (intent === "remove-atividade") {
+    const atividadeId = String(formData.get("atividadeId") ?? "");
+    if (!atividadeId) throw new Response("atividadeId obrigatório.", { status: 400 });
+    await removerAtividade(atividadeId, user);
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/app/ministerios/${ministerioId}` },
+    });
+  }
+
+  // ── Adicionar indisponibilidade ──
+  if (intent === "add-indisponibilidade") {
+    const membroId = String(formData.get("membroId") ?? "");
+    const dataInicio = String(formData.get("dataInicio") ?? "");
+    const dataFim = String(formData.get("dataFim") ?? dataInicio);
+    const motivo = String(formData.get("motivo") ?? "");
+    if (!membroId || !dataInicio) throw new Response("membroId e dataInicio são obrigatórios.", { status: 400 });
+    await criarIndisponibilidade(
+      { ministerioId, membroId, dataInicio, dataFim, motivo: motivo || undefined },
+      user,
+    );
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/app/ministerios/${ministerioId}` },
+    });
+  }
+
+  // ── Remover indisponibilidade ──
+  if (intent === "remove-indisponibilidade") {
+    const indisponibilidadeId = String(formData.get("indisponibilidadeId") ?? "");
+    if (!indisponibilidadeId) throw new Response("indisponibilidadeId obrigatório.", { status: 400 });
+    await removerIndisponibilidade(indisponibilidadeId, user);
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/app/ministerios/${ministerioId}` },
+    });
+  }
+
+  // ── Gerar escalas do mês ──
+  if (intent === "gerar-escalas") {
+    const agora = new Date();
+    const mes = agora.getMonth() + 1;
+    const ano = agora.getFullYear();
+    await gerarCultosRecorrentes(ministerioId, mes, ano, user);
+    const result = await gerarEscalasMes(ministerioId, mes, ano, user);
+    return new Response(
+      JSON.stringify({ ok: true, escalasCriadas: result.escalasCriadas }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   throw new Response("Intent não reconhecido.", { status: 400 });
 }
 
@@ -288,9 +441,10 @@ function tipoLabel(tipo: string | null): string {
 // ─────────────────────────────────────────────────────────────
 
 export default function MinisterioEditar({ loaderData, actionData }: Route.ComponentProps) {
-  const { ministerio, membros, membrosDisponiveis, canEdit } = loaderData;
+  const { ministerio, membros, membrosDisponiveis, canEdit, funcoes, atividades } = loaderData;
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const fetcher = useFetcher();
 
   const fieldErrors = (actionData as { fieldErrors?: Record<string, string> } | undefined)?.fieldErrors;
 
@@ -312,6 +466,11 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
   // Adicionar membro
   const [showAddMembro, setShowAddMembro] = useState(false);
   const [membroBusca, setMembroBusca] = useState("");
+
+  // Modal de disponibilidade
+  const [membroDisponibilidade, setMembroDisponibilidade] = useState<{ id: string; nome: string } | null>(null);
+  const [formAtividade, setFormAtividade] = useState<{ data: string; tipo: "ENSAIO" | "ATIVIDADE_EXTRA" } | null>(null);
+  const [formIndisponibilidade, setFormIndisponibilidade] = useState<string | null>(null);
 
   const membrosDisponiveisFiltrados = membrosDisponiveis.filter((m) =>
     m.nome.toLowerCase().includes(membroBusca.toLowerCase())
@@ -605,6 +764,48 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
         </div>
       </Form>
 
+      {/* ── Gerar Escalas do Mês ── */}
+      {canEdit && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs mb-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="text-base font-extrabold text-slate-900 mb-1">Gerar Escalas do Mês</h2>
+              <ul className="space-y-1 text-xs text-slate-600">
+                <li><strong>O que faz:</strong> cria escalas para todos os cultos e ensaios do mês atual deste ministério.</li>
+                <li><strong>Como funciona:</strong> para cada atividade, o sistema sorteia um membro disponível para cada função cadastrada, tentando não repetir o mesmo membro em datas consecutivas.</li>
+                <li><strong>Depois de gerar:</strong> as escalas ficam marcadas com badge "Auto" e podem ser editadas manualmente (trocar, adicionar ou remover voluntários).</li>
+                <li><strong>Re-gerar:</strong> se você gerar novamente, apenas as escalas automáticas do mês são substituídas. Escalas editadas manualmente são preservadas.</li>
+              </ul>
+            </div>
+            <fetcher.Form method="post" className="shrink-0">
+              <input type="hidden" name="intent" value="gerar-escalas" />
+              <Button
+                type="submit"
+                variant="blue"
+                size="sm"
+                loading={fetcher.state === "submitting"}
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Gerar
+              </Button>
+            </fetcher.Form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Card: Funções do Ministério ── */}
+      {canEdit && (
+        <div className="mb-5">
+          <GerenciarFuncoes
+            ministerioId={ministerio.id}
+            funcoes={funcoes}
+            canEdit={canEdit}
+          />
+        </div>
+      )}
+
       {/* ── Card: Membros do Ministério ── (form separado por membro) */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
@@ -694,6 +895,9 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                     Membro
                   </th>
                   <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Cargo
+                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Função
                   </th>
                   <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -724,6 +928,27 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                       )}
                     </td>
                     <td className="px-6 py-4">
+                      {canEdit ? (
+                        <Form method="post" className="inline">
+                          <input type="hidden" name="intent" value="atribuir-funcao" />
+                          <input type="hidden" name="vinculoId" value={membro.vinculoId} />
+                          <select
+                            name="funcaoId"
+                            defaultValue={membro.funcaoId ?? ""}
+                            onChange={(e) => e.currentTarget.form?.submit()}
+                            className="h-8 px-2 border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-700"
+                          >
+                            <option value="">—</option>
+                            {funcoes.map((f) => (
+                              <option key={f.id} value={f.id}>{f.nome}</option>
+                            ))}
+                          </select>
+                        </Form>
+                      ) : (
+                        <span className="text-slate-600">{membro.funcaoNome ?? "—"}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         Ativo
                       </span>
@@ -731,6 +956,18 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                     {canEdit && (
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
+                          {/* Disponibilidade */}
+                          <button
+                            type="button"
+                            onClick={() => setMembroDisponibilidade({ id: membro.membroId, nome: membro.nome })}
+                            className="p-1.5 text-slate-400 hover:text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors"
+                            aria-label={`Gerenciar disponibilidade de ${membro.nome}`}
+                            title="Disponibilidade"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </button>
                           <Form method="post">
                             <input type="hidden" name="intent" value="toggle-lider" />
                             <input type="hidden" name="membroId" value={membro.membroId} />
@@ -769,6 +1006,86 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
           </div>
         )}
       </div>
+
+      {/* ── Modal de Disponibilidade ── */}
+      {membroDisponibilidade && (
+        <ModalDisponibilidade
+          open={!!membroDisponibilidade}
+          onClose={() => {
+            setMembroDisponibilidade(null);
+            setFormAtividade(null);
+            setFormIndisponibilidade(null);
+          }}
+          nomeMembro={membroDisponibilidade.nome}
+          atividades={atividades}
+          indisponibilidades={[]}
+          onAddAtividade={(data) => setFormAtividade({ data, tipo: "ENSAIO" })}
+          onAddIndisponibilidade={(data) => setFormIndisponibilidade(data)}
+          onRemoveAtividade={(id) => {
+            fetcher.submit(
+              { intent: "remove-atividade", atividadeId: id },
+              { method: "post" },
+            );
+          }}
+          onRemoveIndisponibilidade={(id) => {
+            fetcher.submit(
+              { intent: "remove-indisponibilidade", indisponibilidadeId: id },
+              { method: "post" },
+            );
+          }}
+        />
+      )}
+
+      {/* ── Formulário de atividade (ensaio/extra) ── */}
+      {formAtividade && membroDisponibilidade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setFormAtividade(null)}>
+          <div className="bg-white rounded-xl shadow-lg p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-slate-900 mb-3">Nova Atividade</h3>
+            <fetcher.Form method="post" className="space-y-3">
+              <input type="hidden" name="intent" value="add-atividade" />
+              <input type="hidden" name="data" value={formAtividade.data} />
+              <input type="hidden" name="membroId" value={membroDisponibilidade.id} />
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-slate-600">Tipo</label>
+                <select
+                  name="tipo"
+                  defaultValue={formAtividade.tipo}
+                  className="w-full h-9 px-3 border border-slate-300 rounded-md text-sm"
+                >
+                  <option value="ENSAIO">Ensaio</option>
+                  <option value="ATIVIDADE_EXTRA">Atividade Extra</option>
+                </select>
+              </div>
+              <Input name="horario" label="Horário" placeholder="19:30" defaultValue="19:30" />
+              <Input name="descricao" label="Descrição (opcional)" placeholder="Ex: Ensaio extra para o culto de domingo" />
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="secondary" size="sm" onClick={() => setFormAtividade(null)}>Cancelar</Button>
+                <Button type="submit" variant="blue" size="sm" loading={fetcher.state === "submitting"}>Adicionar</Button>
+              </div>
+            </fetcher.Form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Formulário de indisponibilidade ── */}
+      {formIndisponibilidade && membroDisponibilidade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setFormIndisponibilidade(null)}>
+          <div className="bg-white rounded-xl shadow-lg p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-slate-900 mb-3">Marcar Indisponibilidade</h3>
+            <fetcher.Form method="post" className="space-y-3">
+              <input type="hidden" name="intent" value="add-indisponibilidade" />
+              <input type="hidden" name="membroId" value={membroDisponibilidade.id} />
+              <Input name="dataInicio" type="date" label="Data início" defaultValue={formIndisponibilidade} />
+              <Input name="dataFim" type="date" label="Data fim" defaultValue={formIndisponibilidade} />
+              <Input name="motivo" label="Motivo (opcional)" placeholder="Ex: Viagem, consulta médica..." />
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="secondary" size="sm" onClick={() => setFormIndisponibilidade(null)}>Cancelar</Button>
+                <Button type="submit" variant="blue" size="sm" loading={fetcher.state === "submitting"}>Marcar</Button>
+              </div>
+            </fetcher.Form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

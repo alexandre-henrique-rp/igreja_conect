@@ -145,6 +145,11 @@ model Membro {
   eventosResponsavel Evento[]
   eventosCriados     Evento[]           @relation("EventoCriador")
 
+  // Disponibilidades e Atividades
+  atividadesCriado   AtividadeMinisterio[]     @relation("AtividadeCriador")
+  atividadesMembro   AtividadeMinisterio[]     @relation("AtividadeMembro")
+  indisponibilidades IndisponibilidadeMembro[]
+
   // Upload de avatar (S3-compatible / Garage)
   avatarUploadId String?
   avatarUpload   Upload? @relation("MembroAvatar", fields: [avatarUploadId], references: [id], onDelete: SetNull)
@@ -202,10 +207,10 @@ model ConviteToken {
 }
 
 model Ministerio {
-  id               String              @id @default(uuid())
-  nome             String              @unique
+  id               String                @id @default(uuid())
+  nome             String                @unique
   descricao        String?
-  status           String              @default("ATIVO")
+  status           String                @default("ATIVO")
   corDestaque      String?
   liderNome        String?
   capacidadeMaxima Int?
@@ -213,22 +218,27 @@ model Ministerio {
   horarioPadrao    String?
   turnoPrincipal   String?
   membros          MinisterioMembro[]
-  configGeral      ConfiguracaoGeral[] @relation("MinisterioResponsavel")
+  funcoes          FuncaoMinisterio[]
+  atividades       AtividadeMinisterio[]
+  configGeral      ConfiguracaoGeral[]   @relation("MinisterioResponsavel")
   escalas          Escala[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  indisponibilidadeMembros IndisponibilidadeMembro[]
 
   @@map("ministerios")
 }
 
 model MinisterioMembro {
-  id           String     @id @default(uuid())
+  id           String            @id @default(uuid())
   membroId     String
   ministerioId String
-  lider        Boolean    @default(false)
-  membro       Membro     @relation(fields: [membroId], references: [id], onDelete: Cascade)
-  ministerio   Ministerio @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  lider        Boolean           @default(false)
+  funcaoId     String?
+  funcao       FuncaoMinisterio? @relation(fields: [funcaoId], references: [id], onDelete: SetNull)
+  membro       Membro            @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  ministerio   Ministerio        @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
 
   @@unique([membroId, ministerioId])
   @@map("ministerio_membros")
@@ -455,18 +465,19 @@ enum StatusEscala {
 }
 
 model Escala {
-  id           String             @id @default(uuid())
-  ministerioId String
-  ministerio   Ministerio         @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
-  titulo       String
-  data         DateTime
-  observacao   String?
-  status       StatusEscala       @default(PENDENTE)
-  createdById  String?
-  createdBy    Membro?            @relation(fields: [createdById], references: [id])
-  voluntarios  EscalaVoluntario[]
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id                    String             @id @default(uuid())
+  ministerioId          String
+  ministerio            Ministerio         @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  titulo                String
+  data                  DateTime
+  observacao            String?
+  status                StatusEscala       @default(PENDENTE)
+  geradaAutomaticamente Boolean            @default(false)
+  createdById           String?
+  createdBy             Membro?            @relation(fields: [createdById], references: [id])
+  voluntarios           EscalaVoluntario[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   @@index([ministerioId])
   @@map("escalas")
@@ -477,14 +488,70 @@ model EscalaVoluntario {
   escalaId   String
   membroId   String
   funcao     String
+  funcaoId   String?
   status     String  @default("CONFIRMADO")
   observacao String?
 
-  escala Escala @relation(fields: [escalaId], references: [id], onDelete: Cascade)
-  membro Membro @relation(fields: [membroId], references: [id], onDelete: Restrict)
+  escala    Escala            @relation(fields: [escalaId], references: [id], onDelete: Cascade)
+  membro    Membro            @relation(fields: [membroId], references: [id], onDelete: Restrict)
+  funcaoRef FuncaoMinisterio? @relation(fields: [funcaoId], references: [id], onDelete: SetNull)
 
   @@unique([escalaId, membroId, funcao])
   @@map("escala_voluntarios")
+}
+
+// ==========================================
+// MÓDULO 5.1: FUNÇÕES, ATIVIDADES E DISPONIBILIDADES
+// ==========================================
+
+enum TipoAtividade {
+  CULTO
+  ENSAIO
+  ATIVIDADE_EXTRA
+}
+
+model FuncaoMinisterio {
+  id           String             @id @default(uuid())
+  ministerioId String
+  nome         String
+  cor          String?
+  ministerio   Ministerio         @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  membros      MinisterioMembro[]
+  voluntarios  EscalaVoluntario[]
+
+  @@unique([ministerioId, nome])
+  @@map("funcoes_ministerio")
+}
+
+model AtividadeMinisterio {
+  id           String        @id @default(uuid())
+  ministerioId String
+  membroId     String?
+  tipo         TipoAtividade
+  data         DateTime
+  horario      String
+  descricao    String?
+  criadoPorId  String?
+  ministerio   Ministerio    @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  membro       Membro?       @relation("AtividadeMembro", fields: [membroId], references: [id], onDelete: SetNull)
+  criadoPor    Membro?       @relation("AtividadeCriador", fields: [criadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([ministerioId, data])
+  @@map("atividades_ministerio")
+}
+
+model IndisponibilidadeMembro {
+  id           String     @id @default(uuid())
+  ministerioId String
+  membroId     String
+  dataInicio   DateTime
+  dataFim      DateTime
+  motivo       String?
+  ministerio   Ministerio @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  membro       Membro     @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([ministerioId, membroId, dataInicio])
+  @@map("indisponibilidades_membro")
 }
 
 // ==========================================

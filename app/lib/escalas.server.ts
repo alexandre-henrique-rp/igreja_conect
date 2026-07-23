@@ -29,6 +29,7 @@ export type EscalaComVoluntarios = {
   data: Date;
   observacao: string | null;
   status: string;
+  geradaAutomaticamente: boolean;
   voluntarios: Array<{
     id: string;
     membroId: string;
@@ -95,6 +96,7 @@ const escalaComVoluntariosSelect = {
   data: true,
   observacao: true,
   status: true,
+  geradaAutomaticamente: true,
   ministerio: { select: { nome: true } },
   voluntarios: {
     select: {
@@ -115,6 +117,7 @@ function formatEscala(raw: {
   data: Date;
   observacao: string | null;
   status: string;
+  geradaAutomaticamente: boolean;
   ministerio: { nome: string };
   voluntarios: Array<{
     id: string;
@@ -133,6 +136,7 @@ function formatEscala(raw: {
     data: raw.data,
     observacao: raw.observacao,
     status: raw.status,
+    geradaAutomaticamente: raw.geradaAutomaticamente,
     voluntarios: raw.voluntarios.map((v) => ({
       id: v.id,
       membroId: v.membroId,
