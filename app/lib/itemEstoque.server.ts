@@ -210,6 +210,7 @@ export async function listarItensEstoque(
     tipo?: "CONSUMO" | "PATRIMONIO";
     status?: string;
     q?: string;
+    filtro?: "critico";
     page?: number;
     pageSize?: number;
   },
@@ -226,8 +227,8 @@ export async function listarItensEstoque(
   const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 25));
 
   const where: Record<string, unknown> = {};
-  if (options.apenasAtivos !== false) {
-    where.ativo = true;
+  if (typeof options.apenasAtivos === "boolean") {
+    where.ativo = options.apenasAtivos;
   }
   if (options.tipo) {
     where.tipo = options.tipo;
@@ -240,6 +241,10 @@ export async function listarItensEstoque(
       { nome: { contains: options.q } },
       { descricao: { contains: options.q } },
     ];
+  }
+  if (options.filtro === "critico") {
+    where.tipo = "CONSUMO";
+    where.quantidade = { lte: 5 };
   }
 
   const select = {
@@ -440,6 +445,43 @@ export async function reabrirItem(
     where: { id },
     data: { ativo: true },
   });
+
+  return { success: true };
+}
+
+/**
+ * Exclui permanentemente um item de estoque (apenas se arquivado).
+ * Remove também movimentações e manutenções relacionadas.
+ *
+ * * @param {string} id - UUID do item.
+ * @param {SessionUser} user - Usuário autenticado.
+ * @returns {Promise<{ success: true }>}
+ * @throws {Response} 403 se sem permissão.
+ * @throws {Response} 404 se item não encontrado.
+ * @throws {Response} 409 se item ainda está ativo (não arquivado).
+ */
+export async function excluirItem(
+  id: string,
+  user: SessionUser
+): Promise<{ success: true }> {
+  assertCanManageEstoque(user);
+
+  const item = await prisma.itemEstoque.findUnique({
+    where: { id },
+    select: { id: true, ativo: true },
+  });
+  if (!item) {
+    throw new Response("Item não encontrado.", { status: 404 });
+  }
+  if (item.ativo) {
+    throw new Response("Arquive o item antes de excluí-lo permanentemente.", { status: 409 });
+  }
+
+  await prisma.$transaction([
+    prisma.movimentacaoEstoque.deleteMany({ where: { itemEstoqueId: id } }),
+    prisma.manutencaoAtivo.deleteMany({ where: { itemEstoqueId: id } }),
+    prisma.itemEstoque.delete({ where: { id } }),
+  ]);
 
   return { success: true };
 }

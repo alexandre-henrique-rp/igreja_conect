@@ -8,6 +8,7 @@ interface TabelaItensEstoqueProps {
   podeGerenciar: boolean;
   onArquivar?: (id: string) => void;
   onReabrir?: (id: string) => void;
+  onExcluir?: (id: string) => void;
 }
 
 /**
@@ -19,6 +20,7 @@ export default function TabelaItensEstoque({
   podeGerenciar,
   onArquivar,
   onReabrir,
+  onExcluir,
 }: TabelaItensEstoqueProps) {
   if (items.length === 0) {
     return (
@@ -89,14 +91,24 @@ export default function TabelaItensEstoque({
                           Arquivar
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer text-xs"
-                          title="Reabrir"
-                          onClick={() => onReabrir?.(item.id)}
-                        >
-                          Reabrir
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer text-xs"
+                            title="Reabrir"
+                            onClick={() => onReabrir?.(item.id)}
+                          >
+                            Reabrir
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1.5 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer text-xs"
+                            title="Excluir permanentemente"
+                            onClick={() => onExcluir?.(item.id)}
+                          >
+                            Excluir
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>

@@ -61,3 +61,38 @@ export const SenhaConviteSchema = z
   });
 
 export type SenhaConviteInput = z.infer<typeof SenhaConviteSchema>;
+
+/**
+ * Schema da etapa 1 de recuperação de senha (verificar identidade).
+ * Valida email + nome para confirmar que o usuário é quem diz ser.
+ */
+export const RecuperarSenhaStep1Schema = z.object({
+  email: z
+    .string()
+    .min(1, "E-mail obrigatório.")
+    .max(120, "E-mail muito longo.")
+    .email("E-mail inválido. Verifique o formato."),
+  nome: z
+    .string()
+    .min(2, "Nome obrigatório.")
+    .max(120, "Nome muito longo."),
+});
+
+export type RecuperarSenhaStep1Input = z.infer<typeof RecuperarSenhaStep1Schema>;
+
+/**
+ * Schema da etapa 2 de recuperação de senha (redefinir).
+ * Reutiliza a mesma política de complexidade do convite.
+ */
+export const RecuperarSenhaStep2Schema = z
+  .object({
+    email: z.string().email(),
+    senha: z.string().regex(SENHA_REGEX, SENHA_ERRO),
+    confirmarSenha: z.string().min(1, "Confirmação de senha obrigatória."),
+  })
+  .refine((d) => d.senha === d.confirmarSenha, {
+    message: "As senhas não conferem.",
+    path: ["confirmarSenha"],
+  });
+
+export type RecuperarSenhaStep2Input = z.infer<typeof RecuperarSenhaStep2Schema>;

@@ -40,6 +40,7 @@ export default [
   route("/login", "routes/public/login.tsx"),
   route("/logout", "routes/logout.tsx"),
   route("/convite/:token", "routes/public/convite.$token.tsx"),
+  route("/recuperar-senha", "routes/public/recuperar-senha.tsx"),
 
   // API — uploads (autenticado, ver middleware via context)
   route("/api/uploads", "routes/api/uploads.ts"),
@@ -154,6 +155,9 @@ export default [
         route(":id/retorno", "routes/app/estoque.$id.retorno.tsx"),
         route(":id/baixa", "routes/app/estoque.$id.baixa.tsx"),
       ]),
+      route("estoque/requisicoes", "routes/app/estoque.requisicoes._index.tsx"),
+      route("estoque/requisicoes/nova", "routes/app/estoque.requisicoes.nova.tsx"),
+      route("estoque/requisicoes/:id", "routes/app/estoque.requisicoes.$id.tsx"),
 
       // Patrimônio (atalho UX, redireciona para /app/estoque?tipo=PATRIMONIO)
       route("patrimonio", "routes/app/patrimonio.tsx"),

@@ -1,5 +1,5 @@
 import type { Route } from "./+types/estoque._index";
-import { Link, useSubmit, Form, useActionData, useNavigation } from "react-router";
+import { Link, useSubmit, useNavigate, Form, useActionData, useNavigation } from "react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { prisma } from "~/db/prisma.server";
@@ -14,6 +14,7 @@ import {
   editarItem,
   arquivarItem,
   reabrirItem,
+  excluirItem,
 } from "~/lib/itemEstoque.server";
 import { safeLog } from "~/lib/audit.server";
 import { assertCanSeeEstoque, assertCanManageEstoque } from "~/lib/rbac.server";
@@ -59,6 +60,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const q = url.searchParams.get("q") || "";
   const tipo = url.searchParams.get("tipo") || "";
   const mostrarArquivados = url.searchParams.get("mostrarArquivados") === "true";
+  const filtro = url.searchParams.get("filtro") || "";
 
   const count = await prisma.itemEstoque.count();
   if (count === 0) {
@@ -84,6 +86,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       q: q || undefined,
       tipo: (tipo as "CONSUMO" | "PATRIMONIO") || undefined,
       apenasAtivos: !mostrarArquivados,
+      filtro: (filtro as "critico") || undefined,
       pageSize: 100,
     }, user),
   ]);
@@ -94,6 +97,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     q,
     tipo,
     mostrarArquivados,
+    filtro,
     kpis: dashboard.kpis,
     podeGerenciar: !!(user.cargo && ["ADMIN", "PASTOR", "SECRETARIO"].includes(user.cargo)),
   };
@@ -299,20 +303,20 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
   }
 
-  if (intent === "excluir") {
+  if (intent === "excluir-permanente") {
     assertCanManageEstoque(user);
     const id = formData.get("id") as string;
-    if (!id) return { success: false, error: "ID do produto inválido.", intent: "excluir" };
+    if (!id) return { success: false, error: "ID do produto inválido.", intent: "excluir-permanente" };
 
     try {
-      await arquivarItem(id, user);
-      return { success: true, message: "Produto arquivado com sucesso!", intent: "excluir" };
+      await excluirItem(id, user);
+      return { success: true, message: "Produto excluído permanentemente!", intent: "excluir-permanente" };
     } catch (err: any) {
       if (err instanceof Response) throw err;
       return {
         success: false,
-        error: "Não foi possível arquivar o produto. Verifique se ele está em manutenção.",
-        intent: "excluir",
+        error: "Não foi possível excluir o produto. Tente novamente.",
+        intent: "excluir-permanente",
       };
     }
   }
@@ -321,9 +325,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
-  const { items, q, tipo, mostrarArquivados, kpis, podeGerenciar } = loaderData;
+  const { items, q, tipo, mostrarArquivados, filtro, kpis, podeGerenciar } = loaderData;
   const actionData = useActionData<any>();
   const submit = useSubmit();
+  const navigate = useNavigate();
   const navigation = useNavigation();
 
   const [isMovModalOpen, setIsMovModalOpen] = useState(false);
@@ -377,6 +382,14 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
     submit(fd, { method: "post" });
   };
 
+  const handleExcluir = (id: string) => {
+    if (!confirm("Tem certeza? Esta ação exclui o item permanentemente e não pode ser desfeita.")) return;
+    const fd = new FormData();
+    fd.append("intent", "excluir-permanente");
+    fd.append("id", id);
+    submit(fd, { method: "post" });
+  };
+
   const todayStr = new Date().toISOString().split("T")[0];
 
   return (
@@ -396,6 +409,30 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
         <div className="flex items-center gap-3">
           {podeGerenciar && (
             <>
+              <Link
+                to="/app/estoque/requisicoes"
+                className="flex items-center justify-center gap-2 px-4 h-10 border border-slate-200 text-slate-700 bg-white rounded-lg font-semibold hover:bg-slate-50 transition-all text-sm"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Requisições
+              </Link>
+              <button
+                type="button"
+                onClick={() => navigate(mostrarArquivados ? "/app/estoque" : "/app/estoque?mostrarArquivados=true")}
+                className={`flex items-center justify-center gap-2 px-4 h-10 border rounded-lg font-semibold transition-all text-sm cursor-pointer ${
+                  mostrarArquivados
+                    ? "border-amber-300 text-amber-700 bg-amber-50"
+                    : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
+                }`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-8H7v8M7 3v5h8" />
+                </svg>
+                {mostrarArquivados ? "Ver Ativos" : "Arquivados"}
+              </button>
               <Link
                 to="/app/estoque/novo"
                 className="flex items-center justify-center gap-2 px-4 h-10 border border-slate-200 text-slate-700 bg-white rounded-lg font-semibold hover:bg-slate-50 transition-all text-sm"
@@ -446,6 +483,26 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
 
       <KpiEstoque kpis={kpis} />
 
+      {filtro === "critico" && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-red-800">Itens com estoque crítico</p>
+              <p className="text-xs text-red-700 mt-0.5">Mostrando apenas itens de consumo com quantidade ≤ 5.</p>
+            </div>
+          </div>
+          <Link
+            to="/app/estoque"
+            className="text-sm font-semibold text-red-700 hover:text-red-800 underline shrink-0"
+          >
+            Ver todos
+          </Link>
+        </div>
+      )}
+
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <ItemEstoqueSearchBar q={q} tipo={tipo} mostrarArquivados={mostrarArquivados} />
@@ -468,6 +525,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
           podeGerenciar={podeGerenciar}
           onArquivar={handleArquivar}
           onReabrir={handleReabrir}
+          onExcluir={handleExcluir}
         />
 
         <div className="p-6 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">

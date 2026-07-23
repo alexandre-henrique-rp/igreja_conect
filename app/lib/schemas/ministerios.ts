@@ -26,6 +26,13 @@ export const MinisterioCreateSchema = z
       .string()
       .max(500, "Descrição deve ter no máximo 500 caracteres.")
       .optional(),
+    status: z.enum(["ATIVO", "INATIVO", "SUSPENSO"]).optional(),
+    corDestaque: z.string().max(20).optional(),
+    liderNome: z.string().max(120).optional(),
+    capacidadeMaxima: z.number().int().positive().optional(),
+    diasEncontro: z.string().max(50).optional(),
+    horarioPadrao: z.string().max(10).optional(),
+    turnoPrincipal: z.enum(["MANHA", "TARDE", "NOITE"]).optional(),
   })
   .strict();
 

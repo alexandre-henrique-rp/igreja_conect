@@ -23,7 +23,7 @@ import { Input } from "~/components/Input";
 import { Select } from "~/components/Select";
 import { Breadcrumb } from "~/components/Breadcrumb";
 import { ErrorAlert } from "~/components/ErrorAlert";
-import { NomeDuplicadoError } from "~/lib/errors";
+import { ConflictError, NomeDuplicadoError } from "~/lib/errors";
 
 /** Cargos que podem gerenciar ministérios. */
 const CAN_MANAGE = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
@@ -36,13 +36,14 @@ export function meta({ data }: Route.MetaArgs) {
 const UpdateSchema = z.object({
   nome: z.string().min(2, "Nome deve ter ao menos 2 caracteres.").max(80),
   descricao: z.string().max(500).optional(),
-  status: z.string().optional(),
-  corDestaque: z.string().optional(),
-  liderNome: z.string().optional(),
+  status: z.enum(["ATIVO", "INATIVO", "SUSPENSO"]).optional(),
+  corDestaque: z.string().max(20).optional(),
+  liderNome: z.string().max(120).optional(),
+  liderId: z.string().optional(),
   capacidadeMaxima: z.string().optional(),
-  diasEncontro: z.string().optional(),
-  horarioPadrao: z.string().optional(),
-  turnoPrincipal: z.string().optional(),
+  diasEncontro: z.string().max(50).optional(),
+  horarioPadrao: z.string().max(10).optional(),
+  turnoPrincipal: z.enum(["MANHA", "TARDE", "NOITE"]).optional(),
 });
 
 /**
@@ -88,6 +89,13 @@ export async function loader({ context, params }: Route.LoaderArgs) {
       id: ministerio.id,
       nome: ministerio.nome,
       descricao: ministerio.descricao,
+      status: ministerio.status,
+      corDestaque: ministerio.corDestaque,
+      liderNome: ministerio.liderNome,
+      capacidadeMaxima: ministerio.capacidadeMaxima,
+      diasEncontro: ministerio.diasEncontro,
+      horarioPadrao: ministerio.horarioPadrao,
+      turnoPrincipal: ministerio.turnoPrincipal,
       createdAt: ministerio.createdAt,
       updatedAt: ministerio.updatedAt,
     },
@@ -154,9 +162,41 @@ export async function action({ context, request, params }: Route.ActionArgs) {
         {
           nome: parsed.data.nome,
           descricao: parsed.data.descricao,
+          status: parsed.data.status as "ATIVO" | "INATIVO" | "SUSPENSO" | undefined,
+          corDestaque: parsed.data.corDestaque,
+          liderNome: parsed.data.liderNome,
+          capacidadeMaxima: parsed.data.capacidadeMaxima
+            ? Number(parsed.data.capacidadeMaxima)
+            : undefined,
+          diasEncontro: parsed.data.diasEncontro,
+          horarioPadrao: parsed.data.horarioPadrao,
+          turnoPrincipal: parsed.data.turnoPrincipal as "MANHA" | "TARDE" | "NOITE" | undefined,
         },
         user
       );
+
+      // Se um líder foi selecionado, garantir vínculo + flag lider=true
+      const liderId = parsed.data.liderId;
+      if (liderId) {
+        // Tenta adicionar o membro (ignora se já estiver vinculado)
+        try {
+          await addMembroToMinisterio(ministerioId, liderId, user);
+        } catch (e) {
+          if (!(e instanceof ConflictError)) throw e;
+        }
+        // Marca como líder (toggle aceita o estado atual e inverte)
+        // Precisa garantir que lider=true: busca o vínculo e seta diretamente
+        const vinculo = await prisma.ministerioMembro.findUnique({
+          where: { membroId_ministerioId: { membroId: liderId, ministerioId } },
+        });
+        if (vinculo && !vinculo.lider) {
+          await prisma.ministerioMembro.update({
+            where: { membroId_ministerioId: { membroId: liderId, ministerioId } },
+            data: { lider: true },
+          });
+        }
+      }
+
       return new Response(null, {
         status: 302,
         headers: { Location: `/app/ministerios/${ministerioId}` },
@@ -176,8 +216,8 @@ export async function action({ context, request, params }: Route.ActionArgs) {
     try {
       await addMembroToMinisterio(ministerioId, membroId, user);
     } catch (e) {
-      if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "P2002") {
-        throw new Response("Este membro já está neste ministério.", { status: 400 });
+      if (e instanceof ConflictError) {
+        throw new Response("Este membro já está neste ministério.", { status: 409 });
       }
       throw e;
     }
@@ -255,12 +295,18 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
   const fieldErrors = (actionData as { fieldErrors?: Record<string, string> } | undefined)?.fieldErrors;
 
   // Estado local para dias e cor
-  const [diasSelecionados, setDiasSelecionados] = useState<string[]>(["DOM", "QUA"]);
-  const [corDestaque, setCorDestaque] = useState("#3B82F6");
+  const [diasSelecionados, setDiasSelecionados] = useState<string[]>(
+    ministerio.diasEncontro
+      ? ministerio.diasEncontro.split(",").filter(Boolean)
+      : ["DOM", "QUA"]
+  );
+  const [corDestaque, setCorDestaque] = useState(ministerio.corDestaque ?? "#3B82F6");
 
   // Liderança
   const [liderNome, setLiderNome] = useState("");
-  const [liderSelecionado, setLiderSelecionado] = useState<{ id: string; nome: string } | null>(null);
+  const [liderSelecionado, setLiderSelecionado] = useState<{ id: string; nome: string } | null>(
+    ministerio.liderNome ? { id: "", nome: ministerio.liderNome } : null
+  );
   const [showLiderDropdown, setShowLiderDropdown] = useState(false);
 
   // Adicionar membro
@@ -296,7 +342,10 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
         <input type="hidden" name="diasEncontro" value={diasSelecionados.join(",")} />
         <input type="hidden" name="corDestaque" value={corDestaque} />
         {liderSelecionado && (
-          <input type="hidden" name="liderNome" value={liderSelecionado.nome} />
+          <>
+            <input type="hidden" name="liderNome" value={liderSelecionado.nome} />
+            <input type="hidden" name="liderId" value={liderSelecionado.id} />
+          </>
         )}
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-3 mb-6">
@@ -360,7 +409,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
             <Select
               name="status"
               label="Status"
-              defaultValue="ATIVO"
+              defaultValue={ministerio.status ?? "ATIVO"}
               options={STATUS_OPTIONS}
             />
             <div className="space-y-1">
@@ -507,6 +556,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                 type="number"
                 min={1}
                 placeholder="Ilimitado"
+                defaultValue={ministerio.capacidadeMaxima ?? undefined}
                 className="w-full h-11 px-3 rounded-md border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-700 text-sm"
               />
             </div>
@@ -543,12 +593,12 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
               name="horarioPadrao"
               label="Horário Padrão"
               placeholder="19:30"
-              defaultValue="19:30"
+              defaultValue={ministerio.horarioPadrao ?? "19:30"}
             />
             <Select
               name="turnoPrincipal"
               label="Turno"
-              defaultValue="NOITE"
+              defaultValue={ministerio.turnoPrincipal ?? "NOITE"}
               options={TURNO_OPTIONS}
             />
           </div>

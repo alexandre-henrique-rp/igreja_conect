@@ -62,6 +62,13 @@ enum StatusItemPatrimonio {
   BAIXADO_PERDA
 }
 
+enum StatusRequisicaoCompra {
+  SOLICITADA
+  APROVADA
+  REJEITADA
+  COMPRADA
+}
+
 // ==========================================
 // MÓDULO 1: MEMBROS & USUÁRIOS
 // ==========================================
@@ -142,8 +149,11 @@ model Membro {
   avatarUploadId String?
   avatarUpload   Upload? @relation("MembroAvatar", fields: [avatarUploadId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  requisicoesSolicitadas RequisicaoCompra[] @relation("RequisicaoSolicitante")
+  requisicoesAprovadas   RequisicaoCompra[] @relation("RequisicaoAprovador")
+  requisicoesCompradas   RequisicaoCompra[] @relation("RequisicaoComprador")
 
   @@map("membros")
 }
@@ -192,12 +202,19 @@ model ConviteToken {
 }
 
 model Ministerio {
-  id          String              @id @default(uuid())
-  nome        String              @unique
-  descricao   String?
-  membros     MinisterioMembro[]
-  configGeral ConfiguracaoGeral[] @relation("MinisterioResponsavel")
-  escalas     Escala[]
+  id               String              @id @default(uuid())
+  nome             String              @unique
+  descricao        String?
+  status           String              @default("ATIVO")
+  corDestaque      String?
+  liderNome        String?
+  capacidadeMaxima Int?
+  diasEncontro     String?
+  horarioPadrao    String?
+  turnoPrincipal   String?
+  membros          MinisterioMembro[]
+  configGeral      ConfiguracaoGeral[] @relation("MinisterioResponsavel")
+  escalas          Escala[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -312,8 +329,9 @@ model ItemEstoque {
   movimentacoes MovimentacaoEstoque[]
   manutencoes   ManutencaoAtivo[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  requisicaoCompras RequisicaoCompra[]
 
   @@index([tipo, ativo])
   @@map("itens_estoque")
@@ -358,6 +376,36 @@ model ManutencaoAtivo {
   updatedAt DateTime @updatedAt
 
   @@map("manutencoes_ativo")
+}
+
+model RequisicaoCompra {
+  id            String                 @id @default(uuid())
+  itemEstoqueId String? // Se null, é para um item novo ainda não cadastrado
+  nomeItem      String // Nome do item solicitado (mesmo se itemEstoqueId for null)
+  quantidade    Int
+  justificativa String?
+  status        StatusRequisicaoCompra @default(SOLICITADA)
+  valorCentavos Int? // Preenchido quando comprado
+  observacao    String? // Observação do aprovador ou comprador
+
+  solicitadoPorId String
+  aprovadoPorId   String?
+  compradoPorId   String?
+
+  // Vínculo opcional com lançamento financeiro quando comprada
+  lancamentoId String?
+
+  itemEstoque   ItemEstoque? @relation(fields: [itemEstoqueId], references: [id], onDelete: SetNull)
+  solicitadoPor Membro       @relation("RequisicaoSolicitante", fields: [solicitadoPorId], references: [id], onDelete: Restrict)
+  aprovadoPor   Membro?      @relation("RequisicaoAprovador", fields: [aprovadoPorId], references: [id], onDelete: SetNull)
+  compradoPor   Membro?      @relation("RequisicaoComprador", fields: [compradoPorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([solicitadoPorId])
+  @@map("requisicoes_compra")
 }
 
 // ==========================================

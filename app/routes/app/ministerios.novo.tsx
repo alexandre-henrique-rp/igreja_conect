@@ -10,8 +10,8 @@ import { z } from "zod";
 import { Button } from "~/components/Button";
 import { Input } from "~/components/Input";
 import { Select } from "~/components/Select";
-import { NomeDuplicadoError } from "~/lib/errors";
-import { createMinisterio } from "~/lib/ministries.server";
+import { NomeDuplicadoError, ConflictError } from "~/lib/errors";
+import { createMinisterio, addMembroToMinisterio } from "~/lib/ministries.server";
 
 /** Cargos que podem gerenciar ministérios. */
 const CAN_MANAGE = ["ADMIN", "PASTOR", "SECRETARIO"] as const;
@@ -26,12 +26,13 @@ export function meta(_args: Route.MetaArgs) {
 const CreateSchema = z.object({
   nome: z.string().min(2, "Nome deve ter ao menos 2 caracteres.").max(80),
   descricao: z.string().max(500).optional(),
-  status: z.string().optional(),
+  status: z.enum(["ATIVO", "INATIVO", "SUSPENSO"]).optional(),
   capacidadeMaxima: z.string().optional(),
   diasEncontro: z.string().optional(),
   horarioPadrao: z.string().optional(),
-  turnoPrincipal: z.string().optional(),
+  turnoPrincipal: z.enum(["MANHA", "TARDE", "NOITE"]).optional(),
   corDestaque: z.string().optional(),
+  liderancaId: z.string().optional(),
 });
 
 /**
@@ -94,6 +95,9 @@ export async function action({ context, request }: Route.ActionArgs) {
     corDestaque: formData.get("corDestaque")
       ? String(formData.get("corDestaque"))
       : undefined,
+    liderancaId: formData.get("liderancaId")
+      ? String(formData.get("liderancaId"))
+      : undefined,
   };
 
   const parsed = CreateSchema.safeParse(raw);
@@ -110,10 +114,40 @@ export async function action({ context, request }: Route.ActionArgs) {
   }
 
   try {
-    await createMinisterio(
-      { nome: parsed.data.nome, descricao: parsed.data.descricao },
+    const created = await createMinisterio(
+      {
+        nome: parsed.data.nome,
+        descricao: parsed.data.descricao,
+        status: parsed.data.status as "ATIVO" | "INATIVO" | "SUSPENSO" | undefined,
+        corDestaque: parsed.data.corDestaque,
+        capacidadeMaxima: parsed.data.capacidadeMaxima
+          ? Number(parsed.data.capacidadeMaxima)
+          : undefined,
+        diasEncontro: parsed.data.diasEncontro,
+        horarioPadrao: parsed.data.horarioPadrao,
+        turnoPrincipal: parsed.data.turnoPrincipal as "MANHA" | "TARDE" | "NOITE" | undefined,
+      },
       user
     );
+
+    // Se um líder foi selecionado, vincula ao ministério e marca como líder
+    if (parsed.data.liderancaId) {
+      try {
+        await addMembroToMinisterio(created.id, parsed.data.liderancaId, user);
+      } catch (e) {
+        if (!(e instanceof ConflictError)) throw e;
+      }
+      await prisma.ministerioMembro.update({
+        where: {
+          membroId_ministerioId: {
+            membroId: parsed.data.liderancaId,
+            ministerioId: created.id,
+          },
+        },
+        data: { lider: true },
+      });
+    }
+
     return new Response(null, { status: 302, headers: { Location: "/app/ministerios" } });
   } catch (e) {
     if (

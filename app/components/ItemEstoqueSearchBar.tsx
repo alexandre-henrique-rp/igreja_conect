@@ -1,4 +1,4 @@
-import { Form } from "react-router";
+import { Form, useSubmit } from "react-router";
 
 interface ItemEstoqueSearchBarProps {
   q: string;
@@ -15,8 +15,11 @@ export default function ItemEstoqueSearchBar({
   tipo,
   mostrarArquivados,
 }: ItemEstoqueSearchBarProps) {
+  const submit = useSubmit();
+
   return (
-    <Form method="get" className="flex flex-wrap items-center gap-3">
+    <Form method="get" className="flex flex-wrap items-center gap-3" onChange={(e) => submit(e.currentTarget)}>
+      <input type="hidden" name="mostrarArquivados" value={String(mostrarArquivados)} />
       <div className="relative w-full md:w-72">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -40,15 +43,6 @@ export default function ItemEstoqueSearchBar({
         <option value="CONSUMO">Consumo</option>
         <option value="PATRIMONIO">Patrimônio</option>
       </select>
-      <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-        <input
-          type="checkbox"
-          name="mostrarArquivados"
-          defaultChecked={mostrarArquivados}
-          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-        />
-        Mostrar arquivados
-      </label>
       <button
         type="submit"
         className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"

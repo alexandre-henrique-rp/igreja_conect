@@ -112,7 +112,17 @@ export async function createMinisterio(
   const validated = MinisterioCreateSchema.parse(input);
   try {
     const created = await prisma.ministerio.create({
-      data: { nome: validated.nome, descricao: validated.descricao ?? null },
+      data: {
+        nome: validated.nome,
+        descricao: validated.descricao ?? null,
+        status: validated.status,
+        corDestaque: validated.corDestaque,
+        liderNome: validated.liderNome,
+        capacidadeMaxima: validated.capacidadeMaxima,
+        diasEncontro: validated.diasEncontro,
+        horarioPadrao: validated.horarioPadrao,
+        turnoPrincipal: validated.turnoPrincipal,
+      },
     });
     return created;
   } catch (e) {
@@ -155,6 +165,13 @@ export async function updateMinisterio(
   const data: Prisma.MinisterioUpdateInput = {};
   if (validated.nome !== undefined) data.nome = validated.nome;
   if (validated.descricao !== undefined) data.descricao = validated.descricao;
+  if (validated.status !== undefined) data.status = validated.status;
+  if (validated.corDestaque !== undefined) data.corDestaque = validated.corDestaque;
+  if (validated.liderNome !== undefined) data.liderNome = validated.liderNome;
+  if (validated.capacidadeMaxima !== undefined) data.capacidadeMaxima = validated.capacidadeMaxima;
+  if (validated.diasEncontro !== undefined) data.diasEncontro = validated.diasEncontro;
+  if (validated.horarioPadrao !== undefined) data.horarioPadrao = validated.horarioPadrao;
+  if (validated.turnoPrincipal !== undefined) data.turnoPrincipal = validated.turnoPrincipal;
 
   try {
     // IMPORTANTE: `return await` (não `return prisma.update(...)`) —

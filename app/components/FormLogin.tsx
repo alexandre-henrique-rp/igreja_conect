@@ -39,7 +39,7 @@
  * @returns Elemento JSX do
  */
 import { useState } from "react";
-import { Form, useNavigation, useSearchParams } from "react-router";
+import { Form, Link, useNavigation, useSearchParams } from "react-router";
 import { Button } from "./Button";
 import { Checkbox } from "./Checkbox";
 import { ErrorAlert } from "./ErrorAlert";
@@ -148,7 +148,6 @@ export function FormLogin({
   const navigation = useNavigation();
   void useSearchParams;
   const isSubmitting = navigation.state === "submitting";
-  const [showForgotMsg, setShowForgotMsg] = useState(false);
   const clientIP = useClientIP();
 
   // SVGs dos ícones
@@ -192,15 +191,12 @@ export function FormLogin({
         SENHA
         <span aria-hidden="true" className="text-red-400 font-bold">*</span>
       </span>
-      <button
-        type="button"
-        onClick={() => {
-          setShowForgotMsg((prev) => !prev);
-        }}
+      <Link
+        to="/recuperar-senha"
         className="text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors cursor-pointer focus-visible:outline-none focus-visible:underline"
       >
         Esqueceu a senha?
-      </button>
+      </Link>
     </div>
   );
 
@@ -255,13 +251,6 @@ export function FormLogin({
           {formError && (
             <div className="mb-4">
               <ErrorAlert tone="error">{formError}</ErrorAlert>
-            </div>
-          )}
-
-          {showForgotMsg && (
-            <div className="mb-4 p-3.5 bg-blue-950/40 border border-blue-980/40 rounded-lg text-slate-300 text-sm">
-              <p className="font-semibold text-blue-400 mb-1">Recuperação de Acesso</p>
-              Para recuperar ou redefinir a sua senha, por favor entre em contato com o administrador da sua igreja.
             </div>
           )}
 
