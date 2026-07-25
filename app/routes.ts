@@ -47,6 +47,9 @@ export default [
   route("/api/uploads/:id", "routes/api/uploads.$id.ts"),
   route("/api/uploads/:id/delete", "routes/api/uploads.$id.delete.ts"),
 
+  // API — health check (monitoramento)
+  route("/api/ping", "routes/api/ping.ts"),
+
   // API — anexos de lançamentos (comprovantes)
   route("/api/lancamentos/:id/anexo", "routes/api/lancamentos.$id.anexo.ts"),
 
