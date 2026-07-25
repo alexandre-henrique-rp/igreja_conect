@@ -20,7 +20,7 @@ ENV NODE_ENV=production
 ENV DATABASE_URL="file:/app/data/prod.db"
 ENV STORAGE_PROVIDER=local
 ENV STORAGE_LOCAL_DIR="/app/data/storage"
-RUN apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg curl
 COPY --from=deps /app/node_modules /app/node_modules
 COPY --from=build /app/build /app/build
 COPY --from=build /app/generated /app/generated
