@@ -381,15 +381,7 @@ describe("membros.$id — render (S02-T07 + S03-T07)", () => {
     expect(html).toContain("Rua das Flores");
     expect(html).toContain("São Paulo");
     expect(html).toContain("CEP 01000-000");
-    // Tabs
-    expect(html).toContain('role="tablist"');
-    expect(html).toContain("Dados");
-    expect(html).toContain("Discipulado");
-    expect(html).toContain("Ministérios");
-    // ADMIN pode ver Fidelidade
-    expect(html).toContain("Fidelidade");
-    // Tab Dados ativa por default → renderiza TabDadosPessoais
-    expect(html).toContain("tab-dados-pessoais");
+    // Dados Pessoais e cadastrais exibidos diretamente
     expect(html).toContain("Professora");
     expect(html).toContain("Casada");
     // Botão Editar + Excluir
@@ -443,49 +435,7 @@ describe("membros.$id — render (S02-T07 + S03-T07)", () => {
     expect(html).not.toContain(">Fidelidade<");
   });
 
-  it("FINANCEIRO: canSeeFinancials=true, VÊ Fidelidade", () => {
-    const Stub = createRoutesStub([
-      {
-        path: "/app/membros/:id",
-        Component: () => (
-          <DefaultComponent
-            loaderData={makeLoaderData({
-              canSeeFinancials: true,
-              user: { id: "u1", nome: "Auth", cargo: "FINANCEIRO" },
-            }) as unknown as LoaderData}
-          />
-        ),
-      },
-    ]);
-    const html = renderToString(<Stub initialEntries={["/app/membros/m1"]} />);
 
-    expect(html).toContain(">Fidelidade<");
-  });
-
-  it("BYPASS: SECRETARIO + activeTab=fidelidade → UI força tab=dados (camada 1 reforça)", () => {
-    // Mesmo se loader passar activeTab="fidelidade" sem permissão,
-    // a UI (TabsMembro) cai em "dados" como fallback.
-    const Stub = createRoutesStub([
-      {
-        path: "/app/membros/:id",
-        Component: () => (
-          <DefaultComponent
-            loaderData={makeLoaderData({
-              activeTab: "fidelidade",
-              canSeeFinancials: false,
-              user: { id: "u1", nome: "Auth", cargo: "SECRETARIO" },
-            }) as unknown as LoaderData}
-          />
-        ),
-      },
-    ]);
-    const html = renderToString(<Stub initialEntries={["/app/membros/m1"]} />);
-
-    // Tab Fidelidade NÃO renderiza (mesmo se activeTab="fidelidade")
-    expect(html).not.toContain(">Fidelidade<");
-    // Tab Dados está ativa → tab-dados-pessoais renderiza
-    expect(html).toContain("tab-dados-pessoais");
-  });
 
   it("LGPD: SECRETARIO + Fidelidade → HTML não contém termos sensíveis", () => {
     const Stub = createRoutesStub([
@@ -510,61 +460,7 @@ describe("membros.$id — render (S02-T07 + S03-T07)", () => {
     expect(html).not.toContain("Lancamento");
   });
 
-  it("activeTab=discipulado: renderiza TabDiscipulado", () => {
-    const Stub = createRoutesStub([
-      {
-        path: "/app/membros/:id",
-        Component: () => (
-          <DefaultComponent
-            loaderData={makeLoaderData({
-              activeTab: "discipulado",
-            }) as unknown as LoaderData}
-          />
-        ),
-      },
-    ]);
-    const html = renderToString(<Stub initialEntries={["/app/membros/m1"]} />);
 
-    expect(html).toContain("tab-discipulado");
-  });
-
-  it("activeTab=ministerios: renderiza TabMinisterios", () => {
-    const Stub = createRoutesStub([
-      {
-        path: "/app/membros/:id",
-        Component: () => (
-          <DefaultComponent
-            loaderData={makeLoaderData({
-              activeTab: "ministerios",
-            }) as unknown as LoaderData}
-          />
-        ),
-      },
-    ]);
-    const html = renderToString(<Stub initialEntries={["/app/membros/m1"]} />);
-
-    expect(html).toContain("tab-ministerios");
-  });
-
-  it("activeTab=fidelidade + canSeeFinancials=true: renderiza placeholder", () => {
-    const Stub = createRoutesStub([
-      {
-        path: "/app/membros/:id",
-        Component: () => (
-          <DefaultComponent
-            loaderData={makeLoaderData({
-              activeTab: "fidelidade",
-              canSeeFinancials: true,
-            }) as unknown as LoaderData}
-          />
-        ),
-      },
-    ]);
-    const html = renderToString(<Stub initialEntries={["/app/membros/m1"]} />);
-
-    expect(html).toContain("tab-fidelidade");
-    expect(html).toContain("Módulo Financeiro");
-  });
 });
 
 // ===== ErrorBoundary test =====

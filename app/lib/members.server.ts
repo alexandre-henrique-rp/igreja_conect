@@ -145,9 +145,11 @@ export async function listMembros(
   const q = normalizeQ(filter.q);
   const skip = (page - 1) * pageSize;
 
-  // RBAC fina: membros com isDiscipulador=true podem ser filtrados
+  // RBAC fina: DISCIPULADOR ou LIDER_MINISTERIO lista apenas seus discípulos, outros cargos podem filtrar
   const where: Prisma.MembroWhereInput = {};
-  if (filter.discipuladorId) {
+  if (user.cargo === "DISCIPULADOR" || user.cargo === "LIDER_MINISTERIO") {
+    where.discipuladorId = user.id;
+  } else if (filter.discipuladorId) {
     where.discipuladorId = filter.discipuladorId;
   }
   if (filter.tipo) where.tipo = filter.tipo;
@@ -194,6 +196,12 @@ export async function getMembroById(
   });
   if (!membro) {
     throw new NotFoundError("Membro não encontrado.");
+  }
+  // RBAC fina: DISCIPULADOR ou LIDER_MINISTERIO só pode acessar a si mesmo ou a seus discípulos
+  if (user.cargo === "DISCIPULADOR" || user.cargo === "LIDER_MINISTERIO") {
+    if (membro.id !== user.id && membro.discipuladorId !== user.id) {
+      throw new NotFoundError("Membro não encontrado.");
+    }
   }
   return membro;
 }
@@ -441,10 +449,11 @@ export async function deleteMembro(id: string, user: SessionUser): Promise<void>
   await prisma.membro.delete({ where: { id } });
 
   await logAction({
-    membroId: id,
+    membroId: null, // Evita violação de chave estrangeira em cascata
     event: "membro.delete",
     actorId: user.id,
     actorRole: user.cargo,
+    details: JSON.stringify({ deletedMembroId: id }),
   });
 }
 

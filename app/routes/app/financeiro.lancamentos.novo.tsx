@@ -16,6 +16,7 @@
  * @see docs/REGRAS_DE_NEGOCIO.md (RN-FIN-05)
  */
 import { data, Link, redirect, useActionData } from "react-router";
+import { useState } from "react";
 import { ZodError } from "zod";
 import type { Route } from "./+types/financeiro.lancamentos.novo";
 import { userContext } from "~/lib/user-context";
@@ -98,6 +99,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     membroId: raw.membroId || null, // vazio → null
     dataCompetencia: raw.dataCompetencia,
     descricao: raw.descricao,
+    beneficiario: raw.beneficiario || undefined,
   };
 
   // Validação Zod
@@ -148,6 +150,12 @@ const CATEGORIA_LABEL: Record<string, string> = {
   TRANSFERENCIA: "Transferência",
 };
 
+/** Categorias de ENTRADA (contribuições). */
+const CATEGORIAS_ENTRADA = ["DIZIMO", "OFERTA", "CAMPANHA"] as const;
+
+/** Categorias de SAÍDA (despesas). TRANSFERENCIA é exclusiva do sistema de transferências. */
+const CATEGORIAS_SAIDA = ["DESPESA_OPERACIONAL", "COMPRA_ESTOQUE", "MANUTENCAO"] as const;
+
 /** Labels amigáveis para situação. */
 const STATUS_LABEL: Record<string, string> = {
   PAGO: "Pago / Confirmado",
@@ -177,6 +185,24 @@ export default function NovoLancamento({
   const tipoDefault = defaultValues.tipo ?? "ENTRADA";
   const statusDefault = defaultValues.status ?? "PENDENTE";
 
+  // Estado da categoria controla visibilidade do select de membro.
+  // Só DÍZIMO exige membro (RN-FIN-05); demais categorias não mostram o campo.
+  const [categoria, setCategoria] = useState<string>(defaultValues.categoria ?? "");
+  const exibirMembro = categoria === "DIZIMO";
+
+  // Estado do tipo controla visibilidade da seção "Status e Observações".
+  // ENTRADA é sempre confirmada (PAGO) automaticamente; SAÍDA exige escolha do usuário.
+  const [tipo, setTipo] = useState<string>(tipoDefault);
+  const isSaida = tipo === "SAIDA";
+
+  // Categorias disponíveis conforme o tipo selecionado.
+  // ENTRADA → DÍZIMO/OFERTA/CAMPANHA; SAÍDA → DESPESA_OPERACIONAL/COMPRA_ESTOQUE/MANUTENCAO.
+  const categoriasDoTipo = isSaida ? CATEGORIAS_SAIDA : CATEGORIAS_ENTRADA;
+
+  // Se a categoria atual não pertence ao tipo selecionado, reseta para placeholder.
+  const categoriaEhValidaParaTipo = categoriasDoTipo.includes(categoria as never);
+  const categoriaValue = categoriaEhValidaParaTipo ? categoria : "";
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -198,7 +224,8 @@ export default function NovoLancamento({
               type="radio"
               name="tipo"
               value="ENTRADA"
-              defaultChecked={tipoDefault !== "SAIDA"}
+              checked={tipo === "ENTRADA"}
+              onChange={() => setTipo("ENTRADA")}
               className="sr-only peer"
             />
             <span className="flex items-center justify-center gap-2 h-11 rounded-lg text-sm font-semibold text-slate-600 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 peer-checked:border peer-checked:border-emerald-200 transition-colors">
@@ -213,7 +240,8 @@ export default function NovoLancamento({
               type="radio"
               name="tipo"
               value="SAIDA"
-              defaultChecked={tipoDefault === "SAIDA"}
+              checked={tipo === "SAIDA"}
+              onChange={() => setTipo("SAIDA")}
               className="sr-only peer"
             />
             <span className="flex items-center justify-center gap-2 h-11 rounded-lg text-sm font-semibold text-slate-600 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:border peer-checked:border-red-200 transition-colors">
@@ -225,6 +253,9 @@ export default function NovoLancamento({
           </label>
         </div>
         {fieldErrors.tipo && <p role="alert" className="text-sm text-red-700">{fieldErrors.tipo}</p>}
+
+        {/* ENTRADA é sempre confirmada (PAGO) automaticamente — não exige escolha do usuário. */}
+        {!isSaida && <input type="hidden" name="status" value="PAGO" />}
 
         {/* Informações Básicas */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -249,7 +280,7 @@ export default function NovoLancamento({
                 name="dataCompetencia"
                 label="Data de Competência"
                 type="date"
-                defaultValue={defaultValues.dataCompetencia ?? ""}
+                defaultValue={defaultValues.dataCompetencia ?? new Date().toISOString().slice(0, 10)}
                 error={fieldErrors.dataCompetencia}
                 required
               />
@@ -264,63 +295,88 @@ export default function NovoLancamento({
                 name="categoria"
                 label="Categoria"
                 placeholder="Selecione"
-                options={CATEGORIAS_LANCAMENTO.map((c) => ({
+                options={categoriasDoTipo.map((c) => ({
                   value: c,
                   label: CATEGORIA_LABEL[c] ?? c,
                 }))}
-                defaultValue={defaultValues.categoria ?? ""}
+                value={categoriaValue}
+                onChange={(e) => setCategoria(e.target.value)}
               />
             </div>
             {fieldErrors.caixaId && <p role="alert" className="text-sm text-red-700">{fieldErrors.caixaId}</p>}
             {fieldErrors.categoria && <p role="alert" className="text-sm text-red-700">{fieldErrors.categoria}</p>}
+
+            {/* Membro vinculado — só aparece para DÍZIMO (RN-FIN-05: obrigatório).
+                Demais categorias (OFERTA, CAMPANHA, DESPESA_*, etc.) não vinculam membro. */}
+            {exibirMembro && (
+              <Select
+                name="membroId"
+                label="Membro vinculado (obrigatório para Dízimo)"
+                placeholder="Selecione o membro"
+                options={membros.map((m) => ({ value: m.id, label: m.nome }))}
+                defaultValue={defaultValues.membroId ?? ""}
+              />
+            )}
+            {exibirMembro && fieldErrors.membroId && <p role="alert" className="text-sm text-red-700">{fieldErrors.membroId}</p>}
           </div>
         </div>
 
-        {/* Status e Observações */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
-            <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            <h2 className="font-semibold text-slate-900">Status e Observações</h2>
-          </div>
-          <div className="p-6 space-y-5">
-            <fieldset>
-              <legend className="text-sm font-medium text-slate-700">Situação do Lançamento</legend>
-              <div className="flex flex-wrap gap-4 mt-2">
-                {STATUS_LANCAMENTO.map((s) => (
-                  <label key={s} className="inline-flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status"
-                      value={s}
-                      defaultChecked={statusDefault === s}
-                      className="h-4 w-4 text-cyan-700 border-slate-300 focus:ring-cyan-700"
-                    />
-                    <span className="text-sm text-slate-700">{STATUS_LABEL[s]}</span>
-                  </label>
-                ))}
-              </div>
-              {fieldErrors.status && <p role="alert" className="text-sm text-red-700 mt-1">{fieldErrors.status}</p>}
-            </fieldset>
+        {/* Status e Observações — só aparece para SAÍDA.
+            ENTRADA é sempre confirmada (PAGO) automaticamente via hidden input acima. */}
+        {isSaida && (
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
+              <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <h2 className="font-semibold text-slate-900">Status e Observações</h2>
+            </div>
+            <div className="p-6 space-y-5">
+              <fieldset>
+                <legend className="text-sm font-medium text-slate-700">Situação do Lançamento</legend>
+                <div className="flex flex-wrap gap-4 mt-2">
+                  {STATUS_LANCAMENTO.map((s) => (
+                    <label key={s} className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
+                        value={s}
+                        defaultChecked={statusDefault === s}
+                        className="h-4 w-4 text-cyan-700 border-slate-300 focus:ring-cyan-700"
+                      />
+                      <span className="text-sm text-slate-700">{STATUS_LABEL[s]}</span>
+                    </label>
+                  ))}
+                </div>
+                {fieldErrors.status && <p role="alert" className="text-sm text-red-700 mt-1">{fieldErrors.status}</p>}
+              </fieldset>
 
-            <div className="space-y-1">
-              <label htmlFor="descricao" className="block text-sm font-medium text-slate-700">
-                Observações (Opcional)
-              </label>
-              <textarea
-                id="descricao"
-                name="descricao"
-                rows={4}
-                defaultValue={defaultValues.descricao ?? ""}
-                placeholder="Informações adicionais sobre o lançamento..."
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+              <Input
+                name="beneficiario"
+                label="Beneficiário / Destino (opcional)"
+                placeholder="Ex: Novo som, Empresa XYZ, Igreja sede..."
+                defaultValue={defaultValues.beneficiario ?? ""}
+                error={fieldErrors.beneficiario}
               />
-              {fieldErrors.descricao && <p role="alert" className="text-sm text-red-700">{fieldErrors.descricao}</p>}
+
+              <div className="space-y-1">
+                <label htmlFor="descricao" className="block text-sm font-medium text-slate-700">
+                  Observações (Opcional)
+                </label>
+                <textarea
+                  id="descricao"
+                  name="descricao"
+                  rows={4}
+                  defaultValue={defaultValues.descricao ?? ""}
+                  placeholder="Informações adicionais sobre o lançamento..."
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                />
+                {fieldErrors.descricao && <p role="alert" className="text-sm text-red-700">{fieldErrors.descricao}</p>}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Ações */}
         <div className="flex items-center gap-3">

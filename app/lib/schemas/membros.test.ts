@@ -50,7 +50,7 @@ describe("schemas/membros — MembroCreateSchema (S02-T01)", () => {
       const data: MembroCreateInput = r.data;
       expect(data.tipo).toBe("MEMBRO_ATIVO");
       expect(data.email).toBe("joao@igreja.local");
-      expect(data.cep).toBe("01000-000");
+      expect(data.cep).toBe("01000000");
       expect(data.dataConversao).toBeInstanceOf(Date);
       expect(data.dataBatismo).toBeInstanceOf(Date);
     }

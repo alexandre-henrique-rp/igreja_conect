@@ -170,6 +170,7 @@ export default [
 
       // Eventos
       route("eventos", "routes/app/eventos._index.tsx"),
+      route("eventos/novo", "routes/app/eventos.novo.tsx"),
 
       // Alertas
       route("alertas", "routes/app/alertas._index.tsx"),

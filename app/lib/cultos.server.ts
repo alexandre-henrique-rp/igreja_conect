@@ -30,6 +30,7 @@ export type CriarCultoInput = {
   horario: string;
   local?: string;
   preletor?: string;
+  ministerioId?: string;
 };
 
 /** Input para editar culto (parcial). */
@@ -118,16 +119,28 @@ export async function buscarCulto(id: string, user: SessionUser): Promise<Culto>
 export async function criarCulto(input: CriarCultoInput, user: SessionUser): Promise<Culto> {
   assertPodeEscrever(user);
 
+  let preletorFinal = input.preletor?.trim() || null;
+  if (!preletorFinal) {
+    const pastor = await prisma.membro.findFirst({
+      where: { cargo: "PASTOR" },
+      select: { nome: true }
+    });
+    if (pastor) {
+      preletorFinal = pastor.nome;
+    }
+  }
+
   return prisma.culto.create({
     data: {
       titulo: input.titulo,
       descricao: input.descricao ?? null,
       tipo: input.tipo,
       status: input.status ?? "AGENDADO",
-      data: new Date(input.data),
+      data: input.data.includes("T") ? new Date(input.data) : new Date(input.data + "T00:00:00"),
       horario: input.horario,
       local: input.local ?? null,
-      preletor: input.preletor ?? null,
+      preletor: preletorFinal,
+      ministerioId: input.ministerioId ?? null,
       createdById: user.id,
     },
   });
@@ -159,6 +172,7 @@ export async function editarCulto(id: string, input: EditarCultoInput, user: Ses
   if (input.horario !== undefined) data.horario = input.horario;
   if (input.local !== undefined) data.local = input.local;
   if (input.preletor !== undefined) data.preletor = input.preletor;
+  if (input.ministerioId !== undefined) data.ministerioId = input.ministerioId;
 
   return prisma.culto.update({ where: { id }, data });
 }

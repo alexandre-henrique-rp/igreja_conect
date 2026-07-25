@@ -1,12 +1,12 @@
 /**
  * Rota /app/cultos — Listagem e Programação de Cultos.
  */
-import { Link } from "react-router";
+import { Link, Form, data, useActionData } from "react-router";
 import type { Route } from "./+types/cultos._index";
 import { userContext } from "~/lib/user-context";
-import { listarCultos } from "~/lib/cultos.server";
-import type { Culto } from "~/lib/cultos.server";
+import { prisma } from "~/db/prisma.server";
 import { Button } from "~/components/Button";
+import { excluirCulto } from "~/lib/cultos.server";
 
 function formatDate(d: Date): string {
   const dia = String(d.getDate()).padStart(2, "0");
@@ -35,15 +35,95 @@ export function meta(_args: Route.MetaArgs) {
 export async function loader({ context }: Route.LoaderArgs) {
   const user = context.get(userContext);
   if (!user) throw new Response("Não autenticado.", { status: 401 });
-  const cultos = await listarCultos(user);
+  const cultos = await prisma.culto.findMany({
+    where: { executado: false },
+    orderBy: { data: "desc" },
+    include: {
+      ministerio: { select: { id: true, nome: true } },
+    },
+  });
   return { user, cultos };
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
+  const user = context.get(userContext);
+  if (!user) throw new Response("Não autenticado.", { status: 401 });
+
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "deletar") {
+    const id = formData.get("id");
+    if (typeof id !== "string") {
+      return new Response(
+        JSON.stringify({ error: "ID inválido." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    try {
+      await excluirCulto(id, user);
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error: any) {
+      return new Response(
+        JSON.stringify({ error: error instanceof Error ? error.message : "Erro ao excluir o culto." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  } else if (intent === "executar") {
+    const id = formData.get("id");
+    if (typeof id !== "string") {
+      return new Response(
+        JSON.stringify({ error: "ID inválido." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    try {
+      if (!user.cargo || !["ADMIN", "PASTOR"].includes(user.cargo)) {
+        return new Response(
+          JSON.stringify({ error: "Apenas ADMIN ou PASTOR podem marcar cultos como executados." }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      await prisma.culto.update({
+        where: { id },
+        data: { executado: true },
+      });
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error: any) {
+      return new Response(
+        JSON.stringify({ error: error instanceof Error ? error.message : "Erro ao marcar o culto como executado." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ error: "Ação não suportada." }),
+    { status: 400, headers: { "Content-Type": "application/json" } }
+  );
 }
 
 export default function CultosIndex({ loaderData }: Route.ComponentProps) {
   const { cultos } = loaderData;
+  const actionData = useActionData<typeof action>();
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {actionData?.error && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-semibold">
+          {actionData.error}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -123,7 +203,23 @@ export default function CultosIndex({ loaderData }: Route.ComponentProps) {
             <tbody className="divide-y divide-slate-50">
               {cultos.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-5 py-4 font-semibold text-slate-900">{c.titulo}</td>
+                   <td className="px-5 py-4">
+                     <div className="font-semibold text-slate-900">{c.titulo}</div>
+                     {((c as any).preletor || (c as any).ministerio) && (
+                       <div className="text-[10px] text-slate-400 font-semibold mt-1 space-x-1.5 flex items-center flex-wrap">
+                         {(c as any).preletor && (
+                           <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md">
+                             Preletor: {(c as any).preletor}
+                           </span>
+                         )}
+                         {(c as any).ministerio && (
+                           <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-md">
+                             Ministério: {(c as any).ministerio.nome}
+                           </span>
+                         )}
+                       </div>
+                     )}
+                   </td>
                   <td className="px-5 py-4 text-slate-600 font-medium">{formatDate(new Date(c.data))}</td>
                   <td className="px-5 py-4 text-slate-600 font-medium">{c.horario}</td>
                   <td className="px-5 py-4">
@@ -169,16 +265,56 @@ export default function CultosIndex({ loaderData }: Route.ComponentProps) {
                   </td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-2.5">
-                      <Link to={`/app/cultos/${c.id}/editar`} className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
+                      {/* Botão de Marcar como Executado (Check) */}
+                      <Form
+                        method="post"
+                        onSubmit={(e) => {
+                          if (!confirm("Deseja marcar este culto como executado? Ele sairá da lista ativa.")) {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="inline"
+                      >
+                        <input type="hidden" name="intent" value="executar" />
+                        <input type="hidden" name="id" value={c.id} />
+                        <button
+                          type="submit"
+                          className="p-1 text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
+                          title="Marcar como Executado"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      </Form>
+
+                      <Link to={`/app/cultos/${c.id}/editar`} className="p-1 text-slate-400 hover:text-blue-600 transition-colors" title="Editar Culto">
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
                       </Link>
-                      <button type="button" className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </button>
+                      
+                      <Form
+                        method="post"
+                        onSubmit={(e) => {
+                          if (!confirm("Tem certeza que deseja excluir definitivamente este culto?")) {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="inline"
+                      >
+                        <input type="hidden" name="intent" value="deletar" />
+                        <input type="hidden" name="id" value={c.id} />
+                        <button
+                          type="submit"
+                          className="p-1 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                          title="Excluir Culto"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </Form>
                     </div>
                   </td>
                 </tr>

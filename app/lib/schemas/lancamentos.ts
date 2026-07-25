@@ -45,7 +45,7 @@ export const LancamentoCreateSchema = z
   .object({
     tipo: z.enum(TIPOS_LANCAMENTO),
     categoria: z.enum(CATEGORIAS_LANCAMENTO),
-    status: z.enum(STATUS_LANCAMENTO),
+    status: z.enum(STATUS_LANCAMENTO).optional().default("PENDENTE"),
     valorCentavos: z
       .number()
       .int("Valor deve ser inteiro.")
@@ -61,13 +61,18 @@ export const LancamentoCreateSchema = z
     }),
     descricao: z
       .string()
+      .min(1, "Descrição não pode ser vazia.")
       .max(500, "Descrição deve ter no máximo 500 caracteres.")
       .optional(),
-    // descricao é opcional na UI; armazena vazio como null
+    // Para SAÍDAS: beneficiário/destino do valor (ex: "Novo som", "Empresa XYZ"). Opcional.
+    beneficiario: z
+      .string()
+      .max(200, "Beneficiário deve ter no máximo 200 caracteres.")
+      .optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
-    // RN-FIN-05: DIZIMO exige membroId
+    // RN-FIN-05: apenas DIZIMO exige membroId
     if (data.categoria === "DIZIMO" && !data.membroId) {
       ctx.addIssue({
         code: "custom",
@@ -75,15 +80,12 @@ export const LancamentoCreateSchema = z
         message: "Dízimo exige membro.",
       });
     }
-    // DESPESA/COMPRA/MANUTENCAO/TRANSFERENCIA não pode ter membroId
-    if (
-      !["DIZIMO", "OFERTA", "CAMPANHA"].includes(data.categoria) &&
-      data.membroId
-    ) {
+    // Apenas DIZIMO pode ter membroId; demais categorias não vinculam membro
+    if (data.categoria !== "DIZIMO" && data.membroId) {
       ctx.addIssue({
         code: "custom",
         path: ["membroId"],
-        message: "Apenas DÍZIMO, OFERTA e CAMPANHA podem ter membro vinculado.",
+        message: "Apenas DÍZIMO pode ter membro vinculado.",
       });
     }
   });

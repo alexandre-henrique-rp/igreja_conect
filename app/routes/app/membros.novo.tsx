@@ -64,9 +64,9 @@ export async function action({ request, context }: Route.ActionArgs) {
           fieldErrors[path] = issue.message;
         }
       }
-      return data(
-        { fieldErrors, defaultValues: raw },
-        { status: 422 }
+      throw new Response(
+        JSON.stringify({ fieldErrors, defaultValues: raw }),
+        { status: 422, headers: { "Content-Type": "application/json" } }
       );
     }
     throw e;
@@ -112,9 +112,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     });
   } catch (e) {
     if (e instanceof EmailDuplicadoError) {
-      return data(
-        { fieldErrors: { email: e.message }, defaultValues: raw },
-        { status: 422 }
+      throw new Response(
+        JSON.stringify({ fieldErrors: { email: e.message }, defaultValues: raw }),
+        { status: 422, headers: { "Content-Type": "application/json" } }
       );
     }
     throw e;

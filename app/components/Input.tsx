@@ -57,7 +57,7 @@ export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
   /** `name` do campo — também usado no `id` quando não fornecido. */
   name: string;
   /** Tipo do input. Default: `text`. */
-  type?: "text" | "email" | "password" | "tel" | "number" | "search" | "date";
+  type?: "text" | "email" | "password" | "tel" | "number" | "search" | "date" | "time";
   /** ID único — usado em `htmlFor` do label e `aria-describedby`. Default: `name`. */
   id?: string;
   /** Mensagem de ajuda exibida abaixo do input (só quando NÃO há erro). */
@@ -132,8 +132,25 @@ export function Input({
           aria-required={required || undefined}
           aria-invalid={hasError || undefined}
           aria-describedby={hint || error ? descId : undefined}
+          onClick={(e) => {
+            if (type === "date" || type === "time") {
+              try {
+                e.currentTarget.showPicker();
+              } catch (err) {}
+            }
+            if (rest.onClick) rest.onClick(e);
+          }}
+          onFocus={(e) => {
+            if (type === "date" || type === "time") {
+              try {
+                e.currentTarget.showPicker();
+              } catch (err) {}
+            }
+            if (rest.onFocus) rest.onFocus(e);
+          }}
           className={cn(
             "w-full h-11 px-3 rounded-md border",
+            type === "date" || type === "time" ? "cursor-pointer" : "",
             isDark
               ? "bg-[#131d30] border-[#253551] text-white placeholder:text-slate-500 focus-visible:ring-blue-500 focus-visible:ring-offset-0"
               : "bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",

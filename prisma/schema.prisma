@@ -222,6 +222,7 @@ model Ministerio {
   atividades       AtividadeMinisterio[]
   configGeral      ConfiguracaoGeral[]   @relation("MinisterioResponsavel")
   escalas          Escala[]
+  cultos           Culto[]               @relation("MinisterioCultos")
 
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
@@ -293,6 +294,8 @@ model Lancamento {
   status          StatusLancamento    @default(PENDENTE)
   valorCentavos   Int
   descricao       String?
+  // Para SAÍDAS: informa o beneficiário/destino do valor (ex: "Novo som", "Empresa XYZ"). Opcional.
+  beneficiario    String?
   dataCompetencia DateTime            @default(now())
 
   caixaId String
@@ -441,15 +444,20 @@ model Culto {
   descricao   String?
   tipo        TipoCulto   @default(PRESENCIAL)
   status      StatusCulto @default(AGENDADO)
+  executado   Boolean     @default(false)
   data        DateTime
   horario     String
   local       String?
   preletor    String?
-  createdById String?
-  createdBy   Membro?     @relation(fields: [createdById], references: [id])
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdById  String?
+  createdBy    Membro?     @relation(fields: [createdById], references: [id])
+  escalas      Escala[]    @relation("CultoEscalas")
+  ministerioId String?
+  ministerio   Ministerio? @relation("MinisterioCultos", fields: [ministerioId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
+  @@index([ministerioId])
   @@map("cultos")
 }
 
@@ -476,10 +484,16 @@ model Escala {
   createdById           String?
   createdBy             Membro?            @relation(fields: [createdById], references: [id])
   voluntarios           EscalaVoluntario[]
+  cultoId               String?
+  culto                 Culto?             @relation("CultoEscalas", fields: [cultoId], references: [id], onDelete: SetNull)
+  eventoId              String?
+  evento                Evento?            @relation("EventoEscalas", fields: [eventoId], references: [id], onDelete: SetNull)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
   @@index([ministerioId])
+  @@index([cultoId])
+  @@index([eventoId])
   @@map("escalas")
 }
 
@@ -618,6 +632,7 @@ model Evento {
   responsavel   Membro?      @relation(fields: [responsavelId], references: [id], onDelete: SetNull)
   createdById   String?
   createdBy     Membro?      @relation("EventoCriador", fields: [createdById], references: [id])
+  escalas       Escala[]     @relation("EventoEscalas")
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 

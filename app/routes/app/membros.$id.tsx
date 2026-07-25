@@ -294,7 +294,18 @@ function formatDate(iso: string | Date | null | undefined): string {
  * para ADMIN/PASTOR.
  */
 export default function MembroDetail({ loaderData, actionData }: Route.ComponentProps) {
-  const { membro, canDelete, isAdmin, canToggleDiscipulador, blockedIPs, avatarSigned, discipulos, discipuladorAtual, ministeriosMembro, auditLogs } = loaderData;
+  const {
+    membro,
+    canDelete,
+    isAdmin,
+    canToggleDiscipulador,
+    blockedIPs = [],
+    avatarSigned,
+    discipulos = [],
+    discipuladorAtual,
+    ministeriosMembro = [],
+    auditLogs = [],
+  } = loaderData;
   const navigation = useNavigation();
   const isDeleting =
     navigation.state === "submitting" &&

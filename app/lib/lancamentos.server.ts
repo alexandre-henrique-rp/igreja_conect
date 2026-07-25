@@ -129,6 +129,7 @@ export async function criarLancamento(
         membroId: parsed.membroId ?? null,
         dataCompetencia: parsed.dataCompetencia,
         descricao: parsed.descricao,
+        beneficiario: parsed.beneficiario ?? null,
       },
     });
 

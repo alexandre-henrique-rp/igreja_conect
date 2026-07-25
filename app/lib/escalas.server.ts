@@ -37,6 +37,8 @@ export type EscalaComVoluntarios = {
     funcao: string;
     status: string;
   }>;
+  cultoId: string | null;
+  eventoId: string | null;
 };
 
 /** Input para criar escala. */
@@ -46,6 +48,8 @@ export type CriarEscalaInput = {
   data: string;
   observacao?: string;
   status?: string;
+  cultoId?: string;
+  eventoId?: string;
 };
 
 /** Input para adicionar voluntário. */
@@ -97,6 +101,8 @@ const escalaComVoluntariosSelect = {
   observacao: true,
   status: true,
   geradaAutomaticamente: true,
+  cultoId: true,
+  eventoId: true,
   ministerio: { select: { nome: true } },
   voluntarios: {
     select: {
@@ -118,6 +124,8 @@ function formatEscala(raw: {
   observacao: string | null;
   status: string;
   geradaAutomaticamente: boolean;
+  cultoId: string | null;
+  eventoId: string | null;
   ministerio: { nome: string };
   voluntarios: Array<{
     id: string;
@@ -144,6 +152,8 @@ function formatEscala(raw: {
       funcao: v.funcao,
       status: v.status,
     })),
+    cultoId: raw.cultoId,
+    eventoId: raw.eventoId,
   };
 }
 
@@ -250,6 +260,8 @@ export async function criarEscala(input: CriarEscalaInput, user: SessionUser): P
       observacao: input.observacao ?? null,
       status: (input.status as "PENDENTE" | "CONFIRMADA" | "REALIZADA" | "CANCELADA") ?? "PENDENTE",
       createdById: user.id,
+      cultoId: input.cultoId ?? null,
+      eventoId: input.eventoId ?? null,
     },
     select: escalaComVoluntariosSelect,
   });

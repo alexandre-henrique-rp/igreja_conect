@@ -21,6 +21,7 @@ declare global {
 }
 
 export function ensureStorageStarted(): void {
+  if (process.env.NODE_ENV === "test") return;
   if (globalThis.__storage_worker_started__) return;
   globalThis.__storage_worker_started__ = true;
   _setWorkerRunning(true);

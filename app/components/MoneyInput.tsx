@@ -26,7 +26,9 @@
  * @param props.required - Se true, adiciona asterisco no label.
  * @returns Elemento JSX do input monetário.
  */
+import { useId, useState, type ChangeEvent } from "react";
 import { cn } from "~/lib/cn";
+import { mascaraBRL } from "~/lib/money-format";
 
 /**
  * Props aceitas pelo `<MoneyInput>`.
@@ -62,8 +64,14 @@ export function MoneyInput({
   placeholder = "0,00",
   disabled = false,
 }: MoneyInputProps) {
-  const inputId = `money-${name}`;
+  const reactId = useId();
+  const inputId = `money-${name}-${reactId}`;
   const hasError = Boolean(error);
+  const [value, setValue] = useState(defaultValue);
+
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    setValue(mascaraBRL(e.target.value));
+  }
 
   return (
     <div className="space-y-1">
@@ -91,7 +99,8 @@ export function MoneyInput({
           type="text"
           inputMode="decimal"
           autoComplete="off"
-          defaultValue={defaultValue}
+          value={value}
+          onChange={handleChange}
           placeholder={placeholder}
           disabled={disabled}
           required={required}

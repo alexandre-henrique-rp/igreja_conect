@@ -92,6 +92,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     descricao: l.descricao,
     caixa: l.caixa,
     membro: l.membro,
+    beneficiario: l.beneficiario,
   }));
 
   // Aprovações = lançamentos reais com status PENDENTE (substitui mock antigo)
@@ -116,6 +117,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     caixa: l.caixa,
     membro: l.membro,
     status: "Pendente",
+    beneficiario: l.beneficiario,
   }));
 
   // Resumo Anual — agrega saldo líquido (entradas − saídas) por mês nos últimos 12 meses.
@@ -203,7 +205,6 @@ export default function DashboardFinanceiro({
   const [searchText, setSearchText] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showNovoMenu, setShowNovoMenu] = useState(false);
 
   // Mapeia os lançamentos do banco
   const databaseEntries = useMemo(() => {
@@ -220,6 +221,7 @@ export default function DashboardFinanceiro({
         caixa: l.caixa,
         membro: l.membro,
         status: "Confirmado",
+        beneficiario: l.beneficiario,
       };
     });
   }, [todosLancamentos]);
@@ -446,7 +448,7 @@ export default function DashboardFinanceiro({
             </button>
           </div>
 
-          {/* Ações: Nova Caixa + Nova Transferência + Novo Lançamento (Dropdown) */}
+          {/* Ações: Nova Caixa + Nova Transferência + Novo Lançamento */}
           <div className="flex items-center gap-2 self-start sm:self-auto">
             {podeGerenciarCaixa && (
               <>
@@ -470,49 +472,15 @@ export default function DashboardFinanceiro({
                 </Link>
               </>
             )}
-            <div className="relative">
-            <button
-              onClick={() => setShowNovoMenu(!showNovoMenu)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 h-9 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
+            <Link
+              to="/app/financeiro/lancamentos/novo"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 h-9 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-sm"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
               </svg>
               Novo Lançamento
-            </button>
-            {showNovoMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowNovoMenu(false)} />
-                <div className="absolute right-0 mt-2 w-48 rounded-lg bg-white shadow-lg border border-slate-150 py-1 z-20 animate-in fade-in slide-in-from-top-1 duration-100">
-                  <Link
-                    to="/app/financeiro/lancamentos/novo"
-                    className="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                    onClick={() => setShowNovoMenu(false)}
-                  >
-                    Novo Lançamento
-                  </Link>
-                  {podeGerenciarCaixa && (
-                    <>
-                      <Link
-                        to="/app/financeiro/caixas/novo"
-                        className="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                        onClick={() => setShowNovoMenu(false)}
-                      >
-                        Nova Caixa
-                      </Link>
-                      <Link
-                        to="/app/financeiro/transferencias/nova"
-                        className="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                        onClick={() => setShowNovoMenu(false)}
-                      >
-                        Nova Transferência
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -583,7 +551,14 @@ export default function DashboardFinanceiro({
                             )}
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900">{item.descricao}</p>
+                            <p className="font-semibold text-slate-900 flex items-center gap-2 flex-wrap">
+                              <span>{item.descricao}</span>
+                              {item.beneficiario && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                  Para: {item.beneficiario}
+                                </span>
+                              )}
+                            </p>
                             <span className="text-[10px] text-slate-400 font-medium">ID: #{item.id}</span>
                           </div>
                         </div>
