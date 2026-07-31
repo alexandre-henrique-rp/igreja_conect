@@ -242,10 +242,6 @@ export async function listarItensEstoque(
       { descricao: { contains: options.q } },
     ];
   }
-  if (options.filtro === "critico") {
-    where.tipo = "CONSUMO";
-    where.quantidade = { lte: 5 };
-  }
 
   const select = {
     id: true,
@@ -257,6 +253,39 @@ export async function listarItensEstoque(
     localizacaoFisica: true,
     createdAt: true,
   } as const;
+
+  if (options.filtro === "critico") {
+    where.tipo = "CONSUMO";
+    // Prisma não suporta comparar colunas entre si, então filtramos via raw SQL
+    const criticoResult = await prisma.$queryRaw<{id: string}[]>`
+      SELECT id FROM ItemEstoque
+      WHERE tipo = 'CONSUMO' AND ativo = 1 AND quantidade <= quantidadeMinima
+      ORDER BY nome ASC
+      LIMIT ${BigInt(pageSize)} OFFSET ${BigInt((page - 1) * pageSize)}
+    `;
+    const criticoCount = await prisma.$queryRaw<[{count: bigint}]>`
+      SELECT COUNT(*) as count FROM ItemEstoque
+      WHERE tipo = 'CONSUMO' AND ativo = 1 AND quantidade <= quantidadeMinima
+    `;
+
+    const idList = criticoResult.map((r) => r.id);
+    if (idList.length === 0) {
+      return { items: [], total: 0, page, pageSize };
+    }
+
+    const rows = await prisma.itemEstoque.findMany({
+      where: { id: { in: idList } },
+      select,
+      orderBy: [{ tipo: "asc" }, { nome: "asc" }],
+    });
+
+    return {
+      items: rows.map(toResumo),
+      total: Number(criticoCount[0]?.count ?? 0),
+      page,
+      pageSize,
+    };
+  }
 
   const [total, rows] = await Promise.all([
     prisma.itemEstoque.count({ where }),
@@ -314,7 +343,12 @@ export async function criarItem(
   }
 
   const item = await prisma.itemEstoque.create({
-    data: { ...parsed.data, ativo: true },
+    data: {
+      ...parsed.data,
+      // RN-EST-01: Patrimônio sempre inicia com quantidade 1
+      quantidade: parsed.data.tipo === "PATRIMONIO" ? 1 : (parsed.data.quantidade ?? 0),
+      ativo: true,
+    },
   });
 
   return item;
@@ -557,7 +591,7 @@ export async function getItemEstoqueDetalhe(
       foiPerdaTotal: m.foiPerdaTotal,
     })),
     quantidadeCalculada: item.quantidade,
-    estoqueBaixo: item.tipo === "CONSUMO" && item.quantidade <= 5,
+    estoqueBaixo: item.tipo === "CONSUMO" && item.quantidade <= item.quantidadeMinima,
   };
 }
 
@@ -587,20 +621,18 @@ export async function getDashboardEstoque(
 
   const whereAtivo = { ativo: true } as const;
 
-  const [total, consumo, patrimonio, estoqueBaixo, ultimosItens] =
+  const [total, consumo, patrimonio, estoqueBaixoRaw, ultimosItens] =
     await Promise.all([
       prisma.itemEstoque.count({ where: whereAtivo }),
       prisma.itemEstoque.count({ where: { ...whereAtivo, tipo: "CONSUMO" } }),
       prisma.itemEstoque.count({
         where: { ...whereAtivo, tipo: "PATRIMONIO" },
       }),
-      prisma.itemEstoque.count({
-        where: {
-          ...whereAtivo,
-          tipo: "CONSUMO",
-          quantidade: { lte: 5 },
-        },
-      }),
+      // Prisma não suporta comparar colunas entre si — raw SQL para estoqueBaixo
+      prisma.$queryRaw<[{count: bigint}]>`
+        SELECT COUNT(*) as count FROM ItemEstoque
+        WHERE tipo = 'CONSUMO' AND ativo = 1 AND quantidade <= quantidadeMinima
+      `,
       prisma.itemEstoque.findMany({
         where: whereAtivo,
         orderBy: { createdAt: "desc" },
@@ -619,7 +651,7 @@ export async function getDashboardEstoque(
     ]);
 
   return {
-    kpis: { total, consumo, patrimonio, estoqueBaixo },
+    kpis: { total, consumo, patrimonio, estoqueBaixo: Number(estoqueBaixoRaw[0]?.count ?? 0) },
     ultimosItens: ultimosItens.map(toResumo),
   };
 }

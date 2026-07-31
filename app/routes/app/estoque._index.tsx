@@ -16,17 +16,8 @@ import {
   reabrirItem,
   excluirItem,
 } from "~/lib/itemEstoque.server";
-import { safeLog } from "~/lib/audit.server";
+import { criarMovimentacao } from "~/lib/movimentacao.server";
 import { assertCanSeeEstoque, assertCanManageEstoque } from "~/lib/rbac.server";
-
-const MovimentacaoSchema = z.object({
-  itemEstoqueId: z.string().uuid("Item inválido."),
-  tipo: z.enum(["ENTRADA", "SAIDA"]),
-  quantidade: z.coerce.number().int().positive("A quantidade deve ser maior que zero."),
-  data: z.string().min(1, "A data é obrigatória."),
-  nomeRetirante: z.string().optional(),
-  observacao: z.string().optional(),
-});
 
 const CriarItemSchema = z.object({
   nome: z.string().min(2, "O nome do produto deve ter pelo menos 2 caracteres."),
@@ -43,7 +34,6 @@ const EditarItemSchema = z.object({
   tipo: z.enum(["CONSUMO", "PATRIMONIO"]),
   localizacaoFisica: z.string().min(1, "O setor é obrigatório."),
   descricao: z.string().optional(),
-  quantidade: z.coerce.number().int().nonnegative("A quantidade não pode ser negativa."),
   quantidadeMinima: z.coerce.number().int().nonnegative("A quantidade mínima não pode ser negativa."),
 });
 
@@ -135,75 +125,29 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
   }
 
-  let adminId = user.id;
-  const dbUser = await prisma.membro.findFirst({ where: { cargo: { not: null } } });
-  if (dbUser) adminId = dbUser.id;
-
   if (intent === "movimentacao") {
     assertCanManageEstoque(user);
-    const raw = {
-      itemEstoqueId: formData.get("itemEstoqueId"),
-      tipo: formData.get("tipo"),
-      quantidade: formData.get("quantidade"),
-      data: formData.get("data"),
-      nomeRetirante: formData.get("nomeRetirante"),
-      observacao: formData.get("observacao"),
-    };
 
-    const parsed = MovimentacaoSchema.safeParse(raw);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Dados de movimentação inválidos.",
-        fieldErrors: parsed.error.flatten().fieldErrors,
-        intent: "movimentacao",
-      };
+    const tipo = String(formData.get("tipo") ?? "ENTRADA");
+    const quantidadeForm = Number(formData.get("quantidade") ?? 1);
+    const itemEstoqueId = String(formData.get("itemEstoqueId") ?? "");
+
+    if (!itemEstoqueId) {
+      return { success: false, error: "Selecione um produto.", intent: "movimentacao" };
     }
 
-    const { itemEstoqueId, tipo, quantidade, nomeRetirante, observacao } = parsed.data;
+    const delta = tipo === "SAIDA" ? -quantidadeForm : quantidadeForm;
 
     try {
-      const item = await prisma.itemEstoque.findUnique({ where: { id: itemEstoqueId } });
-      if (!item) {
-        return { success: false, error: "Produto não encontrado.", intent: "movimentacao" };
-      }
-
-      let novaQuantidade = item.quantidade;
-
-      if (tipo === "SAIDA") {
-        if (item.quantidade < quantidade) {
-          return {
-            success: false,
-            error: `Quantidade insuficiente em estoque. Saldo atual: ${item.quantidade} unidade(s).`,
-            intent: "movimentacao",
-          };
-        }
-        novaQuantidade = item.quantidade - quantidade;
-      } else {
-        novaQuantidade = item.quantidade + quantidade;
-      }
-
-      const movimento = await prisma.movimentacaoEstoque.create({
-        data: {
-          itemEstoqueId,
-          quantidade: tipo === "SAIDA" ? -quantidade : quantidade,
-          justificativa: observacao || (tipo === "ENTRADA" ? "Entrada de estoque" : "Saída de estoque"),
-          autorizadoPorId: adminId,
-          nomeRetirante: nomeRetirante || user.nome,
+      await criarMovimentacao(
+        {
+          itemId: itemEstoqueId,
+          quantidade: delta,
+          nomeRetirante: String(formData.get("nomeRetirante") ?? user.nome),
+          justificativa: String(formData.get("observacao") ?? null) || undefined,
         },
-      });
-
-      await prisma.itemEstoque.update({
-        where: { id: itemEstoqueId },
-        data: { quantidade: novaQuantidade },
-      });
-
-      await safeLog({
-        action: "movimentacao_estoque",
-        resource: `item_estoque:${itemEstoqueId}`,
-        userId: user.id,
-        result: "ok",
-      });
+        user,
+      );
 
       return { success: true, message: "Movimentação registrada com sucesso!", intent: "movimentacao" };
     } catch (err: any) {
@@ -289,7 +233,6 @@ export async function action({ request, context }: Route.ActionArgs) {
         parsed.data.id,
         {
           nome: parsed.data.nome,
-          quantidade: parsed.data.quantidade,
           quantidadeMinima: parsed.data.quantidadeMinima,
           localizacaoFisica: parsed.data.localizacaoFisica,
           descricao: parsed.data.descricao,
@@ -482,7 +425,7 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
             </svg>
             <div>
               <p className="text-sm font-semibold text-red-800">Itens com estoque crítico</p>
-              <p className="text-xs text-red-700 mt-0.5">Mostrando apenas itens de consumo com quantidade ≤ 5.</p>
+              <p className="text-xs text-red-700 mt-0.5">Mostrando apenas itens com estoque abaixo do mínimo.</p>
             </div>
           </div>
           <Link
@@ -880,27 +823,15 @@ export default function EstoqueDashboard({ loaderData }: Route.ComponentProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Quantidade</label>
-                    <input
-                      name="quantidade"
-                      type="number"
-                      min="0"
-                      defaultValue={editingProduct.quantidade}
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Qtd Mínima (Alerta)</label>
-                    <input
-                      name="quantidadeMinima"
-                      type="number"
-                      min="0"
-                      defaultValue={editingProduct.quantidadeMinima}
-                      className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Qtd Mínima (Alerta)</label>
+                  <input
+                    name="quantidadeMinima"
+                    type="number"
+                    min="0"
+                    defaultValue={editingProduct.quantidadeMinima}
+                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                  />
                 </div>
 
                 <div>

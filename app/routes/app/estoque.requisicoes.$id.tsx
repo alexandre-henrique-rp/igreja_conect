@@ -10,6 +10,7 @@ import {
   comprarRequisicao,
 } from "~/lib/requisicaoCompra.server";
 import { parseBRLToCents } from "~/lib/money-format";
+import { listarCaixasParaSelect } from "~/lib/caixas.server";
 
 export function meta() {
   return [{ title: "Requisição de Compra · Igreja Conect" }];
@@ -27,7 +28,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     !!user.cargo &&
     ["ADMIN", "PASTOR", "SECRETARIO"].includes(user.cargo);
 
-  return { req, podeGerenciar };
+  const caixas = podeGerenciar ? await listarCaixasParaSelect(user) : [];
+
+  return { req, podeGerenciar, caixas };
 }
 
 export async function action({ request, params, context }: Route.ActionArgs) {
@@ -75,6 +78,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
           id: params.id,
           valorCentavos,
           observacao: String(formData.get("observacao") ?? "") || undefined,
+          caixaId: String(formData.get("caixaId") ?? "") || undefined,
         },
         user,
       );
@@ -106,7 +110,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function DetalheRequisicao({ loaderData, actionData }: Route.ComponentProps) {
-  const { req, podeGerenciar } = loaderData;
+  const { req, podeGerenciar, caixas } = loaderData;
   const result = actionData as { success?: boolean; message?: string; error?: string } | undefined;
 
   return (
@@ -218,39 +222,39 @@ export default function DetalheRequisicao({ loaderData, actionData }: Route.Comp
       {podeGerenciar && req.status === "SOLICITADA" && (
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
           <h3 className="font-semibold text-slate-900">Aprovar ou Rejeitar</h3>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label htmlFor="observacao" className="block text-sm font-medium text-slate-700">
-                Observação (opcional para aprovar, obrigatória para rejeitar)
-              </label>
+          <div className="flex items-center gap-3">
+            <form method="POST" className="inline">
+              <input type="hidden" name="intent" value="aprovar" />
               <textarea
-                id="observacao"
                 name="observacao"
                 rows={2}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                placeholder="Ex: Aprovado. Comprar até sexta. / Rejeitado: item não prioritário no momento."
+                className="hidden"
+                defaultValue="Aprovado"
               />
-            </div>
-            <div className="flex items-center gap-3">
-              <form method="POST" className="inline">
-                <input type="hidden" name="intent" value="aprovar" />
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-6 h-11 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
-                >
-                  Aprovar
-                </button>
-              </form>
-              <form method="POST" className="inline">
-                <input type="hidden" name="intent" value="rejeitar" />
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center rounded-md bg-red-600 px-6 h-11 text-sm font-medium text-white hover:bg-red-700 transition-colors"
-                >
-                  Rejeitar
-                </button>
-              </form>
-            </div>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-6 h-11 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+              >
+                Aprovar
+              </button>
+            </form>
+            <form method="POST" className="inline-flex items-start gap-2">
+              <input type="hidden" name="intent" value="rejeitar" />
+              <textarea
+                name="observacao"
+                rows={2}
+                className="w-64 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                placeholder="Motivo da rejeição (mín. 5 caracteres)"
+                required
+                minLength={5}
+              />
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center rounded-md bg-red-600 px-6 h-11 text-sm font-medium text-white hover:bg-red-700 transition-colors shrink-0"
+              >
+                Rejeitar
+              </button>
+            </form>
           </div>
         </div>
       )}
@@ -276,6 +280,23 @@ export default function DetalheRequisicao({ loaderData, actionData }: Route.Comp
                 required
               />
             </div>
+            {caixas.length > 0 && (
+              <div className="space-y-1">
+                <label htmlFor="caixaId" className="block text-sm font-medium text-slate-700">
+                  Caixa de Destino (opcional)
+                </label>
+                <select
+                  id="caixaId"
+                  name="caixaId"
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <option value="">Sem integração financeira</option>
+                  {caixas.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="space-y-1">
               <label htmlFor="compraObservacao" className="block text-sm font-medium text-slate-700">
                 Observação (opcional)

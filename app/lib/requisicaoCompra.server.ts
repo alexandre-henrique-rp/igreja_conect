@@ -1,6 +1,6 @@
 import { prisma } from "~/db/prisma.server";
 import { assertCanSeeEstoque, assertCanManageEstoque } from "./rbac.server";
-import { safeLog } from "./audit.server";
+import { logAction } from "./audit.server";
 import {
   RequisicaoCompraCreateSchema,
   AprovarRequisicaoSchema,
@@ -88,11 +88,11 @@ export async function criarRequisicao(
     },
   });
 
-  safeLog({
-    action: "create_requisicao_compra",
-    resource: `requisicao:${req.id}`,
-    userId: user.id,
-    result: "ok",
+  logAction({
+    actorId: user.id,
+    actorRole: user.cargo ?? null,
+    event: "requisicao_criada",
+    details: JSON.stringify({ requisicaoId: req.id }),
   });
 
   return { id: req.id };
@@ -159,22 +159,8 @@ export async function aprovarRequisicao(
 
   const parsed = AprovarRequisicaoSchema.parse(input);
 
-  const req = await prisma.requisicaoCompra.findUnique({
-    where: { id: parsed.id },
-    select: { id: true, status: true },
-  });
-
-  if (!req) {
-    throw new Response("Requisição não encontrada.", { status: 404 });
-  }
-  if (req.status !== "SOLICITADA") {
-    throw new Response("Apenas requisições com status SOLICITADA podem ser aprovadas.", {
-      status: 409,
-    });
-  }
-
-  await prisma.requisicaoCompra.update({
-    where: { id: parsed.id },
+  const { count } = await prisma.requisicaoCompra.updateMany({
+    where: { id: parsed.id, status: "SOLICITADA" },
     data: {
       status: "APROVADA",
       aprovadoPorId: user.id,
@@ -182,11 +168,26 @@ export async function aprovarRequisicao(
     },
   });
 
-  safeLog({
-    action: "approve_requisicao_compra",
-    resource: `requisicao:${parsed.id}`,
-    userId: user.id,
-    result: "ok",
+  if (count === 0) {
+    const req = await prisma.requisicaoCompra.findUnique({
+      where: { id: parsed.id },
+      select: { id: true, status: true },
+    });
+    if (!req) {
+      throw new Response("Requisição não encontrada.", { status: 404 });
+    }
+    if (req.status === "APROVADA") return { success: true }; // idempotente
+    throw new Response(
+      `Apenas requisições SOLICITADAS podem ser aprovadas (atual: ${req.status}).`,
+      { status: 409 },
+    );
+  }
+
+  logAction({
+    actorId: user.id,
+    actorRole: user.cargo ?? null,
+    event: "requisicao_aprovada",
+    details: JSON.stringify({ requisicaoId: parsed.id }),
   });
 
   return { success: true };
@@ -200,22 +201,8 @@ export async function rejeitarRequisicao(
 
   const parsed = RejeitarRequisicaoSchema.parse(input);
 
-  const req = await prisma.requisicaoCompra.findUnique({
-    where: { id: parsed.id },
-    select: { id: true, status: true },
-  });
-
-  if (!req) {
-    throw new Response("Requisição não encontrada.", { status: 404 });
-  }
-  if (req.status !== "SOLICITADA") {
-    throw new Response("Apenas requisições com status SOLICITADA podem ser rejeitadas.", {
-      status: 409,
-    });
-  }
-
-  await prisma.requisicaoCompra.update({
-    where: { id: parsed.id },
+  const { count } = await prisma.requisicaoCompra.updateMany({
+    where: { id: parsed.id, status: "SOLICITADA" },
     data: {
       status: "REJEITADA",
       aprovadoPorId: user.id,
@@ -223,16 +210,30 @@ export async function rejeitarRequisicao(
     },
   });
 
-  safeLog({
-    action: "reject_requisicao_compra",
-    resource: `requisicao:${parsed.id}`,
-    userId: user.id,
-    result: "ok",
+  if (count === 0) {
+    const req = await prisma.requisicaoCompra.findUnique({
+      where: { id: parsed.id },
+      select: { id: true, status: true },
+    });
+    if (!req) {
+      throw new Response("Requisição não encontrada.", { status: 404 });
+    }
+    if (req.status === "REJEITADA") return { success: true }; // idempotente
+    throw new Response(
+      `Apenas requisições SOLICITADAS podem ser rejeitadas (atual: ${req.status}).`,
+      { status: 409 },
+    );
+  }
+
+  logAction({
+    actorId: user.id,
+    actorRole: user.cargo ?? null,
+    event: "requisicao_rejeitada",
+    details: JSON.stringify({ requisicaoId: parsed.id }),
   });
 
   return { success: true };
 }
-
 export async function comprarRequisicao(
   input: unknown,
   user: SessionUser,
@@ -241,54 +242,97 @@ export async function comprarRequisicao(
 
   const parsed = ComprarRequisicaoSchema.parse(input);
 
-  const req = await prisma.requisicaoCompra.findUnique({
-    where: { id: parsed.id },
-    select: { id: true, status: true, itemEstoqueId: true, nomeItem: true, quantidade: true },
+  // Transição condicional atômica: WHERE inclui status esperado.
+  const { count } = await prisma.requisicaoCompra.updateMany({
+    where: { id: parsed.id, status: "APROVADA" },
+    data: {
+      status: "COMPRADA",
+      compradoPorId: user.id,
+      valorCentavos: parsed.valorCentavos,
+      observacao: parsed.observacao || null,
+    },
   });
 
-  if (!req) {
-    throw new Response("Requisição não encontrada.", { status: 404 });
-  }
-  if (req.status !== "APROVADA") {
-    throw new Response("Apenas requisições APROVADAS podem ser marcadas como compradas.", {
-      status: 409,
-    });
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.requisicaoCompra.update({
+  if (count === 0) {
+    const req = await prisma.requisicaoCompra.findUnique({
       where: { id: parsed.id },
-      data: {
-        status: "COMPRADA",
-        compradoPorId: user.id,
-        valorCentavos: parsed.valorCentavos,
-        observacao: parsed.observacao || null,
-      },
+      select: { id: true, status: true },
     });
+    if (!req) {
+      throw new Response("Requisição não encontrada.", { status: 404 });
+    }
+    if (req.status === "COMPRADA") return { success: true }; // idempotente
+    throw new Response(
+      `Apenas requisições APROVADAS podem ser compradas (atual: ${req.status}).`,
+      { status: 409 },
+    );
+  }
 
-    if (req.itemEstoqueId) {
+  // Busca dados da requisição para atualizar estoque e criar lançamento financeiro
+  const req = await prisma.requisicaoCompra.findUnique({
+    where: { id: parsed.id },
+    select: { itemEstoqueId: true, quantidade: true, nomeItem: true },
+  });
+
+  if (req?.itemEstoqueId) {
+    await prisma.$transaction(async (tx) => {
       await tx.itemEstoque.update({
-        where: { id: req.itemEstoqueId },
+        where: { id: req.itemEstoqueId! },
         data: { quantidade: { increment: req.quantidade } },
       });
 
       await tx.movimentacaoEstoque.create({
         data: {
-          itemEstoqueId: req.itemEstoqueId,
+          itemEstoqueId: req.itemEstoqueId!,
           quantidade: req.quantidade,
-          justificativa: `Reposição via requisição de compra`,
+          justificativa: "Reposição via requisição de compra",
           autorizadoPorId: user.id,
           nomeRetirante: user.nome,
         },
       });
-    }
-  });
 
-  safeLog({
-    action: "buy_requisicao_compra",
-    resource: `requisicao:${parsed.id}`,
-    userId: user.id,
-    result: "ok",
+      // Lançamento financeiro vinculado ao caixa (se caixaId informado)
+      if (parsed.caixaId && parsed.valorCentavos > 0) {
+        const caixa = await tx.caixa.findUnique({
+          where: { id: parsed.caixaId },
+          select: { id: true, saldoCentavos: true },
+        });
+        if (!caixa) {
+          throw new Response("Caixa não encontrado.", { status: 404 });
+        }
+        const novoSaldo = caixa.saldoCentavos - parsed.valorCentavos;
+        if (novoSaldo < 0) {
+          throw new Response(
+            "Saldo insuficiente no caixa para esta compra.",
+            { status: 400 },
+          );
+        }
+
+        await tx.lancamento.create({
+          data: {
+            tipo: "SAIDA",
+            categoria: "COMPRA_ESTOQUE",
+            descricao: `Compra de estoque: ${req.nomeItem} (qtd: ${req.quantidade})`,
+            valorCentavos: parsed.valorCentavos,
+            dataCompetencia: new Date(),
+            status: "PAGO",
+            caixaId: parsed.caixaId,
+          },
+        });
+
+        await tx.caixa.update({
+          where: { id: parsed.caixaId },
+          data: { saldoCentavos: novoSaldo },
+        });
+      }
+    });
+  }
+
+  logAction({
+    actorId: user.id,
+    actorRole: user.cargo ?? null,
+    event: "requisicao_comprada",
+    details: JSON.stringify({ requisicaoId: parsed.id }),
   });
 
   return { success: true };

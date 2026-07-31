@@ -14,18 +14,19 @@
  * `loaderData` para os componentes filhos.
  *
  * **Por que este layout existe:** S01 só tinha `<Outlet />` (esqueleto).
- * S02 traz a UI real do shell. S04 vai sofisticar (drawer mobile, busca
- * global, etc).
+ * S02 traz a UI real do shell; o drawer mobile mantém a navegação
+ * disponível abaixo do breakpoint `lg`.
  *
  * @see app/routes/app/_middleware.tsx para o middleware de auth
  * @see design/PRODUCT.md §2.2
  */
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Outlet, useLoaderData, type LoaderFunctionArgs } from "react-router";
 import { prisma } from "~/db/prisma.server";
 import { userContext } from "~/lib/user-context";
+import { MobileNavigation } from "~/components/MobileNavigation";
 import { Sidebar } from "~/components/Sidebar";
 import { TopbarAutenticada } from "~/components/TopbarAutenticada";
-import type { SessionUser } from "~/lib/session.types";
 
 /**
  * Loader do layout autenticado.
@@ -59,20 +60,49 @@ export async function loader({ context }: LoaderFunctionArgs) {
  *
  * **Responsividade:**
  * - `lg+`: sidebar visível (240px) à esquerda; topbar 100% width.
- * - `<lg`: sidebar escondida (drawer mobile entra em S04); topbar com
- *   hamburger (placeholder — sem ação na S02).
+ * - `<lg`: sidebar desktop escondida; hamburger abre drawer acessível
+ *   com a mesma navegação e permissões.
  */
 export default function AppShell() {
   const { user, alertasNaoLidos } = useLoaderData<typeof loader>();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const backgroundRef = useRef<HTMLDivElement>(null);
+  const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), []);
+
+  useEffect(() => {
+    if (!backgroundRef.current) return;
+    backgroundRef.current.inert = isMobileMenuOpen;
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const handleDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) closeMobileMenu();
+    };
+    desktopQuery.addEventListener("change", handleDesktop);
+    return () => desktopQuery.removeEventListener("change", handleDesktop);
+  }, [closeMobileMenu]);
+
   return (
-    <div className="h-screen flex bg-slate-50">
-      <Sidebar user={user} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopbarAutenticada user={user} alertasNaoLidos={alertasNaoLidos} />
-        <main
-          id="main-content"
-          className="flex-1 min-w-0 overflow-y-auto"
-        >
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar user={user} alertasNaoLidos={alertasNaoLidos} />
+      <MobileNavigation
+        user={user}
+        alertasNaoLidos={alertasNaoLidos}
+        isOpen={isMobileMenuOpen}
+        onClose={closeMobileMenu}
+        triggerRef={mobileMenuTriggerRef}
+      />
+      <div ref={backgroundRef} className="flex min-w-0 flex-1 flex-col">
+        <TopbarAutenticada
+          user={user}
+          alertasNaoLidos={alertasNaoLidos}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
+          mobileMenuTriggerRef={mobileMenuTriggerRef}
+        />
+        <main id="main-content" className="min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>

@@ -30,4 +30,5 @@ export const ComprarRequisicaoSchema = z.object({
   id: z.string().uuid(),
   valorCentavos: z.coerce.number().int().positive("O valor deve ser maior que zero."),
   observacao: z.string().max(500).optional(),
+  caixaId: z.string().uuid().optional(),
 });

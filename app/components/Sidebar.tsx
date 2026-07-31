@@ -8,9 +8,9 @@ import { Can } from "./Can";
 export type SidebarProps = {
   /** Pathname atual (para destacar o item ativo). */
   currentPath?: string;
-  /** Usuário autenticado (para mostrar nome no rodapé). */
+  /** Usuário autenticado (para aplicar RBAC aos itens). */
   user: SessionUser;
-  /** Quantidade de alertas nao lidos (se > 0 exibe badge). */
+  /** Quantidade de alertas não lidos (se > 0 exibe badge). */
   alertasNaoLidos?: number;
 };
 
@@ -286,98 +286,121 @@ function isItemActive(item: MenuItem, currentPath: string): boolean {
   return currentPath === item.to || currentPath.startsWith(item.to + "/");
 }
 
+export type NavigationContentProps = {
+  alertasNaoLidos: number;
+  currentPath: string;
+  isMobile?: boolean;
+  onNavigate?: () => void;
+  user: SessionUser;
+};
+
+export function NavigationContent({
+  alertasNaoLidos,
+  currentPath,
+  isMobile = false,
+  onNavigate,
+  user,
+}: NavigationContentProps) {
+  const itemHeight = isMobile ? "h-11" : "h-10";
+
+  return (
+    <>
+      <ul className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+        {MENU_ITEMS.filter((item) => !item.hidden).map((item) => {
+          const active = isItemActive(item, currentPath);
+          const linkElement = (
+            <li key={item.to}>
+              <NavLink
+                to={item.to}
+                end={item.exact}
+                aria-current={active ? "page" : undefined}
+                onClick={onNavigate}
+                className={`${itemHeight} flex items-center gap-3 rounded-md px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                  active
+                    ? "bg-cyan-50 text-cyan-900"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`}
+              >
+                {item.icon}
+                <span className="flex-1">{item.label}</span>
+                {item.label === "Alertas" && alertasNaoLidos > 0 && (
+                  <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+                    {alertasNaoLidos > 99 ? "99+" : alertasNaoLidos}
+                  </span>
+                )}
+              </NavLink>
+            </li>
+          );
+
+          if (item.roles) {
+            return (
+              <Can key={item.to} user={user} allow={item.roles}>
+                {linkElement}
+              </Can>
+            );
+          }
+
+          return linkElement;
+        })}
+      </ul>
+
+      <div className="border-t border-slate-800 p-4">
+        <Form method="post" action="/logout">
+          <button
+            type="submit"
+            className={`${itemHeight} flex w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-red-400 transition-colors hover:bg-slate-800 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 motion-reduce:transition-none`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 rotate-180"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            <span>Sair</span>
+          </button>
+        </Form>
+      </div>
+    </>
+  );
+}
+
 /**
- * @description Sidebar de navegação autenticada com 11 itens + botão Sair.
- * @param {SidebarProps} props - currentPath, user e alertasNaoLidos.
- * @returns {JSX.Element} Elemento da sidebar.
+ * @description Sidebar desktop da navegação autenticada.
+ * @param {SidebarProps} props - Usuário, caminho atual e badge de alertas.
+ * @returns {JSX.Element} Navegação desktop.
  */
-export function Sidebar({ currentPath: currentPathProp, user, alertasNaoLidos = 0 }: SidebarProps) {
+export function Sidebar({
+  currentPath: currentPathProp,
+  user,
+  alertasNaoLidos = 0,
+}: SidebarProps) {
   const location = useLocation();
   const currentPath = currentPathProp ?? location.pathname;
 
   return (
     <nav
       aria-label="Menu principal"
-      className="hidden lg:block w-60 shrink-0 border-r border-slate-800 bg-[#0F172A]"
+      className="hidden w-60 shrink-0 border-r border-slate-800 bg-[#0F172A] lg:block"
     >
-      <div className="flex flex-col h-full">
-        {/* Logo / Cabeçalho */}
-        <div className="p-6 border-b border-slate-800">
-          <span className="text-xl font-bold text-white block">IgrejaConnect</span>
-          <span className="text-[10px] tracking-wider text-slate-400 block font-semibold uppercase mt-0.5">GESTÃO ECLESIÁSTICA</span>
+      <div className="flex h-full flex-col">
+        <div className="border-b border-slate-800 p-6">
+          <span className="block text-xl font-bold text-white">IgrejaConnect</span>
+          <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            Gestão eclesiástica
+          </span>
         </div>
-
-        {/* Lista de itens */}
-        <ul className="flex-1 py-4 px-2 space-y-1">
-          {MENU_ITEMS.filter((item) => !item.hidden).map((item) => {
-            const active = isItemActive(item, currentPath);
-
-            const linkElement = (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.exact}
-                  aria-current={active ? "page" : undefined}
-                  className={
-                    active
-                      ? "flex items-center gap-3 px-3 h-10 rounded-md text-sm font-medium bg-cyan-50 text-cyan-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                      : "flex items-center gap-3 px-3 h-10 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                  }
-                >
-                  {item.icon}
-                  <span className="flex-1">{item.label}</span>
-                  {item.label === "Alertas" && alertasNaoLidos > 0 && (
-                    <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold bg-red-500 text-white">
-                      {alertasNaoLidos > 99 ? "99+" : alertasNaoLidos}
-                    </span>
-                  )}
-                </NavLink>
-              </li>
-            );
-
-            if (item.roles) {
-              return (
-                <Can key={item.to} user={user} allow={item.roles}>
-                  {linkElement}
-                </Can>
-              );
-            }
-
-            return linkElement;
-          })}
-        </ul>
-
-        {/* Rodapé: Sair */}
-        <div className="border-t border-slate-800 p-4">
-          <Form method="post" action="/logout">
-            <button
-              type="submit"
-              className="
-                w-full flex items-center gap-3
-                h-10 px-3 rounded-md
-                text-sm font-medium text-red-400
-                hover:bg-slate-800 hover:text-red-300 transition-colors
-                focus-visible:outline-none focus-visible:ring-2
-                focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900
-              "
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 rotate-180"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-              </svg>
-              <span>Sair</span>
-            </button>
-          </Form>
-        </div>
+        <NavigationContent
+          alertasNaoLidos={alertasNaoLidos}
+          currentPath={currentPath}
+          user={user}
+        />
       </div>
     </nav>
   );

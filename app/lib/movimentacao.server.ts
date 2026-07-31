@@ -12,13 +12,13 @@
  */
 import { prisma } from "~/db/prisma.server";
 import { ZodError } from "zod";
-import { assertCanMovimentarConsumo } from "./rbac.server";
+import { assertCanMovimentarConsumo, assertCanDarSaidaEstoque } from "./rbac.server";
 import { assertSaldoQuantidade } from "./itemEstoque.server";
 import {
   MovimentacaoCreateSchema,
   type MovimentacaoCreateInput,
 } from "./schemas/estoque";
-import { safeLog } from "./audit.server";
+import { logAction } from "./audit.server";
 import type { SessionUser } from "./session.server";
 
 /**
@@ -64,6 +64,11 @@ export async function criarMovimentacao(
       throw new Response(err.message, { status: 422 });
     }
     throw err;
+  }
+
+  // RBAC adicional para saídas — apenas ADMIN e SECRETARIO (controle de desvio)
+  if (parsed.quantidade < 0) {
+    assertCanDarSaidaEstoque(user);
   }
 
   await assertSaldoQuantidade(input.itemId, parsed.quantidade, "Movimentação");
@@ -116,11 +121,11 @@ export async function criarMovimentacao(
     return mov;
   });
 
-  safeLog({
-    action: "movimentar_estoque",
-    resource: `item_estoque:${input.itemId}+movimentacao:${movimentacao.id}`,
-    userId: user.id,
-    result: "ok",
+  logAction({
+    actorId: user.id,
+    actorRole: user.cargo ?? null,
+    event: parsed.quantidade > 0 ? "movimentacao_entrada" : "movimentacao_saida",
+    details: JSON.stringify({ itemId: input.itemId, quantidade: parsed.quantidade }),
   });
 
   return movimentacao;

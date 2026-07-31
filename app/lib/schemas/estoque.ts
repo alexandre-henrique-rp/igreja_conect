@@ -57,13 +57,13 @@ export const ItemEstoqueCreateSchema = z.discriminatedUnion("tipo", [
 /**
  * Schema de atualização de Item de Estoque/Patrimônio.
  * Todos os campos são opcionais (partial do create).
- * Tipo, numeroSerie e statusPatrimonio não são alteráveis via update.
+ * Tipo, numeroSerie, statusPatrimonio e quantidade não são alteráveis via update.
+ * Quantidade é controlada exclusivamente via movimentação.
  */
 export const ItemEstoqueUpdateSchema = z
   .object({
     nome: z.string().min(2).max(120).optional(),
     descricao: z.string().max(500).optional(),
-    quantidade: z.coerce.number().int().min(0).optional(),
     quantidadeMinima: z.coerce.number().int().min(0).optional(),
     localizacaoFisica: z.string().max(120).optional(),
   })

@@ -313,3 +313,19 @@ export function assertCanBaixarPerda(user: SessionUser): void {
   }
 }
 
+/** Cargos que podem dar saída do estoque — apenas ADMIN e SECRETARIO. */
+export const SAIDA_ESTOQUE_CARGOS = ["ADMIN", "SECRETARIO"] as const;
+
+/**
+ * Lança Response(403) se o usuário não pode dar saída do estoque.
+ *
+ * @description 2 perfis: ADMIN, SECRETARIO — restrição para prevenir desvios.
+ * @param {SessionUser} user - Usuário autenticado com `cargo`.
+ * @throws {Response} 403 se cargo não está em SAIDA_ESTOQUE_CARGOS.
+ */
+export function assertCanDarSaidaEstoque(user: SessionUser): void {
+  if (!user.cargo || !(SAIDA_ESTOQUE_CARGOS as readonly string[]).includes(user.cargo)) {
+    throw new Response("Apenas ADMIN e SECRETARIO podem dar saída do estoque.", { status: 403 });
+  }
+}
+
