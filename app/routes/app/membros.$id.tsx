@@ -178,7 +178,8 @@ export async function action({ params, context, request }: Route.ActionArgs) {
     }
     const ip = formData.get("ip") as string;
     if (ip) {
-      unblockIP(ip);
+      // Camada 2 → camada 3: service valida role + IP + loga auditoria
+      unblockIP(ip, user);
     }
     return new Response(null, {
       status: 302,
@@ -630,6 +631,15 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
                         <button
                           type="submit"
                           className="text-xs font-medium text-red-600 hover:text-red-800 underline cursor-pointer"
+                          onClick={(e: React.MouseEvent<HTMLElement>) => {
+                            if (
+                              !window.confirm(
+                                `Desbloquear o IP ${blocked.ip}? O evento será registrado na auditoria.`,
+                              )
+                            ) {
+                              e.preventDefault();
+                            }
+                          }}
                         >
                           Desbloquear
                         </button>
