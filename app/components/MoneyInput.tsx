@@ -77,18 +77,18 @@ export function MoneyInput({
     <div className="space-y-1">
       <label
         htmlFor={inputId}
-        className="block text-sm font-medium text-slate-700"
+        className="block text-sm font-medium text-fg"
       >
         {label}
         {required && (
-          <span aria-hidden="true" className="text-red-700 ml-1">
+          <span aria-hidden="true" className="text-danger ml-1">
             *
           </span>
         )}
       </label>
       <div className="relative">
         <span
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium"
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-medium"
           aria-hidden="true"
         >
           R$
@@ -108,16 +108,16 @@ export function MoneyInput({
           aria-invalid={hasError || undefined}
           aria-label={label}
           className={cn(
-            "w-full h-11 pl-10 pr-3 rounded-md border bg-white text-slate-900 tabular-nums",
-            "placeholder:text-slate-400",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "w-full h-11 pl-10 pr-3 rounded-md border bg-surface text-fg tabular-nums",
+            "placeholder:text-subtle",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            hasError ? "border-red-700" : "border-slate-300"
+            hasError ? "border-danger" : "border-border-strong"
           )}
         />
       </div>
       {error && (
-        <p id={`${inputId}-error`} role="alert" className="text-sm text-red-700">
+        <p id={`${inputId}-error`} role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

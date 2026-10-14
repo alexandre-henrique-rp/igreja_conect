@@ -49,11 +49,11 @@ export function Saudacao({ user, showHint, horaParam }: SaudacaoProps) {
 
   return (
     <header data-testid="saudacao" className="mb-6">
-      <h1 className="text-2xl font-bold text-slate-900">
+      <h1 className="text-2xl font-bold text-fg">
         {saudacao}, {user.nome}.
       </h1>
       {showHint && (
-        <p className="text-sm text-slate-600 mt-1">
+        <p className="text-sm text-muted mt-1">
           Você tem alertas não lidos.
         </p>
       )}

@@ -49,7 +49,7 @@ function LockIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className="h-12 w-12 text-slate-300"
+      className="h-12 w-12 text-border-strong"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -76,14 +76,14 @@ export function CardFidelidade({ data }: CardFidelidadeProps) {
       <div
         role="status"
         aria-live="polite"
-        className="flex flex-col items-center justify-center rounded-lg border border-slate-200 bg-white p-8 text-center space-y-3"
+        className="flex flex-col items-center justify-center rounded-lg border border-border bg-surface p-8 text-center space-y-3"
         data-testid="card-fidelidade-sem-acesso"
       >
         <LockIcon />
-        <p className="text-slate-700 font-medium">
+        <p className="text-fg font-medium">
           Você não tem permissão para ver dados financeiros detalhados
         </p>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted">
           Apenas perfis ADMIN, PASTOR e FINANCEIRO podem visualizar dízimos.
         </p>
       </div>

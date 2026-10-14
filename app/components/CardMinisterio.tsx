@@ -34,7 +34,7 @@
  * @returns Elemento JSX do card.
  */
 import { Form } from "react-router";
-import { Button } from "~/components/Button";
+import { Button } from "~/components/ds";
 
 /**
  * Subset de Ministerio usado pelo card.
@@ -84,23 +84,23 @@ export function CardMinisterio({
 }: CardMinisterioProps) {
   return (
     <article
-      className="border border-slate-200 rounded-lg bg-white p-4 sm:p-6 space-y-3"
+      className="border border-border rounded-lg bg-surface p-4 sm:p-6 space-y-3"
       data-testid={`card-ministerio-${ministerio.id}`}
     >
       {/* Header */}
       <header className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-fg">
             {ministerio.nome}
           </h2>
           {ministerio.descricao && (
-            <p className="text-sm text-slate-600 mt-0.5">
+            <p className="text-sm text-muted mt-0.5">
               {ministerio.descricao}
             </p>
           )}
         </div>
         <span
-          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800"
+          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-soft-2 text-accent-strong"
           aria-label={`${totalMembros} ${
             totalMembros === 1 ? "membro vinculado" : "membros vinculados"
           }`}
@@ -111,17 +111,17 @@ export function CardMinisterio({
 
       {/* Lista de membros */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-900 mb-2">Membros</h3>
+        <h3 className="text-sm font-semibold text-fg mb-2">Membros</h3>
         {membros.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum membro vinculado.</p>
+          <p className="text-sm text-muted">Nenhum membro vinculado.</p>
         ) : (
-          <ul className="divide-y divide-slate-200 border border-slate-200 rounded-lg bg-white">
+          <ul className="divide-y divide-border border border-border rounded-lg bg-surface">
             {membros.map((m) => (
               <li
                 key={m.id}
                 className="flex items-center justify-between px-3 py-2 gap-2"
               >
-                <span className="text-sm text-slate-900">{m.nome}</span>
+                <span className="text-sm text-fg">{m.nome}</span>
                 {canEdit && (
                   <Form method="post" className="inline">
                     <input
@@ -153,7 +153,7 @@ export function CardMinisterio({
 
       {/* Ações */}
       {canEdit && (
-        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-200">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border">
           <Button
             type="button"
             variant="secondary"

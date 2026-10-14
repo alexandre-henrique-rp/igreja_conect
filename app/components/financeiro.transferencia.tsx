@@ -34,8 +34,7 @@
  */
 import { Form, useNavigation } from "react-router";
 import { useEffect, useRef, useState } from "react";
-import { Select } from "~/components/Select";
-import { Input } from "~/components/Input";
+import { Select, Input } from "~/components/ds";
 import { MoneyInput } from "~/components/MoneyInput";
 import { formatBRLFromCents } from "~/lib/money-format";
 
@@ -148,7 +147,7 @@ export function FormTransferencia({
       {formError && (
         <div
           role="alert"
-          className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800"
+          className="rounded-md bg-danger-soft border border-danger-soft px-4 py-3 text-sm text-danger"
         >
           {formError}
         </div>
@@ -171,7 +170,7 @@ export function FormTransferencia({
             aria-describedby={errors.origemId ? "origemId-error" : undefined}
           />
           {errors.origemId && (
-            <p id="origemId-error" role="alert" className="text-sm text-red-700 mt-1">
+            <p id="origemId-error" role="alert" className="text-sm text-danger mt-1">
               {errors.origemId}
             </p>
           )}
@@ -190,7 +189,7 @@ export function FormTransferencia({
             aria-describedby={errors.destinoId ? "destinoId-error" : undefined}
           />
           {errors.destinoId && (
-            <p id="destinoId-error" role="alert" className="text-sm text-red-700 mt-1">
+            <p id="destinoId-error" role="alert" className="text-sm text-danger mt-1">
               {errors.destinoId}
             </p>
           )}
@@ -221,7 +220,7 @@ export function FormTransferencia({
         aria-describedby={errors.descricao ? "descricao-error" : "descricao-hint"}
       />
       {errors.descricao && (
-        <p id="descricao-error" role="alert" className="text-sm text-red-700 -mt-3">
+        <p id="descricao-error" role="alert" className="text-sm text-danger -mt-3">
           {errors.descricao}
         </p>
       )}
@@ -232,7 +231,7 @@ export function FormTransferencia({
           type="submit"
           disabled={isSubmitting}
           aria-disabled={isSubmitting}
-          className="inline-flex items-center justify-center rounded-md bg-cyan-700 px-6 h-11 text-sm font-medium text-white hover:bg-cyan-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center rounded-md bg-accent px-6 h-11 text-sm font-medium text-white hover:bg-accent-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? "Transferindo..." : "Transferir"}
         </button>

@@ -23,22 +23,22 @@ describe("<ErrorAlert />", () => {
     expect(html).toContain("Algo deu errado");
   });
 
-  it("tone='error' tem classes vermelhas (bg-red-50, border-red-200)", () => {
+  it("tone='error' tem classes vermelhas (bg-danger-soft, border-danger-soft)", () => {
     const html = renderAlert({ tone: "error", children: "Erro!" });
-    expect(html).toContain("bg-red-50");
-    expect(html).toContain("border-red-200");
+    expect(html).toContain("bg-danger-soft");
+    expect(html).toContain("border-danger-soft");
   });
 
   it("tone='warning' tem classes amarelas", () => {
     const html = renderAlert({ tone: "warning", children: "Atenção" });
-    expect(html).toContain("bg-amber-50");
-    expect(html).toContain("border-amber-200");
+    expect(html).toContain("bg-warning-soft");
+    expect(html).toContain("border-warning-soft");
   });
 
   it("tone='info' tem classes azuis", () => {
     const html = renderAlert({ tone: "info", children: "Informação" });
-    expect(html).toContain("bg-blue-50");
-    expect(html).toContain("border-blue-200");
+    expect(html).toContain("bg-accent-soft-2");
+    expect(html).toContain("border-accent-soft");
   });
 
   it("renderiza ícone SVG (aria-hidden para não poluir screen reader)", () => {

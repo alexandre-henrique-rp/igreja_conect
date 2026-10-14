@@ -20,7 +20,7 @@
 import type { CaixaResumo } from "~/lib/finance.server";
 import { formatBRLFromCents } from "~/lib/money-format";
 import { BadgeStatus } from "./BadgeStatus";
-import { InfoBox } from "./InfoBox";
+import { InfoBox } from "~/components/ds";
 
 /**
  * Props aceitas pelo `<CaixaHeader>`.
@@ -55,34 +55,32 @@ export function CaixaHeader({
     <div data-testid="caixa-header" className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-900">{caixa.nome}</h1>
+          <h1 className="text-2xl font-bold text-fg">{caixa.nome}</h1>
           <BadgeStatus ativo={caixa.ativo} />
         </div>
       </div>
 
       <div className="flex flex-wrap gap-6 text-sm">
         <div>
-          <span className="text-slate-500">Saldo: </span>
-          <span className="font-semibold text-slate-900 tabular-nums">
+          <span className="text-muted">Saldo: </span>
+          <span className="font-semibold text-fg tabular-nums">
             {formatBRLFromCents(caixa.saldoCentavos)}
           </span>
         </div>
         <div>
-          <span className="text-slate-500">Criado em: </span>
-          <span className="text-slate-700">
-            {formatDateShort(caixa.createdAt)}
-          </span>
+          <span className="text-muted">Criado em: </span>
+          <span className="text-fg">{formatDateShort(caixa.createdAt)}</span>
         </div>
         <div>
-          <span className="text-slate-500">Lançamentos: </span>
-          <span className="text-slate-700">{totalLancamentos}</span>
+          <span className="text-muted">Lançamentos: </span>
+          <span className="text-fg">{totalLancamentos}</span>
         </div>
       </div>
 
       {!caixa.ativo && (
         <InfoBox tone="warning" title="Caixa Arquivado">
-          Este caixa está arquivado e não aceita novos lançamentos.
-          Para reativá-lo, utilize a opção Reabrir.
+          Este caixa está arquivado e não aceita novos lançamentos. Para
+          reativá-lo, utilize a opção Reabrir.
         </InfoBox>
       )}
     </div>

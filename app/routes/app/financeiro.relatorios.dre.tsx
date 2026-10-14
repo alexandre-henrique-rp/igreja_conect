@@ -97,47 +97,47 @@ export default function DREPage({ loaderData }: Route.ComponentProps) {
     : 0;
 
   return (
-    <main className="p-6 max-w-7xl mx-auto space-y-6 bg-white min-h-screen">
+    <main className="p-6 max-w-7xl mx-auto space-y-6 bg-surface min-h-screen">
       {/* Breadcrumb + Page Header + Período */}
       <div className="mb-8">
-        <nav className="flex text-xs text-slate-400 font-medium mb-2 space-x-2">
-          <Link to="/app/financeiro" className="hover:text-blue-500">Financeiro</Link>
-          <span className="text-slate-300">{IconChevron}</span>
-          <Link to="/app/financeiro/relatorios" className="hover:text-blue-500">Relatórios</Link>
-          <span className="text-slate-300">{IconChevron}</span>
-          <span className="text-slate-600">DRE</span>
+        <nav className="flex text-xs text-subtle font-medium mb-2 space-x-2">
+          <Link to="/app/financeiro" className="hover:text-accent">Financeiro</Link>
+          <span className="text-border-strong">{IconChevron}</span>
+          <Link to="/app/financeiro/relatorios" className="hover:text-accent">Relatórios</Link>
+          <span className="text-border-strong">{IconChevron}</span>
+          <span className="text-muted">DRE</span>
         </nav>
         <div className="flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">DRE - Demonstração do Resultado</h1>
-            <p className="text-slate-600 mt-1">Análise detalhada de performance financeira do período.</p>
+            <h1 className="text-3xl font-bold text-fg tracking-tight">DRE - Demonstração do Resultado</h1>
+            <p className="text-muted mt-1">Análise detalhada de performance financeira do período.</p>
           </div>
           <div className="flex items-center gap-3">
-            <Form method="get" className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+            <Form method="get" className="flex items-center gap-3 bg-surface p-2 rounded-xl shadow-sm border border-border">
               <div className="flex flex-col">
-                <label htmlFor="dataInicio" className="text-[10px] uppercase font-bold text-slate-400 px-3">Início</label>
+                <label htmlFor="dataInicio" className="text-[10px] uppercase font-bold text-subtle px-3">Início</label>
                 <input
                   id="dataInicio"
                   name="dataInicio"
-                  className="border-none focus:ring-0 text-sm py-0 font-medium text-slate-700 bg-transparent"
+                  className="border-none focus:ring-0 text-sm py-0 font-medium text-fg bg-transparent"
                   type="date"
                   defaultValue={periodo.dataInicio}
                 />
               </div>
-              <div className="h-8 w-px bg-slate-200"></div>
+              <div className="h-8 w-px bg-border"></div>
               <div className="flex flex-col">
-                <label htmlFor="dataFim" className="text-[10px] uppercase font-bold text-slate-400 px-3">Fim</label>
+                <label htmlFor="dataFim" className="text-[10px] uppercase font-bold text-subtle px-3">Fim</label>
                 <input
                   id="dataFim"
                   name="dataFim"
-                  className="border-none focus:ring-0 text-sm py-0 font-medium text-slate-700 bg-transparent"
+                  className="border-none focus:ring-0 text-sm py-0 font-medium text-fg bg-transparent"
                   type="date"
                   defaultValue={periodo.dataFim}
                 />
               </div>
               <button
                 type="submit"
-                className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors"
+                className="bg-accent text-white p-2 rounded-lg hover:bg-accent transition-colors"
                 title="Atualizar período"
               >
                 <span className="text-white">{IconRefresh}</span>
@@ -148,7 +148,7 @@ export default function DREPage({ loaderData }: Route.ComponentProps) {
               <input type="hidden" name="dataFim" value={dataFimISO} />
               <button
                 type="submit"
-                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                className="flex items-center gap-2 bg-success text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-success transition-colors"
                 title="Exportar DRE em CSV"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
@@ -161,98 +161,99 @@ export default function DREPage({ loaderData }: Route.ComponentProps) {
 
       {/* 3 KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+        <div className="bg-surface p-6 rounded-xl border border-border shadow-sm hover:shadow-md transition-all group">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-emerald-50 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">{IconTrendingUp}</div>
-            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">{percentualResultado}% margem</span>
+            <div className="p-3 bg-success-soft rounded-lg text-success group-hover:scale-110 transition-transform">{IconTrendingUp}</div>
+            <span className="text-xs font-medium text-success bg-success-soft px-2 py-1 rounded-full">{percentualResultado}% margem</span>
           </div>
-          <p className="text-slate-500 text-sm font-medium">Total de Entradas</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">{formatBRLFromCents(kpis.totalEntradasCentavos)}</h3>
+          <p className="text-muted text-sm font-medium">Total de Entradas</p>
+          <h3 className="text-2xl font-bold text-fg mt-1">{formatBRLFromCents(kpis.totalEntradasCentavos)}</h3>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+        <div className="bg-surface p-6 rounded-xl border border-border shadow-sm hover:shadow-md transition-all group">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-red-50 rounded-lg text-red-600 group-hover:scale-110 transition-transform">{IconTrendingDown}</div>
-            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">{kpis.totalSaidasCentavos > 0 ? Math.round((kpis.totalSaidasCentavos / kpis.totalEntradasCentavos) * 100) : 0}% das entradas</span>
+            <div className="p-3 bg-danger-soft rounded-lg text-danger group-hover:scale-110 transition-transform">{IconTrendingDown}</div>
+            <span className="text-xs font-medium text-danger bg-danger-soft px-2 py-1 rounded-full">{kpis.totalSaidasCentavos > 0 ? Math.round((kpis.totalSaidasCentavos / kpis.totalEntradasCentavos) * 100) : 0}% das entradas</span>
           </div>
-          <p className="text-slate-500 text-sm font-medium">Total de Saídas</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">{formatBRLFromCents(kpis.totalSaidasCentavos)}</h3>
+          <p className="text-muted text-sm font-medium">Total de Saídas</p>
+          <h3 className="text-2xl font-bold text-fg mt-1">{formatBRLFromCents(kpis.totalSaidasCentavos)}</h3>
         </div>
-        <div className={`bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group ring-2 ${isLucro ? "ring-blue-500/10" : "ring-red-500/10"}`}>
+        <div className={`bg-surface p-6 rounded-xl border border-border shadow-sm hover:shadow-md transition-all group ring-2 ${isLucro ? "ring-accent/10" : "ring-danger/10"}`}>
           <div className="flex justify-between items-start mb-4">
-            <div className={`p-3 rounded-lg group-hover:scale-110 transition-transform ${isLucro ? "bg-blue-50 text-blue-600" : "bg-red-50 text-red-600"}`}>{IconWallet}</div>
-            <span className={`text-xs font-medium px-2 py-1 rounded-full uppercase tracking-wider ${isLucro ? "text-blue-600 bg-blue-50" : "text-red-600 bg-red-50"}`}>{isLucro ? "Lucro" : "Prejuízo"}</span>
+            <div className={`p-3 rounded-lg group-hover:scale-110 transition-transform ${isLucro ? "bg-accent-soft-2 text-accent" : "bg-danger-soft text-danger"}`}>{IconWallet}</div>
+            <span className={`text-xs font-medium px-2 py-1 rounded-full uppercase tracking-wider ${isLucro ? "text-accent bg-accent-soft-2" : "text-danger bg-danger-soft"}`}>{isLucro ? "Lucro" : "Prejuízo"}</span>
           </div>
-          <p className="text-slate-500 text-sm font-medium">Resultado Líquido</p>
-          <h3 className={`text-2xl font-bold mt-1 ${isLucro ? "text-slate-900" : "text-red-600"}`}>{formatBRLFromCents(Math.abs(kpis.resultadoCentavos))}</h3>
+          <p className="text-muted text-sm font-medium">Resultado Líquido</p>
+          <h3 className={`text-2xl font-bold mt-1 ${isLucro ? "text-fg" : "text-danger"}`}>{formatBRLFromCents(Math.abs(kpis.resultadoCentavos))}</h3>
         </div>
       </div>
 
       {/* 2 painéis: Entradas por Tipo + Saídas por Categoria */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Entradas por Tipo */}
-        <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-fit">
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <h3 className="font-bold text-slate-900">Entradas por Tipo</h3>
+        <div className="lg:col-span-5 bg-surface rounded-xl border border-border shadow-sm overflow-hidden h-fit">
+          <div className="p-6 border-b border-surface-2 flex justify-between items-center bg-surface-2/50">
+            <h3 className="font-bold text-fg">Entradas por Tipo</h3>
           </div>
           <div className="p-6 space-y-6">
             {entradasPorTipo.map((e) => (
               <div key={e.tipo} className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-slate-700">{e.tipo}</span>
-                  <span className="text-slate-900 font-bold">{formatBRLFromCents(e.valorCentavos)}</span>
+                  <span className="font-medium text-fg">{e.tipo}</span>
+                  <span className="text-fg font-bold">{formatBRLFromCents(e.valorCentavos)}</span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-surface-2 rounded-full h-2 overflow-hidden">
                   <div className={`${e.cor} h-full rounded-full transition-all duration-1000`} style={{ width: `${e.percentual}%` }}></div>
                 </div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">{e.percentual}% do total de entradas</p>
+                <p className="text-[10px] text-subtle uppercase font-bold">{e.percentual}% do total de entradas</p>
               </div>
             ))}
-            <div className="pt-4 border-t border-slate-100">
-              <div className="flex justify-between items-center text-xs text-slate-500">
+            <div className="pt-4 border-t border-surface-2">
+              <div className="flex justify-between items-center text-xs text-muted">
                 <span>Base de cálculo: Receitas Brutas</span>
-                <button className="text-blue-500 font-semibold hover:underline" type="button">Ver Detalhes</button>
+                <button className="text-accent font-semibold hover:underline" type="button">Ver Detalhes</button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Saídas por Categoria */}
-        <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <h3 className="font-bold text-slate-900">Saídas por Categoria</h3>
+        <div className="lg:col-span-7 bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-surface-2 flex justify-between items-center bg-surface-2/50">
+            <h3 className="font-bold text-fg">Saídas por Categoria</h3>
             <div className="flex gap-2">
-              <button className="px-3 py-1 text-xs font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" type="button">Exportar PDF</button>
+              <button className="px-3 py-1 text-xs font-medium bg-surface border border-border rounded-lg hover:bg-surface-2 transition-colors" type="button">Exportar PDF</button>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50/80 text-[10px] uppercase font-bold text-slate-400">
+<caption className="sr-only">Demonstrativo de resultado por categoria</caption>
+              <thead className="bg-surface-2/80 text-[10px] uppercase font-bold text-subtle">
                 <tr>
-                  <th className="px-6 py-4 border-b border-slate-100">Categoria</th>
-                  <th className="px-6 py-4 border-b border-slate-100">Transações</th>
-                  <th className="px-6 py-4 border-b border-slate-100">Impacto</th>
-                  <th className="px-6 py-4 border-b border-slate-100 text-right">Valor Total</th>
+                  <th scope="col" className="px-6 py-4 border-b border-surface-2">Categoria</th>
+                  <th scope="col" className="px-6 py-4 border-b border-surface-2">Transações</th>
+                  <th scope="col" className="px-6 py-4 border-b border-surface-2">Impacto</th>
+                  <th scope="col" className="px-6 py-4 border-b border-surface-2 text-right">Valor Total</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {saidasPorCategoria.map((s) => (
-                  <tr key={s.categoria} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 border-b border-slate-100">
+                  <tr key={s.categoria} className="hover:bg-surface-2 transition-colors">
+                    <td className="px-6 py-4 border-b border-surface-2">
                       <div className="flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full ${s.cor}`}></div>
-                        <span className="font-medium text-slate-700">{s.categoria}</span>
+                        <span className="font-medium text-fg">{s.categoria}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 border-b border-slate-100 text-slate-500">{s.transacoes} lançamentos</td>
-                    <td className="px-6 py-4 border-b border-slate-100">
+                    <td className="px-6 py-4 border-b border-surface-2 text-muted">{s.transacoes} lançamentos</td>
+                    <td className="px-6 py-4 border-b border-surface-2">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1 bg-slate-100 rounded-full max-w-[60px]">
+                        <div className="flex-1 h-1 bg-surface-2 rounded-full max-w-[60px]">
                           <div className={`h-full ${s.cor} rounded-full`} style={{ width: `${s.percentual}%` }}></div>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400">{s.percentual}%</span>
+                        <span className="text-[10px] font-bold text-subtle">{s.percentual}%</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 border-b border-slate-100 text-right font-bold text-slate-900">{formatBRLFromCents(s.valorCentavos)}</td>
+                    <td className="px-6 py-4 border-b border-surface-2 text-right font-bold text-fg">{formatBRLFromCents(s.valorCentavos)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -262,16 +263,16 @@ export default function DREPage({ loaderData }: Route.ComponentProps) {
       </div>
 
       {/* Banner "Resumo de Saúde Financeira" */}
-      <div className="mt-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 text-white relative overflow-hidden shadow-lg group">
+      <div className="mt-8 bg-gradient-to-br from-accent to-accent-strong rounded-2xl p-8 text-white relative overflow-hidden shadow-lg group">
         <div className="relative z-10 max-w-3xl">
           <h4 className="text-xl font-bold mb-2">Resumo de Saúde Financeira</h4>
-          <p className="text-blue-100 text-sm leading-relaxed opacity-90">
+          <p className="text-accent-soft-2 text-sm leading-relaxed opacity-90">
             {isLucro
               ? `Resultado líquido positivo de ${formatBRLFromCents(kpis.resultadoCentavos)} no período (${percentualResultado}% de margem). ${entradasPorTipo.length > 0 ? `Maior fonte de entradas: ${entradasPorTipo[0].tipo}.` : ""}`
               : `Déficit de ${formatBRLFromCents(Math.abs(kpis.resultadoCentavos))} no período. Recomenda-se revisar despesas operacionais.`
             }
           </p>
-          <button type="button" className="mt-6 px-6 py-2 bg-white text-blue-600 rounded-lg text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
+          <button type="button" className="mt-6 px-6 py-2 bg-surface text-accent rounded-lg text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
             Imprimir Relatório Anual
           </button>
         </div>

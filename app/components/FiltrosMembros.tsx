@@ -41,9 +41,7 @@
  * @returns Elemento JSX do form de filtros.
  */
 import { Form, Link } from "react-router";
-import { Button } from "./Button";
-import { Input } from "./Input";
-import { Select } from "./Select";
+import { Button, Input, Select } from "~/components/ds";
 
 /**
  * Default values dos filtros (vindos da URL no loader).

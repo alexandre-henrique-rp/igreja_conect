@@ -25,7 +25,7 @@
  * @returns Elemento JSX da tab.
  */
 import { Form } from "react-router";
-import { Button } from "~/components/Button";
+import { Button } from "~/components/ds";
 
 /**
  * Subset de Ministerio (id + nome).
@@ -61,17 +61,17 @@ export function TabMinisterios({
   return (
     <div className="space-y-3" data-testid="tab-ministerios">
       {ministerios.length === 0 ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted">
           Este membro não está em nenhum ministério.
         </p>
       ) : (
-        <ul className="divide-y divide-slate-200 border border-slate-200 rounded-lg bg-white">
+        <ul className="divide-y divide-border border border-border rounded-lg bg-surface">
           {ministerios.map((m) => (
             <li
               key={m.id}
               className="flex items-center justify-between px-4 py-2 gap-2"
             >
-              <span className="text-sm text-slate-900">{m.nome}</span>
+              <span className="text-sm text-fg">{m.nome}</span>
               {canEdit && (
                 <Form method="post" className="inline">
                   <input
@@ -96,11 +96,11 @@ export function TabMinisterios({
       )}
 
       {canEdit && ministerios.length > 0 && (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           Para adicionar o membro a outros ministérios, vá em{" "}
           <a
             href="/app/ministerios"
-            className="text-cyan-700 hover:underline"
+            className="text-accent hover:underline"
           >
             Ministérios
           </a>

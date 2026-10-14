@@ -39,9 +39,9 @@ describe("<KpiSaldoTotal />", () => {
     expect(html).toContain("1 caixa ativo");
   });
 
-  it("usa bg-cyan-700 como cor de fundo", () => {
+  it("usa bg-accent como cor de fundo", () => {
     const html = renderKpi({ saldoCentavos: 100, totalCaixas: 2 });
-    expect(html).toContain("bg-cyan-700");
+    expect(html).toContain("bg-accent");
   });
 
   it("possui data-testid='kpi-saldo-total'", () => {

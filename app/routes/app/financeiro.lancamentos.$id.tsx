@@ -18,23 +18,27 @@
  * @see app/lib/storage/signed-url.server.ts (signed URLs)
  */
 import { Form, Link, data } from "react-router";
-import type { Route } from "./+types/financeiro.lancamentos.$id";
-import { userContext } from "~/lib/user-context";
-import { prisma } from "~/db/prisma.server";
-import { assertCanSeeFinancialModule, assertCanWriteLancamento } from "~/lib/rbac.server";
-import { formatBRLFromCents } from "~/lib/money-format";
-import { getSignedPreviewUrl } from "~/lib/storage/signed-url.server";
-import { Breadcrumb } from "~/components/Breadcrumb";
-import { PageHeader } from "~/components/PageHeader";
-import { Button } from "~/components/Button";
-import { ErrorAlert } from "~/components/ErrorAlert";
+import { Button, Breadcrumb, BreadcrumbItem, BreadcrumbSeparator, PageHeader } from "~/components/ds";
 import { ComprovanteUpload } from "~/components/ComprovanteUpload";
+import { ErrorAlert } from "~/components/ErrorAlert";
+import { prisma } from "~/db/prisma.server";
+import { criarAlertaLancamentoPago } from "~/lib/alerts.server";
+import { formatBRLFromCents } from "~/lib/money-format";
+import {
+  assertCanSeeFinancialModule,
+  assertCanWriteLancamento,
+} from "~/lib/rbac.server";
+import { getSignedPreviewUrl } from "~/lib/storage/signed-url.server";
+import { userContext } from "~/lib/user-context";
+import type { Route } from "./+types/financeiro.lancamentos.$id";
 
 export function meta({ data }: Route.MetaArgs) {
   if (!data?.lancamento) {
     return [{ title: "Lançamento não encontrado — Igreja Conect" }];
   }
-  return [{ title: `Lançamento #${data.lancamento.id.slice(0, 8)} — Igreja Conect` }];
+  return [
+    { title: `Lançamento #${data.lancamento.id.slice(0, 8)} — Igreja Conect` },
+  ];
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -139,17 +143,42 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     return data({ error: "Intent inválido." }, { status: 400 });
   }
 
-  if (
-    status !== "PAGO" &&
-    status !== "PENDENTE" &&
-    status !== "AGENDADO"
-  ) {
+  if (status !== "PAGO" && status !== "PENDENTE" && status !== "AGENDADO") {
     return data({ error: "Status inválido." }, { status: 422 });
   }
 
-  await prisma.lancamento.update({
-    where: { id: params.id },
-    data: { status: status as "PAGO" | "PENDENTE" | "AGENDADO" },
+  await prisma.$transaction(async (tx) => {
+    // Lê o status anterior para disparar o alerta apenas na TRANSIÇÃO
+    // para PAGO (evita duplicar notificação em re-salvamentos).
+    const atual = await tx.lancamento.findUnique({
+      where: { id: params.id },
+      select: { status: true },
+    });
+
+    const lancamento = await tx.lancamento.update({
+      where: { id: params.id },
+      data: { status: status as "PAGO" | "PENDENTE" | "AGENDADO" },
+      select: {
+        id: true,
+        tipo: true,
+        categoria: true,
+        valorCentavos: true,
+        status: true,
+        caixa: { select: { nome: true } },
+      },
+    });
+
+    // Notificação interna de pagamento confirmado (fan-out ADMIN/PASTOR/FINANCEIRO).
+    if (status === "PAGO" && atual?.status !== "PAGO") {
+      await criarAlertaLancamentoPago(tx, {
+        id: lancamento.id,
+        tipo: lancamento.tipo,
+        categoria: lancamento.categoria,
+        valorCentavos: lancamento.valorCentavos,
+        status: lancamento.status,
+        caixaNome: lancamento.caixa?.nome ?? null,
+      });
+    }
   });
 
   return { ok: true };
@@ -180,42 +209,44 @@ export default function LancamentoDetail({
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {error && <ErrorAlert tone="error">{error}</ErrorAlert>}
 
-      <Breadcrumb
-        items={[
-          { label: "Financeiro", href: "/app/financeiro" },
-          {
-            label: "Caixa " + lancamento.caixa.nome,
-            href: `/app/financeiro/caixas/${lancamento.caixa.id}`,
-          },
-          { label: `Lançamento #${lancamento.id.slice(0, 8)}` },
-        ]}
-      />
+      <Breadcrumb>
+        <BreadcrumbItem href="/app/financeiro">Financeiro</BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem href={`/app/financeiro/caixas/${lancamento.caixa.id}`}>{"Caixa " + lancamento.caixa.nome}</BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem current>{`Lançamento #${lancamento.id.slice(0, 8)}`}</BreadcrumbItem>
+      </Breadcrumb>
 
       <PageHeader
         title={`Lançamento #${lancamento.id.slice(0, 8)}`}
-        action={
+        actions={
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button as={Link} to={`/app/financeiro/caixas/${lancamento.caixa.id}`} variant="ghost">
+            <Button
+              as={Link}
+              to={`/app/financeiro/caixas/${lancamento.caixa.id}`}
+              variant="ghost"
+            >
               ← Ver Caixa
             </Button>
           </div>
         }
       />
 
-      <p className="text-sm text-slate-600 -mt-4 mb-4">
-        {CATEGORIA_LABEL[lancamento.categoria] || lancamento.categoria} • {formatDate(lancamento.dataCompetencia)}
+      <p className="text-sm text-muted -mt-4 mb-4">
+        {CATEGORIA_LABEL[lancamento.categoria] || lancamento.categoria} •{" "}
+        {formatDate(lancamento.dataCompetencia)}
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Detalhes do Lançamento (2/3) */}
         <article className="lg:col-span-2 space-y-4">
-          <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <header className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+          <section className="bg-surface border border-border rounded-2xl p-6 shadow-sm">
+            <header className="flex items-center gap-3 mb-4 pb-4 border-b border-surface-2">
               <div
                 className={`p-3 rounded-xl ${
                   isEntrada
-                    ? "bg-emerald-50 text-emerald-600"
-                    : "bg-rose-50 text-rose-600"
+                    ? "bg-success-soft text-success"
+                    : "bg-danger-soft text-danger"
                 }`}
               >
                 <svg
@@ -233,10 +264,11 @@ export default function LancamentoDetail({
                 </svg>
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-slate-900">
-                  {CATEGORIA_LABEL[lancamento.categoria] || lancamento.categoria}
+                <h2 className="text-xl font-bold text-fg">
+                  {CATEGORIA_LABEL[lancamento.categoria] ||
+                    lancamento.categoria}
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-muted mt-1">
                   ID: #{lancamento.id.slice(0, 8)} •{" "}
                   {formatDate(lancamento.dataCompetencia)}
                 </p>
@@ -244,8 +276,8 @@ export default function LancamentoDetail({
               <span
                 className={`px-3 py-1 rounded-full text-xs font-bold ${
                   isEntrada
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-rose-50 text-rose-700"
+                    ? "bg-success-soft text-success"
+                    : "bg-danger-soft text-danger"
                 }`}
               >
                 {isEntrada ? "Entrada" : "Saída"}
@@ -254,34 +286,34 @@ export default function LancamentoDetail({
 
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-muted">
                   Valor
                 </dt>
                 <dd
                   className={`text-2xl font-bold mt-1 ${
-                    isEntrada ? "text-emerald-600" : "text-rose-600"
+                    isEntrada ? "text-success" : "text-danger"
                   }`}
                 >
                   {isEntrada ? "+" : "−"}{" "}
                   {formatBRLFromCents(lancamento.valorCentavos)}
                 </dd>
-                <dd className="text-xs text-slate-400 mt-0.5 font-mono">
+                <dd className="text-xs text-subtle mt-0.5 font-mono">
                   {lancamento.valorCentavos} centavos
                 </dd>
               </div>
 
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-muted">
                   Status
                 </dt>
                 <dd className="mt-1">
                   <span
                     className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase ${
                       lancamento.status === "PAGO"
-                        ? "bg-emerald-50 text-emerald-700"
+                        ? "bg-success-soft text-success"
                         : lancamento.status === "PENDENTE"
-                          ? "bg-amber-50 text-amber-700"
-                          : "bg-slate-100 text-slate-700"
+                          ? "bg-warning-soft text-warning"
+                          : "bg-surface-2 text-fg"
                     }`}
                   >
                     {STATUS_LABEL[lancamento.status] || lancamento.status}
@@ -290,31 +322,32 @@ export default function LancamentoDetail({
               </div>
 
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-muted">
                   Data de Competência
                 </dt>
-                <dd className="text-slate-900 mt-1 font-mono">
+                <dd className="text-fg mt-1 font-mono">
                   {formatDate(lancamento.dataCompetencia)}
                 </dd>
               </div>
 
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-muted">
                   Categoria
                 </dt>
-                <dd className="text-slate-900 mt-1">
-                  {CATEGORIA_LABEL[lancamento.categoria] || lancamento.categoria}
+                <dd className="text-fg mt-1">
+                  {CATEGORIA_LABEL[lancamento.categoria] ||
+                    lancamento.categoria}
                 </dd>
               </div>
 
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-muted">
                   Caixa
                 </dt>
-                <dd className="text-slate-900 mt-1">
+                <dd className="text-fg mt-1">
                   <Link
                     to={`/app/financeiro/caixas/${lancamento.caixa.id}`}
-                    className="text-cyan-700 hover:underline"
+                    className="text-accent hover:underline"
                   >
                     {lancamento.caixa.nome}
                   </Link>
@@ -322,30 +355,30 @@ export default function LancamentoDetail({
               </div>
 
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-muted">
                   Membro / Doador
                 </dt>
-                <dd className="text-slate-900 mt-1">
+                <dd className="text-fg mt-1">
                   {lancamento.membro ? (
                     <span>
                       {lancamento.membro.nome}
-                      <span className="text-xs text-slate-400 ml-1.5">
+                      <span className="text-xs text-subtle ml-1.5">
                         #{lancamento.membro.id.slice(0, 8)}
                       </span>
                     </span>
                   ) : (
-                    <span className="text-slate-400 italic">— sem membro</span>
+                    <span className="text-subtle italic">— sem membro</span>
                   )}
                 </dd>
               </div>
             </dl>
 
             {lancamento.descricao && (
-              <div className="mt-5 pt-5 border-t border-slate-100">
-                <dt className="text-xs uppercase tracking-wide text-slate-500 mb-2">
+              <div className="mt-5 pt-5 border-t border-surface-2">
+                <dt className="text-xs uppercase tracking-wide text-muted mb-2">
                   Descrição
                 </dt>
-                <dd className="text-sm text-slate-700 whitespace-pre-wrap">
+                <dd className="text-sm text-fg whitespace-pre-wrap">
                   {lancamento.descricao}
                 </dd>
               </div>
@@ -353,14 +386,16 @@ export default function LancamentoDetail({
           </section>
 
           {/* Comprovante */}
-          <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <header className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">Comprovante</h3>
+          <section className="bg-surface border border-border rounded-2xl p-6 shadow-sm">
+            <header className="flex items-center justify-between mb-4 pb-4 border-b border-surface-2">
+              <h3 className="text-base font-bold text-fg">Comprovante</h3>
             </header>
             <ComprovanteUpload
               lancamentoId={lancamento.id}
               currentUrl={comprovanteUrl}
-              currentFilename={lancamento.attachmentUpload?.originalFilename ?? null}
+              currentFilename={
+                lancamento.attachmentUpload?.originalFilename ?? null
+              }
               currentUploadId={lancamento.attachmentUploadId}
               currentStatus={lancamento.attachmentUpload?.status ?? null}
               currentMime={lancamento.attachmentUpload?.detectedMime ?? null}
@@ -371,10 +406,10 @@ export default function LancamentoDetail({
         {/* Sidebar: Ações (1/3) */}
         <aside className="space-y-4">
           {/* Mudar status */}
-          <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-base font-bold text-slate-900 mb-4">Alterar Status</h3>
+          <section className="bg-surface border border-border rounded-2xl p-6 shadow-sm">
+            <h3 className="text-base font-bold text-fg mb-4">Alterar Status</h3>
             {!podeEditar ? (
-              <p className="text-xs text-slate-500 italic">
+              <p className="text-xs text-muted italic">
                 Apenas ADMIN/PASTOR/FINANCEIRO podem alterar status.
               </p>
             ) : (
@@ -388,14 +423,14 @@ export default function LancamentoDetail({
                     value={s}
                     className={`w-full flex items-center justify-between p-3 rounded-lg border text-sm font-medium transition-colors ${
                       lancamento.status === s
-                        ? "border-blue-500 bg-blue-50 text-blue-900"
-                        : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                        ? "border-accent bg-accent-soft-2 text-accent-strong"
+                        : "border-border hover:bg-surface-2 text-fg"
                     }`}
                   >
                     <span>{STATUS_LABEL[s]}</span>
                     {lancamento.status === s && (
                       <svg
-                        className="w-4 h-4 text-blue-600"
+                        className="w-4 h-4 text-accent"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -415,9 +450,9 @@ export default function LancamentoDetail({
           </section>
 
           {/* Ações futuras */}
-          <section className="bg-slate-50 border border-slate-200/60 rounded-2xl p-5">
-            <h3 className="text-sm font-bold text-slate-700 mb-2">Próximas ações</h3>
-            <ul className="text-xs text-slate-500 space-y-1.5 list-disc pl-4">
+          <section className="bg-surface-2 border border-border/60 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-fg mb-2">Próximas ações</h3>
+            <ul className="text-xs text-muted space-y-1.5 list-disc pl-4">
               <li>Estornar lançamento (gera oposto)</li>
               <li>Editar valor / categoria / descrição</li>
               <li>Histórico de mudanças (audit log)</li>
@@ -437,7 +472,8 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Erro ao carregar lançamento.";
   if (error instanceof Response) {
     if (error.status === 404) {
-      message = "Lançamento não encontrado ou você não tem permissão para vê-lo.";
+      message =
+        "Lançamento não encontrado ou você não tem permissão para vê-lo.";
     } else {
       message = error.statusText || message;
     }
@@ -446,7 +482,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
   return (
     <main className="p-4 sm:p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">Erro</h1>
+      <h1 className="text-2xl font-bold text-fg mb-2">Erro</h1>
       <ErrorAlert tone="error">{message}</ErrorAlert>
       <div className="mt-4">
         <Button as={Link} to="/app/financeiro" variant="ghost">

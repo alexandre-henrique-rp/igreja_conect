@@ -57,60 +57,60 @@ export default function NovoProduto({ loaderData, actionData }: Route.ComponentP
   return (
     <main className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-2">
-        <Link to="/app/estoque" className="hover:text-blue-600 transition-colors">Estoque</Link>
+      <nav className="flex items-center gap-2 text-xs font-semibold text-subtle mb-2">
+        <Link to="/app/estoque" className="hover:text-accent transition-colors">Estoque</Link>
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-blue-600">Novo Produto</span>
+        <span className="text-accent">Novo Produto</span>
       </nav>
 
-      <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Novo Produto</h2>
-      <p className="text-slate-500 text-sm">Cadastre um novo item no estoque ou patrimônio da igreja.</p>
+      <h2 className="text-3xl font-extrabold text-fg tracking-tight">Novo Produto</h2>
+      <p className="text-muted text-sm">Cadastre um novo item no estoque ou patrimônio da igreja.</p>
 
       {actionData?.error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="p-4 bg-danger-soft border border-danger-soft rounded-xl text-sm text-danger">
           {actionData.error}
         </div>
       )}
 
-      <Form method="post" className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <Form method="post" className="bg-surface border border-border rounded-2xl shadow-sm overflow-hidden">
         <div className="p-8 space-y-8">
           {/* Section 1: Identificação */}
           <div>
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Identificação</h3>
+            <h3 className="text-lg font-bold text-fg mb-4">Identificação</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Nome do Produto *</label>
+                <label className="block text-sm font-semibold text-fg mb-2">Nome do Produto *</label>
                 <input
                   name="nome"
                   type="text"
                   required
                   defaultValue={actionData?.values?.nome as string}
-                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                  className="w-full p-2.5 border border-border rounded-xl bg-surface-2 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all text-sm"
                   placeholder="Ex: Copo Descartável 200ml"
                 />
                 {actionData?.fieldErrors?.nome && (
-                  <p className="text-xs text-red-500 mt-1">{actionData.fieldErrors.nome}</p>
+                  <p className="text-xs text-danger mt-1">{actionData.fieldErrors.nome}</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Tipo de Item *</label>
+                <label className="block text-sm font-semibold text-fg mb-2">Tipo de Item *</label>
                 <select
                   name="tipo"
                   value={tipo}
                   onChange={(e) => setTipo(e.target.value)}
-                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm cursor-pointer"
+                  className="w-full p-2.5 border border-border rounded-xl bg-surface-2 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all text-sm cursor-pointer"
                 >
                   <option value="CONSUMO">Consumo</option>
                   <option value="PATRIMONIO">Patrimônio</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Setor / Localização</label>
+                <label className="block text-sm font-semibold text-fg mb-2">Setor / Localização</label>
                 <select
                   name="localizacaoFisica"
-                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm cursor-pointer"
+                  className="w-full p-2.5 border border-border rounded-xl bg-surface-2 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all text-sm cursor-pointer"
                 >
                   <option value="Cozinha">Cozinha</option>
                   <option value="Limpeza">Limpeza</option>
@@ -118,15 +118,29 @@ export default function NovoProduto({ loaderData, actionData }: Route.ComponentP
                   <option value="Sonorização">Sonorização</option>
                 </select>
               </div>
+              <div>
+                <label htmlFor="categoria" className="block text-sm font-semibold text-fg mb-2">
+                  Categoria <span className="font-normal text-muted">(opcional)</span>
+                </label>
+                <input
+                  id="categoria"
+                  name="categoria"
+                  type="text"
+                  maxLength={60}
+                  placeholder="Ex.: Cantina, Cultos, Higiene"
+                  defaultValue={actionData?.values?.categoria as string}
+                  className="w-full p-2.5 border border-border rounded-xl bg-surface-2 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all text-sm"
+                />
+              </div>
             </div>
           </div>
 
           {/* Section 2: Quantidade */}
           <div>
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Quantidade e Controle</h3>
+            <h3 className="text-lg font-bold text-fg mb-4">Quantidade e Controle</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <label className="block text-sm font-semibold text-fg mb-2">
                   Quantidade {tipo === "PATRIMONIO" ? "" : "Inicial"}
                 </label>
                 <input
@@ -134,17 +148,17 @@ export default function NovoProduto({ loaderData, actionData }: Route.ComponentP
                   type="number"
                   min="0"
                   defaultValue={tipo === "PATRIMONIO" ? "1" : "0"}
-                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                  className="w-full p-2.5 border border-border rounded-xl bg-surface-2 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Qtd Mínima (Alerta)</label>
+                <label className="block text-sm font-semibold text-fg mb-2">Qtd Mínima (Alerta)</label>
                 <input
                   name="quantidadeMinima"
                   type="number"
                   min="0"
                   defaultValue="5"
-                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                  className="w-full p-2.5 border border-border rounded-xl bg-surface-2 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all text-sm"
                 />
               </div>
             </div>
@@ -153,18 +167,18 @@ export default function NovoProduto({ loaderData, actionData }: Route.ComponentP
           {/* Section 3: Patrimônio (condicional) */}
           {tipo === "PATRIMONIO" && (
             <div>
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Dados do Patrimônio</h3>
+              <h3 className="text-lg font-bold text-fg mb-4">Dados do Patrimônio</h3>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Número de Série *</label>
+                <label className="block text-sm font-semibold text-fg mb-2">Número de Série *</label>
                 <input
                   name="numeroSerie"
                   type="text"
                   maxLength={60}
-                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-mono uppercase"
+                  className="w-full p-2.5 border border-border rounded-xl bg-surface-2 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all text-sm font-mono uppercase"
                   placeholder="Ex: PJ-001"
                 />
                 {actionData?.fieldErrors && 'numeroSerie' in actionData.fieldErrors && actionData.fieldErrors.numeroSerie && (
-                  <p className="text-xs text-red-500 mt-1">{actionData.fieldErrors.numeroSerie}</p>
+                  <p className="text-xs text-danger mt-1">{actionData.fieldErrors.numeroSerie}</p>
                 )}
               </div>
             </div>
@@ -172,27 +186,27 @@ export default function NovoProduto({ loaderData, actionData }: Route.ComponentP
 
           {/* Section 4: Descrição */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Descrição</label>
+            <label className="block text-sm font-semibold text-fg mb-2">Descrição</label>
             <textarea
               name="descricao"
-              className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none text-sm"
+              className="w-full p-3 border border-border rounded-xl bg-surface-2 focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all resize-none text-sm"
               placeholder="Descreva brevemente a finalidade ou especificações..."
               rows={3}
             />
           </div>
         </div>
 
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+        <div className="p-6 bg-surface-2 border-t border-surface-2 flex items-center justify-end gap-3">
           <Link
             to="/app/estoque"
-            className="px-6 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+            className="px-6 py-2.5 text-sm font-semibold text-muted hover:text-fg transition-colors"
           >
             Cancelar
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all transform active:scale-95 disabled:opacity-50"
+            className="px-8 py-2.5 bg-accent text-white rounded-xl font-bold text-sm hover:bg-accent-strong shadow-lg shadow-accent/30 transition-all transform active:scale-95 disabled:opacity-50"
           >
             {isSubmitting ? "Salvando..." : "Salvar Produto"}
           </button>

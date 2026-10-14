@@ -71,7 +71,7 @@ export function ExtratoFiltros({
       <select
         name="periodo"
         defaultValue={periodo}
-        className="h-10 px-3 rounded-md border border-slate-300 text-sm bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+        className="h-10 px-3 rounded-md border border-border-strong text-sm bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         aria-label="Período"
       >
         {PERIODOS.map((p) => (
@@ -84,7 +84,7 @@ export function ExtratoFiltros({
       <select
         name="categoria"
         defaultValue={categoria}
-        className="h-10 px-3 rounded-md border border-slate-300 text-sm bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+        className="h-10 px-3 rounded-md border border-border-strong text-sm bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         aria-label="Categoria"
       >
         {CATEGORIAS.map((c) => (
@@ -96,14 +96,14 @@ export function ExtratoFiltros({
 
       <button
         type="submit"
-        className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-cyan-700 text-white text-sm font-medium hover:bg-cyan-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+        className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
       >
         Filtrar
       </button>
 
       <Link
         to={basePath}
-        className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+        className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium text-fg bg-surface-2 hover:bg-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
       >
         Limpar
       </Link>

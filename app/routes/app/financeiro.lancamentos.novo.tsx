@@ -26,10 +26,8 @@ import { CATEGORIAS_LANCAMENTO, LancamentoCreateSchema, STATUS_LANCAMENTO } from
 import { criarLancamento } from "~/lib/lancamentos.server";
 import { listarCaixasParaSelect } from "~/lib/caixas.server";
 import { listarMembrosParaSelect } from "~/lib/members.server";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
+import { Button, Input, Select } from "~/components/ds";
 import { MoneyInput } from "~/components/MoneyInput";
-import { Select } from "~/components/Select";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Novo Lançamento — Igreja Conect" }];
@@ -208,8 +206,8 @@ export default function NovoLancamento({
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Novo Lançamento</h1>
-          <p className="text-slate-600 mt-1">Registre uma nova transação financeira.</p>
+          <h1 className="text-2xl font-bold text-fg">Novo Lançamento</h1>
+          <p className="text-muted mt-1">Registre uma nova transação financeira.</p>
         </div>
         <Button as={Link} to="/app/financeiro" variant="secondary" size="sm">
           Cancelar
@@ -218,7 +216,7 @@ export default function NovoLancamento({
 
       <form method="POST" noValidate className="space-y-6">
         {/* Tipo: Entrada / Saída */}
-        <div className="bg-white rounded-xl border border-slate-200 p-1 flex">
+        <div className="bg-surface rounded-xl border border-border p-1 flex">
           <label className="flex-1 cursor-pointer">
             <input
               type="radio"
@@ -228,7 +226,7 @@ export default function NovoLancamento({
               onChange={() => setTipo("ENTRADA")}
               className="sr-only peer"
             />
-            <span className="flex items-center justify-center gap-2 h-11 rounded-lg text-sm font-semibold text-slate-600 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 peer-checked:border peer-checked:border-emerald-200 transition-colors">
+            <span className="flex items-center justify-center gap-2 h-11 rounded-lg text-sm font-semibold text-muted peer-checked:bg-success-soft peer-checked:text-success peer-checked:border peer-checked:border-success-soft transition-colors">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7" />
               </svg>
@@ -244,7 +242,7 @@ export default function NovoLancamento({
               onChange={() => setTipo("SAIDA")}
               className="sr-only peer"
             />
-            <span className="flex items-center justify-center gap-2 h-11 rounded-lg text-sm font-semibold text-slate-600 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:border peer-checked:border-red-200 transition-colors">
+            <span className="flex items-center justify-center gap-2 h-11 rounded-lg text-sm font-semibold text-muted peer-checked:bg-danger-soft peer-checked:text-danger peer-checked:border peer-checked:border-danger-soft transition-colors">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12l7 7 7-7" />
               </svg>
@@ -252,19 +250,19 @@ export default function NovoLancamento({
             </span>
           </label>
         </div>
-        {fieldErrors.tipo && <p role="alert" className="text-sm text-red-700">{fieldErrors.tipo}</p>}
+        {fieldErrors.tipo && <p role="alert" className="text-sm text-danger">{fieldErrors.tipo}</p>}
 
         {/* ENTRADA é sempre confirmada (PAGO) automaticamente — não exige escolha do usuário. */}
         {!isSaida && <input type="hidden" name="status" value="PAGO" />}
 
         {/* Informações Básicas */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
-            <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="bg-surface rounded-xl border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+            <svg className="h-5 w-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <path d="M12 16v-4M12 8h.01" />
             </svg>
-            <h2 className="font-semibold text-slate-900">Informações Básicas</h2>
+            <h2 className="font-semibold text-fg">Informações Básicas</h2>
           </div>
           <div className="p-6 space-y-5">
             <MoneyInput
@@ -303,8 +301,8 @@ export default function NovoLancamento({
                 onChange={(e) => setCategoria(e.target.value)}
               />
             </div>
-            {fieldErrors.caixaId && <p role="alert" className="text-sm text-red-700">{fieldErrors.caixaId}</p>}
-            {fieldErrors.categoria && <p role="alert" className="text-sm text-red-700">{fieldErrors.categoria}</p>}
+            {fieldErrors.caixaId && <p role="alert" className="text-sm text-danger">{fieldErrors.caixaId}</p>}
+            {fieldErrors.categoria && <p role="alert" className="text-sm text-danger">{fieldErrors.categoria}</p>}
 
             {/* Membro vinculado — só aparece para DÍZIMO (RN-FIN-05: obrigatório).
                 Demais categorias (OFERTA, CAMPANHA, DESPESA_*, etc.) não vinculam membro. */}
@@ -317,24 +315,24 @@ export default function NovoLancamento({
                 defaultValue={defaultValues.membroId ?? ""}
               />
             )}
-            {exibirMembro && fieldErrors.membroId && <p role="alert" className="text-sm text-red-700">{fieldErrors.membroId}</p>}
+            {exibirMembro && fieldErrors.membroId && <p role="alert" className="text-sm text-danger">{fieldErrors.membroId}</p>}
           </div>
         </div>
 
         {/* Status e Observações — só aparece para SAÍDA.
             ENTRADA é sempre confirmada (PAGO) automaticamente via hidden input acima. */}
         {isSaida && (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
-              <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="bg-surface rounded-xl border border-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+              <svg className="h-5 w-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
-              <h2 className="font-semibold text-slate-900">Status e Observações</h2>
+              <h2 className="font-semibold text-fg">Status e Observações</h2>
             </div>
             <div className="p-6 space-y-5">
               <fieldset>
-                <legend className="text-sm font-medium text-slate-700">Situação do Lançamento</legend>
+                <legend className="text-sm font-medium text-fg">Situação do Lançamento</legend>
                 <div className="flex flex-wrap gap-4 mt-2">
                   {STATUS_LANCAMENTO.map((s) => (
                     <label key={s} className="inline-flex items-center gap-2 cursor-pointer">
@@ -343,13 +341,13 @@ export default function NovoLancamento({
                         name="status"
                         value={s}
                         defaultChecked={statusDefault === s}
-                        className="h-4 w-4 text-cyan-700 border-slate-300 focus:ring-cyan-700"
+                        className="h-4 w-4 text-accent border-border-strong focus:ring-accent"
                       />
-                      <span className="text-sm text-slate-700">{STATUS_LABEL[s]}</span>
+                      <span className="text-sm text-fg">{STATUS_LABEL[s]}</span>
                     </label>
                   ))}
                 </div>
-                {fieldErrors.status && <p role="alert" className="text-sm text-red-700 mt-1">{fieldErrors.status}</p>}
+                {fieldErrors.status && <p role="alert" className="text-sm text-danger mt-1">{fieldErrors.status}</p>}
               </fieldset>
 
               <Input
@@ -361,7 +359,7 @@ export default function NovoLancamento({
               />
 
               <div className="space-y-1">
-                <label htmlFor="descricao" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="descricao" className="block text-sm font-medium text-fg">
                   Observações (Opcional)
                 </label>
                 <textarea
@@ -370,9 +368,9 @@ export default function NovoLancamento({
                   rows={4}
                   defaultValue={defaultValues.descricao ?? ""}
                   placeholder="Informações adicionais sobre o lançamento..."
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                  className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                 />
-                {fieldErrors.descricao && <p role="alert" className="text-sm text-red-700">{fieldErrors.descricao}</p>}
+                {fieldErrors.descricao && <p role="alert" className="text-sm text-danger">{fieldErrors.descricao}</p>}
               </div>
             </div>
           </div>

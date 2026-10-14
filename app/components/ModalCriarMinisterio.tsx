@@ -33,8 +33,7 @@
  */
 import { Form } from "react-router";
 import { Dialog } from "~/components/Dialog";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
+import { Button, Input } from "~/components/ds";
 
 /**
  * Erros de validação por campo.

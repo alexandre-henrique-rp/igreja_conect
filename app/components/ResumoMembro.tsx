@@ -58,9 +58,9 @@ const TIPO_LABEL: Record<ResumoMembroData["tipo"], string> = {
   MEMBRO_ATIVO: "Membro ativo",
 };
 const TIPO_CLASS: Record<ResumoMembroData["tipo"], string> = {
-  VISITANTE: "bg-amber-100 text-amber-800",
-  CONGREGADO: "bg-blue-100 text-blue-800",
-  MEMBRO_ATIVO: "bg-green-100 text-green-800",
+  VISITANTE: "bg-warning-soft text-warning",
+  CONGREGADO: "bg-accent-soft-2 text-accent-strong",
+  MEMBRO_ATIVO: "bg-success-soft text-success",
 };
 
 /**
@@ -75,12 +75,12 @@ export function ResumoMembro({ membro }: ResumoMembroProps) {
 
   return (
     <section
-      className="border border-slate-200 rounded-lg bg-white p-4 sm:p-6"
+      className="border border-border rounded-lg bg-surface p-4 sm:p-6"
       data-testid="resumo-membro"
     >
       {/* Header: nome + tipo */}
       <header className="flex items-center gap-2 flex-wrap mb-3">
-        <h1 className="text-2xl font-bold text-slate-900">{membro.nome}</h1>
+        <h1 className="text-2xl font-bold text-fg">{membro.nome}</h1>
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${TIPO_CLASS[membro.tipo]}`}
         >
@@ -91,24 +91,24 @@ export function ResumoMembro({ membro }: ResumoMembroProps) {
       {/* Contato */}
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-3">
         <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="text-xs uppercase tracking-wide text-muted">
             E-mail
           </dt>
-          <dd className="text-slate-900 mt-0.5">{membro.email ?? "—"}</dd>
+          <dd className="text-fg mt-0.5">{membro.email ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="text-xs uppercase tracking-wide text-muted">
             Telefone
           </dt>
-          <dd className="text-slate-900 mt-0.5">{membro.telefone ?? "—"}</dd>
+          <dd className="text-fg mt-0.5">{membro.telefone ?? "—"}</dd>
         </div>
       </dl>
 
       {/* Endereço */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-900 mb-1">Endereço</h2>
+        <h2 className="text-sm font-semibold text-fg mb-1">Endereço</h2>
         {hasAddress ? (
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-fg">
             {[
               membro.logradouro,
               membro.numero ? `nº ${membro.numero}` : null,
@@ -121,7 +121,7 @@ export function ResumoMembro({ membro }: ResumoMembroProps) {
             {membro.cep ? ` — CEP ${membro.cep}` : ""}
           </p>
         ) : (
-          <p className="text-sm text-slate-500">Endereço não informado.</p>
+          <p className="text-sm text-muted">Endereço não informado.</p>
         )}
       </div>
     </section>

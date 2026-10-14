@@ -60,13 +60,13 @@ describe("<InfoBox />", () => {
   it("tone='info': classes cyan (default)", () => {
     const html = renderBox({ children: "X" });
     // tone default = info
-    expect(html).toContain("border-cyan-200");
-    expect(html).toContain("bg-cyan-50");
+    expect(html).toContain("border-accent-soft");
+    expect(html).toContain("bg-accent-soft-2");
   });
 
   it("tone='warning': classes amber", () => {
     const html = renderBox({ tone: "warning", children: "X" });
-    expect(html).toContain("border-amber-200");
-    expect(html).toContain("bg-amber-50");
+    expect(html).toContain("border-warning-soft");
+    expect(html).toContain("bg-warning-soft");
   });
 });

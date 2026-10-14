@@ -1,5 +1,5 @@
 import { Dialog } from "./Dialog";
-import { Button } from "./Button";
+import { Button } from "~/components/ds";
 import {
   CalendarioDisponibilidade,
   type AtividadeCalendario,
@@ -40,12 +40,12 @@ export function ModalDisponibilidade({
       }
     >
       {/* Texto explicativo ponto-a-ponto */}
-      <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-        <ul className="space-y-1 text-xs text-slate-600">
-          <li><strong className="text-blue-700">Cultos (azul):</strong> gerados automaticamente pelos dias de encontro e horário padrão do ministério. Não precisam ser cadastrados manualmente.</li>
-          <li><strong className="text-green-700">Ensaios (verde):</strong> clique em um dia vazio para agendar um ensaio. Defina data e horário.</li>
-          <li><strong className="text-purple-700">Atividades extras (roxo):</strong> clique em um dia vazio para registrar um evento pontual (ex: ensaio extra, retiro). Defina data, horário e descrição.</li>
-          <li><strong className="text-red-600">Indisponibilidades (vermelho):</strong> marque os dias/horários em que o membro não poderá participar. O sistema não o escalará nessas datas.</li>
+      <div className="mb-4 p-3 bg-surface-2 border border-border rounded-lg">
+        <ul className="space-y-1 text-xs text-muted">
+          <li><strong className="text-accent-strong">Cultos (azul):</strong> gerados automaticamente pelos dias de encontro e horário padrão do ministério. Não precisam ser cadastrados manualmente.</li>
+          <li><strong className="text-success">Ensaios (verde):</strong> clique em um dia vazio para agendar um ensaio. Defina data e horário.</li>
+          <li><strong className="text-accent-strong">Atividades extras (roxo):</strong> clique em um dia vazio para registrar um evento pontual (ex: ensaio extra, retiro). Defina data, horário e descrição.</li>
+          <li><strong className="text-danger">Indisponibilidades (vermelho):</strong> marque os dias/horários em que o membro não poderá participar. O sistema não o escalará nessas datas.</li>
         </ul>
       </div>
 

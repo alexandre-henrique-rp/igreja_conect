@@ -95,7 +95,7 @@ describe("<FormField />", () => {
     });
     // Asterisco decorativo (aria-hidden)
     expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain("text-red-700");
+    expect(html).toContain("text-danger");
   });
 
   it("sem hint e sem error: NÃO renderiza bloco de mensagem", () => {

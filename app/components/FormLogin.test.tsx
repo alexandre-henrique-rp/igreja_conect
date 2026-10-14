@@ -140,8 +140,8 @@ describe("<FormLogin />", () => {
     expect(html).toContain('value="user@igreja.local"');
   });
 
-  it("botão submit tem classes blue (bg-blue-600)", () => {
+  it("botão submit tem classes blue (bg-accent)", () => {
     const html = renderForm();
-    expect(html).toContain("bg-blue-600");
+    expect(html).toContain("bg-accent");
   });
 });

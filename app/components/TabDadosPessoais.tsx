@@ -25,7 +25,7 @@
  * @returns Elemento JSX da tab.
  */
 import { Form } from "react-router";
-import { Button } from "~/components/Button";
+import { Button } from "~/components/ds";
 
 /**
  * Subset de Membro usado pela tab.
@@ -80,9 +80,9 @@ const TIPO_LABEL: Record<DadosPessoaisMembro["tipo"], string> = {
 
 /** Classes Tailwind por tipo. */
 const TIPO_CLASS: Record<DadosPessoaisMembro["tipo"], string> = {
-  VISITANTE: "bg-amber-100 text-amber-800",
-  CONGREGADO: "bg-blue-100 text-blue-800",
-  MEMBRO_ATIVO: "bg-green-100 text-green-800",
+  VISITANTE: "bg-warning-soft text-warning",
+  CONGREGADO: "bg-accent-soft-2 text-accent-strong",
+  MEMBRO_ATIVO: "bg-success-soft text-success",
 };
 
 /**
@@ -98,39 +98,39 @@ export function TabDadosPessoais({ membro, canPromover }: TabDadosPessoaisProps)
       {/* Campos eclesiásticos */}
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
         <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="text-xs uppercase tracking-wide text-muted">
             Data de conversão
           </dt>
-          <dd className="text-slate-900 mt-0.5">
+          <dd className="text-fg mt-0.5">
             {formatarData(membro.dataConversao)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="text-xs uppercase tracking-wide text-muted">
             Data de batismo
           </dt>
-          <dd className="text-slate-900 mt-0.5">
+          <dd className="text-fg mt-0.5">
             {formatarData(membro.dataBatismo)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="text-xs uppercase tracking-wide text-muted">
             Profissão
           </dt>
-          <dd className="text-slate-900 mt-0.5">{membro.profissao ?? "—"}</dd>
+          <dd className="text-fg mt-0.5">{membro.profissao ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="text-xs uppercase tracking-wide text-muted">
             Estado civil
           </dt>
-          <dd className="text-slate-900 mt-0.5">{membro.estadoCivil ?? "—"}</dd>
+          <dd className="text-fg mt-0.5">{membro.estadoCivil ?? "—"}</dd>
         </div>
       </dl>
 
       {/* Tipo + promoção (RN-MEM-06) */}
-      <div className="border-t border-slate-200 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="border-t border-border pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-700">Tipo atual:</span>
+          <span className="text-sm text-fg">Tipo atual:</span>
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${TIPO_CLASS[membro.tipo]}`}
           >

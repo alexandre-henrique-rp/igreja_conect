@@ -28,6 +28,11 @@ export type EscalaComVoluntarios = {
   titulo: string;
   data: Date;
   observacao: string | null;
+  local: string | null;
+  /** HH:MM */
+  horaInicio: string | null;
+  /** HH:MM */
+  horaFim: string | null;
   status: string;
   geradaAutomaticamente: boolean;
   voluntarios: Array<{
@@ -47,9 +52,24 @@ export type CriarEscalaInput = {
   titulo: string;
   data: string;
   observacao?: string;
+  local?: string;
+  horaInicio?: string;
+  horaFim?: string;
   status?: string;
   cultoId?: string;
   eventoId?: string;
+};
+
+/** Input para editar escala (parcial). `null` limpa o campo opcional. */
+export type EditarEscalaInput = {
+  titulo?: string;
+  data?: string;
+  observacao?: string | null;
+  local?: string | null;
+  horaInicio?: string | null;
+  horaFim?: string | null;
+  status?: "PENDENTE" | "CONFIRMADA" | "REALIZADA" | "CANCELADA";
+  cultoId?: string | null;
 };
 
 /** Input para adicionar voluntário. */
@@ -99,6 +119,9 @@ const escalaComVoluntariosSelect = {
   titulo: true,
   data: true,
   observacao: true,
+  local: true,
+  horaInicio: true,
+  horaFim: true,
   status: true,
   geradaAutomaticamente: true,
   cultoId: true,
@@ -122,6 +145,9 @@ function formatEscala(raw: {
   titulo: string;
   data: Date;
   observacao: string | null;
+  local: string | null;
+  horaInicio: string | null;
+  horaFim: string | null;
   status: string;
   geradaAutomaticamente: boolean;
   cultoId: string | null;
@@ -143,6 +169,9 @@ function formatEscala(raw: {
     titulo: raw.titulo,
     data: raw.data,
     observacao: raw.observacao,
+    local: raw.local,
+    horaInicio: raw.horaInicio,
+    horaFim: raw.horaFim,
     status: raw.status,
     geradaAutomaticamente: raw.geradaAutomaticamente,
     voluntarios: raw.voluntarios.map((v) => ({
@@ -258,6 +287,9 @@ export async function criarEscala(input: CriarEscalaInput, user: SessionUser): P
       titulo: input.titulo,
       data: new Date(input.data),
       observacao: input.observacao ?? null,
+      local: input.local ?? null,
+      horaInicio: input.horaInicio ?? null,
+      horaFim: input.horaFim ?? null,
       status: (input.status as "PENDENTE" | "CONFIRMADA" | "REALIZADA" | "CANCELADA") ?? "PENDENTE",
       createdById: user.id,
       cultoId: input.cultoId ?? null,
@@ -267,6 +299,63 @@ export async function criarEscala(input: CriarEscalaInput, user: SessionUser): P
   });
 
   return formatEscala(raw);
+}
+
+/**
+ * Edita dados básicos de uma escala (parcial).
+ *
+ * O ministério não é editável (os voluntários pertencem a ele). Escalas
+ * `REALIZADA` não podem mudar de status.
+ *
+ * @description UPDATE em `escalas` com RBAC por ministério.
+ * @param {string} id - UUID da escala.
+ * @param {EditarEscalaInput} input - Campos a atualizar.
+ * @param {SessionUser} user - Usuário autenticado (ADMIN/PASTOR/LIDER_MINISTERIO).
+ * @returns {Promise<EscalaComVoluntarios>} Escala atualizada.
+ * @throws {Response} 403 sem permissão.
+ * @throws {NotFoundError} 404 se escala ou culto não existe.
+ * @throws {BusinessRuleError} 422 ao alterar status de escala realizada.
+ * @example
+ *   await editarEscala(id, { titulo: "Louvor — domingo", status: "CONFIRMADA" }, user);
+ */
+export async function editarEscala(
+  id: string,
+  input: EditarEscalaInput,
+  user: SessionUser
+): Promise<EscalaComVoluntarios> {
+  assertPodeEscrever(user);
+
+  const atual = await prisma.escala.findUnique({
+    where: { id },
+    select: { id: true, ministerioId: true, status: true },
+  });
+  if (!atual) {
+    throw new NotFoundError("Escala não encontrada.");
+  }
+  await assertPodeGerenciarMinisterio(atual.ministerioId, user);
+
+  if (atual.status === "REALIZADA" && input.status && input.status !== "REALIZADA") {
+    throw new BusinessRuleError("Escalas realizadas não podem ter o status alterado.");
+  }
+  if (input.cultoId) {
+    const culto = await prisma.culto.findUnique({ where: { id: input.cultoId }, select: { id: true } });
+    if (!culto) {
+      throw new NotFoundError("Culto não encontrado.");
+    }
+  }
+
+  const data: Record<string, unknown> = {};
+  if (input.titulo !== undefined) data.titulo = input.titulo;
+  if (input.data !== undefined) data.data = new Date(input.data);
+  if (input.observacao !== undefined) data.observacao = input.observacao;
+  if (input.local !== undefined) data.local = input.local;
+  if (input.horaInicio !== undefined) data.horaInicio = input.horaInicio;
+  if (input.horaFim !== undefined) data.horaFim = input.horaFim;
+  if (input.status !== undefined) data.status = input.status;
+  if (input.cultoId !== undefined) data.cultoId = input.cultoId;
+
+  await prisma.escala.update({ where: { id }, data });
+  return buscarEscala(id, user);
 }
 
 /**

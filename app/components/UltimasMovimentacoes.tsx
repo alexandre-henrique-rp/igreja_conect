@@ -4,7 +4,7 @@
  * Exibe os últimos 5 lançamentos financeiros com data, valor, categoria,
  * tipo (ENTRADA/SAIDA) e condicionalmente o nome do membro.
  *
- * **Cores:** ENTRADA em verde (`text-green-600`), SAIDA em vermelho (`text-red-600`).
+ * **Cores:** ENTRADA em verde (`text-success`), SAIDA em vermelho (`text-danger`).
  *
  * **Categorias legíveis:** Dízimo, Oferta, Campanha, Despesa Operacional, etc.
  *
@@ -23,7 +23,7 @@
 import type { LancamentoResumo } from "~/lib/finance.server";
 import { cn } from "~/lib/cn";
 import { formatBRLFromCents } from "~/lib/money-format";
-import { EmptyState } from "./EmptyState";
+import { EmptyState } from "~/components/ds";
 
 /**
  * Props aceitas pelo `<UltimasMovimentacoes>`.
@@ -96,23 +96,23 @@ export function UltimasMovimentacoes({
         return (
           <div
             key={item.id}
-            className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-slate-50 transition-colors"
+            className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-2 transition-colors"
             data-testid={`lancamento-${item.id}`}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-sm text-slate-500 tabular-nums shrink-0 w-10">
+              <span className="text-sm text-muted tabular-nums shrink-0 w-10">
                 {formatDateShort(item.dataCompetencia)}
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">
+                <p className="text-sm font-medium text-fg truncate">
                   {labelCat}
                   {item.membro && podeVerMembro && (
-                    <span className="text-slate-500 font-normal">
+                    <span className="text-muted font-normal">
                       {" "}— {item.membro.nome}
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-slate-500 truncate">
+                <p className="text-xs text-muted truncate">
                   {item.descricao || item.caixa.nome}
                 </p>
               </div>
@@ -120,7 +120,7 @@ export function UltimasMovimentacoes({
             <span
               className={cn(
                 "text-sm font-medium tabular-nums shrink-0 ml-2",
-                isEntrada ? "text-green-600" : "text-red-600"
+                isEntrada ? "text-success" : "text-danger"
               )}
             >
               {valorLabel}

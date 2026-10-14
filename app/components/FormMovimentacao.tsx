@@ -1,7 +1,7 @@
 import { Form, useNavigation } from "react-router";
-import { InfoBox } from "./InfoBox";
 import { ErrorAlert } from "./ErrorAlert";
 import { cn } from "~/lib/cn";
+import { InfoBox } from "~/components/ds";
 
 type TipoMovimentacao = "ENTRADA" | "SAIDA";
 
@@ -48,7 +48,7 @@ export function FormMovimentacao({
       )}
 
       <fieldset>
-        <legend className="text-sm font-medium text-slate-700 mb-2">
+        <legend className="text-sm font-medium text-fg mb-2">
           Tipo de Movimentação
         </legend>
         <div className="flex gap-6">
@@ -62,9 +62,9 @@ export function FormMovimentacao({
                 name="tipo"
                 value={opt.value}
                 defaultChecked={defaultTipo === opt.value}
-                className="text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                className="text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               />
-              <span className="text-sm text-slate-700">{opt.label}</span>
+              <span className="text-sm text-fg">{opt.label}</span>
             </label>
           ))}
         </div>
@@ -73,10 +73,10 @@ export function FormMovimentacao({
       <div className="space-y-1">
         <label
           htmlFor="quantidade"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-fg"
         >
           Quantidade
-          <span aria-hidden="true" className="text-red-700 ml-1">*</span>
+          <span aria-hidden="true" className="text-danger ml-1">*</span>
         </label>
         <input
           id="quantidade"
@@ -86,21 +86,21 @@ export function FormMovimentacao({
           required
           defaultValue={1}
           className={cn(
-            "w-full h-11 px-3 rounded-md border bg-white text-slate-900",
-            "border-slate-300 placeholder:text-slate-400",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "w-full h-11 px-3 rounded-md border bg-surface text-fg",
+            "border-border-strong placeholder:text-subtle",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            fieldErrors?.quantidade && "border-red-700"
+            fieldErrors?.quantidade && "border-danger"
           )}
           aria-invalid={Boolean(fieldErrors?.quantidade)}
           aria-required="true"
         />
         {fieldErrors?.quantidade && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {fieldErrors.quantidade}
           </p>
         )}
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           Saldo atual: <strong>{item.quantidade}</strong>
         </p>
       </div>
@@ -108,10 +108,10 @@ export function FormMovimentacao({
       <div className="space-y-1">
         <label
           htmlFor="nomeRetirante"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-fg"
         >
           Nome do Retirante
-          <span aria-hidden="true" className="text-red-700 ml-1">*</span>
+          <span aria-hidden="true" className="text-danger ml-1">*</span>
         </label>
         <input
           id="nomeRetirante"
@@ -120,18 +120,18 @@ export function FormMovimentacao({
           required
           maxLength={120}
           className={cn(
-            "w-full h-11 px-3 rounded-md border bg-white text-slate-900",
-            "border-slate-300 placeholder:text-slate-400",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "w-full h-11 px-3 rounded-md border bg-surface text-fg",
+            "border-border-strong placeholder:text-subtle",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            fieldErrors?.nomeRetirante && "border-red-700"
+            fieldErrors?.nomeRetirante && "border-danger"
           )}
           placeholder="Nome de quem está retirando"
           aria-invalid={Boolean(fieldErrors?.nomeRetirante)}
           aria-required="true"
         />
         {fieldErrors?.nomeRetirante && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {fieldErrors.nomeRetirante}
           </p>
         )}
@@ -140,7 +140,7 @@ export function FormMovimentacao({
       <div className="space-y-1">
         <label
           htmlFor="justificativa"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-fg"
         >
           Justificativa
         </label>
@@ -150,17 +150,17 @@ export function FormMovimentacao({
           rows={3}
           maxLength={500}
           className={cn(
-            "w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900",
-            "border-slate-300 placeholder:text-slate-400",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "w-full rounded-md border bg-surface px-3 py-2 text-sm text-fg",
+            "border-border-strong placeholder:text-subtle",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            fieldErrors?.justificativa && "border-red-700"
+            fieldErrors?.justificativa && "border-danger"
           )}
           placeholder="Motivo da movimentação (opcional)"
           aria-invalid={Boolean(fieldErrors?.justificativa)}
         />
         {fieldErrors?.justificativa && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {fieldErrors.justificativa}
           </p>
         )}
@@ -171,9 +171,9 @@ export function FormMovimentacao({
           type="submit"
           disabled={isSubmitting}
           className={cn(
-            "inline-flex items-center justify-center rounded-md bg-cyan-700 px-6 h-11",
-            "text-sm font-medium text-white hover:bg-cyan-800 transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "inline-flex items-center justify-center rounded-md bg-accent px-6 h-11",
+            "text-sm font-medium text-white hover:bg-accent-strong transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
           aria-disabled={isSubmitting}

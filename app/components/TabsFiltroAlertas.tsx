@@ -76,7 +76,7 @@ export function TabsFiltroAlertas({
 }: TabsFiltroAlertasProps) {
   return (
     <nav
-      className={cn("flex gap-1 border-b border-slate-200", className)}
+      className={cn("flex gap-1 border-b border-border", className)}
       data-testid="tabs-filtro-alertas"
       aria-label="Filtrar alertas"
     >
@@ -91,8 +91,8 @@ export function TabsFiltroAlertas({
             className={cn(
               "relative flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "text-cyan-700 border-b-2 border-cyan-700 -mb-px"
-                : "text-slate-500 hover:text-slate-700 hover:border-b-2 hover:border-slate-300 -mb-px"
+                ? "text-accent border-b-2 border-accent -mb-px"
+                : "text-muted hover:text-fg hover:border-b-2 hover:border-border-strong -mb-px"
             )}
           >
             {tab.label}
@@ -100,8 +100,8 @@ export function TabsFiltroAlertas({
               className={cn(
                 "inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold",
                 isActive
-                  ? "bg-cyan-100 text-cyan-800"
-                  : "bg-slate-100 text-slate-600"
+                  ? "bg-accent-soft-2 text-accent-strong"
+                  : "bg-surface-2 text-muted"
               )}
             >
               {count}

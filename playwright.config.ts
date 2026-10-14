@@ -19,8 +19,9 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: "http://localhost:5173",
     trace: "on-first-retry",
+    headless: true,
   },
   projects: [
     {
@@ -30,8 +31,10 @@ export default defineConfig({
   ],
   webServer: {
     command: "DATABASE_URL='file:/home/kingdev/Documentos/igreja_conect/dev.db' npx react-router dev",
-    url: "http://127.0.0.1:5173",
+    url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 120_000,
+    stdout: "ignore",
+    stderr: "pipe",
   },
 });

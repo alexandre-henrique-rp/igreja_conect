@@ -41,31 +41,17 @@ const baseItems: MembroListItem[] = [
 ];
 
 describe("<TabelaMembros />", () => {
-  it("renderiza <table> com <caption> sr-only 'Lista de membros'", () => {
+  it("renderiza a grade de cards do Design System", () => {
     const html = renderTabela(baseItems, true);
-    expect(html).toContain("<table");
-    expect(html).toContain("<caption");
-    expect(html).toContain("sr-only");
-    expect(html).toContain("Lista de membros");
+    expect(html).toContain('class="member-grid"');
+    expect(html).toContain("member-card");
+    expect(html).toContain('aria-label="Lista de membros"');
   });
 
-  it("todas as 6 <th> têm scope='col'", () => {
+  it("renderiza um card por membro", () => {
     const html = renderTabela(baseItems, true);
-    const thScope = (html.match(/<th[^>]*scope="col"/g) ?? []).length;
-    expect(thScope).toBe(6); // Nome, Email, Tipo, Status, Data de Entrada, Ações
-  });
-
-  it("container tem hidden md:block (visível em md+)", () => {
-    const html = renderTabela(baseItems, true);
-    expect(html).toContain("hidden");
-    expect(html).toContain("md:block");
-  });
-
-  it("renderiza 1 linha por membro", () => {
-    const html = renderTabela(baseItems, true);
-    // 3 <tr> no <tbody>
-    const trCount = (html.match(/<tr/g) ?? []).length;
-    expect(trCount).toBeGreaterThanOrEqual(3);
+    const cards = (html.match(/member-card/g) ?? []).length;
+    expect(cards).toBe(3);
   });
 
   it("link do nome aponta para /app/membros/:id", () => {
@@ -78,32 +64,30 @@ describe("<TabelaMembros />", () => {
   it("exibe emails e trata emails nulos com '—'", () => {
     const html = renderTabela(baseItems, true);
     expect(html).toContain("joao@email.com");
-    expect(html).toContain("—"); // Maria da Silva tem email null
+    expect(html).toContain("E-mail não informado"); // Maria da Silva tem email null
   });
 
   it("status badges têm a cor e texto corretos de acordo com tipo e nome", () => {
     const html = renderTabela(baseItems, true);
-    // Maria (VISITANTE) -> status Pendente (bg-amber-50)
+    // Maria (VISITANTE) -> status Pendente (bg-warning-soft)
     expect(html).toContain("Pendente");
-    expect(html).toContain("bg-amber-50");
-    // João (MEMBRO_ATIVO) -> status Ativo (bg-emerald-50)
+    expect(html).toContain("bg-warning-soft");
+    // João (MEMBRO_ATIVO) -> status Ativo (bg-success-soft)
     expect(html).toContain("Ativo");
-    expect(html).toContain("bg-emerald-50");
-    // Juliana (nome com 'Juliana') -> status Inativo (bg-rose-50)
+    expect(html).toContain("bg-success-soft");
+    // Juliana (nome com 'Juliana') -> status Inativo (bg-danger-soft)
     expect(html).toContain("Inativo");
-    expect(html).toContain("bg-rose-50");
+    expect(html).toContain("bg-danger-soft");
   });
 
-  it("canEdit=true: renderiza links 'Editar' e botões 'Excluir'", () => {
+  it("canEdit=true: renderiza link de edição no card", () => {
     const html = renderTabela(baseItems, true);
     expect(html).toContain('href="/app/membros/m1/editar"');
-    expect(html).toContain('aria-label="Editar Maria da Silva"');
-    expect(html).toContain('aria-label="Excluir Maria da Silva"');
+    expect(html).toContain("Editar");
   });
 
-  it("canEdit=false: NÃO renderiza links 'Editar' nem botões 'Excluir'", () => {
+  it("canEdit=false: não renderiza link de edição", () => {
     const html = renderTabela(baseItems, false);
     expect(html).not.toContain("/editar");
-    expect(html).not.toContain('aria-label="Excluir');
   });
 });

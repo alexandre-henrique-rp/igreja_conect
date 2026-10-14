@@ -32,8 +32,7 @@
  * @returns Elemento JSX do formulário.
  */
 import type { CaixaResumo } from "~/lib/finance.server";
-import { Input } from "./Input";
-import { Select } from "./Select";
+import { Input, Select } from "~/components/ds";
 import { MoneyInput } from "./MoneyInput";
 import { CATEGORIAS_LANCAMENTO, TIPOS_LANCAMENTO } from "~/lib/schemas/lancamentos";
 
@@ -153,10 +152,10 @@ export function FormLancamento({
       <div className="space-y-1">
         <label
           htmlFor="descricao"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-fg"
         >
           Descrição
-          <span aria-hidden="true" className="text-red-700 ml-1">*</span>
+          <span aria-hidden="true" className="text-danger ml-1">*</span>
         </label>
         <textarea
           id="descricao"
@@ -164,11 +163,11 @@ export function FormLancamento({
           required
           rows={3}
           defaultValue={defaultValues.descricao ?? ""}
-          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-required="true"
         />
         {fieldErrors.descricao && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {fieldErrors.descricao}
           </p>
         )}
@@ -176,7 +175,7 @@ export function FormLancamento({
 
       {/* Erro geral (não associado a campo) */}
       {fieldErrors._global && (
-        <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+        <div role="alert" className="rounded-md bg-danger-soft border border-danger-soft px-4 py-3 text-sm text-danger">
           {fieldErrors._global}
         </div>
       )}
@@ -185,7 +184,7 @@ export function FormLancamento({
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          className="inline-flex items-center justify-center rounded-md bg-cyan-700 px-6 h-11 text-sm font-medium text-white hover:bg-cyan-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+          className="inline-flex items-center justify-center rounded-md bg-accent px-6 h-11 text-sm font-medium text-white hover:bg-accent-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           Criar Lançamento
         </button>

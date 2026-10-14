@@ -6,9 +6,9 @@
  * e badge de "Limite atingido" quando === 12.
  *
  * **Lógica de cor (regra crítica):**
- * - `atual < 10`: `text-slate-700` (normal).
- * - `10 <= atual < 12`: `text-amber-700` (atenção).
- * - `atual === 12`: `text-amber-800 font-bold` (limite).
+ * - `atual < 10`: `text-fg` (normal).
+ * - `10 <= atual < 12`: `text-warning` (atenção).
+ * - `atual === 12`: `text-warning font-bold` (limite).
  *
  * **Acessibilidade (WCAG 1.3.1, 4.1.3):**
  * - `aria-live="polite"` — screen reader anuncia mudanças sem interromper.
@@ -21,7 +21,7 @@
  *   <ContadorDiscipulos atual={8} /> // "8/12 discípulos" em slate
  *
  * @example
- *   <ContadorDiscipulos atual={12} /> // "12/12 discípulos" em amber-800 + badge "Limite atingido"
+ *   <ContadorDiscipulos atual={12} /> // "12/12 discípulos" em warning + badge "Limite atingido"
  *
  * @param props - Props do componente (ver `ContadorDiscipulosProps`).
  * @returns Elemento JSX do contador.
@@ -47,12 +47,12 @@ export function ContadorDiscipulos({ atual, max = 12 }: ContadorDiscipulosProps)
   const isLimit = atual === max;
   const isAttention = atual >= 10 && atual < max;
 
-  // Cor: amber-800 no limite, amber-700 em atenção, slate-700 normal.
+  // Cor: warning no limite, warning em atenção, fg normal.
   const colorClass = isLimit
-    ? "text-amber-800"
+    ? "text-warning"
     : isAttention
-      ? "text-amber-700"
-      : "text-slate-700";
+      ? "text-warning"
+      : "text-fg";
 
   // Vagas restantes (apenas para o aria-label, fica implícito na UI).
   const vagasRestantes = Math.max(0, max - atual);
@@ -75,7 +75,7 @@ export function ContadorDiscipulos({ atual, max = 12 }: ContadorDiscipulosProps)
 
       {isLimit && (
         <span
-          className="inline-flex items-center gap-1 text-xs font-medium text-amber-800"
+          className="inline-flex items-center gap-1 text-xs font-medium text-warning"
           aria-label="Limite atingido"
         >
           <span aria-hidden="true">⚠</span>
@@ -85,7 +85,7 @@ export function ContadorDiscipulos({ atual, max = 12 }: ContadorDiscipulosProps)
 
       {isAttention && (
         <span
-          className="inline-flex items-center gap-1 text-xs font-medium text-amber-700"
+          className="inline-flex items-center gap-1 text-xs font-medium text-warning"
           aria-label="Atenção: próximo do limite"
         >
           <span aria-hidden="true">⚠</span>

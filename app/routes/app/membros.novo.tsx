@@ -169,7 +169,7 @@ export default function MembrosNovo({ actionData }: Route.ComponentProps) {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="member-new-page" data-od-id="new-member-page">
       <FormMembro
         isEdit={false}
         formError={(actionData as { formError?: string } | undefined)?.formError}
@@ -179,57 +179,43 @@ export default function MembrosNovo({ actionData }: Route.ComponentProps) {
       {/* Modal de Convite */}
       {showModal && convite && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+          <div className="absolute inset-0 bg-fg/60 backdrop-blur-sm" onClick={handleClose} />
+          <div className="relative bg-surface rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                <svg className="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <div className="w-10 h-10 rounded-full bg-success-soft flex items-center justify-center">
+                <svg className="h-5 w-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Membro cadastrado!</h3>
-                <p className="text-sm text-slate-500">Compartilhe o convite com {convite.membroNome}</p>
+                <h3 className="text-lg font-bold text-fg">Membro cadastrado!</h3>
+                <p className="text-sm text-muted">Compartilhe o convite com {convite.membroNome}</p>
               </div>
             </div>
 
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               Copie o texto abaixo e envie via <strong>WhatsApp</strong> ou <strong>Telegram</strong>:
             </p>
 
             <div className="relative">
-              <pre className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 whitespace-pre-wrap font-mono max-h-60 overflow-y-auto">
+              <pre className="bg-surface-2 border border-border rounded-lg p-4 text-sm text-fg whitespace-pre-wrap font-mono max-h-60 overflow-y-auto">
                 {convite.textoConvite}
               </pre>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                onClick={handleCopy}
-                className="flex-1 h-10 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-              >
-                {copied ? (
-                  <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Copiado!
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                    </svg>
-                    Copiar texto
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleClose}
-                className="flex-1 h-10 rounded-lg bg-slate-100 text-slate-700 font-medium text-sm hover:bg-slate-200 transition-colors"
-              >
-                Fechar
-              </button>
+<button
+              onClick={handleCopy}
+              className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-md bg-accent text-white font-medium text-sm hover:bg-accent-strong transition-colors"
+            >
+              {copied ? "Copiado!" : "Copiar texto"}
+            </button>
+            <button
+              onClick={handleClose}
+              className="flex-1 inline-flex items-center justify-center h-10 rounded-md bg-surface-2 text-fg font-medium text-sm hover:bg-surface-3 transition-colors"
+            >
+              Fechar
+            </button>
             </div>
           </div>
         </div>

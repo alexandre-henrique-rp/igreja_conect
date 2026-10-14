@@ -1,16 +1,15 @@
-import type { Route } from "./+types/estoque.requisicoes.$id";
-import { Link, useActionData } from "react-router";
-import { data } from "react-router";
-import { userContext } from "~/lib/user-context";
-import { assertCanSeeEstoque, assertCanManageEstoque } from "~/lib/rbac.server";
-import {
-  obterRequisicao,
-  aprovarRequisicao,
-  rejeitarRequisicao,
-  comprarRequisicao,
-} from "~/lib/requisicaoCompra.server";
-import { parseBRLToCents } from "~/lib/money-format";
+import { data, Link } from "react-router";
 import { listarCaixasParaSelect } from "~/lib/caixas.server";
+import { formatBRLFromCents, parseBRLToCents } from "~/lib/money-format";
+import { assertCanManageEstoque, assertCanSeeEstoque } from "~/lib/rbac.server";
+import {
+  aprovarRequisicao,
+  comprarRequisicao,
+  obterRequisicao,
+  rejeitarRequisicao,
+} from "~/lib/requisicaoCompra.server";
+import { userContext } from "~/lib/user-context";
+import type { Route } from "./+types/estoque.requisicoes.$id";
 
 export function meta() {
   return [{ title: "Requisição de Compra · Igreja Conect" }];
@@ -25,8 +24,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   if (!req) throw new Response("Requisição não encontrada.", { status: 404 });
 
   const podeGerenciar =
-    !!user.cargo &&
-    ["ADMIN", "PASTOR", "SECRETARIO"].includes(user.cargo);
+    !!user.cargo && ["ADMIN", "PASTOR", "SECRETARIO"].includes(user.cargo);
 
   const caixas = podeGerenciar ? await listarCaixasParaSelect(user) : [];
 
@@ -44,7 +42,10 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     if (intent === "aprovar") {
       assertCanManageEstoque(user);
       await aprovarRequisicao(
-        { id: params.id, observacao: String(formData.get("observacao") ?? "") || undefined },
+        {
+          id: params.id,
+          observacao: String(formData.get("observacao") ?? "") || undefined,
+        },
         user,
       );
       return { success: true, message: "Requisição aprovada!" };
@@ -55,7 +56,10 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       const observacao = String(formData.get("observacao") ?? "");
       if (observacao.length < 5) {
         return data(
-          { success: false, error: "Informe o motivo da rejeição (mín. 5 caracteres)." },
+          {
+            success: false,
+            error: "Informe o motivo da rejeição (mín. 5 caracteres).",
+          },
           { status: 422 },
         );
       }
@@ -82,14 +86,23 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         },
         user,
       );
-      return { success: true, message: "Compra registrada! Estoque atualizado." };
+      return {
+        success: true,
+        message: "Compra registrada! Estoque atualizado.",
+      };
     }
 
-    return data({ success: false, error: "Operação inválida." }, { status: 400 });
+    return data(
+      { success: false, error: "Operação inválida." },
+      { status: 400 },
+    );
   } catch (err: unknown) {
     if (err instanceof Response) throw err;
     return data(
-      { success: false, error: "Erro ao processar a operação. Tente novamente." },
+      {
+        success: false,
+        error: "Erro ao processar a operação. Tente novamente.",
+      },
       { status: 500 },
     );
   }
@@ -103,100 +116,148 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  SOLICITADA: "bg-amber-100 text-amber-700 border-amber-200",
-  APROVADA: "bg-blue-100 text-blue-700 border-blue-200",
-  REJEITADA: "bg-red-100 text-red-700 border-red-200",
-  COMPRADA: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  SOLICITADA: "bg-warning-soft text-warning border-warning-soft",
+  APROVADA: "bg-accent-soft-2 text-accent-strong border-accent-soft",
+  REJEITADA: "bg-danger-soft text-danger border-danger-soft",
+  COMPRADA: "bg-success-soft text-success border-success-soft",
 };
 
-export default function DetalheRequisicao({ loaderData, actionData }: Route.ComponentProps) {
+export default function DetalheRequisicao({
+  loaderData,
+  actionData,
+}: Route.ComponentProps) {
   const { req, podeGerenciar, caixas } = loaderData;
-  const result = actionData as { success?: boolean; message?: string; error?: string } | undefined;
+  const result = actionData as
+    | { success?: boolean; message?: string; error?: string }
+    | undefined;
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full space-y-6 bg-slate-50 min-h-screen">
+    <main className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full space-y-6 bg-surface-2 min-h-screen">
       <div className="flex items-start justify-between">
         <div>
-          <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-2">
-            <Link to="/app/estoque" className="hover:text-slate-600">Estoque</Link>
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          <nav className="flex items-center gap-2 text-xs font-semibold text-subtle mb-2">
+            <Link to="/app/estoque" className="hover:text-muted">
+              Estoque
+            </Link>
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="3"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
-            <Link to="/app/estoque/requisicoes" className="hover:text-slate-600">Requisições</Link>
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            <Link to="/app/estoque/requisicoes" className="hover:text-muted">
+              Requisições
+            </Link>
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="3"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
-            <span className="text-blue-600">Detalhe</span>
+            <span className="text-accent">Detalhe</span>
           </nav>
-          <h2 className="text-2xl font-bold text-slate-900">Requisição de Compra</h2>
+          <h2 className="text-2xl font-bold text-fg">Requisição de Compra</h2>
         </div>
         <Link
           to="/app/estoque/requisicoes"
-          className="px-4 h-10 flex items-center border border-slate-200 text-slate-600 bg-white rounded-lg font-semibold hover:bg-slate-50 transition-all text-sm"
+          className="px-4 h-10 flex items-center border border-border text-muted bg-surface rounded-lg font-semibold hover:bg-surface-2 transition-all text-sm"
         >
           Voltar
         </Link>
       </div>
 
       {result?.success && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-lg bg-success-soft border border-success-soft px-4 py-3 text-sm text-success">
           {result.message}
         </div>
       )}
       {result && !result.success && result.error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg bg-danger-soft border border-danger-soft px-4 py-3 text-sm text-danger">
           {result.error}
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+      <div className="bg-surface rounded-xl border border-border p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">{req.nomeItem}</h3>
-          <span className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold border ${STATUS_COLOR[req.status]}`}>
+          <h3 className="text-lg font-semibold text-fg">{req.nomeItem}</h3>
+          <span
+            className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold border ${STATUS_COLOR[req.status]}`}
+          >
             {STATUS_LABEL[req.status]}
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <dt className="text-xs font-semibold text-slate-400 uppercase">Quantidade</dt>
-            <dd className="text-sm text-slate-700 mt-1">{req.quantidade} un.</dd>
+            <dt className="text-xs font-semibold text-subtle uppercase">
+              Quantidade
+            </dt>
+            <dd className="text-sm text-fg mt-1">{req.quantidade} un.</dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold text-slate-400 uppercase">Data da Solicitação</dt>
-            <dd className="text-sm text-slate-700 mt-1">
+            <dt className="text-xs font-semibold text-subtle uppercase">
+              Data da Solicitação
+            </dt>
+            <dd className="text-sm text-fg mt-1">
               {new Date(req.createdAt).toLocaleString("pt-BR")}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold text-slate-400 uppercase">Solicitado por</dt>
-            <dd className="text-sm text-slate-700 mt-1">{req.solicitadoPor.nome}</dd>
+            <dt className="text-xs font-semibold text-subtle uppercase">
+              Solicitado por
+            </dt>
+            <dd className="text-sm text-fg mt-1">{req.solicitadoPor.nome}</dd>
           </div>
           {req.aprovadoPor && (
             <div>
-              <dt className="text-xs font-semibold text-slate-400 uppercase">Aprovado/Rejeitado por</dt>
-              <dd className="text-sm text-slate-700 mt-1">{req.aprovadoPor.nome}</dd>
+              <dt className="text-xs font-semibold text-subtle uppercase">
+                Aprovado/Rejeitado por
+              </dt>
+              <dd className="text-sm text-fg mt-1">{req.aprovadoPor.nome}</dd>
             </div>
           )}
           {req.compradoPor && (
             <div>
-              <dt className="text-xs font-semibold text-slate-400 uppercase">Comprado por</dt>
-              <dd className="text-sm text-slate-700 mt-1">{req.compradoPor.nome}</dd>
+              <dt className="text-xs font-semibold text-subtle uppercase">
+                Comprado por
+              </dt>
+              <dd className="text-sm text-fg mt-1">{req.compradoPor.nome}</dd>
             </div>
           )}
           {req.valorCentavos != null && (
             <div>
-              <dt className="text-xs font-semibold text-slate-400 uppercase">Valor da Compra</dt>
-              <dd className="text-sm text-slate-700 mt-1">
-                R$ {(req.valorCentavos / 100).toFixed(2)}
+              <dt className="text-xs font-semibold text-subtle uppercase">
+                Valor da Compra
+              </dt>
+              <dd className="text-sm text-fg mt-1">
+                {formatBRLFromCents(req.valorCentavos)}
               </dd>
             </div>
           )}
           {req.itemEstoque && (
             <div>
-              <dt className="text-xs font-semibold text-slate-400 uppercase">Item Vinculado</dt>
-              <dd className="text-sm text-slate-700 mt-1">
-                <Link to={`/app/estoque/${req.itemEstoque.id}`} className="text-blue-600 hover:underline">
+              <dt className="text-xs font-semibold text-subtle uppercase">
+                Item Vinculado
+              </dt>
+              <dd className="text-sm text-fg mt-1">
+                <Link
+                  to={`/app/estoque/${req.itemEstoque.id}`}
+                  className="text-accent hover:underline"
+                >
                   {req.itemEstoque.nome}
                 </Link>
               </dd>
@@ -206,22 +267,26 @@ export default function DetalheRequisicao({ loaderData, actionData }: Route.Comp
 
         {req.justificativa && (
           <div>
-            <dt className="text-xs font-semibold text-slate-400 uppercase">Justificativa</dt>
-            <dd className="text-sm text-slate-700 mt-1">{req.justificativa}</dd>
+            <dt className="text-xs font-semibold text-subtle uppercase">
+              Justificativa
+            </dt>
+            <dd className="text-sm text-fg mt-1">{req.justificativa}</dd>
           </div>
         )}
 
         {req.observacao && (
           <div>
-            <dt className="text-xs font-semibold text-slate-400 uppercase">Observação</dt>
-            <dd className="text-sm text-slate-700 mt-1">{req.observacao}</dd>
+            <dt className="text-xs font-semibold text-subtle uppercase">
+              Observação
+            </dt>
+            <dd className="text-sm text-fg mt-1">{req.observacao}</dd>
           </div>
         )}
       </div>
 
       {podeGerenciar && req.status === "SOLICITADA" && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-          <h3 className="font-semibold text-slate-900">Aprovar ou Rejeitar</h3>
+        <div className="bg-surface rounded-xl border border-border p-6 space-y-4">
+          <h3 className="font-semibold text-fg">Aprovar ou Rejeitar</h3>
           <div className="flex items-center gap-3">
             <form method="POST" className="inline">
               <input type="hidden" name="intent" value="aprovar" />
@@ -233,7 +298,7 @@ export default function DetalheRequisicao({ loaderData, actionData }: Route.Comp
               />
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-6 h-11 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+                className="inline-flex items-center justify-center rounded-md bg-success px-6 h-11 text-sm font-medium text-white hover:bg-success transition-colors"
               >
                 Aprovar
               </button>
@@ -243,14 +308,14 @@ export default function DetalheRequisicao({ loaderData, actionData }: Route.Comp
               <textarea
                 name="observacao"
                 rows={2}
-                className="w-64 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="w-64 rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 placeholder="Motivo da rejeição (mín. 5 caracteres)"
                 required
                 minLength={5}
               />
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-md bg-red-600 px-6 h-11 text-sm font-medium text-white hover:bg-red-700 transition-colors shrink-0"
+                className="inline-flex items-center justify-center rounded-md bg-danger px-6 h-11 text-sm font-medium text-white hover:bg-danger transition-colors shrink-0"
               >
                 Rejeitar
               </button>
@@ -260,58 +325,70 @@ export default function DetalheRequisicao({ loaderData, actionData }: Route.Comp
       )}
 
       {podeGerenciar && req.status === "APROVADA" && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-          <h3 className="font-semibold text-slate-900">Registrar Compra</h3>
-          <p className="text-sm text-slate-500">
-            Informe o valor pago. Ao registrar a compra, o estoque do item vinculado será atualizado automaticamente.
+        <div className="bg-surface rounded-xl border border-border p-6 space-y-4">
+          <h3 className="font-semibold text-fg">Registrar Compra</h3>
+          <p className="text-sm text-muted">
+            Informe o valor pago. Ao registrar a compra, o estoque do item
+            vinculado será atualizado automaticamente.
           </p>
           <form method="POST" className="space-y-3">
             <input type="hidden" name="intent" value="comprar" />
             <div className="space-y-1">
-              <label htmlFor="valorDisplay" className="block text-sm font-medium text-slate-700">
-                Valor da Compra (R$) <span className="text-red-600">*</span>
+              <label
+                htmlFor="valorDisplay"
+                className="block text-sm font-medium text-fg"
+              >
+                Valor da Compra (R$) <span className="text-danger">*</span>
               </label>
               <input
                 id="valorDisplay"
                 name="valorDisplay"
                 type="text"
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 placeholder="0,00"
                 required
               />
             </div>
             {caixas.length > 0 && (
               <div className="space-y-1">
-                <label htmlFor="caixaId" className="block text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="caixaId"
+                  className="block text-sm font-medium text-fg"
+                >
                   Caixa de Destino (opcional)
                 </label>
                 <select
                   id="caixaId"
                   name="caixaId"
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <option value="">Sem integração financeira</option>
                   {caixas.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
             <div className="space-y-1">
-              <label htmlFor="compraObservacao" className="block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="compraObservacao"
+                className="block text-sm font-medium text-fg"
+              >
                 Observação (opcional)
               </label>
               <textarea
                 id="compraObservacao"
                 name="observacao"
                 rows={2}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 placeholder="Ex: Comprado no mercado X, NF 12345."
               />
             </div>
             <button
               type="submit"
-              className="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 h-11 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center justify-center rounded-md bg-accent px-6 h-11 text-sm font-medium text-white hover:bg-accent-strong transition-colors"
             >
               Registrar Compra
             </button>
@@ -320,16 +397,16 @@ export default function DetalheRequisicao({ loaderData, actionData }: Route.Comp
       )}
 
       {req.status === "COMPRADA" && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-center">
-          <p className="text-sm font-semibold text-emerald-700">
+        <div className="bg-success-soft border border-success-soft rounded-xl p-6 text-center">
+          <p className="text-sm font-semibold text-success">
             Esta requisição foi comprada e o estoque foi atualizado.
           </p>
         </div>
       )}
 
       {req.status === "REJEITADA" && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-sm font-semibold text-red-700">
+        <div className="bg-danger-soft border border-danger-soft rounded-xl p-6 text-center">
+          <p className="text-sm font-semibold text-danger">
             Esta requisição foi rejeitada.
           </p>
         </div>

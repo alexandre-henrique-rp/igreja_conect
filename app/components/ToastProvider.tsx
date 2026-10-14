@@ -30,10 +30,10 @@ export function useToast() {
 }
 
 const TONE_STYLES: Record<ToastTone, string> = {
-  error: "bg-red-600 text-white",
-  success: "bg-emerald-600 text-white",
-  info: "bg-blue-600 text-white",
-  warning: "bg-amber-500 text-white",
+  error: "bg-danger text-white",
+  success: "bg-success text-white",
+  info: "bg-accent text-white",
+  warning: "bg-warning text-white",
 };
 
 const TONE_ICONS: Record<ToastTone, string> = {

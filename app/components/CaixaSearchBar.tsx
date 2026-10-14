@@ -46,23 +46,23 @@ export function CaixaSearchBar({
           name="q"
           defaultValue={q}
           placeholder="Buscar caixa por nome..."
-          className="w-full h-10 px-3 rounded-md border border-slate-300 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+          className="w-full h-10 px-3 rounded-md border border-border-strong text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           aria-label="Buscar caixa por nome"
         />
       </div>
-      <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer shrink-0">
+      <label className="flex items-center gap-2 text-sm text-fg cursor-pointer shrink-0">
         <input
           type="checkbox"
           name="mostrarArquivados"
           value="true"
           defaultChecked={mostrarArquivados}
-          className="rounded border-slate-300 text-cyan-700 focus-visible:ring-cyan-700 h-4 w-4"
+          className="rounded border-border-strong text-accent focus-visible:ring-accent h-4 w-4"
         />
         Mostrar arquivados
       </label>
       <button
         type="submit"
-        className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-cyan-700 text-white text-sm font-medium hover:bg-cyan-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+        className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
       >
         Filtrar
       </button>

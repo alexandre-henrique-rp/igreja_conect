@@ -47,8 +47,8 @@ describe("<TopbarAutenticada />", () => {
       user: { id: "u1", nome: "Maria", cargo: "ADMIN" },
       alertasNaoLidos: 0,
     });
-    // Sem badge de número (sem bg-amber-600 com texto)
-    expect(html).not.toContain("bg-amber-600");
+    // Sem badge de número (sem bg-warning com texto)
+    expect(html).not.toContain("bg-warning");
   });
 
   it("alertasNaoLidos>0: renderiza badge com número", () => {
@@ -56,7 +56,7 @@ describe("<TopbarAutenticada />", () => {
       user: { id: "u1", nome: "Maria", cargo: "ADMIN" },
       alertasNaoLidos: 3,
     });
-    expect(html).toContain("bg-amber-600");
+    expect(html).toContain("bg-warning");
     expect(html).toContain("3");
   });
 

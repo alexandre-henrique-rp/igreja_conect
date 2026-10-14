@@ -1,4 +1,5 @@
-import { Link, Form } from "react-router";
+import { Link } from "react-router";
+import { Avatar, Icon } from "~/components/ds";
 import { cn } from "~/lib/cn";
 
 /**
@@ -9,6 +10,7 @@ export type MembroListItem = {
   nome: string;
   tipo: "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
   email: string | null;
+  telefone?: string | null;
   createdAt: Date | string;
   discipulador?: { nome: string } | null;
   ministerios?: { nome: string }[];
@@ -18,6 +20,7 @@ export type MembroListItem = {
 export type TabelaMembrosProps = {
   items: MembroListItem[];
   canEdit: boolean;
+  view?: "grid" | "list";
 };
 
 /** Labels em PT-BR para os tipos. */
@@ -51,51 +54,17 @@ function formatDate(iso: string | Date | null | undefined): string {
   });
 }
 
-/** Renderiza o avatar relacionado ao membro e usa iniciais como fallback. */
-function Avatar({ avatarUrl, nome }: { avatarUrl?: string | null; nome: string }) {
-  const initials = nome
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
-  if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={nome}
-        className="h-10 w-10 rounded-full object-cover border border-slate-100 flex-shrink-0"
-      />
-    );
-  }
-
-  const colors = [
-    "from-blue-400 to-indigo-500",
-    "from-emerald-400 to-teal-500",
-    "from-rose-400 to-pink-500",
-    "from-amber-400 to-orange-500",
-    "from-purple-400 to-indigo-500",
-  ];
-  const hash = nome.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const gradient = colors[hash % colors.length];
-
-  return (
-    <div className={cn(
-      "h-10 w-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-sm font-semibold border border-slate-100 flex-shrink-0",
-      gradient
-    )}>
-      {initials}
-    </div>
-  );
+/** Renderiza o avatar relacionado ao membro e usa o primitivo canônico como fallback. */
+function MemberAvatar({ avatarUrl, nome }: { avatarUrl?: string | null; nome: string }) {
+  return <Avatar name={nome} src={avatarUrl ?? undefined} size={40} />;
 }
 
 /** Badge visual de Status. */
 function BadgeStatus({ status }: { status: "Ativo" | "Pendente" | "Inativo" }) {
   const styles = {
-    Ativo: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    Pendente: "bg-amber-50 text-amber-700 border-amber-100",
-    Inativo: "bg-rose-50 text-rose-700 border-rose-100",
+    Ativo: "bg-success-soft text-success border-success-soft",
+    Pendente: "bg-warning-soft text-warning border-warning-soft",
+    Inativo: "bg-danger-soft text-danger border-danger-soft",
   }[status];
 
   return (
@@ -108,132 +77,62 @@ function BadgeStatus({ status }: { status: "Ativo" | "Pendente" | "Inativo" }) {
   );
 }
 
-/** Tabela responsiva de membros matching the visual mockup. */
-export function TabelaMembros({ items, canEdit }: TabelaMembrosProps) {
+/** Renderiza a grade de membros no padrão `member-grid` do Design System. */
+export function TabelaMembros({ items, canEdit, view = "grid" }: TabelaMembrosProps) {
   return (
-    <div className="hidden md:block border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
-      <table className="w-full text-sm text-left">
-        <caption className="sr-only">Lista de membros</caption>
-        <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-400 tracking-wider">
-          <tr>
-            <th scope="col" className="px-6 py-4 font-semibold">
-              Nome
-            </th>
-            <th scope="col" className="px-6 py-4 font-semibold">
-              Email
-            </th>
-            <th scope="col" className="px-6 py-4 font-semibold">
-              Tipo
-            </th>
-            <th scope="col" className="px-6 py-4 font-semibold">
-              Status
-            </th>
-            <th scope="col" className="px-6 py-4 font-semibold">
-              Data de Entrada
-            </th>
-            <th scope="col" className="px-6 py-4 font-semibold text-right">
-              Ações
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-150">
-          {items.map((m) => {
-            const status = getMembroStatus(m.nome, m.tipo);
-            return (
-              <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar avatarUrl={m.avatarUrl} nome={m.nome} />
+    <div className="member-grid" data-od-id="members-grid" data-view={view} aria-label="Lista de membros">
+      {items.map((m) => {
+        const status = getMembroStatus(m.nome, m.tipo);
+        return (
+          <article key={m.id} className="card member-card" data-od-id={`member-${m.id}`}>
+            <div className="member-top">
+              <div className="member-identity">
+                <MemberAvatar avatarUrl={m.avatarUrl} nome={m.nome} />
+                <div className="min-w-0">
+                  <h3 className="member-name">
                     <Link
                       to={`/app/membros/${m.id}`}
-                      className="text-slate-900 font-bold hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded"
+                      className="hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
                     >
                       {m.nome}
                     </Link>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-slate-500 font-medium">
-                  {m.email ?? "—"}
-                </td>
-                <td className="px-6 py-4 text-slate-500 font-medium">
-                  {TIPO_LABELS[m.tipo]}
-                </td>
-                <td className="px-6 py-4">
-                  <BadgeStatus status={status} />
-                </td>
-                <td className="px-6 py-4 text-slate-500 font-medium">
-                  {formatDate(m.createdAt)}
-                </td>
-                <td className="px-6 py-4 text-right whitespace-nowrap">
-                  <div className="inline-flex items-center gap-1">
-                    {canEdit && (
-                      <Link
-                        to={`/app/membros/${m.id}/editar`}
-                        aria-label={`Editar ${m.nome}`}
-                        className="inline-flex items-center justify-center h-8 w-8 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 transition-colors"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4.5 w-4.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                        </svg>
-                      </Link>
-                    )}
-                    {canEdit && (
-                      <Form
-                        method="post"
-                        action={`/app/membros/${m.id}`}
-                        className="inline"
-                        onSubmit={(e) => {
-                          if (
-                            !window.confirm(
-                              `Tem certeza que deseja excluir ${m.nome}? Esta ação não pode ser desfeita.`
-                            )
-                          ) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        <input type="hidden" name="intent" value="delete" />
-                        <button
-                          type="submit"
-                          aria-label={`Excluir ${m.nome}`}
-                          className="inline-flex items-center justify-center h-8 w-8 rounded text-slate-400 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 transition-colors cursor-pointer"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4.5 w-4.5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                          >
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            <line x1="10" y1="11" x2="10" y2="17" />
-                            <line x1="14" y1="11" x2="14" y2="17" />
-                          </svg>
-                        </button>
-                      </Form>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </h3>
+                  <p className="member-role">{TIPO_LABELS[m.tipo]}</p>
+                </div>
+              </div>
+              <BadgeStatus status={status} />
+            </div>
+
+            <div className="member-chips">
+              <span className="chip">{TIPO_LABELS[m.tipo]}</span>
+              {m.ministerios?.slice(0, 2).map((ministerio) => (
+                <span key={ministerio.nome} className="chip">{ministerio.nome}</span>
+              ))}
+            </div>
+
+            <div className="member-contact">
+              <span><Icon name="mail" size="sm" />{m.email ?? "E-mail não informado"}</span>
+              {m.telefone && <span><Icon name="phone" size="sm" />{m.telefone}</span>}
+              <span><Icon name="calendar" size="sm" />Entrada em {formatDate(m.createdAt)}</span>
+              {m.discipulador?.nome && <span><Icon name="users" size="sm" />Disc. {m.discipulador.nome}</span>}
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <Link to={`/app/membros/${m.id}`} className="card-link">
+                Ver detalhes <Icon name="chevron-right" size="sm" />
+              </Link>
+              {canEdit && (
+                <Link
+                  to={`/app/membros/${m.id}/editar`}
+                  className="text-xs font-bold text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
+                >
+                  Editar
+                </Link>
+              )}
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

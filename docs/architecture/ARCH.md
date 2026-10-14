@@ -1,24 +1,29 @@
 # ARCH.md — Arquitetura Técnica — Igreja Conect
 
-> **Documento vivo de arquitetura técnica.** Diagramas, decisões macro (ADR-style) e fluxos críticos. Complementa `agents/AGENTS.md` (que é o guia de onboarding para agentes LLM).
+> **Documento vivo de arquitetura técnica.** Diagramas, decisões macro (ADR-style) e fluxos críticos. Complementa `AGENTS.md` (mapa de contexto carregado por agentes LLM).
 >
-> **Última atualização:** 2026-06-20 (Fase 1, ciclo 4 — Relatórios Financeiros)
+> **Última atualização:** 2026-08-13 (consolidação de documentação; pendências legadas resolvidas)
 > **Mantido por:** `documenter` agent (Fase 1 do Harness v6)
 > **Audiência:** arquitetos, desenvolvedores seniores, novos agentes do Harness.
 > **Localização:** `docs/architecture/ARCH.md` (em `docs/`, conforme path-boundary do projeto).
 >
-> **Mudanças desta versão (ciclo 4):**
-> - Adicionada §10 "Relatórios Financeiros — Arquitetura" (camadas, fluxos críticos dos 5 relatórios, RBAC fina com SECRETARIO BLOQUEADO, padrão de agregação `groupBy` em `Int` centavos, exportação CSV RFC 4180 + BOM).
+> **Mudanças desta versão (2026-08-13 — consolidação):**
+> - §19 "Pendências para próximos agentes" reformatada — itens 19.1-19.3 do ciclo 1 já foram **resolvidos** (ver §20 abaixo) e migrados para histórico.
+> - §20 "Decisões pendentes detectadas" reduzida — duplicata `prisma.config.ts` removida, model `Session` adicionado, `routes.ts` sem `index("app/api/auth/login.ts")`.
+> - §4.1 "Models por módulo" atualizada com **27 models** (`Membro`, `Session`, `ConviteToken`, `Ministerio`, `MinisterioMembro`, `Caixa`, `TransferenciaCaixa`, `Lancamento`, `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo`, `RequisicaoCompra`, `Culto`, `Escala`, `EscalaVoluntario`, `FuncaoMinisterio`, `AtividadeMinisterio`, `IndisponibilidadeMembro`, `Celula`, `MembroCelula`, `Evento`, `Alerta`, `AlertaDestinatario`, `ConfiguracaoGeral`, `Upload`, `AuditLog`, `Job`).
+> - §4.2 "Enums" expandida com `StatusRequisicaoCompra`, `TipoCulto`, `StatusCulto`, `StatusEscala`, `TipoAtividade`, `TipoEvento`, `StatusEvento`.
+> - Cross-refs adicionados para `docs/GUIDELINES.md` (criado nesta versão).
+>
+> **Mudanças herdadas do ciclo 4 (Relatórios Financeiros, preservadas):**
+> - §10 "Relatórios Financeiros — Arquitetura" (camadas, fluxos críticos dos 5 relatórios, RBAC fina com SECRETARIO BLOQUEADO, padrão de agregação `groupBy` em `Int` centavos, exportação CSV RFC 4180 + BOM).
 > - §4 "Modelo de dados" ampliada: nota explícita de que Relatórios é **read-only** sobre `Lancamento` (sem migration, sem novos models).
-> - §9 (Estoque + Patrimônio) intocada — planejamento de S11+ segue como deferred.
-> - Demais seções (Tratamento de centavos, Sessão, ADRs, etc.) renumeradas para §11+.
 > - Cross-refs para `brief-relatorios.md` e 2 novos RAGs (`pattern-relatorios-aggregations`, `convention-relatorios-csv-export`).
-> - **Mudanças herdadas do ciclo 3 (preservadas):**
->   - §9 "Módulo Estoque + Patrimônio — Arquitetura" (camadas, state machine, trava de quantidade, alerta on-consulta, RBAC fina).
->   - §4 "Modelo de dados" atualizada com `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo` (schema + service + UI ciclo 3, S11–S12).
->   - §4.2 "Enums (resumo)" atualizada: enums `TipoItemEstoque` e `StatusItemPatrimonio` detalhados.
->   - §4.3 "Relacionamentos críticos" ampliada com ligações `ItemEstoque` ↔ `MovimentacaoEstoque` ↔ `ManutencaoAtivo` ↔ `Membro` (autorizadoPor).
->   - Decisão de modelagem `ItemEstoque.ativo` documentada como **proposta pendente** (formalização na Fase 2; espelha `Caixa.ativo` do ciclo 2, já aprovada).
+>
+> **Mudanças herdadas do ciclo 3 (Estoque + Patrimônio, preservadas):**
+> - §9 "Módulo Estoque + Patrimônio — Arquitetura" (camadas, state machine, trava de quantidade, alerta on-consulta, RBAC fina).
+> - §4 atualizada com `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo`, `RequisicaoCompra`.
+> - Enums `TipoItemEstoque` e `StatusItemPatrimonio` detalhados.
+> - Decisão de modelagem `ItemEstoque.ativo` **aprovada** (espelha `Caixa.ativo` do ciclo 2).
 
 ## 1. Visão geral
 
@@ -108,30 +113,45 @@ A camada de Apresentação **nunca** importa `db.server` diretamente. Sempre pas
 
 ## 4. Modelo de dados
 
-> **Fonte da verdade:** `prisma/schema.prisma` (12 models, 6 enums). Este capítulo é um **índice** — não duplica o schema.
+> **Fonte da verdade:** `prisma/schema.prisma` (27 models, 14 enums). Este capítulo é um **índice** — não duplica o schema.
 
 ### 4.1 Models por módulo
 
 | Módulo | Models | Estado |
 |---|---|---|
-| **Membros** (ciclo 1) | `Membro`, `Ministerio`, `MinisterioMembro` | ✅ UI completa + service (S00–S05) |
+| **Membros** (ciclo 1) | `Membro`, `Session`, `ConviteToken`, `Ministerio`, `MinisterioMembro`, `FuncaoMinisterio`, `AtividadeMinisterio`, `IndisponibilidadeMembro` | ✅ UI completa + service (S00–S05) |
 | **Auth** (ciclo 1) | (parte de `Membro.senhaHash`, `Membro.cargo`, `Membro.email`, `Session`) | ✅ Endpoints no MVP (S00–S05) |
 | **Alertas** (ciclo 1) | `Alerta`, `AlertaDestinatario` | ✅ UI básica + service (S00–S05) |
-| **Configuração** (ciclo 1) | `ConfiguracaoGeral`, `ConfigAcolhimento` | ✅ Service + 1 tela ADMIN (S05) |
-| **Financeiro** (ciclo 2, **fechado em produção**) | `Caixa`, `TransferenciaCaixa`, `Lancamento` | ✅ Schema + services+UI (S06-S08). Release `v0.2.0-financeiro-preview`. |
-| **Relatórios Financeiros** (ciclo 4, **em andamento**) | (read-only sobre `Lancamento` — **sem novos models**) | 🟡 **Sem migration.** Schema atual cobre 100% dos requisitos. 5 services de agregação em S11-S12. |
-| **Estoque + Patrimônio** (ciclo 3, **planning fechado, build deferred**) | `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo` | 🟡 **Schema pronto (ciclo 1) + planning completo (ciclo 3); build deferred para ciclo futuro** |
+| **Configuração** (ciclo 1) | `ConfiguracaoGeral` | ✅ Service + 1 tela ADMIN (S05) |
+| **Financeiro** (ciclo 2) | `Caixa`, `TransferenciaCaixa`, `Lancamento` | ✅ Schema + services + UI (S06-S08). Release `v0.2.0-financeiro-preview`. |
+| **Relatórios Financeiros** (ciclo 4) | (read-only sobre `Lancamento` — **sem novos models**) | 🟡 **Planning completo (S11-S12); build halted em phase 5.** |
+| **Estoque + Patrimônio** (ciclo 3) | `ItemEstoque`, `MovimentacaoEstoque`, `ManutencaoAtivo`, `RequisicaoCompra` | ✅ Schema + services + UI (S09-S10). |
+| **Cultos** (ciclo 2+) | `Culto` | ✅ Service + UI |
+| **Escalas** (ciclo 2+) | `Escala`, `EscalaVoluntario` | ✅ Service + UI + geração automática |
+| **Células** (ciclo 1+) | `Celula`, `MembroCelula` | ✅ Service + UI |
+| **Eventos** (ciclo 2+) | `Evento` | ✅ Service + UI |
+| **Storage** (ciclo 1+) | `Upload` (com variantes, status, soft-delete LGPD) | ✅ Pipeline completo |
+| **Auditoria** (transversal) | `AuditLog` | ✅ LGPD art. 46 |
+| **Async / Jobs** (transversal) | `Job` (fila SQLite-based para uploads) | ✅ Worker polling |
 
 ### 4.2 Enums (resumo)
 
 | Enum | Valores | Onde se aplica |
 |---|---|---|
-| `Cargo` | ADMIN, PASTOR, SECRETARIO, DISCIPULADOR, FINANCEIRO, LIDER_MINISTERIO | RBAC. `Membro.cargo` |
+| `Cargo` | ADMIN, PASTOR, SECRETARIO, FINANCEIRO, DISCIPULADOR, LIDER_MINISTERIO | RBAC. `Membro.cargo` |
 | `TipoMembro` | MEMBRO_ATIVO, CONGREGADO, VISITANTE | Segmentação pastoral. `Membro.tipo` |
 | `TipoLancamento` | ENTRADA, SAIDA | Movimentação financeira |
+| `StatusLancamento` | PAGO, PENDENTE, AGENDADO | Estado do lançamento |
 | `CategoriaLancamento` | DIZIMO, OFERTA, CAMPANHA, DESPESA_OPERACIONAL, COMPRA_ESTOQUE, MANUTENCAO, TRANSFERENCIA | Natureza do lançamento |
 | `TipoItemEstoque` | CONSUMO, PATRIMONIO | Define fluxo (consumo vs. manutenção) |
 | `StatusItemPatrimonio` | DISPONIVEL, EM_MANUTENCAO, BAIXADO_PERDA | Lifecycle de ativo |
+| `StatusRequisicaoCompra` | SOLICITADA, APROVADA, REJEITADA, COMPRADA | Trilha de compras |
+| `TipoCulto` | PRESENCIAL, HIBRIDO, ONLINE | Tipo de culto |
+| `StatusCulto` | AGENDADO, CONFIRMADO, REALIZADO, CANCELADO | State machine de culto |
+| `StatusEscala` | PENDENTE, CONFIRMADA, REALIZADA, CANCELADA | State machine de escala |
+| `TipoAtividade` | CULTO, ENSAIO, ATIVIDADE_EXTRA | Atividade de ministério |
+| `TipoEvento` | ESPECIAL, CAMPANHA, CONFRATERNIZACAO, RETIRO, OUTRO | Tipo de evento |
+| `StatusEvento` | RASCUNHO, PUBLICADO, REALIZADO, CANCELADO | State machine de evento |
 
 ### 4.3 Relacionamentos críticos
 
@@ -140,6 +160,9 @@ erDiagram
   Membro ||--o{ Membro : "discipulador (1:N, máx 12)"
   Membro ||--o{ MinisterioMembro : "pertence"
   Ministerio ||--o{ MinisterioMembro : "tem"
+  Ministerio ||--o{ FuncaoMinisterio : "tem"
+  Ministerio ||--o{ AtividadeMinisterio : "agenda"
+  Ministerio ||--o{ IndisponibilidadeMembro : "restringe"
   Membro ||--o{ Lancamento : "dizimista"
   Caixa ||--o{ Lancamento : "registra"
   Caixa ||--o{ TransferenciaCaixa : "origem/destino"
@@ -149,7 +172,22 @@ erDiagram
   Membro ||--o{ MovimentacaoEstoque : "autorizou"
   ItemEstoque ||--o{ MovimentacaoEstoque : "movimenta"
   ItemEstoque ||--o{ ManutencaoAtivo : "em reparo"
+  ItemEstoque ||--o{ RequisicaoCompra : "solicitada"
   Ministerio ||--o{ ConfiguracaoGeral : "responsável visitante"
+  Ministerio ||--o{ Culto : "responsável"
+  Ministerio ||--o{ Escala : "ministra"
+  Culto ||--o{ Escala : "tem"
+  Evento ||--o{ Escala : "tem"
+  Escala ||--o{ EscalaVoluntario : "composta"
+  Membro ||--o{ EscalaVoluntario : "participa"
+  Celula ||--o{ MembroCelula : "tem"
+  Membro ||--o{ MembroCelula : "pertence"
+  Membro ||--o{ Celula : "lidera (1:1)"
+  Membro ||--o{ Evento : "responsável/criador"
+  Membro ||--o{ ConviteToken : "recebe"
+  Membro ||--o{ Upload : "avatar"
+  Lancamento ||--o{ Upload : "comprovante"
+  Membro ||--o{ AuditLog : "alvo/ator"
 ```
 
 ### 4.4 Decisões de modelagem
@@ -1545,84 +1583,96 @@ sequenceDiagram
 
 ---
 
-## 19. Pendências para próximos agentes
+## 19. Status das Pendências Legadas
 
-> Lista de itens **fora do escopo desta task** que precisam ser endereçados em fases seguintes.
+> Em 2026-08-13, foi feita uma varredura para marcar pendências antigas como resolvidas. Itens abaixo migraram para histórico (resolvidos em ciclos anteriores).
 
-### 19.1 Backend agent (Fase 5)
+### 19.1 Backend agent (Ciclo 1) — ✅ Resolvido
 
-- [ ] Criar `prisma/seed.ts` com `upsert` do primeiro ADMIN (idempotente).
-- [ ] Adicionar model `Session` ao schema (id, userId, expiresAt, absoluteExpiresAt).
-- [ ] Implementar `app/lib/session.server.ts` (create/get/delete/renew).
-- [ ] Implementar `app/lib/auth.server.ts` (requireUser, requireRole, verifyCredentials).
-- [ ] Implementar `app/services/membros.server.ts` com TDD.
-- [ ] Implementar `app/services/alertas.server.ts` com TDD.
+- [x] Criar `prisma/seed.ts` com `upsert` do primeiro ADMIN (idempotente). → Resolvido em S00; arquivo em [`prisma/seed.ts`](../../prisma/seed.ts).
+- [x] Adicionar model `Session` ao schema. → Resolvido em S01; ver `prisma/schema.prisma` linhas 174-187.
+- [x] Implementar `app/lib/session.server.ts`. → Resolvido em S01; sliding 7d / absoluto 30d.
+- [x] Implementar `app/lib/auth.server.ts` (requireUser, requireRole, verifyCredentials). → Resolvido em S01.
+- [x] Implementar `app/lib/members.server.ts` com TDD. → Resolvido em S02.
+- [x] Implementar `app/lib/alerts.server.ts` com TDD. → Resolvido em S05.
 
-### 19.2 Designer agent (Fase 3)
+### 19.2 Designer agent (Ciclo 1) — ✅ Resolvido
 
-- [ ] Wireframes de baixa fidelidade: login, lista de membros, ficha do membro, central de alertas, config de acolhimento.
-- [ ] Diagrama de navegação entre rotas autenticadas.
+- [x] Wireframes e diagramas de navegação. → Resolvidos em S03 via Google Stitch MCP.
 
-### 19.3 RAG-curator (Fase 1 auxiliar)
+### 19.3 RAG-curator (Ciclo 1) — ✅ Resolvido
 
-- [ ] `.harness/RAG/cpf-validation.md` — por que não coletamos.
-- [ ] `.harness/RAG/session-security.md` — checklist de session cookie.
-- [ ] `.harness/RAG/rbac-pattern.md` — padrão defense in depth aplicado a 3 camadas.
-- [ ] `.harness/RAG/prisma-rr7-setup.md` — gotchas do Prisma 7 com React Router 7 SSR.
+- [x] `.harness/RAG/cpf-validation.md` → migrado para `.harness/RAG/lgpd-igreja-conect.md`.
+- [x] `.harness/RAG/session-security.md` → migrado para `.harness/RAG/architecture-monolith-modular.md` §5.
+- [x] `.harness/RAG/rbac-pattern.md` → criado em `.harness/RAG/security-rbac-matrix.md`.
+- [x] `.harness/RAG/prisma-rr7-setup.md` → criado em `.harness/RAG/lesson-prisma-7-vite-8-ssr-incompat.md`.
 
-### 19.4 Decisions pendentes (`[A CONFIRMAR]`)
+### 19.4 Decisions pendentes — ✅ Todas resolvidas
 
-1. **Zod vs Valibot vs TypeBox** (ADR-003) — sugestão: Zod.
-2. **TTL exato da sessão** — sugestão: 7d sliding, teto 30d abs.
-3. **Política de senha** — sugestão: ≥ 8 chars, sem forçar complexidade.
-4. **Comportamento da aba Fidelidade Financeira** para perfis bloqueados — sugestão: não renderizar (RN-MEM-03).
-5. **Rate limit no `/login`** — sugestão: 5 tentativas / 15min / IP.
-6. **Resolução de `app/prisma.config.ts` vs `prisma.config.ts`** (duplicata detectada) — ver abaixo.
+| # | Decisão | Resolução | Local |
+|---|---|---|---|
+| 1 | Zod vs Valibot vs TypeBox | **Zod v4** | `app/lib/schemas/`, ADR-003 |
+| 2 | TTL da sessão | **7d sliding / 30d abs** | `app/lib/session.server.ts` |
+| 3 | Política de senha | **≥ 8 chars** (sem complexidade forçada) | `app/lib/schemas/auth.ts` |
+| 4 | Aba Fidelidade perfis bloqueados | **Não renderiza** (3 camadas) | `app/components/TabsMembro.tsx`, `.harness/RAG/security-rbac-matrix.md` |
+| 5 | Rate limit `/login` | **5 tent / 15min / IP** | `app/lib/rate-limit.server.ts` |
+| 6 | Duplicata `prisma.config.ts` | **Mantida apenas raiz** (`app/` foi removida) | `prisma.config.ts` único |
 
 ---
 
-## 20. Anexo: Decisões pendentes detectadas
+## 20. Anexo: Decisões resolvidas (histórico)
 
-Durante a Fase 1, identifiquei os seguintes pontos que precisam de decisão explícita antes de começar a Fase 5:
+Itens abaixo estavam pendentes no ciclo 1 (Fase 1 da documentação). Todos foram resolvidos em sprints subsequentes.
 
-### 20.1 Duplicata `prisma.config.ts`
+### 20.1 Duplicata `prisma.config.ts` — ✅ Resolvido
 
-Existem **dois** arquivos de configuração do Prisma:
+Apenas `prisma.config.ts` (raiz) existe. O arquivo `app/prisma.config.ts` foi removido em S00. Configuração única do Prisma 7 lê env vars via `dotenv/config`.
 
-- `prisma.config.ts` (raiz) — gerado automaticamente pelo `prisma init`, parece "oficial".
-- `app/prisma.config.ts` — criado manualmente em algum momento, mas o RR7 normalmente lê o da raiz.
+### 20.2 Model `Session` — ✅ Resolvido
 
-**Recomendação:** manter apenas `prisma.config.ts` na raiz. O `app/prisma.config.ts` deve ser deletado pelo backend agent. **Decisão pendente** — confirmar com o usuário.
-
-### 20.2 Model `Session` não existe no schema
-
-Sem `Session`, não há como invalidar sessões no servidor (logout real). **Decisão:** adicionar como migration inicial. Estrutura sugerida:
+`Session` foi adicionado em S01 com:
 
 ```prisma
 model Session {
-  id                  String   @id @default(uuid())
-  membroId            String
-  membro              Membro   @relation(fields: [membroId], references: [id], onDelete: Cascade)
-  expiresAt           DateTime
-  absoluteExpiresAt   DateTime
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                String   @id @default(uuid())
+  membroId          String
+  expiresAt         DateTime
+  absoluteExpiresAt DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  membro            Membro   @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  @@index([membroId])
+  @@index([expiresAt])
   @@map("sessions")
 }
 ```
 
-> Isso requer adicionar o back-relation em `Membro.alter()`. **Decisão pendente** — confirmar com o designer.
+### 20.3 `routes.ts` — ✅ Resolvido
 
-### 20.3 `app/routes.ts` tem `index("app/api/auth/login.ts")` como rota
+A linha problemática `index("app/api/auth/login.ts")` foi removida em S01. Endpoints de API agora vivem em `app/routes/api/*` (resource routes RR7 com `.` no nome do arquivo).
 
-A linha 11 do `app/routes.ts` atual tem:
+### 20.4 Outras decisões arquiteturais registradas
 
-```ts
-// api
-index("app/api/auth/login.ts"),
-```
+- **Node 22 → Node 24** — engines atualizado em 2026-08-13 para alinhar com Node LTS mais recente.
+- **`welcome/` boilerplate** — mantido para referência, mas **não** usado em produção. Rotas em `app/routes/public/index.tsx` servem a landing institucional.
+- **Convenções centralizadas** — em 2026-08-13, criou-se [`docs/GUIDELINES.md`](../../GUIDELINES.md) consolidando convenções antes espalhadas em vários RAGs.
 
-Isso faz com que `app/api/auth/login.ts` seja tratado como rota (substituindo `/` na raiz), o que **não** é o desejado para um endpoint de API. **Recomendação:** remover essa linha e tratar endpoints de API fora do `routes.ts` (usar `app/api/` como servidor HTTP independente, ou usar RR7 resource routes com `.` no nome).
+---
+
+## 21. Pendências atuais (ativas em 2026-08-13)
+
+### 21.1 Cycle 4 — Relatórios Financeiros (HALTED)
+
+- [ ] Implementar 5 relatórios em produção (S14 backend + S15 frontend) — atualmente só planning e design completos (fases 0–4).
+- [ ] Resolver MVP-DEBT-001 (74 testes pré-existentes falhando em `app/routes/`).
+- [ ] Resolver MVP-DEBT-003 (107 typecheck errors).
+
+### 21.2 Itens não críticos
+
+- [ ] Integração com provedor de e-mail (reset de senha e convites).
+- [ ] App mobile nativo (atualmente web responsiva).
+- [ ] Concorrência multi-processo (limite atual: 1 processo Node, OK para MVP).
+- [ ] Replicação do SQLite (backup manual via `pnpm db:backup` é suficiente para 1 igreja).
 
 ---
 
@@ -1630,4 +1680,4 @@ Isso faz com que `app/api/auth/login.ts` seja tratado como rota (substituindo `/
 
 - **Quando:** ao final de cada sprint (Fase 5 completa) ou quando schema/fluxos mudarem.
 - **Por quem:** `documenter` agent, acionado pelo orchestrator.
-- **O que atualizar:** especialmente a §12 (ADRs), §13 (Roadmap) e §19 (Pendências) — os itens 19.1-19.3 devem sumir à medida que forem resolvidos.
+- **O que atualizar:** especialmente §4 (Modelo de dados), §10 (Relatórios quando implementados) e §21 (Pendências atuais).

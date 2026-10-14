@@ -128,12 +128,12 @@ export function AutocompleteInput({
         htmlFor={inputId}
         className={cn(
           "block text-sm font-medium",
-          isDark ? "text-slate-400" : "text-slate-700",
+          isDark ? "text-subtle" : "text-fg",
         )}
       >
         {label}
         {required && !hideAsterisk && (
-          <span aria-hidden="true" className={cn("ml-1", isDark ? "text-red-400" : "text-red-700")}>
+          <span aria-hidden="true" className={cn("ml-1", isDark ? "text-danger" : "text-danger")}>
             *
           </span>
         )}
@@ -142,8 +142,8 @@ export function AutocompleteInput({
         {leadingIcon && (
           <span
             className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none",
-              isDark && "text-slate-500",
+              "absolute left-3 top-1/2 -translate-y-1/2 text-subtle pointer-events-none",
+              isDark && "text-muted",
             )}
           >
             {leadingIcon}
@@ -166,18 +166,18 @@ export function AutocompleteInput({
           aria-invalid={hasError}
           aria-describedby={hasError ? descId : hint ? descId : undefined}
           className={cn(
-            "w-full h-11 px-3 rounded-md border bg-white text-slate-900 border-slate-300 placeholder:text-slate-400",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:border-cyan-700",
+            "w-full h-11 px-3 rounded-md border bg-surface text-fg border-border-strong placeholder:text-subtle",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:border-accent",
             "transition-colors",
             Boolean(leadingIcon) && "pl-10",
-            hasError && "border-red-500 focus-visible:ring-red-500",
-            isDark && "bg-slate-900 border-slate-700 text-white placeholder:text-slate-500",
+            hasError && "border-danger focus-visible:ring-danger",
+            isDark && "bg-fg border-fg text-white placeholder:text-muted",
           )}
         />
         {showDropdown && (
-          <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          <div className="absolute z-50 mt-1 w-full bg-surface border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
             {fetcher.state === "loading" && results.length === 0 && (
-              <div className="px-3 py-2 text-sm text-slate-400">Carregando…</div>
+              <div className="px-3 py-2 text-sm text-subtle">Carregando…</div>
             )}
             {results.map((item, idx) => (
               <button
@@ -187,12 +187,12 @@ export function AutocompleteInput({
                 onMouseEnter={() => setHighlightIdx(idx)}
                 className={cn(
                   "w-full text-left px-3 py-2 text-sm transition-colors",
-                  idx === highlightIdx ? "bg-cyan-50 text-cyan-900" : "text-slate-700 hover:bg-slate-50",
+                  idx === highlightIdx ? "bg-accent-soft-2 text-accent-strong" : "text-fg hover:bg-surface-2",
                 )}
               >
                 <span className="font-medium">{item.label}</span>
                 {item.sublabel && (
-                  <span className="ml-2 text-xs text-slate-400">{item.sublabel}</span>
+                  <span className="ml-2 text-xs text-subtle">{item.sublabel}</span>
                 )}
               </button>
             ))}
@@ -200,11 +200,11 @@ export function AutocompleteInput({
         )}
       </div>
       {hasError ? (
-        <p id={descId} role="alert" className={cn("text-xs", isDark ? "text-red-400" : "text-red-600")}>
+        <p id={descId} role="alert" className={cn("text-xs", isDark ? "text-danger" : "text-danger")}>
           {error}
         </p>
       ) : hint ? (
-        <p id={descId} className={cn("text-xs", isDark ? "text-slate-500" : "text-slate-500")}>
+        <p id={descId} className={cn("text-xs", isDark ? "text-muted" : "text-muted")}>
           {hint}
         </p>
       ) : null}

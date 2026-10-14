@@ -16,18 +16,16 @@
  * @see app/lib/caixas.server.ts
  */
 import { useEffect, useRef, useState } from "react";
-import { Link, useFetcher, useLoaderData, type ActionFunctionArgs, type LoaderFunctionArgs } from "react-router";
-import type { Route } from "./+types/financeiro.caixas._index";
-import { z } from "zod";
-import { userContext } from "~/lib/user-context";
-import { assertCanSeeFinancialModule } from "~/lib/rbac.server";
-import { listarCaixas, arquivarCaixa, reabrirCaixa } from "~/lib/caixas.server";
-import { PageHeader } from "~/components/PageHeader";
-import { Can } from "~/components/Can";
+import { Link, useFetcher, useLoaderData } from "react-router";
 import { CaixaSearchBar } from "~/components/CaixaSearchBar";
-import { TabelaCaixas } from "~/components/TabelaCaixas";
+import { Can } from "~/components/Can";
 import { ModalConfirmar } from "~/components/ModalConfirmar";
-import { EmptyState } from "~/components/EmptyState";
+import { TabelaCaixas } from "~/components/TabelaCaixas";
+import { Button, EmptyState, PageHeader } from "~/components/ds";
+import { arquivarCaixa, listarCaixas, reabrirCaixa } from "~/lib/caixas.server";
+import { assertCanSeeFinancialModule } from "~/lib/rbac.server";
+import { userContext } from "~/lib/user-context";
+import type { Route } from "./+types/financeiro.caixas._index";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Caixas — Financeiro — Igreja Conect" }];
@@ -48,7 +46,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const result = await listarCaixas(
     { apenasAtivos: !mostrarArquivados, q },
-    user
+    user,
   );
 
   return { user, q: q ?? "", mostrarArquivados, ...result };
@@ -102,7 +100,9 @@ export default function CaixasList() {
 
   // Estado do modal de confirmação
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalAction, setModalAction] = useState<"arquivar" | "reabrir" | null>(null);
+  const [modalAction, setModalAction] = useState<"arquivar" | "reabrir" | null>(
+    null,
+  );
   const [modalCaixaId, setModalCaixaId] = useState<string | null>(null);
   const [modalNome, setModalNome] = useState<string>("");
 
@@ -116,7 +116,11 @@ export default function CaixasList() {
     }
   }, [fetcher.data, fetcher.state]);
 
-  const abrirModal = (action: "arquivar" | "reabrir", id: string, nome: string) => {
+  const abrirModal = (
+    action: "arquivar" | "reabrir",
+    id: string,
+    nome: string,
+  ) => {
     setModalAction(action);
     setModalCaixaId(id);
     setModalNome(nome);
@@ -127,7 +131,7 @@ export default function CaixasList() {
     if (!modalAction || !modalCaixaId) return;
     fetcher.submit(
       { _action: modalAction, caixaId: modalCaixaId },
-      { method: "post" }
+      { method: "post" },
     );
   };
 
@@ -135,11 +139,11 @@ export default function CaixasList() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <PageHeader
         title="Caixas"
-        action={
+        actions={
           <Can user={user} allow={["ADMIN", "PASTOR", "FINANCEIRO"]}>
             <Link
               to="/app/financeiro/caixas/novo"
-              className="inline-flex items-center justify-center rounded-md bg-cyan-700 px-3 h-9 text-sm font-medium text-white hover:bg-cyan-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+              className="inline-flex items-center justify-center rounded-md bg-accent px-3 h-9 text-sm font-medium text-white hover:bg-accent-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               + Nova Caixa
             </Link>
@@ -152,7 +156,7 @@ export default function CaixasList() {
       {/* Caixas ativos */}
       {ativos.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-base font-semibold text-slate-900 mb-2">
+          <h2 className="text-base font-semibold text-fg mb-2">
             Caixas Ativos ({ativos.length})
           </h2>
           <TabelaCaixas
@@ -169,7 +173,7 @@ export default function CaixasList() {
       {/* Caixas arquivados (toggle) */}
       {mostrarArquivados && arquivados.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-base font-semibold text-slate-900 mb-2">
+          <h2 className="text-base font-semibold text-fg mb-2">
             Caixas Arquivados ({arquivados.length})
           </h2>
           <TabelaCaixas
@@ -184,26 +188,31 @@ export default function CaixasList() {
       )}
 
       {/* Empty state */}
-      {ativos.length === 0 && (!mostrarArquivados || arquivados.length === 0) && (
-        <EmptyState
-          title="Nenhum caixa encontrado"
-          description="Crie um novo caixa para organizar as finanças da igreja."
-          action={
-            podeGerenciar
-              ? { label: "Criar Caixa", to: "/app/financeiro/caixas/novo" }
-              : undefined
-          }
-        />
-      )}
+      {ativos.length === 0 &&
+        (!mostrarArquivados || arquivados.length === 0) && (
+          <EmptyState
+            title="Nenhum caixa encontrado"
+            description="Crie um novo caixa para organizar as finanças da igreja."
+            action={
+              podeGerenciar ? (
+                <Button
+                  as={Link}
+                  to="/app/financeiro/caixas/novo"
+                  variant="primary"
+                >
+                  Criar Caixa
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
 
       {/* Modal de confirmação */}
       <ModalConfirmar
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onConfirm={confirmar}
-        title={
-          modalAction === "arquivar" ? "Arquivar Caixa" : "Reabrir Caixa"
-        }
+        title={modalAction === "arquivar" ? "Arquivar Caixa" : "Reabrir Caixa"}
         description={
           modalAction === "arquivar"
             ? `Tem certeza que deseja arquivar "${modalNome}"? O saldo será preservado, mas não será possível fazer novos lançamentos.`

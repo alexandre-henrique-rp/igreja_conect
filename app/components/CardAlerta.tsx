@@ -2,15 +2,17 @@
  * Componente <CardAlerta /> — card individual de alerta (S04-T07).
  *
  * Exibe um alerta com:
- * - Borda esquerda cyan-600 se não lido.
+ * - Borda esquerda `accent` se não lido.
  * - Opacidade reduzida (opacity-75) se resolvido.
  * - Título + mensagem + RelativeTime.
  * - Form com `_action="marcarLido"` ou `_action="marcarResolvido"`.
  * - Link "Ver membro" se alerta.membroId presente.
  *
+ * Construído sobre `Card` do Design System (`~/components/ds`).
+ *
  * @example
  *   <CardAlerta
- *     alerta={{ id: "a1", titulo: "...", mensagem: "...", createdAt: new Date(), lidoEm: null, resolvidoEm: null }}
+ *     alerta={{ id: "a1", titulo: "...", mensagem: "...", createdAt: new Date(), lido: false, resolvido: false }}
  *     user={{ nome: "Admin", cargo: "ADMIN" }}
  *     now={new Date()}
  *   />
@@ -23,8 +25,9 @@
  * @returns Elemento JSX do card.
  */
 import { Form, Link } from "react-router";
-import { RelativeTime } from "./RelativeTime";
+import { Card } from "~/components/ds";
 import { cn } from "~/lib/cn";
+import { RelativeTime } from "./RelativeTime";
 
 /**
  * Dados de um alerta.
@@ -68,35 +71,44 @@ export type CardAlertaProps = {
   canResolve?: boolean;
 };
 
+const ACTION_CLASSES =
+  "text-xs font-medium text-accent-strong hover:text-accent underline underline-offset-2";
+
 /**
  * @description Card de alerta com ações de leitura/resolução e link para membro.
  * @param {CardAlertaProps} props - alerta, user, now.
  * @returns {JSX.Element} Elemento do card.
  */
-export function CardAlerta({ alerta, user: _user, now, canResolve = false }: CardAlertaProps) {
-  const { id, titulo, mensagem, createdAt, lido, resolvido, membroId } =
-    alerta;
+export function CardAlerta({
+  alerta,
+  user: _user,
+  now,
+  canResolve = false,
+}: CardAlertaProps) {
+  const { id, titulo, mensagem, createdAt, lido, resolvido, membroId } = alerta;
 
   const isNaoLido = !lido && !resolvido;
   const isResolvido = resolvido;
 
   return (
-    <div
+    <Card
+      variant="flat"
+      padding="sm"
       data-testid="card-alerta"
       className={cn(
-        "border border-slate-200 rounded-lg bg-white p-4 space-y-2 transition-opacity",
-        isNaoLido && "border-l-4 border-l-cyan-600",
-        isResolvido && "opacity-75"
+        "space-y-2 transition-opacity",
+        isNaoLido && "border-l-4 border-l-accent",
+        isResolvido && "opacity-75",
       )}
     >
       {/* Header: título + hora */}
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-900">{titulo}</h3>
+        <h3 className="text-sm font-semibold text-fg">{titulo}</h3>
         <RelativeTime date={createdAt} now={now} className="shrink-0" />
       </div>
 
       {/* Mensagem */}
-      <p className="text-sm text-slate-700">{mensagem}</p>
+      <p className="text-sm text-muted">{mensagem}</p>
 
       {/* Ações */}
       <div className="flex items-center gap-2 pt-1">
@@ -104,10 +116,7 @@ export function CardAlerta({ alerta, user: _user, now, canResolve = false }: Car
           <Form method="post" className="inline">
             <input type="hidden" name="alertaId" value={id} />
             <input type="hidden" name="_action" value="marcarLido" />
-            <button
-              type="submit"
-              className="text-xs font-medium text-cyan-700 hover:text-cyan-800 underline underline-offset-2"
-            >
+            <button type="submit" className={ACTION_CLASSES}>
               Marcar lido
             </button>
           </Form>
@@ -117,10 +126,7 @@ export function CardAlerta({ alerta, user: _user, now, canResolve = false }: Car
           <Form method="post" className="inline">
             <input type="hidden" name="alertaId" value={id} />
             <input type="hidden" name="_action" value="marcarResolvido" />
-            <button
-              type="submit"
-              className="text-xs font-medium text-cyan-700 hover:text-cyan-800 underline underline-offset-2"
-            >
+            <button type="submit" className={ACTION_CLASSES}>
               Resolver
             </button>
           </Form>
@@ -129,12 +135,12 @@ export function CardAlerta({ alerta, user: _user, now, canResolve = false }: Car
         {membroId && (
           <Link
             to={`/app/membros/${membroId}`}
-            className="text-xs font-medium text-slate-500 hover:text-slate-700 underline underline-offset-2"
+            className="text-xs font-medium text-muted hover:text-fg underline underline-offset-2"
           >
             Ver membro
           </Link>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -79,40 +79,40 @@ export default function NovaRequisicao({ loaderData, actionData }: Route.Compone
     (actionData as { defaultValues?: Record<string, string> } | undefined)?.defaultValues ?? {};
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full space-y-6 bg-slate-50 min-h-screen">
+    <main className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full space-y-6 bg-surface-2 min-h-screen">
       <div className="flex items-start justify-between">
         <div>
-          <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-2">
-            <Link to="/app/estoque" className="hover:text-slate-600">Estoque</Link>
+          <nav className="flex items-center gap-2 text-xs font-semibold text-subtle mb-2">
+            <Link to="/app/estoque" className="hover:text-muted">Estoque</Link>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            <Link to="/app/estoque/requisicoes" className="hover:text-slate-600">Requisições</Link>
+            <Link to="/app/estoque/requisicoes" className="hover:text-muted">Requisições</Link>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            <span className="text-blue-600">Nova</span>
+            <span className="text-accent">Nova</span>
           </nav>
-          <h2 className="text-2xl font-bold text-slate-900">Nova Requisição de Compra</h2>
+          <h2 className="text-2xl font-bold text-fg">Nova Requisição de Compra</h2>
         </div>
         <Link
           to="/app/estoque/requisicoes"
-          className="px-4 h-10 flex items-center border border-slate-200 text-slate-600 bg-white rounded-lg font-semibold hover:bg-slate-50 transition-all text-sm"
+          className="px-4 h-10 flex items-center border border-border text-muted bg-surface rounded-lg font-semibold hover:bg-surface-2 transition-all text-sm"
         >
           Cancelar
         </Link>
       </div>
 
-      <form method="POST" className="space-y-5 bg-white rounded-xl border border-slate-200 p-6">
+      <form method="POST" className="space-y-5 bg-surface rounded-xl border border-border p-6">
         <div className="space-y-1">
-          <label htmlFor="itemEstoqueId" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="itemEstoqueId" className="block text-sm font-medium text-fg">
             Item do Estoque (opcional)
           </label>
           <select
             id="itemEstoqueId"
             name="itemEstoqueId"
             defaultValue={defaultValues.itemEstoqueId ?? ""}
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <option value="">— Item novo (não cadastrado) —</option>
             {itens.map((item) => (
@@ -121,32 +121,32 @@ export default function NovaRequisicao({ loaderData, actionData }: Route.Compone
               </option>
             ))}
           </select>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-subtle">
             Selecione um item existente ou deixe em branco para solicitar um item novo.
           </p>
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="nomeItem" className="block text-sm font-medium text-slate-700">
-            Nome do Item <span className="text-red-600">*</span>
+          <label htmlFor="nomeItem" className="block text-sm font-medium text-fg">
+            Nome do Item <span className="text-danger">*</span>
           </label>
           <input
             id="nomeItem"
             name="nomeItem"
             type="text"
             defaultValue={defaultValues.nomeItem ?? ""}
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             placeholder="Ex: Café em Grãos (1kg)"
             required
           />
           {fieldErrors.nomeItem && (
-            <p role="alert" className="text-sm text-red-600">{fieldErrors.nomeItem}</p>
+            <p role="alert" className="text-sm text-danger">{fieldErrors.nomeItem}</p>
           )}
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="quantidade" className="block text-sm font-medium text-slate-700">
-            Quantidade <span className="text-red-600">*</span>
+          <label htmlFor="quantidade" className="block text-sm font-medium text-fg">
+            Quantidade <span className="text-danger">*</span>
           </label>
           <input
             id="quantidade"
@@ -154,43 +154,43 @@ export default function NovaRequisicao({ loaderData, actionData }: Route.Compone
             type="number"
             min="1"
             defaultValue={defaultValues.quantidade ?? ""}
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             placeholder="Ex: 10"
             required
           />
           {fieldErrors.quantidade && (
-            <p role="alert" className="text-sm text-red-600">{fieldErrors.quantidade}</p>
+            <p role="alert" className="text-sm text-danger">{fieldErrors.quantidade}</p>
           )}
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="justificativa" className="block text-sm font-medium text-slate-700">
-            Justificativa <span className="text-red-600">*</span>
+          <label htmlFor="justificativa" className="block text-sm font-medium text-fg">
+            Justificativa <span className="text-danger">*</span>
           </label>
           <textarea
             id="justificativa"
             name="justificativa"
             rows={3}
             defaultValue={defaultValues.justificativa ?? ""}
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             placeholder="Ex: Estoque abaixo do mínimo, necessário para o culto de domingo..."
             required
           />
           {fieldErrors.justificativa && (
-            <p role="alert" className="text-sm text-red-600">{fieldErrors.justificativa}</p>
+            <p role="alert" className="text-sm text-danger">{fieldErrors.justificativa}</p>
           )}
         </div>
 
         <div className="flex items-center gap-3 pt-2">
           <button
             type="submit"
-            className="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 h-11 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center justify-center rounded-md bg-accent px-6 h-11 text-sm font-medium text-white hover:bg-accent-strong transition-colors"
           >
             Criar Requisição
           </button>
           <Link
             to="/app/estoque/requisicoes"
-            className="inline-flex items-center justify-center rounded-md border border-slate-200 px-6 h-11 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center justify-center rounded-md border border-border px-6 h-11 text-sm font-medium text-muted hover:bg-surface-2 transition-colors"
           >
             Cancelar
           </Link>

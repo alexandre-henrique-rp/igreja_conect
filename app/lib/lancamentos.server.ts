@@ -27,6 +27,7 @@ import { LancamentoCreateSchema } from "./schemas/lancamentos";
 import { assertSaldoSuficiente } from "./finance.server";
 import { assertCanWriteLancamento } from "./rbac.server";
 import { safeLog } from "./audit.server";
+import { criarAlertaNovaCobranca, criarAlertaLancamentoPago } from "./alerts.server";
 import type { SessionUser } from "./session.types";
 import type { LancamentoCreateInput } from "./schemas/lancamentos";
 
@@ -143,6 +144,24 @@ export async function criarLancamento(
             : { decrement: parsed.valorCentavos },
       },
     });
+
+    // Notificação interna (fan-out ADMIN/PASTOR/FINANCEIRO):
+    // - PENDENTE/AGENDADO → "nova cobrança"
+    // - PAGO → "pagamento/recebimento confirmado"
+    // LGPD: os geradores usam apenas valor+categoria+caixa (sem PII).
+    const alertaInput = {
+      id: lancamento.id,
+      tipo: lancamento.tipo,
+      categoria: lancamento.categoria,
+      valorCentavos: lancamento.valorCentavos,
+      status: lancamento.status,
+      caixaNome: caixa.nome,
+    };
+    if (lancamento.status === "PAGO") {
+      await criarAlertaLancamentoPago(tx, alertaInput);
+    } else {
+      await criarAlertaNovaCobranca(tx, alertaInput);
+    }
 
     safeLog({
       action: "create_lancamento",

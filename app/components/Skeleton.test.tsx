@@ -33,10 +33,10 @@ describe("<Skeleton />", () => {
     expect(matches).toHaveLength(5);
   });
 
-  it("cada row tem h-4 e bg-slate-200 (classe de placeholder)", () => {
+  it("cada row tem h-4 e bg-border (classe de placeholder)", () => {
     const html = renderSkeleton({ rows: 2 });
     expect(html).toContain("h-4");
-    expect(html).toContain("bg-slate-200");
+    expect(html).toContain("bg-border");
   });
 
   it("data-testid='skeleton'", () => {

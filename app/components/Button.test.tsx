@@ -40,24 +40,24 @@ describe("<Button />", () => {
     expect(html).toContain("Click");
   });
 
-  it("variant primary tem classe bg-cyan-700", () => {
+  it("variant primary tem classe bg-accent", () => {
     const html = renderButton({ variant: "primary" });
-    expect(html).toContain("bg-cyan-700");
+    expect(html).toContain("bg-accent");
   });
 
-  it("variant secondary tem bg-slate-200", () => {
+  it("variant secondary tem bg-surface", () => {
     const html = renderButton({ variant: "secondary" });
-    expect(html).toContain("bg-slate-200");
+    expect(html).toContain("bg-surface");
   });
 
-  it("variant ghost não tem bg-cyan-700", () => {
+  it("variant ghost não tem bg-accent", () => {
     const html = renderButton({ variant: "ghost" });
-    expect(html).not.toContain("bg-cyan-700");
+    expect(html).not.toContain("bg-accent");
   });
 
-  it("variant danger tem bg-red-700", () => {
+  it("variant danger tem bg-danger", () => {
     const html = renderButton({ variant: "danger" });
-    expect(html).toContain("bg-red-700");
+    expect(html).toContain("bg-danger");
   });
 
   it("size sm tem h-9 (small height)", () => {

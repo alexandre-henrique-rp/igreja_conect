@@ -12,7 +12,7 @@
  * @param props.dizimos - Lista de dízimos do membro.
  * @returns Elemento JSX da tabela.
  */
-import { EmptyState } from "~/components/EmptyState";
+import { EmptyState } from "~/components/ds";
 import { formatBRLFromCents } from "~/lib/money-format";
 
 /**
@@ -60,21 +60,32 @@ export function TabelaDizimos({ dizimos }: TabelaDizimosProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
-      <table className="w-full text-sm text-left" aria-label="Dízimos do membro">
-        <thead className="bg-slate-50 text-slate-700 uppercase tracking-wide">
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table
+        className="w-full text-sm text-left"
+        aria-label="Dízimos do membro"
+      >
+        <thead className="bg-surface-2 text-fg uppercase tracking-wide">
           <tr>
-            <th scope="col" className="px-4 py-3 font-semibold">Data</th>
-            <th scope="col" className="px-4 py-3 font-semibold">Caixa</th>
-            <th scope="col" className="px-4 py-3 font-semibold text-right">Valor</th>
+            <th scope="col" className="px-4 py-3 font-semibold">
+              Data
+            </th>
+            <th scope="col" className="px-4 py-3 font-semibold">
+              Caixa
+            </th>
+            <th scope="col" className="px-4 py-3 font-semibold text-right">
+              Valor
+            </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
+        <tbody className="divide-y divide-surface-2 bg-surface">
           {dizimos.map((dizimo) => (
-            <tr key={dizimo.id} className="hover:bg-slate-50">
-              <td className="px-4 py-3 text-slate-900">{formatDate(new Date(dizimo.dataCompetencia))}</td>
-              <td className="px-4 py-3 text-slate-700">{dizimo.caixaNome}</td>
-              <td className="px-4 py-3 text-right font-medium text-slate-900 tabular-nums">
+            <tr key={dizimo.id} className="hover:bg-surface-2">
+              <td className="px-4 py-3 text-fg">
+                {formatDate(new Date(dizimo.dataCompetencia))}
+              </td>
+              <td className="px-4 py-3 text-fg">{dizimo.caixaNome}</td>
+              <td className="px-4 py-3 text-right font-medium text-fg tabular-nums">
                 {formatBRLFromCents(dizimo.valorCentavos)}
               </td>
             </tr>

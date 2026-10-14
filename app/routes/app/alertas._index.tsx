@@ -9,15 +9,13 @@
  */
 import { ZodError } from "zod";
 import { CardAlerta } from "~/components/CardAlerta";
+import { EmptyState, Icon, KpiCard, PageHeader } from "~/components/ds";
 import { TabsFiltroAlertas } from "~/components/TabsFiltroAlertas";
-import { userContext } from "~/lib/user-context";
 import { listAlertas, marcarLido, marcarResolvido } from "~/lib/alerts.server";
 import { assertIsAdmin } from "~/lib/rbac.server";
+import { MarcarLidoSchema, MarcarResolvidoSchema } from "~/lib/schemas/alertas";
 import type { SessionUser } from "~/lib/session.types";
-import {
-  MarcarLidoSchema,
-  MarcarResolvidoSchema,
-} from "~/lib/schemas/alertas";
+import { userContext } from "~/lib/user-context";
 
 /** Filtro usado na URL e nos componentes frontend. */
 export type AlertaFilterFrontend = "todos" | "naoLidos" | "resolvidos";
@@ -51,7 +49,10 @@ export function meta() {
 /**
  * Loader: lista alertas por destinatário e lê ?filter=.
  */
-export async function loader({ request, context }: RouteLoaderArgs): Promise<AlertasLoaderData> {
+export async function loader({
+  request,
+  context,
+}: RouteLoaderArgs): Promise<AlertasLoaderData> {
   const user = context.get<SessionUser | null>(userContext);
   if (!user) {
     throw new Response("Não autenticado.", { status: 401 });
@@ -59,7 +60,10 @@ export async function loader({ request, context }: RouteLoaderArgs): Promise<Ale
 
   const url = new URL(request.url);
   const activeFilter = normalizeAlertaFilter(url.searchParams.get("filter"));
-  const { items, counts } = await listAlertas(user, toBackendFilter(activeFilter));
+  const { items, counts } = await listAlertas(
+    user,
+    toBackendFilter(activeFilter),
+  );
 
   return {
     items,
@@ -91,7 +95,9 @@ export async function action({ request, context }: RouteActionArgs) {
       await marcarLido(alertaId, user);
     } else if (actionType === "marcarResolvido") {
       assertIsAdmin(user);
-      const { alertaId } = MarcarResolvidoSchema.parse(formDataToRecord(formData));
+      const { alertaId } = MarcarResolvidoSchema.parse(
+        formDataToRecord(formData),
+      );
       await marcarResolvido(alertaId, user);
     } else {
       throw new Response(JSON.stringify({ error: "Ação inválida" }), {
@@ -104,7 +110,7 @@ export async function action({ request, context }: RouteActionArgs) {
       status: 302,
       headers: {
         Location: `/app/alertas?filter=${normalizeAlertaFilter(
-          new URL(request.url).searchParams.get("filter")
+          new URL(request.url).searchParams.get("filter"),
         )}`,
       },
     });
@@ -127,20 +133,63 @@ export async function action({ request, context }: RouteActionArgs) {
 }
 
 /**
- * Página de alertas com abas, cards e actions compatíveis com _action.
+ * Página de alertas: cabeçalho e indicadores do DS, abas de filtro por URL
+ * (`?filter=`), lista de cards e estado vazio contextual.
  */
 export default function AlertasPage({ loaderData }: { loaderData: AlertasLoaderData }) {
   const { items, counts, activeFilter, canResolve } = loaderData;
+  const pendentes = counts.todos - counts.resolvidos;
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Alertas</h1>
+    <div className="mx-auto max-w-4xl space-y-6" data-od-id="alerts-page">
+      <PageHeader
+        eyebrow="Central de alertas"
+        title="Alertas"
+        description="Acompanhe o que precisa da atenção da equipe e marque o que já foi tratado."
+      />
+
+      <section
+        className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+        aria-label="Resumo dos alertas"
+        data-od-id="alerts-kpis"
+      >
+        <KpiCard
+          label="Não lidos"
+          value={counts.naoLidos}
+          hint={counts.naoLidos === 0 ? "tudo em dia" : "aguardando leitura"}
+          tone="warning"
+          icon={<Icon name="bell" size="md" />}
+        />
+        <KpiCard
+          label="Pendentes"
+          value={pendentes}
+          hint="ainda não resolvidos"
+          tone="danger"
+          icon={<Icon name="alert-triangle" size="md" />}
+        />
+        <KpiCard
+          label="Resolvidos"
+          value={counts.resolvidos}
+          hint={`de ${counts.todos} no total`}
+          tone="success"
+          icon={<Icon name="check" size="md" />}
+        />
+      </section>
+
       <TabsFiltroAlertas activeFilter={activeFilter} counts={counts} />
 
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500">{emptyAlertaMessage(activeFilter)}</p>
+        <EmptyState
+          icon={<Icon name="bell" size="lg" />}
+          title={emptyAlertaMessage(activeFilter)}
+          description={
+            activeFilter === "todos"
+              ? "Quando algo precisar da sua atenção, aparecerá aqui."
+              : "Troque de aba para ver os demais alertas."
+          }
+        />
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3" aria-label="Lista de alertas">
           {items.map((alerta) => (
             <li key={alerta.id}>
               <CardAlerta

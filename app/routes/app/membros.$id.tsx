@@ -25,28 +25,33 @@
  * @see app/lib/members.server.ts (getMembroById, deleteMembro)
  * @see design/private-membros-detail.DESIGN.md
  */
-import { Form, Link, isRouteErrorResponse, useNavigation } from "react-router";
-import { data } from "react-router";
 import type React from "react";
-import { useState, useRef, useEffect } from "react";
-import type { Route } from "./+types/membros.$id";
-import { userContext } from "~/lib/user-context";
+import { useEffect, useRef, useState } from "react";
 import {
+  Form,
+  Link,
+  data,
+  isRouteErrorResponse,
+  useNavigation,
+  useSearchParams,
+} from "react-router";
+import { Avatar, Badge, Button, EmptyState } from "~/components/ds";
+import { ErrorAlert } from "~/components/ErrorAlert";
+import { CardFidelidade } from "~/components/fidelidade/CardFidelidade";
+import { prisma } from "~/db/prisma.server";
+import { getAuditLogsByMembro } from "~/lib/audit.server";
+import { criarConvite } from "~/lib/convite.server";
+import { BusinessRuleError, NotFoundError } from "~/lib/errors";
+import { getFidelidadeFinanceira } from "~/lib/finance.server";
+import {
+  deleteMembro,
   getMembroAvatarSignedUrl,
   getMembroById,
-  deleteMembro,
   toggleDiscipulador,
 } from "~/lib/members.server";
-import { getFidelidadeFinanceira } from "~/lib/finance.server";
-import { getAuditLogsByMembro } from "~/lib/audit.server";
-import { BusinessRuleError, NotFoundError } from "~/lib/errors";
 import { getBlockedIPs, unblockIP } from "~/lib/rate-limit.server";
-import { criarConvite } from "~/lib/convite.server";
-import { prisma } from "~/db/prisma.server";
-import { Breadcrumb } from "~/components/Breadcrumb";
-import { Button } from "~/components/Button";
-import { ErrorAlert } from "~/components/ErrorAlert";
-import { PageHeader } from "~/components/PageHeader";
+import { userContext } from "~/lib/user-context";
+import type { Route } from "./+types/membros.$id";
 
 export function meta({ data }: Route.MetaArgs) {
   if (!data?.membro) {
@@ -72,7 +77,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const membro = await getMembroById(params.id, user);
   const canDelete = user.cargo === "ADMIN" || user.cargo === "PASTOR";
   const isAdmin = user.cargo === "ADMIN";
-  const canToggleDiscipulador = user.cargo === "ADMIN" || user.cargo === "PASTOR" || user.cargo === "SECRETARIO";
+  const canToggleDiscipulador =
+    user.cargo === "ADMIN" ||
+    user.cargo === "PASTOR" ||
+    user.cargo === "SECRETARIO";
   const fidelidadeFinanceira = await getFidelidadeFinanceira(params.id, user);
 
   // IPs bloqueados (apenas ADMIN vê)
@@ -154,15 +162,15 @@ export async function action({ params, context, request }: Route.ActionArgs) {
       });
     } catch (e) {
       if (e instanceof BusinessRuleError) {
-        return new Response(
-          JSON.stringify({ formError: e.message }),
-          { status: 409, headers: { "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ formError: e.message }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       if (e instanceof NotFoundError) {
         return new Response(
           JSON.stringify({ formError: "Membro não encontrado." }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
+          { status: 404, headers: { "Content-Type": "application/json" } },
         );
       }
       throw e;
@@ -172,8 +180,10 @@ export async function action({ params, context, request }: Route.ActionArgs) {
   if (intent === "unblock") {
     if (user.cargo !== "ADMIN") {
       return new Response(
-        JSON.stringify({ formError: "Apenas administradores podem desbloquear IPs." }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          formError: "Apenas administradores podem desbloquear IPs.",
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
       );
     }
     const ip = formData.get("ip") as string;
@@ -207,8 +217,10 @@ export async function action({ params, context, request }: Route.ActionArgs) {
   if (intent === "gerar-convite") {
     if (user.cargo !== "ADMIN") {
       return new Response(
-        JSON.stringify({ formError: "Apenas administradores podem gerar convites." }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          formError: "Apenas administradores podem gerar convites.",
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
       );
     }
     const membro = await getMembroById(params.id, user);
@@ -227,10 +239,13 @@ export async function action({ params, context, request }: Route.ActionArgs) {
     });
   }
 
-  return new Response(JSON.stringify({ formError: "Intent não reconhecido." }), {
-    status: 400,
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ formError: "Intent não reconhecido." }),
+    {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }
 
 /**
@@ -294,7 +309,10 @@ function formatDate(iso: string | Date | null | undefined): string {
  * **Mobile:** "Editar" e "Excluir" empilham; "Excluir" só aparece
  * para ADMIN/PASTOR.
  */
-export default function MembroDetail({ loaderData, actionData }: Route.ComponentProps) {
+export default function MembroDetail({
+  loaderData,
+  actionData,
+}: Route.ComponentProps) {
   const {
     membro,
     canDelete,
@@ -306,7 +324,27 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
     discipuladorAtual,
     ministeriosMembro = [],
     auditLogs = [],
+    fidelidadeFinanceira,
   } = loaderData;
+  const canSeeFinancials = Boolean(fidelidadeFinanceira);
+
+  // Abas controladas pela URL (?tab=). Fidelidade (RN-MEM-03) só existe quando
+  // o loader liberou os dados; Auditoria e Segurança são exclusivas de ADMIN.
+  const [searchParams] = useSearchParams();
+  const TABS = [
+    { key: "dados", label: "Dados" },
+    { key: "discipulado", label: "Discipulado" },
+    { key: "ministerios", label: "Ministérios" },
+    ...(canSeeFinancials ? [{ key: "fidelidade", label: "Fidelidade" }] : []),
+    ...(isAdmin
+      ? [
+          { key: "auditoria", label: "Auditoria" },
+          { key: "seguranca", label: "Segurança" },
+        ]
+      : []),
+  ];
+  const tabParam = searchParams.get("tab");
+  const tab = TABS.some((t) => t.key === tabParam) ? tabParam : "dados";
   const navigation = useNavigation();
   const isDeleting =
     navigation.state === "submitting" &&
@@ -363,135 +401,121 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
   const temAcesso = !!membro.cargo && !!membro.email;
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      {/* Avatar grande + header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="h-24 w-24 rounded-full overflow-hidden bg-slate-50 border border-slate-300 flex items-center justify-center shrink-0">
-          {avatarSigned?.url ? (
-            <img
-              src={avatarSigned.url}
-              alt={`Foto de ${membro.nome}`}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <svg
-              className="h-10 w-10 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
+    <div className="member-detail-page" data-od-id="member-detail-page">
+      <header className="profile-head" data-od-id="member-detail-header">
+        <Avatar
+          name={membro.nome}
+          src={avatarSigned?.url ?? undefined}
+          size={96}
+          alt={`Foto de ${membro.nome}`}
+        />
+        <div className="profile-copy">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <h1>{membro.nome}</h1>
+            <Badge tone={membro.status === "Inativo" ? "danger" : "success"}>
+              {membro.status ?? "Ativo"}
+            </Badge>
+            {membro.cargo && <Badge tone="accent">{membro.cargo}</Badge>}
+          </div>
+          <nav aria-label="Trilha de navegação" className="profile-meta">
+            <Link to="/app/membros" className="text-accent hover:underline">
+              Membros
+            </Link>
+            <span aria-hidden="true" className="text-subtle">
+              ›
+            </span>
+            <span aria-current="page">
+              Membro desde {formatDate(membro.createdAt)}
+            </span>
+          </nav>
+        </div>
+        <div className="profile-actions">
+          <Button
+            as={Link}
+            to={`/app/membros/${membro.id}/editar`}
+            variant="primary"
+          >
+            Editar
+          </Button>
+          {canToggleDiscipulador && (
+            <Button
+              type="button"
+              variant={membro.isDiscipulador ? "ghost" : "secondary"}
+              onClick={() => setShowDiscipuladorModal(true)}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
+              {membro.isDiscipulador
+                ? "Remover Discipulador"
+                : "Tornar Discipulador"}
+            </Button>
+          )}
+          {isAdmin && temAcesso && (
+            <Form method="post" className="inline">
+              <input type="hidden" name="intent" value="gerar-convite" />
+              <Button
+                type="submit"
+                variant="secondary"
+                loading={isGerandoConvite}
+              >
+                Gerar Convite
+              </Button>
+            </Form>
+          )}
+          {canDelete && (
+            <Form method="post" className="inline">
+              <input type="hidden" name="intent" value="delete" />
+              <Button
+                type="submit"
+                variant="danger"
+                loading={isDeleting}
+                onClick={(e: React.MouseEvent<HTMLElement>) => {
+                  if (
+                    !window.confirm(
+                      `Tem certeza que deseja excluir ${membro.nome}? Esta ação não pode ser desfeita.`,
+                    )
+                  ) {
+                    e.preventDefault();
+                  }
+                }}
+              >
+                Excluir
+              </Button>
+            </Form>
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight truncate">
-            {membro.nome}
-          </h1>
-          <div className="mt-1 flex items-center gap-2 text-sm flex-wrap text-slate-500">
-            <nav aria-label="Trilha de navegação">
-              <ol className="flex items-center gap-1 text-sm flex-wrap">
-                <li className="flex items-center gap-1">
-                  <Link
-                    to="/app/membros"
-                    className="text-cyan-700 hover:underline"
-                  >
-                    Membros
-                  </Link>
-                  <span className="text-slate-400" aria-hidden="true">
-                    ›
-                  </span>
-                </li>
-                <li>
-                  <span
-                    className="font-medium text-slate-900"
-                    aria-current="page"
-                  >
-                    {membro.nome}
-                  </span>
-                </li>
-              </ol>
-            </nav>
-          </div>
-        </div>
-      </div>
+      </header>
 
-      <PageHeader
-        title=""
-        action={
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              as={Link}
-              to={`/app/membros/${membro.id}/editar`}
-              variant="primary"
-            >
-              Editar
-            </Button>
-            {canToggleDiscipulador && (
-              <Button
-                type="button"
-                variant={membro.isDiscipulador ? "ghost" : "blue"}
-                onClick={() => setShowDiscipuladorModal(true)}
-              >
-                {membro.isDiscipulador ? "Remover Discipulador" : "Tornar Discipulador"}
-              </Button>
-            )}
-            {isAdmin && temAcesso && (
-              <Form method="post" className="inline">
-                <input type="hidden" name="intent" value="gerar-convite" />
-                <Button
-                  type="submit"
-                  variant="blue"
-                  loading={isGerandoConvite}
-                >
-                  Gerar Convite
-                </Button>
-              </Form>
-            )}
-            {canDelete && (
-              <Form method="post" className="inline">
-                <input type="hidden" name="intent" value="delete" />
-                <Button
-                  type="submit"
-                  variant="danger"
-                  loading={isDeleting}
-                  onClick={(e: React.MouseEvent<HTMLElement>) => {
-                    if (
-                      !window.confirm(
-                        `Tem certeza que deseja excluir ${membro.nome}? Esta ação não pode ser desfeita.`,
-                      )
-                    ) {
-                      e.preventDefault();
-                    }
-                  }}
-                >
-                  Excluir
-                </Button>
-              </Form>
-            )}
-          </div>
-        }
-      />
+      <nav
+        className="member-detail-tabs"
+        data-od-id="member-detail-tabs"
+        aria-label="Seções do membro"
+      >
+        {TABS.map((t) => (
+          <Link
+            key={t.key}
+            to={`/app/membros/${membro.id}?tab=${t.key}`}
+            preventScrollReset
+            className={tab === t.key ? "active" : undefined}
+            aria-current={tab === t.key ? "page" : undefined}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
 
+      {/* ── Aba Dados ── */}
+      {tab === "dados" && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Resumo principal (2/3) */}
-        <article className="lg:col-span-2 border border-slate-300 rounded-lg bg-white p-4 sm:p-6 space-y-4">
+        <article className="lg:col-span-2 card p-4 sm:p-6 space-y-4">
           <header className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Dados cadastrais
-            </h2>
+            <h2 className="text-lg font-semibold text-fg">Dados cadastrais</h2>
             <TipoBadge tipo={membro.tipo} />
             {membro.cargo ? (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-soft text-success">
                 {membro.cargo}
               </span>
             ) : (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-2 text-muted">
                 Sem acesso ao sistema
               </span>
             )}
@@ -512,11 +536,9 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
           </dl>
 
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-2">
-              Endereço
-            </h3>
+            <h3 className="text-sm font-semibold text-fg mb-2">Endereço</h3>
             {membro.logradouro || membro.cidade ? (
-              <p className="text-sm text-slate-700">
+              <p className="text-sm text-fg">
                 {[
                   membro.logradouro,
                   membro.numero ? `nº ${membro.numero}` : null,
@@ -529,38 +551,74 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
                 {membro.cep ? ` — CEP ${membro.cep}` : ""}
               </p>
             ) : (
-              <p className="text-sm text-slate-500">Endereço não informado.</p>
+              <p className="text-sm text-muted">Endereço não informado.</p>
             )}
           </div>
 
-          {/* Card Discipulado (abaixo do endereço) */}
-          <div className="border border-slate-300 rounded-lg bg-white p-4 sm:p-6 space-y-3">
-            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <svg className="h-4 w-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </article>
+        <aside className="space-y-4">
+          <div className="card p-4 sm:p-6 space-y-3">
+            <h2 className="text-sm font-semibold text-fg">KPIs</h2>
+            <Kpi label="Cadastrado em" value={formatDate(membro.createdAt)} />
+            <Kpi label="Atualizado em" value={formatDate(membro.updatedAt)} />
+            {membro.cargo && (
+              <Kpi
+                label="Cargo administrativo"
+                value={
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-soft-2 text-accent-strong">
+                    {membro.cargo}
+                  </span>
+                }
+              />
+            )}
+          </div>
+
+        </aside>
+      </div>
+      )}
+
+      {/* ── Aba Discipulado ── */}
+      {tab === "discipulado" && (
+        <div className="max-w-3xl space-y-3">
+          <div className="card p-4 sm:p-6 space-y-3">
+            <h2 className="text-sm font-semibold text-fg flex items-center gap-2">
+              <svg
+                className="h-4 w-4 text-accent"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                />
               </svg>
               Discipulado
               {membro.isDiscipulador && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-soft-2 text-accent-strong">
                   Discipulador
                 </span>
               )}
             </h2>
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">Discipulador</p>
+              <p className="text-xs uppercase tracking-wide text-muted mb-1">
+                Discipulador
+              </p>
               {discipuladorAtual ? (
                 <Link
                   to={`/app/membros/${discipuladorAtual.id}`}
-                  className="text-sm text-cyan-700 hover:underline"
+                  className="text-sm text-accent hover:underline"
                 >
                   {discipuladorAtual.nome}
                 </Link>
               ) : (
-                <p className="text-sm text-slate-500">Sem discipulador</p>
+                <p className="text-sm text-muted">Sem discipulador</p>
               )}
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+              <p className="text-xs uppercase tracking-wide text-muted mb-1">
                 Discípulos ({discipulos.length})
               </p>
               {discipulos.length > 0 ? (
@@ -569,7 +627,7 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
                     <li key={d.id}>
                       <Link
                         to={`/app/membros/${d.id}`}
-                        className="text-sm text-cyan-700 hover:underline"
+                        className="text-sm text-accent hover:underline"
                       >
                         {d.nome}
                       </Link>
@@ -577,52 +635,178 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-500">Nenhum discípulo</p>
+                <p className="text-sm text-muted">Nenhum discípulo</p>
               )}
             </div>
           </div>
-        </article>
+          <Button as={Link} to={`/app/membros/${membro.id}/discipulado`} variant="secondary">
+            Gerenciar discipulado
+          </Button>
+        </div>
+      )}
 
-        {/* Sidebar info (1/3) */}
-        <aside className="space-y-4">
-          <div className="border border-slate-300 rounded-lg bg-white p-4 sm:p-6 space-y-3">
-            <h2 className="text-sm font-semibold text-slate-900">KPIs</h2>
-            <Kpi label="Cadastrado em" value={formatDate(membro.createdAt)} />
-            <Kpi
-              label="Atualizado em"
-              value={formatDate(membro.updatedAt)}
-            />
-            {membro.cargo && (
-              <Kpi
-                label="Cargo administrativo"
-                value={
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">
-                    {membro.cargo}
-                  </span>
-                }
-              />
+      {/* ── Aba Ministérios ── */}
+      {tab === "ministerios" && (
+        <div className="max-w-3xl space-y-3">
+          <div className="card p-4 sm:p-6 space-y-3">
+            <h2 className="text-sm font-semibold text-fg flex items-center gap-2">
+              <svg
+                className="h-4 w-4 text-warning"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Ministérios
+            </h2>
+            {ministeriosMembro.length > 0 ? (
+              <ul className="space-y-1.5">
+                {ministeriosMembro.map((mm) => (
+                  <li
+                    key={mm.ministerio.id}
+                    className="flex items-center gap-2"
+                  >
+                    <Link
+                      to={`/app/ministerios/${mm.ministerio.id}`}
+                      className="text-sm text-accent hover:underline"
+                    >
+                      {mm.ministerio.nome}
+                    </Link>
+                    {mm.lider && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-warning-soft text-warning">
+                        Líder
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">Sem ministérios vinculados</p>
             )}
           </div>
 
-          {/* Bloqueio de IP (só ADMIN) */}
+          <Button as={Link} to={`/app/membros/${membro.id}/ministerios`} variant="secondary">
+            Gerenciar ministérios
+          </Button>
+        </div>
+      )}
+
+      {/* ── Aba Fidelidade (RN-MEM-03): só existe se o loader liberou os dados ── */}
+      {tab === "fidelidade" && canSeeFinancials && (
+        <section
+          id="fidelidade"
+          aria-labelledby="fidelidade-titulo"
+          className="space-y-4"
+          data-od-id="member-detail-fidelidade"
+        >
+          <h2 id="fidelidade-titulo" className="text-lg font-semibold text-fg">
+            Fidelidade e contribuições
+          </h2>
+          <CardFidelidade data={fidelidadeFinanceira} />
+        </section>
+      )}
+
+      {/* ── Aba Auditoria (ADMIN) ── */}
+      {tab === "auditoria" && isAdmin && (
+        <div className="max-w-3xl">
+          {isAdmin && auditLogs.length > 0 && (
+            <div
+              id="auditoria"
+              className="card p-4 sm:p-6 space-y-3 scroll-mt-24"
+            >
+              <h2 className="text-sm font-semibold text-fg flex items-center gap-2">
+                <svg
+                  className="h-4 w-4 text-muted"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Log de Auditoria
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-muted border-b border-border">
+                      <th className="pb-1 pr-3 font-medium">Ação</th>
+                      <th className="pb-1 pr-3 font-medium">Data/Hora</th>
+                      <th className="pb-1 pr-3 font-medium">IP (hash)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {auditLogs.map((log) => (
+                      <tr key={log.id} className="text-fg">
+                        <td className="py-1.5 pr-3 font-mono">{log.event}</td>
+                        <td className="py-1.5 pr-3 whitespace-nowrap">
+                          {new Date(log.createdAt).toLocaleString("pt-BR")}
+                        </td>
+                        <td className="py-1.5 pr-3 font-mono text-subtle">
+                          {log.ipHash ? log.ipHash.slice(0, 12) + "…" : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {auditLogs.length === 0 && (
+            <EmptyState title="Nenhum evento registrado" description="As ações sobre este cadastro aparecerão aqui." />
+          )}
+        </div>
+      )}
+
+      {/* ── Aba Segurança (ADMIN) ── */}
+      {tab === "seguranca" && isAdmin && (
+        <div className="max-w-3xl">
           {isAdmin && (
-            <div className="border border-slate-300 rounded-lg bg-white p-4 sm:p-6 space-y-3">
-              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <div className="card p-4 sm:p-6 space-y-3">
+              <h2 className="text-sm font-semibold text-fg flex items-center gap-2">
+                <svg
+                  className="h-4 w-4 text-muted"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
                 </svg>
                 Bloqueio de IP
               </h2>
               {blockedIPs.length === 0 ? (
-                <p className="text-xs text-slate-500">Nenhum IP bloqueado no momento.</p>
+                <p className="text-xs text-muted">
+                  Nenhum IP bloqueado no momento.
+                </p>
               ) : (
                 <div className="space-y-2">
                   {blockedIPs.map((blocked) => (
-                    <div key={blocked.ip} className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-100">
+                    <div
+                      key={blocked.ip}
+                      className="flex items-center justify-between p-2 bg-danger-soft rounded-lg border border-danger-soft"
+                    >
                       <div>
-                        <p className="text-xs font-mono text-red-700">{blocked.ip}</p>
-                        <p className="text-[10px] text-red-500">
-                          {blocked.count} falhas · expira em {Math.ceil(blocked.retryAfter / 60)}min
+                        <p className="text-xs font-mono text-danger">
+                          {blocked.ip}
+                        </p>
+                        <p className="text-[10px] text-danger">
+                          {blocked.count} falhas · expira em{" "}
+                          {Math.ceil(blocked.retryAfter / 60)}min
                         </p>
                       </div>
                       <Form method="post" className="inline">
@@ -630,7 +814,7 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
                         <input type="hidden" name="ip" value={blocked.ip} />
                         <button
                           type="submit"
-                          className="text-xs font-medium text-red-600 hover:text-red-800 underline cursor-pointer"
+                          className="text-xs font-medium text-danger hover:text-danger underline cursor-pointer"
                           onClick={(e: React.MouseEvent<HTMLElement>) => {
                             if (
                               !window.confirm(
@@ -651,74 +835,8 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
             </div>
           )}
 
-          {/* Card Ministérios */}
-          <div className="border border-slate-300 rounded-lg bg-white p-4 sm:p-6 space-y-3">
-            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <svg className="h-4 w-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Ministérios
-            </h2>
-            {ministeriosMembro.length > 0 ? (
-              <ul className="space-y-1.5">
-                {ministeriosMembro.map((mm) => (
-                  <li key={mm.ministerio.id} className="flex items-center gap-2">
-                    <Link
-                      to={`/app/ministerios/${mm.ministerio.id}`}
-                      className="text-sm text-cyan-700 hover:underline"
-                    >
-                      {mm.ministerio.nome}
-                    </Link>
-                    {mm.lider && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                        Líder
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">Sem ministérios vinculados</p>
-            )}
-          </div>
-
-          {/* Card Log de Auditoria (só ADMIN) */}
-          {isAdmin && auditLogs.length > 0 && (
-            <div className="border border-slate-300 rounded-lg bg-white p-4 sm:p-6 space-y-3">
-              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Log de Auditoria
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-slate-500 border-b border-slate-200">
-                      <th className="pb-1 pr-3 font-medium">Ação</th>
-                      <th className="pb-1 pr-3 font-medium">Data/Hora</th>
-                      <th className="pb-1 pr-3 font-medium">IP (hash)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {auditLogs.map((log) => (
-                      <tr key={log.id} className="text-slate-700">
-                        <td className="py-1.5 pr-3 font-mono">{log.event}</td>
-                        <td className="py-1.5 pr-3 whitespace-nowrap">
-                          {new Date(log.createdAt).toLocaleString("pt-BR")}
-                        </td>
-                        <td className="py-1.5 pr-3 font-mono text-slate-400">
-                          {log.ipHash ? log.ipHash.slice(0, 12) + "…" : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </aside>
-      </div>
+        </div>
+      )}
 
       {/* Modal de Confirmação - Tornar/Remover Discipulador */}
       {showDiscipuladorModal && (
@@ -727,18 +845,30 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowDiscipuladorModal(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+          <div className="relative bg-surface rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              <div className="w-10 h-10 rounded-full bg-accent-soft-2 flex items-center justify-center">
+                <svg
+                  className="h-5 w-5 text-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  {membro.isDiscipulador ? "Remover Discipulador" : "Tornar Discipulador"}
+                <h3 className="text-lg font-bold text-fg">
+                  {membro.isDiscipulador
+                    ? "Remover Discipulador"
+                    : "Tornar Discipulador"}
                 </h3>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted">
                   {membro.isDiscipulador
                     ? `${membro.nome} não aparecerá mais na lista de discipuladores.`
                     : `${membro.nome} poderá receber discípulos vinculados a ele.`}
@@ -748,18 +878,24 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
 
             <div className="flex flex-col sm:flex-row gap-2">
               <Form method="post" className="flex-1">
-                <input type="hidden" name="intent" value="toggle-discipulador" />
+                <input
+                  type="hidden"
+                  name="intent"
+                  value="toggle-discipulador"
+                />
                 <button
                   type="submit"
-                  className="w-full h-10 rounded-lg bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                  className="w-full h-10 rounded-lg bg-accent text-white font-medium text-sm hover:bg-accent-strong transition-colors flex items-center justify-center gap-2"
                 >
-                  {isTogglingDiscipulador ? "Confirmando…" : "Sim, tenho certeza"}
+                  {isTogglingDiscipulador
+                    ? "Confirmando…"
+                    : "Sim, tenho certeza"}
                 </button>
               </Form>
               <button
                 type="button"
                 onClick={() => setShowDiscipuladorModal(false)}
-                className="flex-1 h-10 rounded-lg bg-slate-100 text-slate-700 font-medium text-sm hover:bg-slate-200 transition-colors"
+                className="flex-1 h-10 rounded-lg bg-surface-2 text-fg font-medium text-sm hover:bg-border transition-colors"
               >
                 Cancelar
               </button>
@@ -771,52 +907,94 @@ export default function MembroDetail({ loaderData, actionData }: Route.Component
       {/* Modal de Convite */}
       {showConviteModal && conviteData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowConviteModal(false); modalShownRef.current = false; }} />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setShowConviteModal(false);
+              modalShownRef.current = false;
+            }}
+          />
+          <div className="relative bg-surface rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                <svg className="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              <div className="w-10 h-10 rounded-full bg-success-soft flex items-center justify-center">
+                <svg
+                  className="h-5 w-5 text-success"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Convite gerado!</h3>
-                <p className="text-sm text-slate-500">Compartilhe com {conviteData.membroNome}</p>
+                <h3 className="text-lg font-bold text-fg">Convite gerado!</h3>
+                <p className="text-sm text-muted">
+                  Compartilhe com {conviteData.membroNome}
+                </p>
               </div>
             </div>
 
-            <p className="text-sm text-slate-600">
-              Copie o texto abaixo e envie via <strong>WhatsApp</strong> ou <strong>Telegram</strong>:
+            <p className="text-sm text-muted">
+              Copie o texto abaixo e envie via <strong>WhatsApp</strong> ou{" "}
+              <strong>Telegram</strong>:
             </p>
 
-            <div className="bg-slate-50 border border-slate-300 rounded-lg p-4 text-sm text-slate-700 max-h-60 overflow-y-auto space-y-2">
+            <div className="bg-surface-2 border border-border-strong rounded-lg p-4 text-sm text-fg max-h-60 overflow-y-auto space-y-2">
               {renderConvitePreview(conviteData.textoConvite)}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleCopy}
-                className="flex-1 h-10 rounded-lg bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                className="flex-1 h-10 rounded-lg bg-accent text-white font-medium text-sm hover:bg-accent-strong transition-colors flex items-center justify-center gap-2"
               >
                 {copied ? (
                   <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth="2"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     Copiado!
                   </>
                 ) : (
                   <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth="2"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                      />
                     </svg>
                     Copiar texto
                   </>
                 )}
               </button>
               <button
-                onClick={() => { setShowConviteModal(false); modalShownRef.current = false; }}
-                className="flex-1 h-10 rounded-lg bg-slate-100 text-slate-700 font-medium text-sm hover:bg-slate-200 transition-colors"
+                onClick={() => {
+                  setShowConviteModal(false);
+                  modalShownRef.current = false;
+                }}
+                className="flex-1 h-10 rounded-lg bg-surface-2 text-fg font-medium text-sm hover:bg-border transition-colors"
               >
                 Fechar
               </button>
@@ -835,9 +1013,9 @@ function TipoBadge({
   tipo: "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
 }) {
   const classes = {
-    VISITANTE: "bg-amber-100 text-amber-800",
-    CONGREGADO: "bg-blue-100 text-blue-800",
-    MEMBRO_ATIVO: "bg-green-100 text-green-800",
+    VISITANTE: "bg-warning-soft text-warning",
+    CONGREGADO: "bg-accent-soft-2 text-accent-strong",
+    MEMBRO_ATIVO: "bg-success-soft text-success",
   }[tipo];
   const label = {
     VISITANTE: "Visitante",
@@ -857,10 +1035,8 @@ function TipoBadge({
 function DataField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-slate-500">
-        {label}
-      </dt>
-      <dd className="text-slate-900 mt-0.5">{value}</dd>
+      <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
+      <dd className="text-fg mt-0.5">{value}</dd>
     </div>
   );
 }
@@ -869,10 +1045,8 @@ function DataField({ label, value }: { label: string; value: string }) {
 function Kpi({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-slate-500">
-        {label}
-      </dt>
-      <dd className="text-slate-900 mt-0.5">{value}</dd>
+      <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
+      <dd className="text-fg mt-0.5">{value}</dd>
     </div>
   );
 }
@@ -887,7 +1061,8 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   if (isRouteErrorResponse(error)) {
     if (error.status === 404) {
       title = "Membro não encontrado";
-      message = "O membro que você procura não existe ou você não tem permissão para vê-lo.";
+      message =
+        "O membro que você procura não existe ou você não tem permissão para vê-lo.";
     } else if (error.status === 403) {
       title = "Acesso negado";
       message = "Você não tem permissão para ver este membro.";
@@ -897,14 +1072,15 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     }
   } else if (error instanceof NotFoundError) {
     title = "Membro não encontrado";
-    message = "O membro que você procura não existe ou você não tem permissão para vê-lo.";
+    message =
+      "O membro que você procura não existe ou você não tem permissão para vê-lo.";
   } else if (error instanceof Error) {
     message = error.message;
   }
 
   return (
     <main className="p-4 sm:p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">{title}</h1>
+      <h1 className="text-2xl font-bold text-fg mb-2">{title}</h1>
       <ErrorAlert tone="error">{message}</ErrorAlert>
       <div className="mt-4">
         <Button as={Link} to="/app/membros" variant="ghost">

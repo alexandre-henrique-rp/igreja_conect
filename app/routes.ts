@@ -84,10 +84,24 @@ export default [
       route("membros/:id/editar", "routes/app/membros.$id.editar.tsx"),
 
       // Sub-rotas do membro
-      route("membros/:id/discipulado", "routes/app/membros.$id.discipulado.tsx"),
-      route("membros/:id/discipulador", "routes/app/membros.$id.discipulador.tsx"),
-      route("membros/:id/ministerios", "routes/app/membros.$id.ministerios.tsx"),
+      route(
+        "membros/:id/discipulado",
+        "routes/app/membros.$id.discipulado.tsx",
+      ),
+      route(
+        "membros/:id/discipulador",
+        "routes/app/membros.$id.discipulador.tsx",
+      ),
+      route(
+        "membros/:id/ministerios",
+        "routes/app/membros.$id.ministerios.tsx",
+      ),
       route("membros/:id/tipo", "routes/app/membros.$id.tipo.tsx"),
+
+      // Visitantes (acolhimento) — Membro com tipo VISITANTE
+      route("visitantes", "routes/app/visitantes._index.tsx"),
+      route("visitantes/novo", "routes/app/visitantes.novo.tsx"),
+      route("visitantes/:id", "routes/app/visitantes.$id.tsx"),
 
       // S06 — Módulo Financeiro
       route("financeiro", "routes/app/financeiro._index.tsx"),
@@ -142,11 +156,7 @@ export default [
       // Escalas
       route("escalas", "routes/app/escalas._index.tsx"),
       route("escalas/novo", "routes/app/escalas.novo.tsx"), // Formulário de Nova Escala
-
-      // Cultos
-      route("cultos", "routes/app/cultos._index.tsx"),
-      route("cultos/novo", "routes/app/cultos.novo.tsx"),
-      route("cultos/:id/editar", "routes/app/cultos.$id.editar.tsx"),
+      route("escalas/:id/editar", "routes/app/escalas.$id.editar.tsx"),
 
       // Estoque
       route("estoque", "routes/app/estoque._index.tsx", [
@@ -158,18 +168,32 @@ export default [
         route(":id/retorno", "routes/app/estoque.$id.retorno.tsx"),
         route(":id/baixa", "routes/app/estoque.$id.baixa.tsx"),
       ]),
+      route("estoque/itens", "routes/app/estoque.itens.tsx"),
+      route("estoque/movimentacoes", "routes/app/estoque.movimentacoes.tsx"),
       route("estoque/requisicoes", "routes/app/estoque.requisicoes._index.tsx"),
-      route("estoque/requisicoes/nova", "routes/app/estoque.requisicoes.nova.tsx"),
-      route("estoque/requisicoes/:id", "routes/app/estoque.requisicoes.$id.tsx"),
+      route(
+        "estoque/requisicoes/nova",
+        "routes/app/estoque.requisicoes.nova.tsx",
+      ),
+      route(
+        "estoque/requisicoes/:id",
+        "routes/app/estoque.requisicoes.$id.tsx",
+      ),
 
-      // Patrimônio (atalho UX, redireciona para /app/estoque?tipo=PATRIMONIO)
-      route("patrimonio", "routes/app/patrimonio.tsx"),
+      // Patrimônio — inventário próprio (ItemEstoque tipo PATRIMONIO)
+      route("patrimonio", "routes/app/patrimonio._index.tsx"),
+      route("patrimonio/novo", "routes/app/patrimonio.novo.tsx"),
+      route("patrimonio/:id", "routes/app/patrimonio.$id.tsx"),
 
       // Configurações
+      route("config", "routes/app/config._index.tsx"),
       route("config/acolhimento", "routes/app/config.acolhimento.tsx"),
 
       // Células
       route("celulas", "routes/app/celulas._index.tsx"),
+      route("celulas/novo", "routes/app/celulas.novo.tsx"),
+      route("celulas/:id", "routes/app/celulas.$id.tsx"),
+      route("celulas/:id/editar", "routes/app/celulas.$id.editar.tsx"),
 
       // Eventos
       route("eventos", "routes/app/eventos._index.tsx"),

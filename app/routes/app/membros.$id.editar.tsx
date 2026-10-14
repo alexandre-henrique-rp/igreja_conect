@@ -147,7 +147,7 @@ import { FormMembro } from "~/components/FormMembro";
 export default function MembrosEditar({ loaderData, actionData }: Route.ComponentProps) {
   const typedActionData = actionData as { formError?: string; fieldErrors?: Record<string, string[]> } | undefined;
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="member-edit-page" data-od-id="edit-member-page">
       {/* `key` força remount quando o usuário navega de /membros/A/editar
           para /membros/B/editar. Sem ele, o FormMembro reusa o estado
           controlado (telefone, cep, cargo, temAcesso) do membro anterior

@@ -13,7 +13,7 @@
  * usuário de Tab precise tabular pelo logo + Entrar toda vez.
  *
  * **Visualmente:**
- * - Fundo branco com `border-b` slate-200 (sutis separação do conteúdo).
+ * - Fundo branco com `border-b` border (sutis separação do conteúdo).
  * - Altura `h-14` (56px) — confortável para toque (≥ 44px) e para Tab.
  * - Sticky `top-0` com `z-10` (fica acima do conteúdo mas abaixo de modais futuros).
  *
@@ -60,18 +60,18 @@ export function TopbarPublica({ entrarHref }: TopbarPublicaProps) {
           sr-only focus:not-sr-only
           focus:fixed focus:top-2 focus:left-2 focus:z-50
           focus:px-3 focus:py-2 focus:rounded-md
-          focus:bg-blue-600 focus:text-white focus:text-sm focus:font-medium
+          focus:bg-accent focus:text-white focus:text-sm focus:font-medium
           focus:shadow-lg
         "
       >
         Pular para o conteúdo
       </a>
-      <header className="sticky top-0 z-10 bg-[#070e1b]/80 backdrop-blur-md border-b border-[#202f47]">
+      <header className="sticky top-0 z-10 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link
             to="/"
             aria-label="Ir para a página inicial"
-            className="font-semibold text-white hover:text-blue-400 transition-colors"
+            className="font-semibold text-white hover:text-accent transition-colors"
           >
             Igreja Conect
           </Link>
@@ -81,9 +81,9 @@ export function TopbarPublica({ entrarHref }: TopbarPublicaProps) {
               className="
                 inline-flex items-center h-9 px-4 rounded-lg
                 text-sm font-medium text-white
-                bg-blue-600 hover:bg-blue-700
+                bg-accent hover:bg-accent-strong
                 focus-visible:outline-none focus-visible:ring-2
-                focus-visible:ring-blue-500 focus-visible:ring-offset-0
+                focus-visible:ring-accent focus-visible:ring-offset-0
                 transition-colors
               "
             >

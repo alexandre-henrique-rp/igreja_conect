@@ -2,7 +2,7 @@
  * Componente <PageHeader /> — cabeçalho de página com título + CTA opcional (S02-T03).
  *
  * Estrutura:
- * 1. `<h1>` com `text-2xl font-bold text-slate-900` — única h1 por página.
+ * 1. `<h1>` com `text-2xl font-bold text-fg` — única h1 por página.
  * 2. Slot `breadcrumb` (opcional) — renderizado **abaixo** do h1.
  * 3. Slot `action` (opcional) — renderizado à **direita** do título em `sm+`,
  *    abaixo em `<sm` (mobile-first: empilha em telas pequenas).
@@ -66,7 +66,7 @@ export function PageHeader({ title, action, breadcrumb }: PageHeaderProps) {
   return (
     <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+        <h1 className="text-2xl font-bold text-fg">{title}</h1>
         {breadcrumb && <div className="mt-1">{breadcrumb}</div>}
       </div>
       {action && <div className="shrink-0">{action}</div>}

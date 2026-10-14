@@ -156,22 +156,22 @@ export default function DetalheCaixa({
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Breadcrumb manual */}
-      <nav className="text-sm text-slate-500 mb-4" aria-label="Breadcrumb">
+      <nav className="text-sm text-muted mb-4" aria-label="Breadcrumb">
         <Link
           to="/app/financeiro"
-          className="hover:text-cyan-700 transition-colors"
+          className="hover:text-accent transition-colors"
         >
           Financeiro
         </Link>
         <span className="mx-2">/</span>
         <Link
           to="/app/financeiro/caixas"
-          className="hover:text-cyan-700 transition-colors"
+          className="hover:text-accent transition-colors"
         >
           Caixas
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-slate-900 font-medium">{caixa.nome}</span>
+        <span className="text-fg font-medium">{caixa.nome}</span>
       </nav>
 
       <CaixaHeader
@@ -185,7 +185,7 @@ export default function DetalheCaixa({
         {caixa.ativo && (
           <Link
             to={`/app/financeiro/lancamentos/novo?caixaId=${caixa.id}`}
-            className="inline-flex items-center justify-center rounded-md bg-cyan-700 px-3 h-9 text-sm font-medium text-white hover:bg-cyan-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+            className="inline-flex items-center justify-center rounded-md bg-accent px-3 h-9 text-sm font-medium text-white hover:bg-accent-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             + Novo Lançamento
           </Link>
@@ -193,7 +193,7 @@ export default function DetalheCaixa({
         <Can user={user} allow={["ADMIN", "PASTOR", "FINANCEIRO"]}>
           <Link
             to="/app/financeiro/caixas"
-            className="inline-flex items-center justify-center rounded-md bg-slate-200 px-3 h-9 text-sm font-medium text-slate-700 hover:bg-slate-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+            className="inline-flex items-center justify-center rounded-md bg-border px-3 h-9 text-sm font-medium text-fg hover:bg-border-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             Voltar
           </Link>
@@ -208,7 +208,7 @@ export default function DetalheCaixa({
       />
 
       {/* Extrato */}
-      <div className="bg-white rounded-lg border border-slate-200 p-2">
+      <div className="bg-surface rounded-lg border border-border p-2">
         <ExtratoCaixa items={lancamentos} podeVerMembro={podeVerMembro} />
       </div>
 

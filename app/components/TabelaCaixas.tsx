@@ -60,7 +60,7 @@ export function TabelaCaixas({
       <div className="hidden sm:block">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
               <th className="pb-2 pr-4">Nome</th>
               <th className="pb-2 pr-4">Saldo</th>
               <th className="pb-2 pr-4">Lançamentos (mês)</th>
@@ -72,21 +72,21 @@ export function TabelaCaixas({
             {items.map((caixa) => (
               <tr
                 key={caixa.id}
-                className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                className="border-b border-surface-2 hover:bg-surface-2 transition-colors"
                 data-testid={`caixa-row-${caixa.id}`}
               >
                 <td className="py-3 pr-4">
                   <Link
                     to={`/app/financeiro/caixas/${caixa.id}`}
-                    className="text-sm font-medium text-slate-900 hover:text-cyan-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded"
+                    className="text-sm font-medium text-fg hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                   >
                     {caixa.nome}
                   </Link>
                 </td>
-                <td className="py-3 pr-4 text-sm font-medium tabular-nums text-slate-900">
+                <td className="py-3 pr-4 text-sm font-medium tabular-nums text-fg">
                   {formatBRLFromCents(caixa.saldoCentavos)}
                 </td>
-                <td className="py-3 pr-4 text-sm text-slate-600">
+                <td className="py-3 pr-4 text-sm text-muted">
                   {caixa.lancamentosMes}
                 </td>
                 <td className="py-3 pr-4">
@@ -96,7 +96,7 @@ export function TabelaCaixas({
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/app/financeiro/caixas/${caixa.id}`}
-                      className="inline-flex items-center justify-center h-8 w-8 rounded-md text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                       aria-label={`Ver detalhes de ${caixa.nome}`}
                     >
                       <svg
@@ -118,7 +118,7 @@ export function TabelaCaixas({
                       <button
                         type="button"
                         onClick={() => onArquivar(caixa.id)}
-                        className="inline-flex items-center justify-center h-8 px-2 rounded-md text-xs font-medium text-amber-700 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                        className="inline-flex items-center justify-center h-8 px-2 rounded-md text-xs font-medium text-warning hover:bg-warning-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                         aria-label={`Arquivar ${caixa.nome}`}
                       >
                         Arquivar
@@ -128,7 +128,7 @@ export function TabelaCaixas({
                       <button
                         type="button"
                         onClick={() => onReabrir(caixa.id)}
-                        className="inline-flex items-center justify-center h-8 px-2 rounded-md text-xs font-medium text-green-700 hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                        className="inline-flex items-center justify-center h-8 px-2 rounded-md text-xs font-medium text-success hover:bg-success-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                         aria-label={`Reabrir ${caixa.nome}`}
                       >
                         Reabrir
@@ -147,32 +147,32 @@ export function TabelaCaixas({
         {items.map((caixa) => (
           <div
             key={caixa.id}
-            className="bg-white rounded-lg border border-slate-200 p-4 space-y-2"
+            className="bg-surface rounded-lg border border-border p-4 space-y-2"
             data-testid={`caixa-card-${caixa.id}`}
           >
             <div className="flex items-center justify-between">
               <Link
                 to={`/app/financeiro/caixas/${caixa.id}`}
-                className="text-sm font-semibold text-slate-900 hover:text-cyan-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded"
+                className="text-sm font-semibold text-fg hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
               >
                 {caixa.nome}
               </Link>
               <BadgeStatus ativo={caixa.ativo} />
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">Saldo</span>
-              <span className="font-medium tabular-nums text-slate-900">
+              <span className="text-muted">Saldo</span>
+              <span className="font-medium tabular-nums text-fg">
                 {formatBRLFromCents(caixa.saldoCentavos)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">Lançamentos (mês)</span>
-              <span className="text-slate-700">{caixa.lancamentosMes}</span>
+              <span className="text-muted">Lançamentos (mês)</span>
+              <span className="text-fg">{caixa.lancamentosMes}</span>
             </div>
             <div className="flex items-center gap-2 pt-1">
               <Link
                 to={`/app/financeiro/caixas/${caixa.id}`}
-                className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium bg-cyan-700 text-white hover:bg-cyan-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium bg-accent text-white hover:bg-accent-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               >
                 Detalhes
               </Link>
@@ -180,7 +180,7 @@ export function TabelaCaixas({
                 <button
                   type="button"
                   onClick={() => onArquivar(caixa.id)}
-                  className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium border border-amber-300 text-amber-700 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                  className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium border border-warning-soft text-warning hover:bg-warning-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                 >
                   Arquivar
                 </button>
@@ -189,7 +189,7 @@ export function TabelaCaixas({
                 <button
                   type="button"
                   onClick={() => onReabrir(caixa.id)}
-                  className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium border border-green-300 text-green-700 hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                  className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium border border-success-soft text-success hover:bg-success-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                 >
                   Reabrir
                 </button>

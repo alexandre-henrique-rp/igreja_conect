@@ -1,17 +1,24 @@
 import { useState, useEffect } from "react";
 import { Form, Link, useNavigation } from "react-router";
 import type { FormEvent } from "react";
-import { Button } from "./Button";
-import { Checkbox } from "./Checkbox";
+import { Button, Checkbox, Input, Select } from "~/components/ds";
 import { ErrorAlert } from "./ErrorAlert";
-import { Input } from "./Input";
-import { Select } from "./Select";
 import { AvatarUpload } from "./AvatarUpload";
 import { AutocompleteInput } from "./AutocompleteInput";
 import { useToast } from "./ToastProvider";
 import { mascaraCep, mascaraTelefone } from "~/lib/masks";
 import { cn } from "~/lib/cn";
 import { getMembroStatus } from "./TabelaMembros";
+import {
+  Card,
+  FormFooter,
+  FormGrid,
+  FormSection,
+  Icon,
+  IconWrap,
+  PageHeader,
+  SpanTwo,
+} from "./ds";
 
 export type TipoMembroValue = "VISITANTE" | "CONGREGADO" | "MEMBRO_ATIVO";
 
@@ -205,17 +212,27 @@ export function FormMembro({
       : "Pendente";
 
   return (
-    <Form method="post" noValidate className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          {isEdit ? "Editar Membro" : "Novo Membro"}
-        </h1>
-        <p className="text-sm font-medium text-slate-500 mt-1">
-          {isEdit
-            ? "Altere os dados abaixo para atualizar o cadastro no sistema."
-            : "Preencha os dados abaixo para cadastrar uma nova pessoa no sistema."}
-        </p>
+    <Form method="post" noValidate className="space-y-6" data-od-id={isEdit ? "edit-member-form" : "new-member-form"}>
+      <div className="member-form-heading">
+        <Link
+          to={cancelarHref}
+          className="inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
+        >
+          ← {isEdit ? "Voltar para o membro" : "Voltar"}
+        </Link>
+        <PageHeader
+          title={isEdit ? "Editar membro" : "Cadastrar novo membro"}
+          description={
+            isEdit
+              ? `Atualize os dados de ${defaultValues?.nome ?? "este membro"}.`
+              : "Adicione os dados básicos para iniciar o acompanhamento."
+          }
+        />
+      </div>
+      <div className="member-form-stepper" data-od-id="member-form-stepper" aria-label="Etapas do cadastro">
+        <span className="active"><strong>1</strong> Dados pessoais</span>
+        <span><strong>2</strong> Dados eclesiásticos</span>
+        <span><strong>3</strong> Vínculos</span>
       </div>
 
       {formError && <ErrorAlert tone="error">{formError}</ErrorAlert>}
@@ -239,14 +256,14 @@ export function FormMembro({
             <legend className="sr-only">Identificação</legend>
             
             {/* Dados Pessoais Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-5">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div className="p-2 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="card p-6 space-y-5">
+              <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+                <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
-                <h2 className="text-base font-extrabold text-slate-900">Dados Pessoais</h2>
+                <h2 className="text-base font-extrabold text-fg">Dados Pessoais</h2>
               </div>
 
               {/* Profile Picture Upload Row */}
@@ -342,7 +359,7 @@ export function FormMembro({
           <fieldset>
             <legend className="sr-only">Contato</legend>
             
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-5">
+            <div className="card p-6 space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   id="telefone"
@@ -371,14 +388,14 @@ export function FormMembro({
           </fieldset>
 
           {/* Vinculação Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-5">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <div className="card p-6 space-y-5">
+            <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+              <div className="p-2 rounded-xl bg-success-soft text-success flex items-center justify-center">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900">Vinculação</h2>
+              <h2 className="text-base font-extrabold text-fg">Vinculação</h2>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -453,15 +470,15 @@ export function FormMembro({
             <legend className="sr-only">Endereço</legend>
             
             {/* Endereço Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-5">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="card p-6 space-y-5">
+              <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+                <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <h2 className="text-base font-extrabold text-slate-900">Endereço</h2>
+                <h2 className="text-base font-extrabold text-fg">Endereço</h2>
               </div>
 
               {/* CEP with Search Button */}
@@ -484,7 +501,7 @@ export function FormMembro({
                   type="button"
                   onClick={buscarCep}
                   disabled={buscandoCep}
-                  className="h-11 px-3 border border-slate-300 rounded-md bg-slate-50 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-slate-500 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                  className="h-11 px-3 border border-border-strong rounded-md bg-surface-2 hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   aria-label="Buscar CEP"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -562,33 +579,33 @@ export function FormMembro({
           </fieldset>
 
           {/* Histórico Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-5">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="p-2 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+          <div className="card p-6 space-y-5">
+            <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+              <div className="p-2 rounded-xl bg-warning-soft text-warning flex items-center justify-center">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900">Histórico</h2>
+              <h2 className="text-base font-extrabold text-fg">Histórico</h2>
             </div>
 
             <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
-              <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+              <div className="h-12 w-12 rounded-full bg-surface-2 flex items-center justify-center text-subtle">
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
               {isEdit && defaultValues?.createdAt ? (
-                <div className="space-y-1 text-sm text-slate-600 font-medium">
-                  <p>Cadastrado em: <span className="font-bold text-slate-900">{formatDate(defaultValues.createdAt)}</span></p>
+                <div className="space-y-1 text-sm text-muted font-medium">
+                  <p>Cadastrado em: <span className="font-bold text-fg">{formatDate(defaultValues.createdAt)}</span></p>
                   {defaultValues.updatedAt && (
-                    <p>Atualizado em: <span className="font-bold text-slate-900">{formatDate(defaultValues.updatedAt)}</span></p>
+                    <p>Atualizado em: <span className="font-bold text-fg">{formatDate(defaultValues.updatedAt)}</span></p>
                   )}
                 </div>
               ) : (
                 <div className="space-y-1">
-                  <p className="text-sm font-bold text-slate-700">Nenhum registro ainda</p>
-                  <p className="text-xs font-semibold text-slate-400 max-w-[200px]">
+                  <p className="text-sm font-bold text-fg">Nenhum registro ainda</p>
+                  <p className="text-xs font-semibold text-subtle max-w-[200px]">
                     O histórico será preenchido automaticamente após salvar.
                   </p>
                 </div>
@@ -597,8 +614,8 @@ export function FormMembro({
                 <span className={cn(
                   "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border",
                   isEdit
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                    : "bg-amber-50 text-amber-700 border-amber-100"
+                    ? "bg-success-soft text-success border-success-soft"
+                    : "bg-warning-soft text-warning border-warning-soft"
                 )}>
                   {isEdit ? "Ativo" : "Aguardando Criação"}
                 </span>
@@ -609,7 +626,7 @@ export function FormMembro({
       </div>
 
       {/* Footer Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-4 border-t border-slate-100">
+      <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-4 border-t border-surface-2">
         <Button as={Link} to={cancelarHref} variant="ghost" className="sm:w-32">
           Cancelar
         </Button>

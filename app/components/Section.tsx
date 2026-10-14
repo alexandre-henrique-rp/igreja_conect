@@ -13,9 +13,9 @@
  *   do form, o que ajuda na navegação visual.
  *
  * **Visual:**
- * - Container: `border border-slate-200 rounded-lg bg-white p-4 sm:p-6`
+ * - Container: `border border-border rounded-lg bg-surface p-4 sm:p-6`
  *   (card clean, padding responsivo).
- * - Legend: `text-sm font-semibold text-slate-900 px-2` (com padding
+ * - Legend: `text-sm font-semibold text-fg px-2` (com padding
  *   lateral para o legend "flutuar" sobre a borda superior do fieldset).
  *
  * **Tailwind 4 utility-first:** sem `@apply`. Classes via string.
@@ -48,8 +48,8 @@ export type SectionProps = {
  */
 export function Section({ title, children }: SectionProps) {
   return (
-    <fieldset className="border border-slate-200 rounded-lg p-4 sm:p-6 bg-white space-y-4">
-      <legend className="text-sm font-semibold text-slate-900 px-2">
+    <fieldset className="border border-border rounded-lg p-4 sm:p-6 bg-surface space-y-4">
+      <legend className="text-sm font-semibold text-fg px-2">
         {title}
       </legend>
       {children}

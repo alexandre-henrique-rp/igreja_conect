@@ -4,7 +4,7 @@
  * Versão mobile/card de cada lançamento no extrato. Exibe data, tipo,
  * categoria, valor, membro (condicional) e descrição.
  *
- * Entrada: texto verde. Saída: texto vermelho.
+ * Entrada: texto `success`. Saída: texto `danger`. Construído sobre `Card` do DS.
  *
  * @example
  *   <CardLancamento item={lancamento} podeVerMembro={true} />
@@ -14,6 +14,7 @@
  * @param props.podeVerMembro - Se true, exibe nome do membro.
  * @returns Elemento JSX do card.
  */
+import { Card } from "~/components/ds";
 import type { LancamentoResumo } from "~/lib/finance.server";
 import { cn } from "~/lib/cn";
 import { formatBRLFromCents } from "~/lib/money-format";
@@ -53,38 +54,37 @@ function formatDateShort(date: Date): string {
  * @param {CardLancamentoProps} props - item, podeVerMembro.
  * @returns {JSX.Element} Card do lançamento.
  */
-export function CardLancamento({
-  item,
-  podeVerMembro,
-}: CardLancamentoProps) {
+export function CardLancamento({ item, podeVerMembro }: CardLancamentoProps) {
   const isEntrada = item.tipo === "ENTRADA";
   const labelCat = CATEGORIA_LABEL[item.categoria] ?? item.categoria;
 
   return (
-    <div
+    <Card
+      variant="flat"
+      padding="none"
       data-testid={`card-lancamento-${item.id}`}
-      className="bg-white rounded-lg border border-slate-200 p-3 space-y-1"
+      className="p-3 space-y-1"
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-muted">
           {formatDateShort(item.dataCompetencia)}
         </span>
         <span
           className={cn(
             "text-sm font-semibold tabular-nums",
-            isEntrada ? "text-green-600" : "text-red-600"
+            isEntrada ? "text-success" : "text-danger",
           )}
         >
           {isEntrada ? "+" : "-"} {formatBRLFromCents(item.valorCentavos)}
         </span>
       </div>
-      <p className="text-sm font-medium text-slate-900">{labelCat}</p>
+      <p className="text-sm font-medium text-fg">{labelCat}</p>
       {item.membro && podeVerMembro && (
-        <p className="text-xs text-slate-500">{item.membro.nome}</p>
+        <p className="text-xs text-muted">{item.membro.nome}</p>
       )}
       {item.descricao && (
-        <p className="text-xs text-slate-400 truncate">{item.descricao}</p>
+        <p className="text-xs text-subtle truncate">{item.descricao}</p>
       )}
-    </div>
+    </Card>
   );
 }

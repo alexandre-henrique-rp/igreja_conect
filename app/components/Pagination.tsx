@@ -44,9 +44,9 @@ export function Pagination({
   return (
     <nav
       aria-label="Paginação"
-      className="flex items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-100 flex-wrap"
+      className="flex items-center justify-between gap-4 mt-6 pt-4 border-t border-surface-2 flex-wrap"
     >
-      <p className="text-sm font-semibold text-slate-500">
+      <p className="text-sm font-semibold text-muted">
         {rangeText}
       </p>
       <ol className="flex items-center gap-1.5">
@@ -56,10 +56,10 @@ export function Pagination({
             aria-disabled={current <= 1}
             tabIndex={current <= 1 ? -1 : undefined}
             className={cn(
-              "inline-flex items-center h-9 px-4 rounded-lg text-sm font-semibold border border-slate-200 bg-white transition-colors",
+              "inline-flex items-center h-9 px-4 rounded-lg text-sm font-semibold border border-border bg-surface transition-colors",
               current > 1
-                ? "text-slate-700 hover:bg-slate-50 cursor-pointer"
-                : "text-slate-300 bg-slate-50/50 cursor-not-allowed pointer-events-none"
+                ? "text-fg hover:bg-surface-2 cursor-pointer"
+                : "text-border-strong bg-surface-2/50 cursor-not-allowed pointer-events-none"
             )}
           >
             Anterior
@@ -75,8 +75,8 @@ export function Pagination({
                 className={cn(
                   "inline-flex items-center justify-center h-9 min-w-9 px-3 rounded-lg text-sm font-semibold transition-colors border",
                   isCurrent
-                    ? "bg-blue-600 text-white border-transparent hover:bg-blue-700"
-                    : "text-slate-700 bg-white border-slate-200 hover:bg-slate-50"
+                    ? "bg-accent text-white border-transparent hover:bg-accent-strong"
+                    : "text-fg bg-surface border-border hover:bg-surface-2"
                 )}
               >
                 {p}
@@ -90,10 +90,10 @@ export function Pagination({
             aria-disabled={current >= total}
             tabIndex={current >= total ? -1 : undefined}
             className={cn(
-              "inline-flex items-center h-9 px-4 rounded-lg text-sm font-semibold border border-slate-200 bg-white transition-colors",
+              "inline-flex items-center h-9 px-4 rounded-lg text-sm font-semibold border border-border bg-surface transition-colors",
               current < total
-                ? "text-slate-700 hover:bg-slate-50 cursor-pointer"
-                : "text-slate-300 bg-slate-50/50 cursor-not-allowed pointer-events-none"
+                ? "text-fg hover:bg-surface-2 cursor-pointer"
+                : "text-border-strong bg-surface-2/50 cursor-not-allowed pointer-events-none"
             )}
           >
             Próximo

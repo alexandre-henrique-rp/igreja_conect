@@ -32,10 +32,8 @@ import { listarCaixasParaTransferencia } from "~/lib/caixas.server";
 import { transferirEntreCaixas } from "~/lib/transferencias.server";
 import { parseBRLToCents } from "~/lib/money-format";
 import { Can } from "~/components/Can";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
+import { Button, Input, Select } from "~/components/ds";
 import { MoneyInput } from "~/components/MoneyInput";
-import { Select } from "~/components/Select";
 import { formatBRLFromCents } from "~/lib/money-format";
 
 // Types for loader/action
@@ -267,13 +265,13 @@ export default function NovaTransferencia() {
         user={user}
         allow={["ADMIN", "PASTOR", "FINANCEIRO"]}
         fallback={
-          <div className="rounded-lg bg-slate-50 border border-slate-200 p-6 text-center">
-            <p className="text-slate-600">
+          <div className="rounded-lg bg-surface-2 border border-border p-6 text-center">
+            <p className="text-muted">
               Você não tem permissão para realizar transferências entre caixas.
             </p>
             <Link
               to="/app/financeiro"
-              className="mt-4 inline-flex items-center text-sm text-cyan-700 hover:text-cyan-800"
+              className="mt-4 inline-flex items-center text-sm text-accent hover:text-accent-strong"
             >
               ← Voltar ao Financeiro
             </Link>
@@ -283,8 +281,8 @@ export default function NovaTransferencia() {
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Nova Transferência</h1>
-            <p className="text-slate-600 mt-1">Mova valores entre contas de forma segura e auditada.</p>
+            <h1 className="text-2xl font-bold text-fg">Nova Transferência</h1>
+            <p className="text-muted mt-1">Mova valores entre contas de forma segura e auditada.</p>
           </div>
           <Button as={Link} to="/app/financeiro" variant="secondary" size="sm">
             Cancelar
@@ -292,13 +290,13 @@ export default function NovaTransferencia() {
         </div>
 
         {caixas.length < 2 && (
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-6 mb-6">
-            <p className="text-sm text-amber-800">
+          <div className="rounded-lg bg-warning-soft border border-warning-soft p-6 mb-6">
+            <p className="text-sm text-warning">
               É necessário ter <strong>pelo menos 2 caixas ativos</strong> para fazer uma transferência.
             </p>
             <Link
               to="/app/financeiro/caixas/novo"
-              className="mt-3 inline-flex items-center rounded-md bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-200 transition-colors"
+              className="mt-3 inline-flex items-center rounded-md bg-warning-soft px-3 py-1.5 text-sm font-medium text-warning hover:bg-warning-soft transition-colors"
             >
               + Criar novo caixa
             </Link>
@@ -307,7 +305,7 @@ export default function NovaTransferencia() {
 
         <form method="POST" noValidate className="space-y-6">
           {formError && (
-            <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+            <div role="alert" className="rounded-md bg-danger-soft border border-danger-soft px-4 py-3 text-sm text-danger">
               {formError}
             </div>
           )}
@@ -316,13 +314,13 @@ export default function NovaTransferencia() {
           <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
           {/* Informações Básicas */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
-              <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="bg-surface rounded-xl border border-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+              <svg className="h-5 w-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 16v-4M12 8h.01" />
               </svg>
-              <h2 className="font-semibold text-slate-900">Informações Básicas</h2>
+              <h2 className="font-semibold text-fg">Informações Básicas</h2>
             </div>
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -335,7 +333,7 @@ export default function NovaTransferencia() {
                     defaultValue={fields.origemId ?? ""}
                     required
                   />
-                  {errors.origemId && <p role="alert" className="text-sm text-red-700 mt-1">{errors.origemId}</p>}
+                  {errors.origemId && <p role="alert" className="text-sm text-danger mt-1">{errors.origemId}</p>}
                 </div>
                 <div ref={setDestinoRef as never}>
                   <Select
@@ -346,7 +344,7 @@ export default function NovaTransferencia() {
                     defaultValue={fields.destinoId ?? ""}
                     required
                   />
-                  {errors.destinoId && <p role="alert" className="text-sm text-red-700 mt-1">{errors.destinoId}</p>}
+                  {errors.destinoId && <p role="alert" className="text-sm text-danger mt-1">{errors.destinoId}</p>}
                 </div>
               </div>
 
@@ -362,19 +360,19 @@ export default function NovaTransferencia() {
                   error={errors.valorCentavos}
                   required
                 />
-                {errors.valorCentavos && <p role="alert" className="text-sm text-red-700 mt-1">{errors.valorCentavos}</p>}
+                {errors.valorCentavos && <p role="alert" className="text-sm text-danger mt-1">{errors.valorCentavos}</p>}
               </div>
             </div>
           </div>
 
           {/* Observações */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
-              <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="bg-surface rounded-xl border border-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+              <svg className="h-5 w-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
-              <h2 className="font-semibold text-slate-900">Observações</h2>
+              <h2 className="font-semibold text-fg">Observações</h2>
             </div>
             <div className="p-6 space-y-5">
               <Input

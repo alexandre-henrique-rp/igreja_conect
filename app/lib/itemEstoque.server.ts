@@ -48,6 +48,13 @@ export type ItemEstoqueDetalhe = {
   numeroSerie: string | null;
   statusPatrimonio: string | null;
   localizacaoFisica: string | null;
+  categoria: string | null;
+  valorAquisicaoCentavos: number | null;
+  dataAquisicao: Date | null;
+  notaFiscal: string | null;
+  fimGarantia: Date | null;
+  vidaUtilAnos: number | null;
+  responsavelPatrimonio: string | null;
   ativo: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -258,13 +265,13 @@ export async function listarItensEstoque(
     where.tipo = "CONSUMO";
     // Prisma não suporta comparar colunas entre si, então filtramos via raw SQL
     const criticoResult = await prisma.$queryRaw<{id: string}[]>`
-      SELECT id FROM ItemEstoque
+      SELECT id FROM itens_estoque
       WHERE tipo = 'CONSUMO' AND ativo = 1 AND quantidade <= quantidadeMinima
       ORDER BY nome ASC
       LIMIT ${BigInt(pageSize)} OFFSET ${BigInt((page - 1) * pageSize)}
     `;
     const criticoCount = await prisma.$queryRaw<[{count: bigint}]>`
-      SELECT COUNT(*) as count FROM ItemEstoque
+      SELECT COUNT(*) as count FROM itens_estoque
       WHERE tipo = 'CONSUMO' AND ativo = 1 AND quantidade <= quantidadeMinima
     `;
 
@@ -569,6 +576,13 @@ export async function getItemEstoqueDetalhe(
     numeroSerie: item.numeroSerie,
     statusPatrimonio: item.statusPatrimonio,
     localizacaoFisica: item.localizacaoFisica,
+    categoria: item.categoria,
+    valorAquisicaoCentavos: item.valorAquisicaoCentavos,
+    dataAquisicao: item.dataAquisicao,
+    notaFiscal: item.notaFiscal,
+    fimGarantia: item.fimGarantia,
+    vidaUtilAnos: item.vidaUtilAnos,
+    responsavelPatrimonio: item.responsavelPatrimonio,
     ativo: item.ativo,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -630,7 +644,7 @@ export async function getDashboardEstoque(
       }),
       // Prisma não suporta comparar colunas entre si — raw SQL para estoqueBaixo
       prisma.$queryRaw<[{count: bigint}]>`
-        SELECT COUNT(*) as count FROM ItemEstoque
+        SELECT COUNT(*) as count FROM itens_estoque
         WHERE tipo = 'CONSUMO' AND ativo = 1 AND quantidade <= quantidadeMinima
       `,
       prisma.itemEstoque.findMany({

@@ -47,8 +47,7 @@
 import { useState, useId } from "react";
 import { Form } from "react-router";
 import { Dialog } from "~/components/Dialog";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
+import { Button, Input } from "~/components/ds";
 import { cn } from "~/lib/cn";
 
 /** Limite máximo de discípulos por discipulador (RN-MEM-04). */
@@ -138,11 +137,11 @@ export function ModalSelecionarDiscipulador({
         />
 
         <fieldset>
-          <legend className="text-sm font-medium text-slate-700 mb-1">
+          <legend className="text-sm font-medium text-fg mb-1">
             Selecionar discipulador
           </legend>
           {filtered.length === 0 ? (
-            <p className="text-sm text-slate-500 py-2">
+            <p className="text-sm text-muted py-2">
               Nenhum discipulador disponível com este nome.
             </p>
           ) : (
@@ -158,9 +157,9 @@ export function ModalSelecionarDiscipulador({
                   <li key={d.id}>
                     <label
                       className={cn(
-                        "flex items-center gap-2 p-2 rounded border border-slate-200 cursor-pointer",
-                        "hover:bg-slate-50",
-                        isSelected && "bg-cyan-50 border-cyan-300",
+                        "flex items-center gap-2 p-2 rounded border border-border cursor-pointer",
+                        "hover:bg-surface-2",
+                        isSelected && "bg-accent-soft-2 border-accent-soft",
                         isLimit && "opacity-50 cursor-not-allowed"
                       )}
                     >
@@ -171,22 +170,22 @@ export function ModalSelecionarDiscipulador({
                         checked={isSelected}
                         disabled={isLimit}
                         onChange={() => setSelectedId(d.id)}
-                        className="text-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-700"
+                        className="text-accent focus-visible:ring-2 focus-visible:ring-accent"
                       />
-                      <span className="flex-1 text-sm text-slate-900">
+                      <span className="flex-1 text-sm text-fg">
                         {d.nome}
                       </span>
                       <span
                         className={cn(
                           "text-sm",
-                          isLimit ? "text-amber-800 font-semibold" : "text-slate-500"
+                          isLimit ? "text-warning font-semibold" : "text-muted"
                         )}
                       >
                         {`${d.count}/${MAX_DISCIPULOS}`}
                       </span>
                       {isLimit && (
                         <span
-                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800"
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-warning-soft text-warning"
                           aria-label="Limite atingido"
                         >
                           Limite

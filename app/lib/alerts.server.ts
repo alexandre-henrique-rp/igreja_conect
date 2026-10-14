@@ -12,9 +12,10 @@
  */
 import { prisma } from "~/db/prisma.server";
 import { safeLog } from "./audit.server";
+import { formatBRLFromCents } from "./money-format";
 import { NotFoundError } from "./errors";
 import type { SessionUser } from "./session.types";
-import type { PrismaClient, Prisma } from "../../generated/prisma/client";
+import type { PrismaClient, Prisma, Cargo } from "../../generated/prisma/client";
 
 /** Filtros de listagem de alertas. */
 export type AlertaFilter = "todos" | "nao_lidos" | "resolvidos";
@@ -273,6 +274,145 @@ export async function criarAlertaVisitante(
         create: destinatarioIds.map((membroId) => ({ membroId })),
       },
     },
+  });
+
+  return { id: alerta.id, titulo: alerta.titulo, mensagem: alerta.mensagem };
+}
+
+
+// ----------------- Alertas financeiros (lançamentos) -----------------
+
+/** Cargos que recebem notificações financeiras internas (RBAC de dízimos). */
+const CARGOS_FINANCEIROS = ["ADMIN", "PASTOR", "FINANCEIRO"] as const;
+
+/** Dados mínimos de um lançamento para montar o alerta. */
+export type LancamentoAlertaInput = {
+  id: string;
+  tipo: string; // "ENTRADA" | "SAIDA"
+  categoria: string;
+  valorCentavos: number;
+  status: string; // "PAGO" | "PENDENTE" | "AGENDADO"
+  caixaNome?: string | null;
+  descricao?: string | null;
+};
+
+/**
+ * Busca os IDs dos membros com cargo financeiro (ADMIN/PASTOR/FINANCEIRO)
+ * para fan-out de alertas financeiros internos.
+ *
+ * @description SELECT membros com cargo em {ADMIN,PASTOR,FINANCEIRO}.
+ * @param {PrismaClient | Prisma.TransactionClient} tx - Client/transaction.
+ * @returns {Promise<string[]>} IDs dos destinatários.
+ */
+async function getDestinatariosFinanceiros(
+  tx: PrismaClient | Prisma.TransactionClient,
+): Promise<string[]> {
+  const membros = await (tx as Prisma.TransactionClient).membro.findMany({
+    where: { cargo: { in: CARGOS_FINANCEIROS as unknown as Cargo[] } },
+    select: { id: true },
+  });
+  return membros.map((m) => m.id);
+}
+
+/**
+ * Formata o rótulo financeiro do lançamento de forma LGPD-safe:
+ * usa valor + categoria + caixa. **Nunca** inclui nome de membro
+ * (DIZIMO é sensível, RN-MEM-03) nem a descrição livre (pode conter PII).
+ */
+function labelLancamento(lanc: LancamentoAlertaInput): string {
+  const valor = formatBRLFromCents(lanc.valorCentavos);
+  const caixa = lanc.caixaNome ? ` · ${lanc.caixaNome}` : "";
+  return `${lanc.categoria} — ${valor}${caixa}`;
+}
+
+/**
+ * Cria alerta interno de **nova cobrança** (lançamento criado com status
+ * PENDENTE ou AGENDADO — uma conta a pagar/receber que ainda não foi
+ * quitada). Fan-out para ADMIN/PASTOR/FINANCEIRO.
+ *
+ * **LGPD:** mensagem contém apenas valor + categoria + caixa. NUNCA
+ * nome de membro ou descrição livre.
+ *
+ * @description INSERT em `alertas` + `alerta_destinatarios`.
+ * @param {PrismaClient | Prisma.TransactionClient} tx - Client/transaction.
+ * @param {LancamentoAlertaInput} lanc - Dados do lançamento.
+ * @returns {Promise<{ id: string; titulo: string; mensagem: string } | null>}
+ *   Alerta criado, ou null se não houver status elegível ou destinatários.
+ */
+export async function criarAlertaNovaCobranca(
+  tx: PrismaClient | Prisma.TransactionClient,
+  lanc: LancamentoAlertaInput,
+): Promise<{ id: string; titulo: string; mensagem: string } | null> {
+  if (lanc.status !== "PENDENTE" && lanc.status !== "AGENDADO") {
+    return null;
+  }
+
+  const destinatarioIds = await getDestinatariosFinanceiros(tx);
+  if (destinatarioIds.length === 0) return null;
+
+  const vencimento = lanc.status === "AGENDADO" ? "agendada" : "pendente";
+  const mensagem = `Nova cobrança ${vencimento}: ${labelLancamento(lanc)}`;
+
+  const alerta = await (tx as Prisma.TransactionClient).alerta.create({
+    data: {
+      titulo: "Nova cobrança registrada",
+      mensagem,
+      destinatarios: {
+        create: destinatarioIds.map((membroId) => ({ membroId })),
+      },
+    },
+  });
+
+  safeLog({
+    action: "alerta_nova_cobranca",
+    resource: `lancamento:${lanc.id}`,
+    result: "ok",
+  });
+
+  return { id: alerta.id, titulo: alerta.titulo, mensagem: alerta.mensagem };
+}
+
+/**
+ * Cria alerta interno de **pagamento confirmado** (lançamento marcado como
+ * PAGO). Fan-out para ADMIN/PASTOR/FINANCEIRO.
+ *
+ * **LGPD:** mensagem contém apenas valor + categoria + caixa. NUNCA
+ * nome de membro ou descrição livre.
+ *
+ * @description INSERT em `alertas` + `alerta_destinatarios`.
+ * @param {PrismaClient | Prisma.TransactionClient} tx - Client/transaction.
+ * @param {LancamentoAlertaInput} lanc - Dados do lançamento (status deve ser PAGO).
+ * @returns {Promise<{ id: string; titulo: string; mensagem: string } | null>}
+ *   Alerta criado, ou null se status != PAGO ou sem destinatários.
+ */
+export async function criarAlertaLancamentoPago(
+  tx: PrismaClient | Prisma.TransactionClient,
+  lanc: LancamentoAlertaInput,
+): Promise<{ id: string; titulo: string; mensagem: string } | null> {
+  if (lanc.status !== "PAGO") {
+    return null;
+  }
+
+  const destinatarioIds = await getDestinatariosFinanceiros(tx);
+  if (destinatarioIds.length === 0) return null;
+
+  const acao = lanc.tipo === "ENTRADA" ? "Recebimento confirmado" : "Pagamento confirmado";
+  const mensagem = `${acao}: ${labelLancamento(lanc)}`;
+
+  const alerta = await (tx as Prisma.TransactionClient).alerta.create({
+    data: {
+      titulo: lanc.tipo === "ENTRADA" ? "Recebimento confirmado" : "Pagamento confirmado",
+      mensagem,
+      destinatarios: {
+        create: destinatarioIds.map((membroId) => ({ membroId })),
+      },
+    },
+  });
+
+  safeLog({
+    action: "alerta_lancamento_pago",
+    resource: `lancamento:${lanc.id}`,
+    result: "ok",
   });
 
   return { id: alerta.id, titulo: alerta.titulo, mensagem: alerta.mensagem };

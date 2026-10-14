@@ -3,7 +3,7 @@
  *
  * **Comportamento esperado:**
  * 1. Renderiza "atual/max discípulos" (default 12).
- * 2. Cor slate-700 quando < 10.
+ * 2. Cor fg quando < 10.
  * 3. Cor amber-700 quando >= 10 e < 12.
  * 4. Cor amber-800 + font-bold quando === 12.
  * 5. Badge "Limite atingido" quando === 12.
@@ -43,24 +43,24 @@ describe("<ContadorDiscipulos />", () => {
     expect(html).toContain("20");
   });
 
-  it("atual < 10: usa cor slate-700 (normal)", () => {
+  it("atual < 10: usa cor fg (normal)", () => {
     const html = renderContador({ atual: 5 });
-    expect(html).toContain("text-slate-700");
+    expect(html).toContain("text-fg");
   });
 
   it("atual === 10: usa cor amber-700 (atenção)", () => {
     const html = renderContador({ atual: 10 });
-    expect(html).toContain("text-amber-700");
+    expect(html).toContain("text-warning");
   });
 
   it("atual === 11: usa cor amber-700 (atenção)", () => {
     const html = renderContador({ atual: 11 });
-    expect(html).toContain("text-amber-700");
+    expect(html).toContain("text-warning");
   });
 
   it("atual === 12: usa cor amber-800 E font-bold (limite)", () => {
     const html = renderContador({ atual: 12 });
-    expect(html).toContain("text-amber-800");
+    expect(html).toContain("text-warning");
     expect(html).toContain("font-bold");
   });
 

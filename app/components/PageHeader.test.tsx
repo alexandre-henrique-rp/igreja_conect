@@ -28,7 +28,7 @@ describe("<PageHeader />", () => {
 
   it("sem action: renderiza apenas o h1", () => {
     const html = renderHeader({ title: "Membros" });
-    expect(html).not.toContain("bg-cyan-700");
+    expect(html).not.toContain("bg-accent");
   });
 
   it("com action: renderiza o conteúdo da action no slot direito", () => {

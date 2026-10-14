@@ -1,7 +1,7 @@
 import { Form, useNavigation } from "react-router";
-import { InfoBox } from "./InfoBox";
 import { ErrorAlert } from "./ErrorAlert";
 import { cn } from "~/lib/cn";
+import { InfoBox } from "~/components/ds";
 
 interface ItemEstoqueManutencao {
   id: string;
@@ -41,10 +41,10 @@ export function FormManutencao({
       <div className="space-y-1">
         <label
           htmlFor="assistenciaTecnica"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-fg"
         >
           Assistência Técnica
-          <span aria-hidden="true" className="text-red-700 ml-1">*</span>
+          <span aria-hidden="true" className="text-danger ml-1">*</span>
         </label>
         <input
           id="assistenciaTecnica"
@@ -53,18 +53,18 @@ export function FormManutencao({
           required
           maxLength={200}
           className={cn(
-            "w-full h-11 px-3 rounded-md border bg-white text-slate-900",
-            "border-slate-300 placeholder:text-slate-400",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "w-full h-11 px-3 rounded-md border bg-surface text-fg",
+            "border-border-strong placeholder:text-subtle",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            fieldErrors?.assistenciaTecnica && "border-red-700"
+            fieldErrors?.assistenciaTecnica && "border-danger"
           )}
           placeholder="Nome da empresa ou técnico"
           aria-invalid={Boolean(fieldErrors?.assistenciaTecnica)}
           aria-required="true"
         />
         {fieldErrors?.assistenciaTecnica && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {fieldErrors.assistenciaTecnica}
           </p>
         )}
@@ -73,10 +73,10 @@ export function FormManutencao({
       <div className="space-y-1">
         <label
           htmlFor="enderecoAssistencia"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-fg"
         >
           Endereço da Assistência
-          <span aria-hidden="true" className="text-red-700 ml-1">*</span>
+          <span aria-hidden="true" className="text-danger ml-1">*</span>
         </label>
         <input
           id="enderecoAssistencia"
@@ -85,18 +85,18 @@ export function FormManutencao({
           required
           maxLength={300}
           className={cn(
-            "w-full h-11 px-3 rounded-md border bg-white text-slate-900",
-            "border-slate-300 placeholder:text-slate-400",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "w-full h-11 px-3 rounded-md border bg-surface text-fg",
+            "border-border-strong placeholder:text-subtle",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            fieldErrors?.enderecoAssistencia && "border-red-700"
+            fieldErrors?.enderecoAssistencia && "border-danger"
           )}
           placeholder="Rua, número, bairro, cidade"
           aria-invalid={Boolean(fieldErrors?.enderecoAssistencia)}
           aria-required="true"
         />
         {fieldErrors?.enderecoAssistencia && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {fieldErrors.enderecoAssistencia}
           </p>
         )}
@@ -106,7 +106,7 @@ export function FormManutencao({
         <div className="space-y-1">
           <label
             htmlFor="numeroOs"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-fg"
           >
             Nº OS / Protocolo
           </label>
@@ -116,17 +116,17 @@ export function FormManutencao({
             type="text"
             maxLength={50}
             className={cn(
-              "w-full h-11 px-3 rounded-md border bg-white text-slate-900",
-              "border-slate-300 placeholder:text-slate-400",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+              "w-full h-11 px-3 rounded-md border bg-surface text-fg",
+              "border-border-strong placeholder:text-subtle",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
               "disabled:opacity-50 disabled:cursor-not-allowed",
-              fieldErrors?.numeroOs && "border-red-700"
+              fieldErrors?.numeroOs && "border-danger"
             )}
             placeholder="Número da ordem de serviço"
             aria-invalid={Boolean(fieldErrors?.numeroOs)}
           />
           {fieldErrors?.numeroOs && (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="text-sm text-danger">
               {fieldErrors.numeroOs}
             </p>
           )}
@@ -135,7 +135,7 @@ export function FormManutencao({
         <div className="space-y-1">
           <label
             htmlFor="prazoTermino"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-fg"
           >
             Previsão de Término
           </label>
@@ -144,16 +144,16 @@ export function FormManutencao({
             name="prazoTermino"
             type="date"
             className={cn(
-              "w-full h-11 px-3 rounded-md border bg-white text-slate-900",
-              "border-slate-300",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+              "w-full h-11 px-3 rounded-md border bg-surface text-fg",
+              "border-border-strong",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
               "disabled:opacity-50 disabled:cursor-not-allowed",
-              fieldErrors?.prazoTermino && "border-red-700"
+              fieldErrors?.prazoTermino && "border-danger"
             )}
             aria-invalid={Boolean(fieldErrors?.prazoTermino)}
           />
           {fieldErrors?.prazoTermino && (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="text-sm text-danger">
               {fieldErrors.prazoTermino}
             </p>
           )}
@@ -163,12 +163,12 @@ export function FormManutencao({
       <div className="space-y-1">
         <label
           htmlFor="custoCentavos"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-fg"
         >
           Custo Estimado (R$)
         </label>
         <div className="relative">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle text-sm">
             R$
           </span>
           <input
@@ -178,22 +178,22 @@ export function FormManutencao({
             min={0}
             step={1}
             className={cn(
-              "w-full h-11 pl-10 pr-3 rounded-md border bg-white text-slate-900",
-              "border-slate-300 placeholder:text-slate-400",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+              "w-full h-11 pl-10 pr-3 rounded-md border bg-surface text-fg",
+              "border-border-strong placeholder:text-subtle",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
               "disabled:opacity-50 disabled:cursor-not-allowed",
-              fieldErrors?.custoCentavos && "border-red-700"
+              fieldErrors?.custoCentavos && "border-danger"
             )}
             placeholder="Valor em centavos"
             aria-invalid={Boolean(fieldErrors?.custoCentavos)}
           />
         </div>
         {fieldErrors?.custoCentavos ? (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {fieldErrors.custoCentavos}
           </p>
         ) : (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted">
             Informe o valor em centavos (ex: 1500 = R$ 15,00)
           </p>
         )}
@@ -204,9 +204,9 @@ export function FormManutencao({
           type="submit"
           disabled={isSubmitting}
           className={cn(
-            "inline-flex items-center justify-center rounded-md bg-cyan-700 px-6 h-11",
-            "text-sm font-medium text-white hover:bg-cyan-800 transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "inline-flex items-center justify-center rounded-md bg-accent px-6 h-11",
+            "text-sm font-medium text-white hover:bg-accent-strong transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
           aria-disabled={isSubmitting}

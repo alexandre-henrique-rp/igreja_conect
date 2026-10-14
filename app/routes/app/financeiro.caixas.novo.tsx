@@ -23,8 +23,7 @@ import { userContext } from "~/lib/user-context";
 import { assertCanManageCaixa } from "~/lib/rbac.server";
 import { criarCaixa } from "~/lib/caixas.server";
 import { CaixaCreateSchema } from "~/lib/schemas/caixas";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
+import { Button, Input } from "~/components/ds";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Nova Caixa — Financeiro — Igreja Conect" }];
@@ -100,8 +99,8 @@ export default function NovaCaixa() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Novo Caixa</h1>
-          <p className="text-slate-600 mt-1">Crie uma nova conta para organizar as finanças da igreja.</p>
+          <h1 className="text-2xl font-bold text-fg">Novo Caixa</h1>
+          <p className="text-muted mt-1">Crie uma nova conta para organizar as finanças da igreja.</p>
         </div>
         <Button as={Link} to="/app/financeiro/caixas" variant="secondary" size="sm">
           Cancelar
@@ -110,19 +109,19 @@ export default function NovaCaixa() {
 
       <form method="POST" noValidate className="space-y-6">
         {formError && (
-          <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+          <div role="alert" className="rounded-md bg-danger-soft border border-danger-soft px-4 py-3 text-sm text-danger">
             {formError}
           </div>
         )}
 
         {/* Informações Básicas */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
-            <svg className="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="bg-surface rounded-xl border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+            <svg className="h-5 w-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <path d="M12 16v-4M12 8h.01" />
             </svg>
-            <h2 className="font-semibold text-slate-900">Informações Básicas</h2>
+            <h2 className="font-semibold text-fg">Informações Básicas</h2>
           </div>
           <div className="p-6 space-y-5">
             <Input

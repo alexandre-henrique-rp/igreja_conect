@@ -8,9 +8,9 @@
  * - Form method="post" com _action="marcarLido" ou "marcarResolvido"
  * - Link "Ver membro" se alerta.membroId presente
  */
-import { describe, it, expect } from "vitest";
-import { createRoutesStub } from "react-router";
 import { renderToString } from "react-dom/server";
+import { createRoutesStub } from "react-router";
+import { describe, expect, it } from "vitest";
 import { CardAlerta, type CardAlertaProps } from "./CardAlerta";
 
 function renderCard(props: CardAlertaProps): string {
@@ -60,7 +60,7 @@ describe("<CardAlerta />", () => {
       user: baseUser,
       now,
     });
-    expect(html).toContain("data-testid=\"relative-time\"");
+    expect(html).toContain('data-testid="relative-time"');
   });
 
   it("quando não lido: tem borda esquerda cyan-600", () => {
@@ -69,7 +69,7 @@ describe("<CardAlerta />", () => {
       user: baseUser,
       now,
     });
-    expect(html).toContain("border-l-cyan-600");
+    expect(html).toContain("border-l-accent");
   });
 
   it("quando lido (lido=true): NÃO tem borda cyan", () => {
@@ -78,7 +78,7 @@ describe("<CardAlerta />", () => {
       user: baseUser,
       now,
     });
-    expect(html).not.toContain("border-l-cyan-600");
+    expect(html).not.toContain("border-l-accent");
   });
 
   it("quando resolvido: opacity 75% (opacity-75)", () => {

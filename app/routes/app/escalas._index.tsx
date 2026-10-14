@@ -1,15 +1,20 @@
 /**
  * Rota /app/escalas — Gestão de Escalas de Voluntários por Ministério.
  */
-import { useState, useMemo } from "react";
-import { Link, Form, useFetcher, redirect } from "react-router";
-import type { Route } from "./+types/escalas._index";
-import { userContext } from "~/lib/user-context";
-import { listarEscalas, adicionarVoluntario, removerVoluntario, atualizarStatus } from "~/lib/escalas.server";
-import { gerarEscalasTodosMinisterios } from "~/lib/gerarEscalas.server";
-import type { EscalaComVoluntarios } from "~/lib/escalas.server";
+import { useMemo, useState } from "react";
+import { Form, Link, redirect, useFetcher } from "react-router";
+import { Button, EmptyState } from "~/components/ds";
 import { prisma } from "~/db/prisma.server";
-import { Button } from "~/components/Button";
+import type { EscalaComVoluntarios } from "~/lib/escalas.server";
+import {
+  adicionarVoluntario,
+  atualizarStatus,
+  listarEscalas,
+  removerVoluntario,
+} from "~/lib/escalas.server";
+import { gerarEscalasTodosMinisterios } from "~/lib/gerarEscalas.server";
+import { userContext } from "~/lib/user-context";
+import type { Route } from "./+types/escalas._index";
 
 function formatDate(d: Date): string {
   const dia = String(d.getDate()).padStart(2, "0");
@@ -43,7 +48,8 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const escalas = await listarEscalas(user);
 
   const canGerarTodos =
-    user.cargo != null && (CAN_GERAR_TODOS as readonly string[]).includes(user.cargo);
+    user.cargo != null &&
+    (CAN_GERAR_TODOS as readonly string[]).includes(user.cargo);
   const canEdit =
     user.cargo != null && (CAN_EDIT as readonly string[]).includes(user.cargo);
 
@@ -62,7 +68,11 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     : null;
 
   // Pré-requisitos para geração automática de escalas
-  const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const inicioMes = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1,
+  );
   const ministerios = await prisma.ministerio.findMany({
     where: { status: "ATIVO" },
     select: {
@@ -73,15 +83,25 @@ export async function loader({ context, request }: Route.LoaderArgs) {
         orderBy: { nome: "asc" },
       },
       _count: {
-        select: { funcoes: true, membros: true, atividades: { where: { data: { gte: inicioMes } } } },
+        select: {
+          funcoes: true,
+          membros: true,
+          atividades: { where: { data: { gte: inicioMes } } },
+        },
       },
     },
     orderBy: { nome: "asc" },
   });
 
-  const ministeriosSemFuncoes = ministerios.filter((m) => m._count.funcoes === 0);
-  const ministeriosSemMembros = ministerios.filter((m) => m._count.membros === 0);
-  const ministeriosSemAtividades = ministerios.filter((m) => m._count.atividades === 0);
+  const ministeriosSemFuncoes = ministerios.filter(
+    (m) => m._count.funcoes === 0,
+  );
+  const ministeriosSemMembros = ministerios.filter(
+    (m) => m._count.membros === 0,
+  );
+  const ministeriosSemAtividades = ministerios.filter(
+    (m) => m._count.atividades === 0,
+  );
 
   const todosOsRequisitos =
     ministerios.length > 0 &&
@@ -117,8 +137,12 @@ export async function action({ context, request }: Route.ActionArgs) {
 
   if (intent === "gerar-todos-ministerios") {
     const canGerarTodos =
-      user.cargo != null && (CAN_GERAR_TODOS as readonly string[]).includes(user.cargo);
-    if (!canGerarTodos) throw new Response("Sem permissão para gerar todas as escalas.", { status: 403 });
+      user.cargo != null &&
+      (CAN_GERAR_TODOS as readonly string[]).includes(user.cargo);
+    if (!canGerarTodos)
+      throw new Response("Sem permissão para gerar todas as escalas.", {
+        status: 403,
+      });
 
     const agora = new Date();
     const mes = agora.getMonth() + 1;
@@ -132,28 +156,40 @@ export async function action({ context, request }: Route.ActionArgs) {
     const escalaId = String(formData.get("escalaId") ?? "");
     const membroId = String(formData.get("membroId") ?? "");
     const funcao = String(formData.get("funcao") ?? "");
-    if (!escalaId || !membroId || !funcao) throw new Response("Campos obrigatórios.", { status: 400 });
+    if (!escalaId || !membroId || !funcao)
+      throw new Response("Campos obrigatórios.", { status: 400 });
     await adicionarVoluntario(escalaId, { membroId, funcao }, user);
-    return new Response(null, { status: 302, headers: { Location: "/app/escalas" } });
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/app/escalas" },
+    });
   }
 
   if (intent === "remove-voluntario") {
     const voluntarioId = String(formData.get("voluntarioId") ?? "");
-    if (!voluntarioId) throw new Response("voluntarioId obrigatório.", { status: 400 });
+    if (!voluntarioId)
+      throw new Response("voluntarioId obrigatório.", { status: 400 });
     await removerVoluntario(voluntarioId, user);
-    return new Response(null, { status: 302, headers: { Location: "/app/escalas" } });
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/app/escalas" },
+    });
   }
 
   if (intent === "atualizar-status") {
     const escalaId = String(formData.get("escalaId") ?? "");
     const status = String(formData.get("status") ?? "");
-    if (!escalaId || !status) throw new Response("Campos obrigatórios.", { status: 400 });
+    if (!escalaId || !status)
+      throw new Response("Campos obrigatórios.", { status: 400 });
     await atualizarStatus(
       escalaId,
       status as "PENDENTE" | "CONFIRMADA" | "REALIZADA" | "CANCELADA",
       user,
     );
-    return new Response(null, { status: 302, headers: { Location: "/app/escalas" } });
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/app/escalas" },
+    });
   }
 
   throw new Response("Intent não reconhecido.", { status: 400 });
@@ -176,18 +212,15 @@ function EmptyStateEscalas({
 }) {
   if (ministerios.length === 0) {
     return (
-      <div className="text-center">
-        <h3 className="text-lg font-bold text-slate-900 mb-2">Nenhum ministério cadastrado</h3>
-        <p className="text-sm text-slate-600 mb-4">
-          Para criar escalas, primeiro cadastre os ministérios da igreja.
-        </p>
-        <Link
-          to="/app/ministerios/novo"
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 h-10 text-sm font-bold text-white hover:bg-blue-700 transition-colors"
-        >
-          + Novo Ministério
-        </Link>
-      </div>
+      <EmptyState
+        title="Nenhum ministério cadastrado"
+        description="Para criar escalas, primeiro cadastre os ministérios da igreja."
+        action={
+          <Button as={Link} to="/app/ministerios/novo" variant="primary">
+            + Novo Ministério
+          </Button>
+        }
+      />
     );
   }
 
@@ -195,9 +228,13 @@ function EmptyStateEscalas({
     return (
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 mb-1">Faltam informações para gerar escalas</h3>
-          <p className="text-sm text-slate-600">
-            O gerador automático precisa de: <strong>funções</strong>, <strong>membros vinculados</strong> e <strong>atividades (cultos/ensaios)</strong> em cada ministério.
+          <h3 className="text-lg font-bold text-fg mb-1">
+            Faltam informações para gerar escalas
+          </h3>
+          <p className="text-sm text-muted">
+            O gerador automático precisa de: <strong>funções</strong>,{" "}
+            <strong>membros vinculados</strong> e{" "}
+            <strong>atividades (cultos/ensaios)</strong> em cada ministério.
           </p>
         </div>
 
@@ -225,30 +262,40 @@ function EmptyStateEscalas({
 
   return (
     <div className="text-center">
-      <h3 className="text-lg font-bold text-slate-900 mb-2">Tudo pronto para gerar as escalas!</h3>
-      <p className="text-sm text-slate-600 mb-4">
-        Todos os ministérios têm funções, membros e atividades no mês atual. Clique em "Gerar Todos" para criar as escalas automaticamente.
+      <h3 className="text-lg font-bold text-fg mb-2">
+        Tudo pronto para gerar as escalas!
+      </h3>
+      <p className="text-sm text-muted mb-4">
+        Todos os ministérios têm funções, membros e atividades no mês atual.
+        Clique em "Gerar Todos" para criar as escalas automaticamente.
       </p>
       {!canGerarTodos && (
-        <p className="text-xs text-slate-500">
-          Apenas ADMIN, PASTOR ou SECRETARIO podem gerar escalas automaticamente.
+        <p className="text-xs text-muted">
+          Apenas ADMIN, PASTOR ou SECRETARIO podem gerar escalas
+          automaticamente.
         </p>
       )}
     </div>
   );
 }
 
-function RequisitoPendente({ titulo, itens }: { titulo: string; itens: { id: string; nome: string }[] }) {
+function RequisitoPendente({
+  titulo,
+  itens,
+}: {
+  titulo: string;
+  itens: { id: string; nome: string }[];
+}) {
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-      <h4 className="text-sm font-bold text-amber-800 mb-2">{titulo}</h4>
+    <div className="bg-warning-soft border border-warning-soft rounded-xl p-4">
+      <h4 className="text-sm font-bold text-warning mb-2">{titulo}</h4>
       <ul className="space-y-2">
         {itens.map((m) => (
           <li key={m.id} className="flex items-center justify-between">
-            <span className="text-sm text-amber-900">{m.nome}</span>
+            <span className="text-sm text-warning">{m.nome}</span>
             <Link
               to={`/app/ministerios/${m.id}`}
-              className="text-xs font-semibold text-amber-700 hover:text-amber-900 hover:underline"
+              className="text-xs font-semibold text-warning hover:text-warning hover:underline"
             >
               Completar cadastro →
             </Link>
@@ -287,7 +334,7 @@ function EscalasPorData({
 }) {
   if (gruposPorData.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-400 text-sm">
+      <div className="bg-surface border border-border rounded-2xl p-10 text-center text-subtle text-sm">
         Nenhuma escala programada.
       </div>
     );
@@ -296,12 +343,15 @@ function EscalasPorData({
   return (
     <div className="space-y-6">
       {gruposPorData.map((grupo) => (
-        <div key={grupo.key} className="relative pl-6 border-l-2 border-blue-200">
-          <div className="absolute -left-[9px] top-0 h-5 w-5 rounded-full bg-blue-100 border-2 border-blue-300 flex items-center justify-center">
-            <span className="block h-1.5 w-1.5 rounded-full bg-blue-500" />
+        <div
+          key={grupo.key}
+          className="relative pl-6 border-l-2 border-accent-soft"
+        >
+          <div className="absolute -left-[9px] top-0 h-5 w-5 rounded-full bg-accent-soft-2 border-2 border-accent-soft flex items-center justify-center">
+            <span className="block h-1.5 w-1.5 rounded-full bg-accent" />
           </div>
           <div className="mb-3">
-            <h3 className="text-sm font-extrabold text-slate-900">
+            <h3 className="text-sm font-extrabold text-fg">
               {formatDiaSemana(grupo.data)}, {formatDate(grupo.data)}
             </h3>
           </div>
@@ -350,7 +400,9 @@ function EscalaCard({
 }) {
   const isEditing = escalaEditando === escala.id;
 
-  const ministerioDaEscala = ministerios.find((m) => m.id === escala.ministerioId);
+  const ministerioDaEscala = ministerios.find(
+    (m) => m.id === escala.ministerioId,
+  );
   const funcoesDoMinisterio = ministerioDaEscala?.funcoes ?? [];
   const funcoesPadraoFallback = [
     "Apoio",
@@ -366,35 +418,56 @@ function EscalaCard({
     "Recepcionista",
     "Líder de Equipe",
   ];
-  const funcoesDisponiveis = funcoesDoMinisterio.length > 0
-    ? funcoesDoMinisterio.map((f: any) => f.nome)
-    : funcoesPadraoFallback;
+  const funcoesDisponiveis =
+    funcoesDoMinisterio.length > 0
+      ? funcoesDoMinisterio.map((f: any) => f.nome)
+      : funcoesPadraoFallback;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+    <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-xs">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-surface-2">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-blue-50 text-blue-600 text-base">{getIcon(escala.ministerioNome)}</div>
+          <div className="p-2 rounded-xl bg-accent-soft-2 text-accent text-base">
+            {getIcon(escala.ministerioNome)}
+          </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-extrabold text-slate-900">{escala.titulo}</h3>
-              <span className="text-xs text-slate-500">({escala.ministerioNome})</span>
+              <h3 className="text-sm font-extrabold text-fg">
+                {escala.titulo}
+              </h3>
+              <span className="text-xs text-muted">
+                ({escala.ministerioNome})
+              </span>
               {escala.geradaAutomaticamente && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-soft-2 text-accent-strong border border-accent-soft">
                   Auto
                 </span>
               )}
               {escala.cultoId && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning-soft text-warning border border-warning-soft">
                   Culto
                 </span>
               )}
               {escala.eventoId && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-soft text-accent-strong border border-accent-soft">
                   Evento
                 </span>
               )}
             </div>
+            {(escala.local || escala.horaInicio) && (
+              <p className="mt-0.5 text-xs text-muted">
+                {[
+                  escala.horaInicio
+                    ? escala.horaFim
+                      ? `${escala.horaInicio}–${escala.horaFim}`
+                      : escala.horaInicio
+                    : null,
+                  escala.local,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -406,7 +479,7 @@ function EscalaCard({
                 name="status"
                 defaultValue={escala.status}
                 onChange={(e) => e.currentTarget.form?.submit()}
-                className="h-8 px-2 border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-700"
+                className="h-8 px-2 border border-border-strong rounded-md text-xs text-fg focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="PENDENTE">Pendente</option>
                 <option value="CONFIRMADA">Confirmada</option>
@@ -416,15 +489,33 @@ function EscalaCard({
             </Form>
           )}
           {canEdit && (
+            <Link
+              to={`/app/escalas/${escala.id}/editar`}
+              className="rounded-md px-2 py-1.5 text-xs font-bold text-muted transition-colors hover:bg-accent-soft-2 hover:text-accent"
+            >
+              Editar escala
+            </Link>
+          )}
+          {canEdit && (
             <button
               type="button"
               onClick={() => setEscalaEditando(isEditing ? null : escala.id)}
-              className="p-1.5 text-slate-400 hover:text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors"
+              className="p-1.5 text-subtle hover:text-accent rounded-md hover:bg-accent-soft-2 transition-colors"
               aria-label="Editar voluntários"
               title="Editar voluntários"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
               </svg>
             </button>
           )}
@@ -432,40 +523,72 @@ function EscalaCard({
       </div>
 
       {escala.voluntarios.length === 0 ? (
-        <div className="px-5 py-6 text-center text-slate-400 text-sm">Nenhum voluntário escalado.</div>
+        <div className="px-5 py-6 text-center text-subtle text-sm">
+          Nenhum voluntário escalado.
+        </div>
       ) : (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-surface-2">
           {escala.voluntarios.map((v) => {
-            const initials = v.membroNome.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
+            const initials = v.membroNome
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .substring(0, 2)
+              .toUpperCase();
             return (
-              <div key={v.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/60 transition-colors">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
+              <div
+                key={v.id}
+                className="flex items-center gap-3 px-5 py-3 hover:bg-surface-2/60 transition-colors"
+              >
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-accent to-accent text-white text-xs font-bold flex items-center justify-center shrink-0">
                   {initials}
                 </div>
-                <span className="text-sm font-semibold text-slate-900 flex-1">{v.membroNome}</span>
-                <span className="text-sm text-slate-600 font-medium">{v.funcao}</span>
+                <span className="text-sm font-semibold text-fg flex-1">
+                  {v.membroNome}
+                </span>
+                <span className="text-sm text-muted font-medium">
+                  {v.funcao}
+                </span>
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                     v.status === "CONFIRMADO"
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      ? "bg-success-soft text-success border border-success-soft"
                       : v.status === "PENDENTE"
-                      ? "bg-amber-50 text-amber-700 border border-amber-200"
-                      : "bg-red-50 text-red-700 border border-red-200"
+                        ? "bg-warning-soft text-warning border border-warning-soft"
+                        : "bg-danger-soft text-danger border border-danger-soft"
                   }`}
                 >
-                  {v.status === "CONFIRMADO" ? "Confirmado" : v.status === "PENDENTE" ? "Pendente" : v.status}
+                  {v.status === "CONFIRMADO"
+                    ? "Confirmado"
+                    : v.status === "PENDENTE"
+                      ? "Pendente"
+                      : v.status}
                 </span>
                 {isEditing && canEdit && (
                   <Form method="post" className="inline">
-                    <input type="hidden" name="intent" value="remove-voluntario" />
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="remove-voluntario"
+                    />
                     <input type="hidden" name="voluntarioId" value={v.id} />
                     <button
                       type="submit"
-                      className="p-1 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"
+                      className="p-1 text-subtle hover:text-danger rounded-md hover:bg-danger-soft transition-colors"
                       aria-label="Remover voluntário"
                     >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth="2"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </Form>
@@ -477,41 +600,64 @@ function EscalaCard({
       )}
 
       {isEditing && canEdit && (
-        <div className="px-5 py-3 bg-slate-50 border-t border-slate-100">
+        <div className="px-5 py-3 bg-surface-2 border-t border-surface-2">
           <Form method="post" className="flex items-end gap-2">
             <input type="hidden" name="intent" value="add-voluntario" />
             <input type="hidden" name="escalaId" value={escala.id} />
             <div className="flex-1 space-y-1">
-              <label className="block text-xs font-medium text-slate-600">Membro</label>
+              <label className="block text-xs font-medium text-muted">
+                Membro
+              </label>
               <select
                 name="membroId"
                 value={novoVoluntario.membroId}
-                onChange={(e) => setNovoVoluntario({ ...novoVoluntario, membroId: e.target.value })}
-                className="w-full h-8 px-2 border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-700"
+                onChange={(e) =>
+                  setNovoVoluntario({
+                    ...novoVoluntario,
+                    membroId: e.target.value,
+                  })
+                }
+                className="w-full h-8 px-2 border border-border-strong rounded-md text-xs text-fg focus:outline-none focus:ring-2 focus:ring-accent"
                 required
               >
                 <option value="">Selecionar...</option>
                 {membros.map((m) => (
-                  <option key={m.id} value={m.id}>{m.nome}</option>
+                  <option key={m.id} value={m.id}>
+                    {m.nome}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="flex-1 space-y-1">
-              <label className="block text-xs font-medium text-slate-600">Função</label>
+              <label className="block text-xs font-medium text-muted">
+                Função
+              </label>
               <select
                 name="funcao"
                 value={novoVoluntario.funcao}
-                onChange={(e) => setNovoVoluntario({ ...novoVoluntario, funcao: e.target.value })}
-                className="w-full h-8 px-2 border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-700"
+                onChange={(e) =>
+                  setNovoVoluntario({
+                    ...novoVoluntario,
+                    funcao: e.target.value,
+                  })
+                }
+                className="w-full h-8 px-2 border border-border-strong rounded-md text-xs text-fg focus:outline-none focus:ring-2 focus:ring-accent"
                 required
               >
                 <option value="">Selecionar...</option>
                 {funcoesDisponiveis.map((f) => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
                 ))}
               </select>
             </div>
-            <Button type="submit" variant="blue" size="sm" disabled={!novoVoluntario.membroId || !novoVoluntario.funcao}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={!novoVoluntario.membroId || !novoVoluntario.funcao}
+            >
               + Add
             </Button>
           </Form>
@@ -537,8 +683,13 @@ export default function EscalasIndex({ loaderData }: Route.ComponentProps) {
   const fetcher = useFetcher();
 
   const [escalaEditando, setEscalaEditando] = useState<string | null>(null);
-  const [novoVoluntario, setNovoVoluntario] = useState({ membroId: "", funcao: "" });
-  const [modoVisualizacao, setModoVisualizacao] = useState<"ministerio" | "data">("data");
+  const [novoVoluntario, setNovoVoluntario] = useState({
+    membroId: "",
+    funcao: "",
+  });
+  const [modoVisualizacao, setModoVisualizacao] = useState<
+    "ministerio" | "data"
+  >("data");
 
   const grupos = useMemo(() => {
     const map = new Map<string, EscalaComVoluntarios[]>();
@@ -565,7 +716,11 @@ export default function EscalasIndex({ loaderData }: Route.ComponentProps) {
     }
     return Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, items]) => ({ key, data: new Date(`${key}T00:00:00`), items }));
+      .map(([key, items]) => ({
+        key,
+        data: new Date(`${key}T00:00:00`),
+        items,
+      }));
   }, [escalas]);
 
   const [tabAtiva, setTabAtiva] = useState(grupos[0]?.nome ?? "");
@@ -576,53 +731,104 @@ export default function EscalasIndex({ loaderData }: Route.ComponentProps) {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Escalas</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Organize sua equipe filtrando por ministério para visualizar escalados e pendências.
+          <h1 className="text-2xl font-extrabold text-fg tracking-tight">
+            Escalas
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            Organize sua equipe filtrando por ministério para visualizar
+            escalados e pendências.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {mensagemGerado && (
-            <p className="text-sm text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-200">
+            <p className="text-sm text-success bg-success-soft px-3 py-1 rounded-full border border-success-soft">
               {mensagemGerado}
             </p>
           )}
           {canGerarTodos && (
             <fetcher.Form method="post" className="shrink-0">
-              <input type="hidden" name="intent" value="gerar-todos-ministerios" />
-              <Button type="submit" variant="blue" size="sm" loading={fetcher.state === "submitting"}>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <input
+                type="hidden"
+                name="intent"
+                value="gerar-todos-ministerios"
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={fetcher.state === "submitting"}
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
                 </svg>
                 Gerar Todos
               </Button>
             </fetcher.Form>
           )}
           <Link to="/app/escalas/novo" className="shrink-0">
-            <Button type="button" variant="secondary" size="sm">+ Nova Escala</Button>
+            <Button type="button" variant="secondary" size="sm">
+              + Nova Escala
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* ── Texto explicativo: Gerar Todos ── */}
       {canGerarTodos && (
-        <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-          <ul className="space-y-1 text-xs text-slate-600">
-            <li><strong>O que faz:</strong> gera as escalas do mês atual para todos os ministérios ativos de uma só vez.</li>
-            <li><strong>Quem pode usar:</strong> restrito a ADMIN, PASTOR e SECRETARIO.</li>
-            <li><strong>Depois de gerar:</strong> cada escala pode ser editada individualmente — acesse o ministério para ajustar voluntários.</li>
-            <li><strong>Re-gerar:</strong> escalas manuais e editadas são preservadas. Apenas escalas automáticas do mês são substituídas.</li>
+        <div className="mb-4 p-3 bg-surface-2 border border-border rounded-lg">
+          <ul className="space-y-1 text-xs text-muted">
+            <li>
+              <strong>O que faz:</strong> gera as escalas do mês atual para
+              todos os ministérios ativos de uma só vez.
+            </li>
+            <li>
+              <strong>Quem pode usar:</strong> restrito a ADMIN, PASTOR e
+              SECRETARIO.
+            </li>
+            <li>
+              <strong>Depois de gerar:</strong> cada escala pode ser editada
+              individualmente — acesse o ministério para ajustar voluntários.
+            </li>
+            <li>
+              <strong>Re-gerar:</strong> escalas manuais e editadas são
+              preservadas. Apenas escalas automáticas do mês são substituídas.
+            </li>
           </ul>
         </div>
       )}
 
       {/* ── Texto explicativo: Lista de Escalas ── */}
-      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <ul className="space-y-1 text-xs text-slate-600">
-          <li><strong className="text-blue-700">Badge "Auto":</strong> indica que a escala foi gerada automaticamente pelo sistema.</li>
-          <li><strong className="text-blue-700">Editar voluntários:</strong> clique no ícone de edição para adicionar, remover ou trocar membros de cada função.</li>
-          <li><strong className="text-blue-700">Alterar status:</strong> mude o status da escala entre Pendente, Confirmada, Realizada ou Cancelada.</li>
-          <li><strong className="text-blue-700">Preservação:</strong> ao re-gerar escalas do mês, apenas as automáticas não-editadas são substituídas. Suas edições manuais são mantidas.</li>
+      <div className="mb-4 p-3 bg-accent-soft-2 border border-accent-soft rounded-lg">
+        <ul className="space-y-1 text-xs text-muted">
+          <li>
+            <strong className="text-accent-strong">Badge "Auto":</strong> indica
+            que a escala foi gerada automaticamente pelo sistema.
+          </li>
+          <li>
+            <strong className="text-accent-strong">Editar voluntários:</strong>{" "}
+            clique no ícone de edição para adicionar, remover ou trocar membros
+            de cada função.
+          </li>
+          <li>
+            <strong className="text-accent-strong">Alterar status:</strong> mude
+            o status da escala entre Pendente, Confirmada, Realizada ou
+            Cancelada.
+          </li>
+          <li>
+            <strong className="text-accent-strong">Preservação:</strong> ao
+            re-gerar escalas do mês, apenas as automáticas não-editadas são
+            substituídas. Suas edições manuais são mantidas.
+          </li>
         </ul>
       </div>
 
@@ -633,8 +839,8 @@ export default function EscalasIndex({ loaderData }: Route.ComponentProps) {
           onClick={() => setModoVisualizacao("data")}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
             modoVisualizacao === "data"
-              ? "bg-blue-600 text-white"
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+              ? "bg-accent text-white"
+              : "bg-surface text-muted border border-border hover:bg-surface-2"
           }`}
         >
           Próximos Eventos
@@ -644,8 +850,8 @@ export default function EscalasIndex({ loaderData }: Route.ComponentProps) {
           onClick={() => setModoVisualizacao("ministerio")}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
             modoVisualizacao === "ministerio"
-              ? "bg-blue-600 text-white"
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+              ? "bg-accent text-white"
+              : "bg-surface text-muted border border-border hover:bg-surface-2"
           }`}
         >
           Por Ministério
@@ -655,28 +861,32 @@ export default function EscalasIndex({ loaderData }: Route.ComponentProps) {
       {modoVisualizacao === "ministerio" && (
         <div className="flex items-center gap-1 overflow-x-auto pb-1 mb-6 scrollbar-hide">
           {grupos.map((g) => {
-          const ativo = tabAtiva === g.nome;
-          return (
-            <button
-              key={g.nome}
-              type="button"
-              onClick={() => setTabAtiva(g.nome)}
-              className={`flex flex-col items-center justify-center gap-1 w-28 h-20 rounded-xl border transition-all shrink-0 ${
-                ativo
-                  ? "bg-blue-50 border-blue-200 text-blue-700"
-                  : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
-              }`}
-            >
-              <span className="text-lg leading-none">{getIcon(g.nome)}</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider">{g.nome}</span>
-              {g.totalVoluntarios > 0 && (
-                <span className={`text-[10px] font-semibold ${ativo ? "text-blue-600" : "text-slate-400"}`}>
-                  {g.totalVoluntarios} Escalados
+            const ativo = tabAtiva === g.nome;
+            return (
+              <button
+                key={g.nome}
+                type="button"
+                onClick={() => setTabAtiva(g.nome)}
+                className={`flex flex-col items-center justify-center gap-1 w-28 h-20 rounded-xl border transition-all shrink-0 ${
+                  ativo
+                    ? "bg-accent-soft-2 border-accent-soft text-accent-strong"
+                    : "bg-surface border-border text-muted hover:border-border-strong hover:text-fg"
+                }`}
+              >
+                <span className="text-lg leading-none">{getIcon(g.nome)}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                  {g.nome}
                 </span>
-              )}
-            </button>
-          );
-        })}
+                {g.totalVoluntarios > 0 && (
+                  <span
+                    className={`text-[10px] font-semibold ${ativo ? "text-accent" : "text-subtle"}`}
+                  >
+                    {g.totalVoluntarios} Escalados
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -712,54 +922,61 @@ export default function EscalasIndex({ loaderData }: Route.ComponentProps) {
             ))
           )}
 
-          {modoVisualizacao === "ministerio" && (!grupoAtivo || grupoAtivo.items.length === 0) && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-xs">
-              {escalas.length === 0 ? (
-                <EmptyStateEscalas
-                  ministerios={ministerios}
-                  ministeriosSemFuncoes={ministeriosSemFuncoes}
-                  ministeriosSemMembros={ministeriosSemMembros}
-                  ministeriosSemAtividades={ministeriosSemAtividades}
-                  todosOsRequisitos={todosOsRequisitos}
-                  canGerarTodos={canGerarTodos}
-                />
-              ) : (
-                <div className="text-center text-slate-400 text-sm">
-                  Nenhuma escala encontrada para este ministério.
-                </div>
-              )}
-            </div>
-          )}
+          {modoVisualizacao === "ministerio" &&
+            (!grupoAtivo || grupoAtivo.items.length === 0) && (
+              <div className="bg-surface border border-border rounded-2xl p-8 shadow-xs">
+                {escalas.length === 0 ? (
+                  <EmptyStateEscalas
+                    ministerios={ministerios}
+                    ministeriosSemFuncoes={ministeriosSemFuncoes}
+                    ministeriosSemMembros={ministeriosSemMembros}
+                    ministeriosSemAtividades={ministeriosSemAtividades}
+                    todosOsRequisitos={todosOsRequisitos}
+                    canGerarTodos={canGerarTodos}
+                  />
+                ) : (
+                  <div className="text-center text-subtle text-sm">
+                    Nenhuma escala encontrada para este ministério.
+                  </div>
+                )}
+              </div>
+            )}
         </div>
 
         {/* ── Sidebar ── */}
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-4">
+          <div className="bg-surface border border-border rounded-2xl p-5 shadow-xs">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-4">
               Resumo de Escalas
             </p>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-700 font-medium">Total de escalas</span>
-                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span className="text-sm text-fg font-medium">
+                  Total de escalas
+                </span>
+                <span className="text-xs font-bold text-muted bg-surface-2 px-2 py-0.5 rounded-full">
                   {escalas.length}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-700 font-medium">Total de voluntários</span>
-                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span className="text-sm text-fg font-medium">
+                  Total de voluntários
+                </span>
+                <span className="text-xs font-bold text-muted bg-surface-2 px-2 py-0.5 rounded-full">
                   {escalas.reduce((s, e) => s + e.voluntarios.length, 0)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-700 font-medium">Ministérios</span>
-                <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span className="text-sm text-fg font-medium">Ministérios</span>
+                <span className="text-xs font-bold text-muted bg-surface-2 px-2 py-0.5 rounded-full">
                   {grupos.length}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-700 font-medium">Escalas automáticas</span>
-                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                <span className="text-sm text-fg font-medium">
+                  Escalas automáticas
+                </span>
+                <span className="text-xs font-bold text-accent bg-accent-soft-2 px-2 py-0.5 rounded-full">
                   {escalas.filter((e) => e.geradaAutomaticamente).length}
                 </span>
               </div>

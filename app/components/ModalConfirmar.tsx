@@ -28,7 +28,7 @@
  * @param props.variant - Variante visual (default "primary").
  * @returns Elemento JSX do modal ou null.
  */
-import { Button } from "./Button";
+import { Button } from "~/components/ds";
 import { Dialog } from "./Dialog";
 
 /**
@@ -84,7 +84,7 @@ export function ModalConfirmar({
         </>
       }
     >
-      <p className="text-sm text-slate-600">{description}</p>
+      <p className="text-sm text-muted">{description}</p>
     </Dialog>
   );
 }

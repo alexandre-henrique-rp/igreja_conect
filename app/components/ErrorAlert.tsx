@@ -49,16 +49,16 @@ export type ErrorAlertProps = {
 
 /** Mapa de classes CSS por tom — separa cores do JSX. */
 const TONE_CLASSES = {
-  error: "border-red-200 bg-red-50 text-red-800",
-  warning: "border-amber-200 bg-amber-50 text-amber-800",
-  info: "border-blue-200 bg-blue-50 text-blue-800",
+  error: "border-danger-soft bg-danger-soft text-danger",
+  warning: "border-warning-soft bg-warning-soft text-warning",
+  info: "border-accent-soft bg-accent-soft-2 text-accent-strong",
 } as const;
 
 /** Cor do ícone (mesma família do tom). */
 const ICON_CLASSES = {
-  error: "text-red-700",
-  warning: "text-amber-700",
-  info: "text-blue-700",
+  error: "text-danger",
+  warning: "text-warning",
+  info: "text-accent-strong",
 } as const;
 
 /** Ícone SVG simples (círculo com exclamação) para todos os tons. */

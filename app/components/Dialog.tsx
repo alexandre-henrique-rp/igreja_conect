@@ -199,7 +199,7 @@ export function Dialog({
     >
       {/* Overlay — click fecha */}
       <div
-        className="fixed inset-0 bg-slate-900/50"
+        className="fixed inset-0 bg-fg/50"
         onClick={onClose}
         aria-hidden="true"
         data-testid="dialog-overlay"
@@ -212,7 +212,7 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          "relative bg-white rounded-lg shadow-xl",
+          "relative bg-surface rounded-lg shadow-xl",
           "max-w-lg w-full max-h-[90vh] overflow-y-auto",
           "focus:outline-none",
           className
@@ -220,15 +220,15 @@ export function Dialog({
         data-testid="dialog"
       >
         {/* Header */}
-        <header className="flex items-center justify-between p-4 border-b border-slate-200">
-          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+        <header className="flex items-center justify-between p-4 border-b border-border">
+          <h2 id={titleId} className="text-lg font-semibold text-fg">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="inline-flex items-center justify-center h-9 w-9 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             <CloseIcon />
           </button>
@@ -239,7 +239,7 @@ export function Dialog({
 
         {/* Footer opcional */}
         {footer && (
-          <footer className="p-4 border-t border-slate-200 flex gap-2 justify-end">
+          <footer className="p-4 border-t border-border flex gap-2 justify-end">
             {footer}
           </footer>
         )}

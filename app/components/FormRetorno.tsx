@@ -1,7 +1,7 @@
 import { Form, useNavigation } from "react-router";
-import { InfoBox } from "./InfoBox";
 import { ErrorAlert } from "./ErrorAlert";
 import { cn } from "~/lib/cn";
+import { InfoBox } from "~/components/ds";
 
 interface DadosManutencao {
   id: string;
@@ -41,18 +41,18 @@ export function FormRetorno({
 
       {formError && <ErrorAlert tone="error">{formError}</ErrorAlert>}
 
-      <InfoBox>
+      <InfoBox tone="info">
         Esta operação marca a manutenção como concluída e atualiza o status
         do item para <strong>DISPONIVEL</strong>.
       </InfoBox>
 
-      <div className="bg-slate-50 border border-slate-200 rounded-md p-4 space-y-2">
-        <p className="text-sm text-slate-600">
-          <span className="font-medium text-slate-900">Assistência:</span>{" "}
+      <div className="bg-surface-2 border border-border rounded-md p-4 space-y-2">
+        <p className="text-sm text-muted">
+          <span className="font-medium text-fg">Assistência:</span>{" "}
           {manutencao.assistenciaTecnica}
         </p>
-        <p className="text-sm text-slate-600">
-          <span className="font-medium text-slate-900">Data de envio:</span>{" "}
+        <p className="text-sm text-muted">
+          <span className="font-medium text-fg">Data de envio:</span>{" "}
           {formatDate(manutencao.dataEnvio)}
         </p>
       </div>
@@ -60,10 +60,10 @@ export function FormRetorno({
       <div className="space-y-1">
         <label
           htmlFor="dataRetorno"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-fg"
         >
           Data de Retorno
-          <span aria-hidden="true" className="text-red-700 ml-1">*</span>
+          <span aria-hidden="true" className="text-danger ml-1">*</span>
         </label>
         <input
           id="dataRetorno"
@@ -72,17 +72,17 @@ export function FormRetorno({
           required
           defaultValue={new Date().toISOString().split("T")[0]}
           className={cn(
-            "w-full h-11 px-3 rounded-md border bg-white text-slate-900",
-            "border-slate-300",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "w-full h-11 px-3 rounded-md border bg-surface text-fg",
+            "border-border-strong",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            fieldErrors?.dataRetorno && "border-red-700"
+            fieldErrors?.dataRetorno && "border-danger"
           )}
           aria-invalid={Boolean(fieldErrors?.dataRetorno)}
           aria-required="true"
         />
         {fieldErrors?.dataRetorno && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {fieldErrors.dataRetorno}
           </p>
         )}
@@ -93,9 +93,9 @@ export function FormRetorno({
           type="submit"
           disabled={isSubmitting}
           className={cn(
-            "inline-flex items-center justify-center rounded-md bg-cyan-700 px-6 h-11",
-            "text-sm font-medium text-white hover:bg-cyan-800 transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+            "inline-flex items-center justify-center rounded-md bg-accent px-6 h-11",
+            "text-sm font-medium text-white hover:bg-accent-strong transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
           aria-disabled={isSubmitting}

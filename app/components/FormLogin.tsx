@@ -40,10 +40,8 @@
  */
 import { useState } from "react";
 import { Form, Link, useNavigation, useSearchParams } from "react-router";
-import { Button } from "./Button";
-import { Checkbox } from "./Checkbox";
+import { Button, Checkbox, Input } from "~/components/ds";
 import { ErrorAlert } from "./ErrorAlert";
-import { Input } from "./Input";
 import { useClientIP } from "~/lib/hooks/useClientIP";
 
 /**
@@ -91,9 +89,9 @@ function ToggleVisibilidade({ inputId }: { inputId: string }) {
       className="
         inline-flex items-center justify-center
         h-8 w-8 rounded-md
-        text-slate-400 hover:text-white hover:bg-slate-800/50
+        text-subtle hover:text-white hover:bg-fg/50
         focus-visible:outline-none focus-visible:ring-2
-        focus-visible:ring-blue-500 focus-visible:ring-offset-0
+        focus-visible:ring-accent focus-visible:ring-offset-0
         transition-colors cursor-pointer
       "
     >
@@ -154,7 +152,7 @@ export function FormLogin({
   const mailIcon = (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5 text-slate-400"
+      className="h-5 w-5 text-subtle"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -170,7 +168,7 @@ export function FormLogin({
   const lockIcon = (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5 text-slate-400"
+      className="h-5 w-5 text-subtle"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -189,11 +187,11 @@ export function FormLogin({
     <div className="flex items-center justify-between w-full">
       <span className="tracking-wider font-bold text-xs flex items-center gap-0.5">
         SENHA
-        <span aria-hidden="true" className="text-red-400 font-bold">*</span>
+        <span aria-hidden="true" className="text-danger font-bold">*</span>
       </span>
       <Link
         to="/recuperar-senha"
-        className="text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors cursor-pointer focus-visible:outline-none focus-visible:underline"
+        className="text-xs font-semibold text-accent hover:text-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:underline"
       >
         Esqueceu a senha?
       </Link>
@@ -201,44 +199,51 @@ export function FormLogin({
   );
 
   return (
-    <div className="min-h-screen bg-[#070e1b] flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden select-none font-sans">
-      {/* Elementos de Brilho de Fundo (Glow) */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-900/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-900/10 blur-[120px] pointer-events-none" />
+    <main className="auth-page split bg-bg" data-od-id="login-page">
+      {/* Lado esquerdo — visual institucional com igreja + sun */}
+      <section className="auth-visual" data-od-id="login-visual">
+        <Link to="/" className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          <span className="brand-name">Igreja Conect</span>
+        </Link>
 
-      {/* Link de acessibilidade (WCAG Skip Link) */}
-      <a
-        href="#main-content"
-        className="
-          sr-only focus:not-sr-only
-          focus:fixed focus:top-4 focus:left-4 focus:z-50
-          focus:px-4 focus:py-2 focus:rounded-md
-          focus:bg-blue-600 focus:text-white focus:text-sm focus:font-medium
-          focus:shadow-lg focus:outline-none
-        "
-      >
-        Pular para o conteúdo
-      </a>
+        <div className="auth-visual-copy">
+          <span
+            className="eyebrow text-xs font-bold uppercase tracking-wider"
+            style={{ color: "oklch(100% 0 0 / 0.68)" }}
+          >
+            Bem-vindo de volta
+          </span>
+          <h1>Cuide da casa. Acompanhe a jornada.</h1>
+          <p>
+            Um espaço seguro para organizar a vida da sua igreja e liberar
+            sua liderança para estar mais perto das pessoas.
+          </p>
+          <div className="auth-visual-art" aria-hidden="true">
+            <span className="sun" />
+            <span className="auth-church">
+              <span className="auth-door" />
+            </span>
+          </div>
+        </div>
 
-      {/* Logo com Brilho Traseiro */}
-      <div className="relative mb-6 text-center z-10">
-        <div className="absolute inset-0 bg-blue-500/15 blur-[25px] rounded-full scale-150 pointer-events-none" />
-        <h1 className="relative text-3xl font-extrabold tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.25)]">
-          IgrejaConnect
-        </h1>
-      </div>
+        <span className="auth-visual-footer">
+          Igreja Conect · gestão com propósito
+        </span>
+      </section>
 
-      <main
-        id="main-content"
-        className="w-full max-w-[440px] z-10"
-      >
-        <div className="bg-[#121b2c]/85 backdrop-blur-md border border-[#202f47] rounded-2xl p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          <header className="mb-6">
-            <h2 className="text-2xl font-bold text-white tracking-tight">Bem-vindo de volta</h2>
-            <p className="text-sm text-slate-400 mt-2">
-              Acesse sua conta para gerenciar sua comunidade.
-            </p>
-          </header>
+      {/* Lado direito — form */}
+      <section className="auth-form-side" data-od-id="login-form-area">
+        <div className="auth-card">
+          <div className="auth-logo-row">
+            <span className="brand-mark" aria-hidden="true" />
+            <span className="brand-name">Igreja Conect</span>
+          </div>
+
+          <h1>Acessar conta</h1>
+          <p className="lead">
+            Entre para continuar cuidando da sua comunidade.
+          </p>
 
           {/* Mensagens informativas e de erro */}
           {motivo === "expirado" && (
@@ -257,7 +262,7 @@ export function FormLogin({
           <Form
             method="post"
             action="/login"
-            className="space-y-5"
+            className="js-form"
             noValidate
           >
             <input type="hidden" name="clientIP" value={clientIP} />
@@ -272,42 +277,45 @@ export function FormLogin({
               defaultValue={defaultEmail}
               error={fieldErrors?.email}
               leadingIcon={mailIcon}
-              variant="dark"
             />
-            <Input
-              id="senha"
-              label={senhaLabel}
-              name="senha"
-              type="password"
-              required
-              autoComplete="current-password"
-              error={fieldErrors?.senha}
-              leadingIcon={lockIcon}
-              trailingAction={<ToggleVisibilidade inputId="senha" />}
-              variant="dark"
-              hideAsterisk
-            />
+            <div className="space-y-1.5">
+              <Input
+                id="senha"
+                label={senhaLabel}
+                name="senha"
+                type="password"
+                required
+                autoComplete="current-password"
+                error={fieldErrors?.senha}
+                leadingIcon={lockIcon}
+                trailingAction={<ToggleVisibilidade inputId="senha" />}
+                hideAsterisk
+              />
+            </div>
 
-            <div className="pt-1">
+            <div className="flex items-center justify-between pt-1">
               <Checkbox
                 label="Lembrar de mim"
                 name="manterConectado"
                 value="true"
-                variant="dark"
               />
             </div>
 
             <Button
               type="submit"
-              variant="blue"
+              variant="primary"
               fullWidth
               loading={isSubmitting}
             >
               {isSubmitting ? "Entrando..." : "Entrar"}
             </Button>
           </Form>
+
+          <div className="auth-footnote">
+            Esqueceu a senha? Procure o admin da sua igreja.
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }

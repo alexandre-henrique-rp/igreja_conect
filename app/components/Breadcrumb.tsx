@@ -6,12 +6,12 @@
  * 2. `<ol>` — lista ordenada (semântica de trilha, não de classificação).
  * 3. Itens com `href` viram `<Link>`; sem `href` viram `<span aria-current="page">`
  *    (último item, sem link).
- * 4. Separador `›` (U+203A) entre itens, em `text-slate-400`.
+ * 4. Separador `›` (U+203A) entre itens, em `text-subtle`.
  *
  * **Visual:**
- * - Ancestrais: `text-cyan-700 hover:underline` (link, clicável).
- * - Atual: `font-medium text-slate-900` (sem link, indica "você está aqui").
- * - Separador: `text-slate-400` (sutis, não compete com o conteúdo).
+ * - Ancestrais: `text-accent hover:underline` (link, clicável).
+ * - Atual: `font-medium text-fg` (sem link, indica "você está aqui").
+ * - Separador: `text-subtle` (sutis, não compete com o conteúdo).
  *
  * **Acessibilidade (WCAG 2.4.8 — Location):** o usuário sabe onde está
  * dentro da hierarquia de páginas. Screen reader anuncia "Trilha de
@@ -64,20 +64,20 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
               {item.href && !isLast ? (
                 <Link
                   to={item.href}
-                  className="text-cyan-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded"
+                  className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                 >
                   {item.label}
                 </Link>
               ) : (
                 <span
-                  className="font-medium text-slate-900"
+                  className="font-medium text-fg"
                   aria-current={isLast ? "page" : undefined}
                 >
                   {item.label}
                 </span>
               )}
               {!isLast && (
-                <span className="text-slate-400" aria-hidden="true">
+                <span className="text-subtle" aria-hidden="true">
                   ›
                 </span>
               )}

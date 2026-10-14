@@ -28,10 +28,7 @@ import {
   gerarCultosRecorrentes,
 } from "~/lib/disponibilidades.server";
 import { gerarEscalasMes } from "~/lib/gerarEscalas.server";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
-import { Select } from "~/components/Select";
-import { Breadcrumb } from "~/components/Breadcrumb";
+import { Button, Input, Select, Breadcrumb, BreadcrumbItem, BreadcrumbSeparator } from "~/components/ds";
 import { ErrorAlert } from "~/components/ErrorAlert";
 import { ConflictError, NomeDuplicadoError } from "~/lib/errors";
 import { GerenciarFuncoes } from "~/components/GerenciarFuncoes";
@@ -487,13 +484,13 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: "Ministérios", href: "/app/ministerios" },
-          { label: ministerio.nome, href: `/app/ministerios/${ministerio.id}` },
-          { label: "Editar" },
-        ]}
-      />
+      <Breadcrumb>
+        <BreadcrumbItem href="/app/ministerios">Ministérios</BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem href={`/app/ministerios/${ministerio.id}`}>{ministerio.nome}</BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem current>Editar</BreadcrumbItem>
+      </Breadcrumb>
 
       {/* Header */}
       <Form method="post" noValidate>
@@ -508,7 +505,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
         )}
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-3 mb-6">
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-extrabold text-fg tracking-tight">
             Editar Ministério
           </h1>
           <div className="flex items-center gap-2 shrink-0">
@@ -517,7 +514,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                 Cancelar
               </Button>
             </Link>
-            <Button type="submit" variant="blue" size="sm" loading={isSubmitting}>
+            <Button type="submit" variant="primary" size="sm" loading={isSubmitting}>
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
@@ -527,14 +524,14 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
         </div>
 
         {/* ── Card: Informações Básicas ── */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5 mb-5">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+        <div className="bg-surface border border-border rounded-2xl p-6 shadow-xs space-y-5 mb-5">
+          <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+            <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-base font-extrabold text-slate-900">Informações Básicas</h2>
+            <h2 className="text-base font-extrabold text-fg">Informações Básicas</h2>
           </div>
 
           <Input
@@ -549,7 +546,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
           />
 
           <div>
-            <label htmlFor="descricao" className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="descricao" className="block text-sm font-medium text-fg mb-1">
               Descrição
             </label>
             <textarea
@@ -558,7 +555,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
               rows={3}
               maxLength={500}
               defaultValue={ministerio.descricao ?? ""}
-              className="w-full px-3 py-2.5 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-700 focus:border-transparent resize-none text-slate-900 placeholder:text-slate-400 text-sm"
+              className="w-full px-3 py-2.5 border border-border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none text-fg placeholder:text-subtle text-sm"
               placeholder="Responsável pela música, som e ambientação..."
             />
           </div>
@@ -572,11 +569,11 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
               options={STATUS_OPTIONS}
             />
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-700">Cor de Identificação</p>
-              <div className="flex items-center gap-3 h-11 px-3 border border-slate-300 rounded-md bg-white">
+              <p className="text-sm font-medium text-fg">Cor de Identificação</p>
+              <div className="flex items-center gap-3 h-11 px-3 border border-border-strong rounded-md bg-surface">
                 {/* Swatch */}
                 <div
-                  className="h-6 w-6 rounded border border-slate-200 shrink-0 relative"
+                  className="h-6 w-6 rounded border border-border shrink-0 relative"
                   style={{ backgroundColor: corDestaque }}
                 >
                   <input
@@ -587,7 +584,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                     title="Escolher cor"
                   />
                 </div>
-                <span className="text-sm text-slate-700 font-medium flex-1">
+                <span className="text-sm text-fg font-medium flex-1">
                   Azul ({corDestaque.toUpperCase()})
                 </span>
                 {/* Paleta rápida */}
@@ -610,7 +607,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                 {/* Ícone de editar cor */}
                 <button
                   type="button"
-                  className="text-slate-400 hover:text-slate-600 relative"
+                  className="text-subtle hover:text-muted relative"
                   aria-label="Editar cor"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -629,36 +626,36 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
         </div>
 
         {/* ── Card: Detalhes Operacionais ── */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5 mb-5">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+        <div className="bg-surface border border-border rounded-2xl p-6 shadow-xs space-y-5 mb-5">
+          <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+            <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <h2 className="text-base font-extrabold text-slate-900">Detalhes Operacionais</h2>
+            <h2 className="text-base font-extrabold text-fg">Detalhes Operacionais</h2>
           </div>
 
           {/* Líder + Capacidade */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Líder do Ministério */}
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-fg">
                 Líder do Ministério
               </label>
               {liderSelecionado ? (
-                <div className="flex items-center gap-2 h-11 px-3 border border-slate-300 rounded-md bg-white">
-                  <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-2 h-11 px-3 border border-border-strong rounded-md bg-surface">
+                  <div className="h-6 w-6 rounded-full bg-accent-soft-2 text-accent-strong text-xs font-bold flex items-center justify-center shrink-0">
                     {liderSelecionado.nome.charAt(0)}
                   </div>
-                  <span className="text-sm text-slate-900 flex-1 truncate">
+                  <span className="text-sm text-fg flex-1 truncate">
                     {liderSelecionado.nome}
                   </span>
                   <button
                     type="button"
                     onClick={() => setLiderSelecionado(null)}
-                    className="text-slate-400 hover:text-slate-600"
+                    className="text-subtle hover:text-muted"
                     aria-label="Remover líder"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -675,24 +672,24 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                     onChange={(e) => { setLiderNome(e.target.value); setShowLiderDropdown(true); }}
                     onFocus={() => setShowLiderDropdown(true)}
                     onBlur={() => setTimeout(() => setShowLiderDropdown(false), 150)}
-                    className="w-full h-11 px-3 border border-slate-300 rounded-md text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-700"
+                    className="w-full h-11 px-3 border border-border-strong rounded-md text-sm text-fg placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                   {showLiderDropdown && liderNome && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-surface border border-border rounded-lg shadow-lg max-h-40 overflow-y-auto">
                       {membrosDisponiveis
                         .filter((m) => m.nome.toLowerCase().includes(liderNome.toLowerCase()))
                         .map((m) => (
                           <button
                             key={m.id}
                             type="button"
-                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                            className="w-full text-left px-3 py-2 text-sm text-fg hover:bg-surface-2 flex items-center gap-2"
                             onMouseDown={() => {
                               setLiderSelecionado(m);
                               setLiderNome("");
                               setShowLiderDropdown(false);
                             }}
                           >
-                            <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+                            <div className="h-6 w-6 rounded-full bg-accent-soft-2 text-accent-strong text-xs font-bold flex items-center justify-center shrink-0">
                               {m.nome.charAt(0)}
                             </div>
                             <span className="truncate">{m.nome}</span>
@@ -706,7 +703,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
 
             {/* Capacidade */}
             <div className="space-y-1">
-              <label htmlFor="capacidadeMaxima" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="capacidadeMaxima" className="block text-sm font-medium text-fg">
                 Capacidade
               </label>
               <input
@@ -716,14 +713,14 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                 min={1}
                 placeholder="Ilimitado"
                 defaultValue={ministerio.capacidadeMaxima ?? undefined}
-                className="w-full h-11 px-3 rounded-md border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-700 text-sm"
+                className="w-full h-11 px-3 rounded-md border border-border-strong bg-surface text-fg placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-accent text-sm"
               />
             </div>
           </div>
 
           {/* Dias de Atuação */}
           <div>
-            <p className="text-sm font-medium text-slate-700 mb-2">Dias de Atuação</p>
+            <p className="text-sm font-medium text-fg mb-2">Dias de Atuação</p>
             <div className="flex items-center gap-2 flex-wrap">
               {DIAS_SEMANA.map((dia) => {
                 const ativo = diasSelecionados.includes(dia.key);
@@ -734,8 +731,8 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                     onClick={() => toggleDia(dia.key)}
                     className={
                       ativo
-                        ? "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors bg-blue-50 text-blue-700 border-blue-300"
-                        : "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors bg-white text-slate-600 border-slate-300 hover:border-blue-300 hover:text-blue-600"
+                        ? "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors bg-accent-soft-2 text-accent-strong border-accent-soft"
+                        : "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors bg-surface text-muted border-border-strong hover:border-accent-soft hover:text-accent"
                     }
                   >
                     {dia.label}
@@ -766,11 +763,11 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
 
       {/* ── Gerar Escalas do Mês ── */}
       {canEdit && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs mb-5">
+        <div className="bg-surface border border-border rounded-2xl p-5 shadow-xs mb-5">
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1">
-              <h2 className="text-base font-extrabold text-slate-900 mb-1">Gerar Escalas do Mês</h2>
-              <ul className="space-y-1 text-xs text-slate-600">
+              <h2 className="text-base font-extrabold text-fg mb-1">Gerar Escalas do Mês</h2>
+              <ul className="space-y-1 text-xs text-muted">
                 <li><strong>O que faz:</strong> cria escalas para todos os cultos e ensaios do mês atual deste ministério.</li>
                 <li><strong>Como funciona:</strong> para cada atividade, o sistema sorteia um membro disponível para cada função cadastrada, tentando não repetir o mesmo membro em datas consecutivas.</li>
                 <li><strong>Depois de gerar:</strong> as escalas ficam marcadas com badge "Auto" e podem ser editadas manualmente (trocar, adicionar ou remover voluntários).</li>
@@ -781,7 +778,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
               <input type="hidden" name="intent" value="gerar-escalas" />
               <Button
                 type="submit"
-                variant="blue"
+                variant="primary"
                 size="sm"
                 loading={fetcher.state === "submitting"}
               >
@@ -807,21 +804,21 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
       )}
 
       {/* ── Card: Membros do Ministério ── (form separado por membro) */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div className="bg-surface border border-border rounded-2xl shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-2">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="p-2 rounded-xl bg-success-soft text-success flex items-center justify-center">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <h2 className="text-base font-extrabold text-slate-900">Membros do Ministério</h2>
+            <h2 className="text-base font-extrabold text-fg">Membros do Ministério</h2>
           </div>
           {canEdit && (
             <button
               type="button"
               onClick={() => setShowAddMembro(!showAddMembro)}
-              className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-semibold text-accent hover:text-accent-strong transition-colors"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -833,11 +830,11 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
 
         {/* Formulário de adicionar membro */}
         {showAddMembro && canEdit && (
-          <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+          <div className="px-6 py-4 bg-surface-2 border-b border-surface-2">
             <Form method="post" className="flex items-end gap-3">
               <input type="hidden" name="intent" value="add-membro" />
               <div className="flex-1 space-y-1">
-                <label htmlFor="membroBusca" className="block text-xs font-medium text-slate-600">
+                <label htmlFor="membroBusca" className="block text-xs font-medium text-muted">
                   Selecionar membro
                 </label>
                 <div className="relative">
@@ -847,20 +844,20 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                     placeholder="Buscar por nome..."
                     value={membroBusca}
                     onChange={(e) => setMembroBusca(e.target.value)}
-                    className="w-full h-9 px-3 border border-slate-300 rounded-md text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-700"
+                    className="w-full h-9 px-3 border border-border-strong rounded-md text-sm text-fg placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                 </div>
                 {membroBusca && membrosDisponiveisFiltrados.length > 0 && (
-                  <div className="absolute z-10 w-64 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                  <div className="absolute z-10 w-64 mt-1 bg-surface border border-border rounded-lg shadow-lg max-h-40 overflow-y-auto">
                     {membrosDisponiveisFiltrados.map((m) => (
                       <button
                         key={m.id}
                         type="submit"
                         name="membroId"
                         value={m.id}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-sm text-fg hover:bg-surface-2 flex items-center gap-2"
                       >
-                        <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+                        <div className="h-6 w-6 rounded-full bg-accent-soft-2 text-accent-strong text-xs font-bold flex items-center justify-center shrink-0">
                           {m.nome.charAt(0)}
                         </div>
                         <span className="truncate">{m.nome}</span>
@@ -869,7 +866,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                   </div>
                 )}
                 {membroBusca && membrosDisponiveisFiltrados.length === 0 && (
-                  <p className="text-xs text-slate-400 mt-1">Nenhum membro encontrado.</p>
+                  <p className="text-xs text-subtle mt-1">Nenhum membro encontrado.</p>
                 )}
               </div>
               <Button type="button" variant="secondary" size="sm" onClick={() => { setShowAddMembro(false); setMembroBusca(""); }}>
@@ -890,41 +887,41 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <tr className="border-b border-surface-2">
+                  <th className="text-left px-6 py-3 text-xs font-bold text-muted uppercase tracking-wider">
                     Membro
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="text-left px-6 py-3 text-xs font-bold text-muted uppercase tracking-wider">
                     Cargo
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="text-left px-6 py-3 text-xs font-bold text-muted uppercase tracking-wider">
                     Função
                   </th>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="text-left px-6 py-3 text-xs font-bold text-muted uppercase tracking-wider">
                     Status
                   </th>
                   {canEdit && (
-                    <th className="text-right px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="text-right px-6 py-3 text-xs font-bold text-muted uppercase tracking-wider">
                       Ações
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-surface-2">
                 {membros.map((membro) => (
-                  <tr key={membro.vinculoId} className="hover:bg-slate-50 transition-colors">
+                  <tr key={membro.vinculoId} className="hover:bg-surface-2 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-200 text-blue-800 text-sm font-bold flex items-center justify-center shrink-0">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-accent-soft-2 to-accent-soft text-accent-strong text-sm font-bold flex items-center justify-center shrink-0">
                           {membro.nome.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-semibold text-slate-900">{membro.nome}</span>
+                        <span className="font-semibold text-fg">{membro.nome}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-muted">
                       <span>{membro.cargo ?? tipoLabel(membro.tipo)}</span>
                       {membro.lider && (
-                        <span className="ml-2 text-xs font-semibold text-amber-700">Líder</span>
+                        <span className="ml-2 text-xs font-semibold text-warning">Líder</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -936,7 +933,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                             name="funcaoId"
                             defaultValue={membro.funcaoId ?? ""}
                             onChange={(e) => e.currentTarget.form?.submit()}
-                            className="h-8 px-2 border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-700"
+                            className="h-8 px-2 border border-border-strong rounded-md text-xs text-fg focus:outline-none focus:ring-2 focus:ring-accent"
                           >
                             <option value="">—</option>
                             {funcoes.map((f) => (
@@ -945,11 +942,11 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                           </select>
                         </Form>
                       ) : (
-                        <span className="text-slate-600">{membro.funcaoNome ?? "—"}</span>
+                        <span className="text-muted">{membro.funcaoNome ?? "—"}</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-success-soft text-success border border-success-soft">
                         Ativo
                       </span>
                     </td>
@@ -960,7 +957,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                           <button
                             type="button"
                             onClick={() => setMembroDisponibilidade({ id: membro.membroId, nome: membro.nome })}
-                            className="p-1.5 text-slate-400 hover:text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors"
+                            className="p-1.5 text-subtle hover:text-accent rounded-md hover:bg-accent-soft-2 transition-colors"
                             aria-label={`Gerenciar disponibilidade de ${membro.nome}`}
                             title="Disponibilidade"
                           >
@@ -973,7 +970,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                             <input type="hidden" name="membroId" value={membro.membroId} />
                             <button
                               type="submit"
-                              className="p-1.5 text-slate-400 hover:text-amber-600 rounded-md hover:bg-amber-50 transition-colors"
+                              className="p-1.5 text-subtle hover:text-warning rounded-md hover:bg-warning-soft transition-colors"
                               aria-label={membro.lider ? `Remover ${membro.nome} como líder` : `Definir ${membro.nome} como líder`}
                               title={membro.lider ? "Remover liderança" : "Definir como líder"}
                             >
@@ -988,7 +985,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
                             <input type="hidden" name="membroId" value={membro.membroId} />
                             <button
                               type="submit"
-                              className="p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"
+                              className="p-1.5 text-subtle hover:text-danger rounded-md hover:bg-danger-soft transition-colors"
                               aria-label="Remover membro"
                             >
                               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -1039,18 +1036,18 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
       {/* ── Formulário de atividade (ensaio/extra) ── */}
       {formAtividade && membroDisponibilidade && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setFormAtividade(null)}>
-          <div className="bg-white rounded-xl shadow-lg p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-bold text-slate-900 mb-3">Nova Atividade</h3>
+          <div className="bg-surface rounded-xl shadow-lg p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-fg mb-3">Nova Atividade</h3>
             <fetcher.Form method="post" className="space-y-3">
               <input type="hidden" name="intent" value="add-atividade" />
               <input type="hidden" name="data" value={formAtividade.data} />
               <input type="hidden" name="membroId" value={membroDisponibilidade.id} />
               <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-600">Tipo</label>
+                <label className="block text-xs font-medium text-muted">Tipo</label>
                 <select
                   name="tipo"
                   defaultValue={formAtividade.tipo}
-                  className="w-full h-9 px-3 border border-slate-300 rounded-md text-sm"
+                  className="w-full h-9 px-3 border border-border-strong rounded-md text-sm"
                 >
                   <option value="ENSAIO">Ensaio</option>
                   <option value="ATIVIDADE_EXTRA">Atividade Extra</option>
@@ -1060,7 +1057,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
               <Input name="descricao" label="Descrição (opcional)" placeholder="Ex: Ensaio extra para o culto de domingo" />
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="secondary" size="sm" onClick={() => setFormAtividade(null)}>Cancelar</Button>
-                <Button type="submit" variant="blue" size="sm" loading={fetcher.state === "submitting"}>Adicionar</Button>
+                <Button type="submit" variant="primary" size="sm" loading={fetcher.state === "submitting"}>Adicionar</Button>
               </div>
             </fetcher.Form>
           </div>
@@ -1070,8 +1067,8 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
       {/* ── Formulário de indisponibilidade ── */}
       {formIndisponibilidade && membroDisponibilidade && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setFormIndisponibilidade(null)}>
-          <div className="bg-white rounded-xl shadow-lg p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-bold text-slate-900 mb-3">Marcar Indisponibilidade</h3>
+          <div className="bg-surface rounded-xl shadow-lg p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-fg mb-3">Marcar Indisponibilidade</h3>
             <fetcher.Form method="post" className="space-y-3">
               <input type="hidden" name="intent" value="add-indisponibilidade" />
               <input type="hidden" name="membroId" value={membroDisponibilidade.id} />
@@ -1080,7 +1077,7 @@ export default function MinisterioEditar({ loaderData, actionData }: Route.Compo
               <Input name="motivo" label="Motivo (opcional)" placeholder="Ex: Viagem, consulta médica..." />
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="secondary" size="sm" onClick={() => setFormIndisponibilidade(null)}>Cancelar</Button>
-                <Button type="submit" variant="blue" size="sm" loading={fetcher.state === "submitting"}>Marcar</Button>
+                <Button type="submit" variant="primary" size="sm" loading={fetcher.state === "submitting"}>Marcar</Button>
               </div>
             </fetcher.Form>
           </div>

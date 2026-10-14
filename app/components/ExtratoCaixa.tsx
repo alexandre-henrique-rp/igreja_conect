@@ -20,12 +20,12 @@
  * @param props.podeVerMembro - Se true, exibe coluna Membro.
  * @returns Elemento JSX do extrato.
  */
-import type { LancamentoExtratoItem } from "~/lib/finance.server";
 import { cn } from "~/lib/cn";
+import type { LancamentoExtratoItem } from "~/lib/finance.server";
 import { formatBRLFromCents } from "~/lib/money-format";
 import { CardLancamento } from "./CardLancamento";
 import { ComprovanteUpload } from "./ComprovanteUpload";
-import { EmptyState } from "./EmptyState";
+import { EmptyState } from "~/components/ds";
 
 /** Mapa de categorias para label legível. */
 const CATEGORIA_LABEL: Record<string, string> = {
@@ -63,10 +63,7 @@ function formatDateShort(date: Date): string {
  * @param {ExtratoCaixaProps} props - items, podeVerMembro.
  * @returns {JSX.Element} Tabela ou cards do extrato.
  */
-export function ExtratoCaixa({
-  items,
-  podeVerMembro,
-}: ExtratoCaixaProps) {
+export function ExtratoCaixa({ items, podeVerMembro }: ExtratoCaixaProps) {
   if (items.length === 0) {
     return (
       <EmptyState
@@ -82,7 +79,7 @@ export function ExtratoCaixa({
       <div className="hidden sm:block">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
               <th className="pb-2 pr-3">Data</th>
               <th className="pb-2 pr-3">Tipo</th>
               <th className="pb-2 pr-3">Categoria</th>
@@ -95,17 +92,19 @@ export function ExtratoCaixa({
           <tbody>
             {items.map((item) => {
               const isEntrada = item.tipo === "ENTRADA";
-              const labelCat = CATEGORIA_LABEL[item.categoria] ?? item.categoria;
+              const labelCat =
+                CATEGORIA_LABEL[item.categoria] ?? item.categoria;
               const membroLabel =
-                item.membro?.nome ?? (item.categoria === "DIZIMO" ? "(membro removido)" : null);
+                item.membro?.nome ??
+                (item.categoria === "DIZIMO" ? "(membro removido)" : null);
 
               return (
                 <tr
                   key={item.id}
-                  className="border-b border-slate-100 hover:bg-slate-50 transition-colors align-middle"
+                  className="border-b border-surface-2 hover:bg-surface-2 transition-colors align-middle"
                   data-testid={`extrato-row-${item.id}`}
                 >
-                  <td className="py-2 pr-3 text-sm text-slate-600 tabular-nums whitespace-nowrap">
+                  <td className="py-2 pr-3 text-sm text-muted tabular-nums whitespace-nowrap">
                     {formatDateShort(item.dataCompetencia)}
                   </td>
                   <td className="py-2 pr-3">
@@ -113,42 +112,39 @@ export function ExtratoCaixa({
                       className={cn(
                         "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
                         isEntrada
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                          ? "bg-success-soft text-success"
+                          : "bg-danger-soft text-danger",
                       )}
                     >
                       {isEntrada ? "Entrada" : "Saída"}
                     </span>
                   </td>
-                  <td className="py-2 pr-3 text-sm text-slate-700">
-                    {labelCat}
-                  </td>
+                  <td className="py-2 pr-3 text-sm text-fg">{labelCat}</td>
                   <td
                     className={cn(
                       "py-2 pr-3 text-sm font-medium tabular-nums whitespace-nowrap",
-                      isEntrada ? "text-green-600" : "text-red-600"
+                      isEntrada ? "text-success" : "text-danger",
                     )}
                   >
-                    {isEntrada ? "+" : "-"} {formatBRLFromCents(item.valorCentavos)}
+                    {isEntrada ? "+" : "-"}{" "}
+                    {formatBRLFromCents(item.valorCentavos)}
                   </td>
                   {podeVerMembro && (
-                    <td className="py-2 pr-3 text-sm text-slate-600">
+                    <td className="py-2 pr-3 text-sm text-muted">
                       {membroLabel ? (
                         <span
-                          className={cn(
-                            !item.membro && "italic text-slate-400"
-                          )}
+                          className={cn(!item.membro && "italic text-subtle")}
                         >
                           {membroLabel}
                         </span>
                       ) : (
-                        <span className="text-slate-300">—</span>
+                        <span className="text-border-strong">—</span>
                       )}
                     </td>
                   )}
-                  <td className="py-2 text-sm text-slate-500 max-w-xs truncate">
+                  <td className="py-2 text-sm text-muted max-w-xs truncate">
                     {item.descricao || (
-                      <span className="text-slate-300">—</span>
+                      <span className="text-border-strong">—</span>
                     )}
                   </td>
                   <td className="py-2 min-w-[260px]">

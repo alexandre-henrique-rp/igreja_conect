@@ -104,8 +104,20 @@ model Membro {
   estado     String?
   cep        String?
 
+  // Acolhimento de visitantes (novo UX — visitante-novo/visitante-detalhe)
+  dataPrimeiraVisita         DateTime?
+  origemVisita               String? // CULTO | EVENTO | INDICACAO | REDES_SOCIAIS | PASSOU_EM_FRENTE | OUTRO
+  preferenciaContato         String? // WHATSAPP | LIGACAO | EMAIL
+  observacoesVisita          String?
+  responsavelAcolhimentoId   String?
+  responsavelAcolhimento     Membro?               @relation("ResponsavelAcolhimento", fields: [responsavelAcolhimentoId], references: [id], onDelete: SetNull)
+  visitantesAcolhidos        Membro[]              @relation("ResponsavelAcolhimento")
+  // LGPD: momento em que a pessoa autorizou o contato da igreja (nulo = sem consentimento registrado)
+  consentimentoContatoEm     DateTime?
+  registrosAcolhimento       RegistroAcolhimento[] @relation("RegistroMembro")
+  registrosAcolhimentoFeitos RegistroAcolhimento[] @relation("RegistroAutor")
   // Flag que indica se o membro pode ser discipulador de outros membros
-  isDiscipulador Boolean @default(false)
+  isDiscipulador             Boolean               @default(false)
 
   // Relacionamento de Discipulado (Auto-relacionamento 1:N)
   // RN-MEM-04: 1 membro tem apenas 1 discipulador. 1 discipulador tem até 12 discípulos (validado via service)
@@ -331,10 +343,18 @@ model ItemEstoque {
   quantidade       Int             @default(0) // Para consumo, incrementa/decrementa. Para patrimônio, geralmente é 1 por unidade física
   quantidadeMinima Int             @default(5) // Quantidade mínima para alerta de estoque baixo
 
+  categoria String? // Estoque e patrimônio (ex.: Cantina, Áudio, Mobiliário)
+
   // Campos específicos de Bens Patrimoniais
-  numeroSerie       String?               @unique
-  statusPatrimonio  StatusItemPatrimonio? @default(DISPONIVEL)
-  localizacaoFisica String?
+  numeroSerie            String?               @unique
+  statusPatrimonio       StatusItemPatrimonio? @default(DISPONIVEL)
+  localizacaoFisica      String?
+  valorAquisicaoCentavos Int?
+  dataAquisicao          DateTime?
+  notaFiscal             String?
+  fimGarantia            DateTime?
+  vidaUtilAnos           Int?
+  responsavelPatrimonio  String? // Pessoa ou ministério que responde pelo bem
 
   // Soft-delete: false = arquivado (não aparece nas listas padrão)
   ativo Boolean @default(true)
@@ -439,16 +459,16 @@ enum StatusCulto {
 }
 
 model Culto {
-  id          String      @id @default(uuid())
-  titulo      String
-  descricao   String?
-  tipo        TipoCulto   @default(PRESENCIAL)
-  status      StatusCulto @default(AGENDADO)
-  executado   Boolean     @default(false)
-  data        DateTime
-  horario     String
-  local       String?
-  preletor    String?
+  id           String      @id @default(uuid())
+  titulo       String
+  descricao    String?
+  tipo         TipoCulto   @default(PRESENCIAL)
+  status       StatusCulto @default(AGENDADO)
+  executado    Boolean     @default(false)
+  data         DateTime
+  horario      String
+  local        String?
+  preletor     String?
   createdById  String?
   createdBy    Membro?     @relation(fields: [createdById], references: [id])
   escalas      Escala[]    @relation("CultoEscalas")
@@ -479,6 +499,9 @@ model Escala {
   titulo                String
   data                  DateTime
   observacao            String?
+  local                 String?
+  horaInicio            String? // HH:MM
+  horaFim               String? // HH:MM
   status                StatusEscala       @default(PENDENTE)
   geradaAutomaticamente Boolean            @default(false)
   createdById           String?
@@ -573,17 +596,20 @@ model IndisponibilidadeMembro {
 // ==========================================
 
 model Celula {
-  id        String         @id @default(uuid())
-  nome      String         @unique
-  descricao String?
-  liderId   String?        @unique
-  lider     Membro?        @relation(fields: [liderId], references: [id], onDelete: SetNull)
-  endereco  String?
-  diaSemana String?
-  horario   String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  membros   MembroCelula[]
+  id         String         @id @default(uuid())
+  nome       String         @unique
+  descricao  String?
+  liderId    String?        @unique
+  lider      Membro?        @relation(fields: [liderId], references: [id], onDelete: SetNull)
+  endereco   String?
+  diaSemana  String?
+  horario    String?
+  regiao     String?
+  status     String         @default("ATIVA") // ATIVA | EM_FORMACAO | INATIVA
+  capacidade Int?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  membros    MembroCelula[]
 
   @@map("celulas")
 }
@@ -598,6 +624,24 @@ model MembroCelula {
 
   @@unique([membroId, celulaId])
   @@map("membro_celulas")
+}
+
+/// Linha do tempo de acolhimento de um visitante (contatos e próximas ações).
+model RegistroAcolhimento {
+  id        String    @id @default(uuid())
+  membroId  String
+  tipo      String // PRIMEIRA_VISITA | MENSAGEM | LIGACAO | RETORNO | PROXIMA_ACAO | OUTRO
+  descricao String
+  prazo     DateTime?
+  concluido Boolean   @default(false)
+  autorId   String?
+  createdAt DateTime  @default(now())
+
+  membro Membro  @relation("RegistroMembro", fields: [membroId], references: [id], onDelete: Cascade)
+  autor  Membro? @relation("RegistroAutor", fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([membroId, createdAt])
+  @@map("registros_acolhimento")
 }
 
 // ==========================================

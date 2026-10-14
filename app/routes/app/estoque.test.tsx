@@ -1,6 +1,14 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
-import { prismaTest, setupTestDb } from "../../../tests/helpers/db";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { hashPassword } from "~/lib/auth.server";
+import { prismaTest, setupTestDb } from "../../../tests/helpers/db";
 
 let cleanup: () => Promise<void>;
 let loader: typeof import("./estoque._index").loader;
@@ -35,7 +43,11 @@ beforeEach(async () => {
 });
 
 // Helper to construct request objects
-function makeRequest(url: string, method: string = "GET", data?: Record<string, string>): Request {
+function makeRequest(
+  url: string,
+  method: string = "GET",
+  data?: Record<string, string>,
+): Request {
   if (method === "POST" && data) {
     const formData = new FormData();
     for (const [k, v] of Object.entries(data)) {
@@ -71,24 +83,49 @@ async function createAdminUser() {
   });
 }
 
+// O loader não faz mais seed: os itens de apoio são criados explicitamente.
+async function seedItens() {
+  await prismaTest.itemEstoque.createMany({
+    data: [
+      {
+        nome: "Café em Grãos (1kg)",
+        tipo: "CONSUMO",
+        quantidade: 3,
+        localizacaoFisica: "Cozinha",
+      },
+      {
+        nome: "Papel A4 (Pacote 500fls)",
+        tipo: "CONSUMO",
+        quantidade: 45,
+        localizacaoFisica: "Escritório",
+      },
+      {
+        nome: "Cabo XLR 10m",
+        tipo: "PATRIMONIO",
+        quantidade: 12,
+        localizacaoFisica: "Sonorização",
+        numeroSerie: "XLR-AUDIO-10M-0012",
+      },
+    ],
+  });
+}
+
 describe("estoque page — loader & actions tests", () => {
-  it("loader: auto-seeds mock items when database is empty", async () => {
+  it("loader: não cria itens automaticamente quando o banco está vazio", async () => {
     const admin = await createAdminUser();
     const req = makeRequest("http://localhost/app/estoque");
     const args = routeArgs(req, admin);
 
     const res = await loader(args);
-    expect(res.items.length).toBe(4);
-    expect(res.kpis.total).toBe(4);
-    expect(res.kpis.estoqueBaixo).toBe(2); // Café (3) and Detergente (2) are <= 5
+    expect(res.items.length).toBe(0);
+    expect(res.kpis.total).toBe(0);
+    expect(await prismaTest.itemEstoque.count()).toBe(0);
   });
 
   it("loader: filters items by name query (q)", async () => {
     const admin = await createAdminUser();
-    
-    // Seed database manually or let it auto-seed
-    const reqSeed = makeRequest("http://localhost/app/estoque");
-    await loader(routeArgs(reqSeed, admin));
+
+    await seedItens();
 
     // Request with search query
     const reqFilter = makeRequest("http://localhost/app/estoque?q=Papel");
@@ -100,11 +137,12 @@ describe("estoque page — loader & actions tests", () => {
 
   it("loader: filters items by tipo", async () => {
     const admin = await createAdminUser();
-    const reqSeed = makeRequest("http://localhost/app/estoque");
-    await loader(routeArgs(reqSeed, admin));
+    await seedItens();
 
     // Request with tipo filter (PATRIMONIO = only Cabo XLR)
-    const reqFilter = makeRequest("http://localhost/app/estoque?tipo=PATRIMONIO");
+    const reqFilter = makeRequest(
+      "http://localhost/app/estoque?tipo=PATRIMONIO",
+    );
     const res = await loader(routeArgs(reqFilter, admin));
 
     expect(res.items.length).toBe(1);

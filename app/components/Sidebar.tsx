@@ -1,407 +1,406 @@
-import { Form, NavLink, useLocation } from "react-router";
+/**
+ * <Sidebar /> — navegação persistente do app autenticado.
+ *
+ * **Padrão do Design System (app-shell.html):**
+ * - `.app-shell` wrapper com `.sidebar` (240px) + `.main-area` (margin-left).
+ * - Sidebar: `.brand` com `brand-mark` (ícone igreja) + `.sidebar-scroll` com
+ *   `.nav-group` (label + `.nav-link`).
+ * - Footer: `.user-mini.dropdown` com avatar + nome + cargo + chevron.
+ * - **Toggle de colapso:** 240px ↔ 64px (apenas labels somem).
+ *
+ * **RBAC:** cada grupo pode ter `roles`. Items sem `roles` são públicos.
+ *
+ * @example
+ *   <Sidebar user={loaderData.user} alertasNaoLidos={3} />
+ */
+import { Form, Link, useLocation } from "react-router";
+import { useState } from "react";
 import type { SessionUser } from "~/lib/session.types";
 import { Can } from "./Can";
+import { Icon } from "~/components/ds";
+import { cn } from "~/lib/cn";
 
-/**
- * Props aceitas pelo `<Sidebar>`.
- */
 export type SidebarProps = {
-  /** Pathname atual (para destacar o item ativo). */
-  currentPath?: string;
-  /** Usuário autenticado (para aplicar RBAC aos itens). */
   user: SessionUser;
-  /** Quantidade de alertas não lidos (se > 0 exibe badge). */
   alertasNaoLidos?: number;
 };
 
-/** Lista de itens do menu principal (declarativa — facilita YAGNI depois). */
-type MenuItem = {
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+type NavItem = {
   label: string;
   to: string;
-  /** Se `true`, match exato (sem prefixo). Para Dashboard. */
+  icon: string;
   exact?: boolean;
-  icon: React.ReactNode | null;
-  /** Cargos com permissão de ver este item (opcional, default = todos). */
   roles?: string[];
-  /** Se `true`, item não é renderizado (oculto temporariamente). */
   hidden?: boolean;
 };
 
-const ICON_DASHBOARD = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="3" width="7" height="9" />
-    <rect x="14" y="3" width="7" height="5" />
-    <rect x="14" y="12" width="7" height="9" />
-    <rect x="3" y="16" width="7" height="5" />
-  </svg>
-);
-
-const ICON_MEMBERS = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-const ICON_RELATORIOS = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M3 3v18h18" />
-    <path d="M7 14l4-4 4 4 5-5" />
-  </svg>
-);
-const ICON_FINANCEIRO = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
-    <line x1="12" y1="4" x2="12" y2="20" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-  </svg>
-);
-
-const ICON_CELULAS = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z" />
-    <path d="M12 6v12" />
-    <path d="M6 12h12" />
-  </svg>
-);
-
-const ICON_MINISTERIOS = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4" />
-  </svg>
-);
-
-const ICON_ESCALAS = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-    <polyline points="9 16 11 18 15 14" />
-  </svg>
-);
-
-const ICON_CULTOS = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M12 2v20M17 5H7" />
-  </svg>
-);
-
-
-
-const ICON_CONFIG = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.39 1h-3.2a1.65 1.65 0 0 0-1-1.6 1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1-.39v-3.2a1.65 1.65 0 0 0 1.6-1 1.65 1.65 0 0 0 .6-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .39-1h3.2a1.65 1.65 0 0 0 1 1.6 1.65 1.65 0 0 0 1 .6 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.23.37.39.77.6 1h0a1.65 1.65 0 0 0 1 .39v3.2a1.65 1.65 0 0 0-1.6 1Z" />
-  </svg>
-);
-
-const ICON_ALERTAS = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </svg>
-);
-
-const ICON_EVENTOS = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-    <path d="M8 14h.01" />
-    <path d="M12 14h.01" />
-    <path d="M16 14h.01" />
-    <path d="M8 18h.01" />
-    <path d="M12 18h.01" />
-    <path d="M16 18h.01" />
-  </svg>
-);
-
-const ICON_ESTOQUE = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <polyline points="21 16 12 21 3 16 12 11 21 16" />
-    <polyline points="3 16 3 8 12 3 21 8 21 16" />
-    <line x1="12" y1="3" x2="12" y2="11" />
-    <line x1="12" y1="11" x2="12" y2="21" />
-    <line x1="12" y1="11" x2="21" y2="8" />
-    <line x1="12" y1="11" x2="3" y2="8" />
-  </svg>
-);
-
-const MENU_ITEMS: MenuItem[] = [
-  { label: "Dashboard", to: "/app", exact: true, icon: ICON_DASHBOARD },
-  { label: "Membros", to: "/app/membros", icon: ICON_MEMBERS },
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Principal",
+    items: [
+      { label: "Dashboard", to: "/app", icon: "building-2", exact: true },
+    ],
+  },
+  {
+    label: "Pessoas",
+    items: [
+      { label: "Membros", to: "/app/membros", icon: "users" },
+      { label: "Células", to: "/app/celulas", icon: "heart" },
+      { label: "Visitantes", to: "/app/visitantes", icon: "user-plus" },
+    ],
+  },
+  {
+    label: "Agenda",
+    items: [
+      { label: "Eventos", to: "/app/eventos", icon: "megaphone" },
+      { label: "Escalas", to: "/app/escalas", icon: "clock" },
+    ],
+  },
+  {
+    label: "Equipes",
+    items: [
+      { label: "Ministérios", to: "/app/ministerios", icon: "users" },
+    ],
+  },
+  {
+    label: "Operações",
+    items: [
+      { label: "Estoque", to: "/app/estoque", icon: "package" },
+      {
+        label: "Patrimônio",
+        to: "/app/patrimonio",
+        icon: "archive",
+      },
+    ],
+  },
   {
     label: "Financeiro",
-    to: "/app/financeiro",
-    icon: ICON_FINANCEIRO,
-    roles: ["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"],
+    items: [
+      {
+        label: "Dashboard",
+        to: "/app/financeiro",
+        icon: "trending-up",
+        roles: ["ADMIN", "PASTOR", "FINANCEIRO", "SECRETARIO"],
+      },
+      {
+        label: "Lançamentos",
+        to: "/app/financeiro/lancamentos/novo",
+        icon: "credit-card",
+        roles: ["ADMIN", "PASTOR", "FINANCEIRO"],
+      },
+      {
+        label: "Caixas",
+        to: "/app/financeiro/caixas",
+        icon: "wallet",
+        roles: ["ADMIN", "PASTOR", "FINANCEIRO"],
+      },
+      {
+        label: "Transferências",
+        to: "/app/financeiro/transferencias",
+        icon: "chevron-right",
+        roles: ["ADMIN", "PASTOR", "FINANCEIRO"],
+      },
+      {
+        label: "Relatórios",
+        to: "/app/financeiro/relatorios",
+        icon: "download",
+        roles: ["ADMIN", "PASTOR", "FINANCEIRO"],
+      },
+    ],
   },
-  { label: "Células", to: "/app/celulas", icon: ICON_CELULAS },
-  { label: "Ministérios", to: "/app/ministerios", icon: ICON_MINISTERIOS },
-  { label: "Escalas", to: "/app/escalas", icon: ICON_ESCALAS },
-  { label: "Cultos", to: "/app/cultos", icon: ICON_CULTOS },
-  { label: "Alertas", to: "/app/alertas", icon: ICON_ALERTAS },
-  { label: "Eventos", to: "/app/eventos", icon: ICON_EVENTOS },
-  { label: "Estoque", to: "/app/estoque", icon: ICON_ESTOQUE },
-  { label: "Configurações", to: "/app/config/acolhimento", icon: ICON_CONFIG, hidden: true },
+  {
+    label: "Administração",
+    items: [
+      { label: "Alertas", to: "/app/alertas", icon: "alert-triangle" },
+      { label: "Configurações", to: "/app/config/acolhimento", icon: "settings" },
+    ],
+  },
 ];
 
-/**
- * Verifica se um item está ativo dado o currentPath.
- * - Itens com `exact: true` (Dashboard) só estão ativos no path exato.
- * - Demais: match por prefixo (ex: /app/membros/abc ativa Membros).
- *
- * @param item - Item do menu.
- * @param currentPath - Pathname atual.
- * @returns `true` se o item está ativo.
- */
-function isItemActive(item: MenuItem, currentPath: string): boolean {
+function isItemActive(item: NavItem, currentPath: string): boolean {
   if (item.exact) {
     return currentPath === item.to;
   }
   return currentPath === item.to || currentPath.startsWith(item.to + "/");
 }
 
+function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/);
+  if (partes.length === 0) return "?";
+  if (partes.length === 1) return partes[0]!.slice(0, 2).toUpperCase();
+  return (partes[0]![0]! + partes[partes.length - 1]![0]!).toUpperCase();
+}
+
+function cargoLabel(cargo?: string | null): string {
+  switch (cargo) {
+    case "ADMIN":
+      return "Administrador";
+    case "PASTOR":
+      return "Pastor";
+    case "SECRETARIO":
+      return "Secretário";
+    case "FINANCEIRO":
+      return "Financeiro";
+    case "LIDER_MINISTERIO":
+      return "Líder";
+    default:
+      return cargo ?? "Membro";
+  }
+}
+
 export type NavigationContentProps = {
   alertasNaoLidos: number;
   currentPath: string;
-  isMobile?: boolean;
+  collapsed?: boolean;
   onNavigate?: () => void;
   user: SessionUser;
 };
 
-export function NavigationContent({
-  alertasNaoLidos,
+function NavGroupContent({
+  group,
   currentPath,
-  isMobile = false,
-  onNavigate,
+  collapsed = false,
+  alertasNaoLidos,
   user,
-}: NavigationContentProps) {
-  const itemHeight = isMobile ? "h-11" : "h-10";
-
+  onNavigate,
+}: {
+  group: NavGroup;
+  currentPath: string;
+  collapsed?: boolean;
+  alertasNaoLidos: number;
+  user: SessionUser;
+  onNavigate?: () => void;
+}) {
+  const visible = group.items.filter((it) => !it.hidden);
+  if (visible.length === 0) return null;
   return (
-    <>
-      <ul className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-        {MENU_ITEMS.filter((item) => !item.hidden).map((item) => {
+    <div className="nav-group mb-5">
+      {!collapsed && (
+        <div className="nav-label px-2.5 pb-1 text-[10px] font-extrabold uppercase tracking-[0.1em] text-subtle">
+          {group.label}
+        </div>
+      )}
+      <div className="grid gap-[5px]">
+        {visible.map((item) => {
           const active = isItemActive(item, currentPath);
-          const linkElement = (
-            <li key={item.to}>
-              <NavLink
-                to={item.to}
-                end={item.exact}
-                aria-current={active ? "page" : undefined}
-                onClick={onNavigate}
-                className={`${itemHeight} flex items-center gap-3 rounded-md px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
-                  active
-                    ? "bg-cyan-50 text-cyan-900"
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                }`}
-              >
-                {item.icon}
-                <span className="flex-1">{item.label}</span>
-                {item.label === "Alertas" && alertasNaoLidos > 0 && (
-                  <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
-                    {alertasNaoLidos > 99 ? "99+" : alertasNaoLidos}
-                  </span>
-                )}
-              </NavLink>
-            </li>
+          const link = (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "nav-link flex items-center gap-2.5 min-h-9 px-2.5 rounded-md text-xs font-semibold",
+                "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+                active
+                  ? "text-accent-strong bg-accent-soft"
+                  : "text-muted hover:text-fg hover:bg-surface-3",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? item.label : undefined}
+            >
+              <Icon name={item.icon} size="md" />
+              {!collapsed && (
+                <>
+                  <span className="flex-1">{item.label}</span>
+                  {item.label === "Alertas" && alertasNaoLidos > 0 && (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white">
+                      {alertasNaoLidos > 99 ? "99+" : alertasNaoLidos}
+                    </span>
+                  )}
+                </>
+              )}
+            </Link>
           );
-
           if (item.roles) {
             return (
               <Can key={item.to} user={user} allow={item.roles}>
-                {linkElement}
+                {link}
               </Can>
             );
           }
-
-          return linkElement;
+          return <span key={item.to}>{link}</span>;
         })}
-      </ul>
+      </div>
+    </div>
+  );
+}
 
-      <div className="border-t border-slate-800 p-4">
-        <Form method="post" action="/logout">
-          <button
-            type="submit"
-            className={`${itemHeight} flex w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-red-400 transition-colors hover:bg-slate-800 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 motion-reduce:transition-none`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 rotate-180"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+export function NavigationContent({
+  alertasNaoLidos,
+  currentPath,
+  collapsed,
+  onNavigate,
+  user,
+}: NavigationContentProps) {
+  return (
+    <>
+      <div className="sidebar-scroll flex-1 overflow-y-auto py-4 px-2.5">
+        {NAV_GROUPS.map((g) => (
+          <NavGroupContent
+            key={g.label}
+            group={g}
+            currentPath={currentPath}
+            collapsed={collapsed}
+            alertasNaoLidos={alertasNaoLidos}
+            user={user}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </div>
+
+      <div className="border-t border-border p-3">
+        <div className="dropdown relative">
+          <details className="group">
+            <summary
+              className={cn(
+                "flex items-center gap-2 min-w-0 rounded-md cursor-pointer select-none list-none",
+                "hover:bg-surface-3 transition-colors",
+                collapsed ? "justify-center p-1.5" : "p-1.5",
+              )}
             >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
-            <span>Sair</span>
-          </button>
-        </Form>
+              <span
+                className={cn(
+                  "inline-grid place-items-center rounded-full overflow-hidden",
+                  "bg-accent-soft text-accent-strong font-extrabold text-xs shrink-0",
+                  "h-8 w-8",
+                )}
+                aria-hidden="true"
+              >
+                {iniciais(user.nome)}
+              </span>
+              {!collapsed && (
+                <>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-bold text-fg">
+                      {user.nome}
+                    </span>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-subtle">
+                      {cargoLabel(user.cargo)}
+                    </span>
+                  </span>
+                  <Icon
+                    name="chevron-down"
+                    size="sm"
+                    className="text-muted group-open:rotate-180 transition-transform"
+                  />
+                </>
+              )}
+            </summary>
+            <div
+              className={cn(
+                "absolute z-30 bg-surface border border-border rounded-md",
+                "shadow-[0_20px_50px_oklch(20.8%_0.035_260_/_0.15)] py-1.5",
+                collapsed ? "left-full ml-2 bottom-0 w-[190px]" : "left-0 right-0 mt-1",
+              )}
+            >
+              <Link
+                to="/app/config/acolhimento"
+                className="flex items-center gap-2 min-h-[34px] px-2.5 text-xs text-muted hover:bg-surface-3 hover:text-fg rounded-sm"
+              >
+                <Icon name="user-check" size="sm" />
+                Meu perfil
+              </Link>
+              <Link
+                to="/app/config/acolhimento"
+                className="flex items-center gap-2 min-h-[34px] px-2.5 text-xs text-muted hover:bg-surface-3 hover:text-fg rounded-sm"
+              >
+                <Icon name="settings" size="sm" />
+                Preferências
+              </Link>
+              <Form method="post" action="/logout" className="contents">
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 min-h-[34px] px-2.5 text-xs text-muted hover:bg-surface-3 hover:text-danger rounded-sm w-full text-left"
+                >
+                  <Icon name="arrow-left" size="sm" />
+                  Sair
+                </button>
+              </Form>
+            </div>
+          </details>
+        </div>
       </div>
     </>
   );
 }
 
-/**
- * @description Sidebar desktop da navegação autenticada.
- * @param {SidebarProps} props - Usuário, caminho atual e badge de alertas.
- * @returns {JSX.Element} Navegação desktop.
- */
-export function Sidebar({
-  currentPath: currentPathProp,
-  user,
-  alertasNaoLidos = 0,
-}: SidebarProps) {
+export function Sidebar({ user, alertasNaoLidos = 0 }: SidebarProps) {
   const location = useLocation();
-  const currentPath = currentPathProp ?? location.pathname;
+  const currentPath = location.pathname;
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <nav
+    <aside
       aria-label="Menu principal"
-      className="hidden w-60 shrink-0 border-r border-slate-800 bg-[#0F172A] lg:block"
+      data-od-id="app-shell-sidebar"
+      className={cn(
+        "sidebar fixed inset-y-0 left-0 z-20 hidden min-[781px]:flex flex-col border-r border-border bg-surface transition-[width] duration-200",
+        collapsed ? "w-16" : "w-60",
+      )}
     >
-      <div className="flex h-full flex-col">
-        <div className="border-b border-slate-800 p-6">
-          <span className="block text-xl font-bold text-white">IgrejaConnect</span>
-          <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            Gestão eclesiástica
-          </span>
-        </div>
-        <NavigationContent
-          alertasNaoLidos={alertasNaoLidos}
-          currentPath={currentPath}
-          user={user}
+      <Link
+        to="/app"
+        className="brand flex h-16 items-center gap-2.5 px-4 border-b border-border text-fg"
+      >
+        <span className="brand-mark" aria-hidden="true" />
+        {!collapsed && <span className="brand-name">Igreja Conect</span>}
+      </Link>
+
+      <NavigationContent
+        alertasNaoLidos={alertasNaoLidos}
+        currentPath={currentPath}
+        collapsed={collapsed}
+        user={user}
+      />
+
+      <button
+        type="button"
+        aria-label="Recolher menu"
+        title="Recolher menu"
+        onClick={() => setCollapsed((c) => !c)}
+        className={cn(
+          "absolute top-3 -right-3 z-10 h-6 w-6 grid place-items-center",
+          "rounded-full border border-border bg-surface text-muted hover:text-fg",
+          "shadow-[0_1px_2px_oklch(20.8%_0.035_260_/_0.04)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        )}
+      >
+        <Icon
+          name="chevron-right"
+          size="sm"
+          className={cn("transition-transform", collapsed ? "" : "rotate-180")}
         />
-      </div>
-    </nav>
+      </button>
+    </aside>
+  );
+}
+
+/** Conteúdo apenas para drawer mobile (sem o `aside fixed`). */
+export function MobileSidebar(props: NavigationContentProps) {
+  return (
+    <div className="flex h-full flex-col bg-surface">
+      <Link
+        to="/app"
+        className="flex h-16 items-center gap-2.5 px-4 border-b border-border text-fg"
+      >
+        <span
+          className="grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-accent text-white"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+            <path d="M12 2 4 6v8l8 4 8-4V6l-8-4Z" />
+          </svg>
+        </span>
+        <span className="text-sm font-extrabold tracking-[-0.02em]">
+          Igreja Conect
+        </span>
+      </Link>
+      <NavigationContent {...props} />
+    </div>
   );
 }

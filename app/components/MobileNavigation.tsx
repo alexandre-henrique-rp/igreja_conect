@@ -71,11 +71,11 @@ export function MobileNavigation({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-40 lg:hidden">
+    <div className="fixed inset-0 z-40 min-[781px]:hidden">
       <button
         type="button"
         aria-label="Fechar menu"
-        className="absolute inset-0 h-full w-full bg-slate-950/60 transition-opacity motion-reduce:transition-none"
+        className="absolute inset-0 h-full w-full bg-fg/60 transition-opacity motion-reduce:transition-none"
         onClick={onClose}
       />
       <div
@@ -84,21 +84,21 @@ export function MobileNavigation({
         role="dialog"
         aria-modal="true"
         aria-labelledby="mobile-navigation-title"
-        className="relative flex h-full w-[min(20rem,85vw)] flex-col border-r border-slate-800 bg-[#0F172A] shadow-2xl transition-transform motion-reduce:transition-none"
+        className="relative flex h-full w-[min(20rem,85vw)] flex-col border-r border-fg bg-[var(--color-surface)] shadow-2xl transition-transform motion-reduce:transition-none"
       >
-        <div className="flex min-h-20 items-center justify-between gap-3 border-b border-slate-800 px-4">
+        <div className="flex min-h-20 items-center justify-between gap-3 border-b border-fg px-4">
           <div>
             <h2 id="mobile-navigation-title" className="text-lg font-bold text-white">
               IgrejaConnect
             </h2>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-subtle">
               Gestão eclesiástica
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-slate-300 hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-border-strong hover:bg-fg hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-fg"
           >
             <span className="sr-only">Fechar menu</span>
             <svg
@@ -119,7 +119,7 @@ export function MobileNavigation({
           <NavigationContent
             alertasNaoLidos={alertasNaoLidos}
             currentPath={location.pathname}
-            isMobile
+            collapsed
             onNavigate={onClose}
             user={user}
           />

@@ -222,7 +222,7 @@ export function ComprovanteUpload({
       />
 
       {/* Preview: thumbnail (image) OU ícone */}
-      <div className="h-10 w-10 rounded border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+      <div className="h-10 w-10 rounded border border-border bg-surface-2 flex items-center justify-center overflow-hidden shrink-0">
         {previewUrl && isImage ? (
           <img
             src={previewUrl}
@@ -231,7 +231,7 @@ export function ComprovanteUpload({
           />
         ) : isPdf ? (
           <svg
-            className="h-5 w-5 text-red-500"
+            className="h-5 w-5 text-danger"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -245,7 +245,7 @@ export function ComprovanteUpload({
           </svg>
         ) : (
           <svg
-            className="h-5 w-5 text-slate-400"
+            className="h-5 w-5 text-subtle"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -263,22 +263,22 @@ export function ComprovanteUpload({
       {/* Status + Filename */}
       <div className="flex-1 min-w-0">
         {status === "idle" && !filename && (
-          <p className="text-xs text-slate-400">Sem comprovante</p>
+          <p className="text-xs text-subtle">Sem comprovante</p>
         )}
         {filename && (
           <p
-            className="text-xs font-medium text-slate-700 truncate max-w-[200px]"
+            className="text-xs font-medium text-fg truncate max-w-[200px]"
             title={filename}
           >
             {filename}
           </p>
         )}
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-subtle">
           {status === "uploading" && "Enviando..."}
           {status === "processing" && "Processando..."}
           {status === "ready" && mime && `${mime.split("/")[1]?.toUpperCase()}`}
           {status === "error" && (
-            <span className="text-red-600">
+            <span className="text-danger">
               {error}{" "}
               <button
                 type="button"
@@ -299,7 +299,7 @@ export function ComprovanteUpload({
             href={previewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="h-7 w-7 rounded inline-flex items-center justify-center text-cyan-700 hover:bg-cyan-50 transition-colors"
+            className="h-7 w-7 rounded inline-flex items-center justify-center text-accent hover:bg-accent-soft-2 transition-colors"
             title="Abrir comprovante em nova aba"
           >
             <svg
@@ -324,7 +324,7 @@ export function ComprovanteUpload({
             onClick={() => fileInputRef.current?.click()}
             disabled={isBusy}
             className={cn(
-              "h-7 px-2 rounded text-xs font-bold bg-cyan-50 text-cyan-700 hover:bg-cyan-100 border border-cyan-200/50 transition-colors",
+              "h-7 px-2 rounded text-xs font-bold bg-accent-soft-2 text-accent hover:bg-accent-soft-2 border border-accent-soft/50 transition-colors",
               isBusy && "opacity-50 cursor-not-allowed",
             )}
           >
@@ -338,7 +338,7 @@ export function ComprovanteUpload({
             onClick={handleRemove}
             disabled={isBusy}
             className={cn(
-              "h-7 w-7 rounded inline-flex items-center justify-center text-red-600 hover:bg-red-50 transition-colors",
+              "h-7 w-7 rounded inline-flex items-center justify-center text-danger hover:bg-danger-soft transition-colors",
               isBusy && "opacity-50 cursor-not-allowed",
             )}
             title="Remover comprovante"

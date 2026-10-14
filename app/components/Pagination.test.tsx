@@ -2,7 +2,7 @@
  * Teste do componente <Pagination /> (S02-T03).
  *
  * Valida semântica (`<nav aria-label>`, `<ol>`), preservação de searchParams
- * (exceto `page`) e render dos links Anterior/Próxima e números.
+ * (exceto `page`) e render dos links Anterior/Próximo e números.
  */
 import { describe, it, expect } from "vitest";
 import { createRoutesStub } from "react-router";
@@ -55,7 +55,7 @@ describe("<Pagination />", () => {
 
   it("renderiza links para todas as páginas (current/total)", () => {
     const html = renderPagination({ current: 1, total: 3, basePath: "/app/membros" });
-    // 3 links de página + Anterior/Próxima (em página 1, não tem Anterior)
+    // 3 links de página + Anterior/Próximo (em página 1, não tem Anterior)
     expect(html).toContain("?page=1");
     expect(html).toContain("?page=2");
     expect(html).toContain("?page=3");
@@ -79,15 +79,15 @@ describe("<Pagination />", () => {
     expect(html).not.toContain("Anterior");
   });
 
-  it("current < total: renderiza link 'Próxima'", () => {
+  it("current < total: renderiza link 'Próximo'", () => {
     const html = renderPagination({ current: 2, total: 3, basePath: "/app/membros" });
-    expect(html).toContain("Próxima");
+    expect(html).toContain("Próximo");
     expect(html).toContain("page=3");
   });
 
-  it("current = total, total > 1: NÃO renderiza link 'Próxima'", () => {
+  it("current = total, total > 1: NÃO renderiza link 'Próximo'", () => {
     const html = renderPagination({ current: 3, total: 3, basePath: "/app/membros" });
-    expect(html).not.toContain("Próxima");
+    expect(html).not.toContain("Próximo");
     expect(html).toContain("Anterior");
   });
 
@@ -101,9 +101,9 @@ describe("<Pagination />", () => {
     expect(html).toBe("");
   });
 
-  it("página atual tem destaque visual (font-bold text-cyan-700)", () => {
+  it("página atual tem destaque visual (font-bold text-accent)", () => {
     const html = renderPagination({ current: 2, total: 3, basePath: "/app/membros" });
-    // O link da página 2 deve ter font-bold text-cyan-700
-    expect(html).toMatch(/font-bold[^"]*text-cyan-700/);
+    // O link da página 2 deve ter font-bold text-accent
+    expect(html).toMatch(/font-bold[^"]*text-accent/);
   });
 });

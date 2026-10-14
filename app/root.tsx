@@ -27,14 +27,19 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)ic-theme=([^;]+)/);var v=m?m[1]:'auto';if(v==='light'||v==='dark'){document.documentElement.setAttribute('data-theme',v);}}catch(e){}})();`,
+          }}
+        />
       </head>
-      <body>
+      <body className="bg-bg text-fg">
         <ToastProvider>{children}</ToastProvider>
         <ScrollRestoration />
         <Scripts />
@@ -70,18 +75,18 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 
   return (
     <main className="pt-16 p-4 container mx-auto max-w-lg">
-      <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm text-center space-y-4">
-        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto">
-          <svg className="h-7 w-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+      <div className="bg-surface border border-border rounded-2xl p-8 shadow-sm text-center space-y-4">
+        <div className="w-14 h-14 rounded-full bg-danger-soft flex items-center justify-center mx-auto">
+          <svg className="h-7 w-7 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold text-slate-900">{message}</h1>
-        <p className="text-sm text-slate-500">{details}</p>
+        <h1 className="text-xl font-bold text-fg">{message}</h1>
+        <p className="text-sm text-muted">{details}</p>
         <button
           type="button"
           onClick={() => window.location.href = "/app"}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-strong transition-colors"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -89,7 +94,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           Voltar ao início
         </button>
         {stack && (
-          <pre className="w-full p-4 overflow-x-auto text-left text-xs bg-slate-50 rounded-lg border border-slate-200">
+          <pre className="w-full p-4 overflow-x-auto text-left text-xs bg-surface-2 rounded-lg border border-border">
             <code>{stack}</code>
           </pre>
         )}

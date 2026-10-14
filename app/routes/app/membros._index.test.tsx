@@ -246,9 +246,9 @@ describe("membros._index — render (S02-T04)", () => {
     ]);
     const html = renderToString(<Stub initialEntries={["/app/membros"]} />);
 
-    // TabelaMembros renderiza a <table> com caption sr-only
-    expect(html).toContain("<table");
-    expect(html).toContain("Lista de membros");
+    // TabelaMembros renderiza a grade canônica de cards
+    expect(html).toContain("member-grid");
+    expect(html).toContain("member-card");
     // Nome do membro aparece
     expect(html).toContain("Maria da Silva");
     // Mapped tipo MEMBRO_ATIVO -> Membro Efetivo

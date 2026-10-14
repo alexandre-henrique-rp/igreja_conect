@@ -14,7 +14,7 @@
  * @returns Elemento JSX do atalho.
  */
 import { Link } from "react-router";
-import { Button } from "./Button";
+import { Button } from "~/components/ds";
 
 /**
  * Props aceitas pelo `<AtalhoFinanceiro>`.

@@ -55,12 +55,12 @@ export function CardTransferencia({ transferencia }: CardTransferenciaProps) {
   }).format(new Date(data));
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-white rounded-lg border border-slate-200">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-surface rounded-lg border border-border">
       {/* Origem → Destino */}
       <div className="flex items-center gap-2 min-w-0">
-        <span className="text-sm font-medium text-slate-900 truncate">{origem.nome}</span>
+        <span className="text-sm font-medium text-fg truncate">{origem.nome}</span>
         <svg
-          className="w-4 h-4 text-slate-400 shrink-0"
+          className="w-4 h-4 text-subtle shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -68,29 +68,29 @@ export function CardTransferencia({ transferencia }: CardTransferenciaProps) {
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
-        <span className="text-sm font-medium text-slate-900 truncate">{destino.nome}</span>
+        <span className="text-sm font-medium text-fg truncate">{destino.nome}</span>
       </div>
 
       {/* Valor centralizado */}
       <div className="flex-1 text-center">
-        <span className="text-base font-bold text-cyan-700">
+        <span className="text-base font-bold text-accent">
           {formatBRLFromCents(valorCentavos)}
         </span>
       </div>
 
       {/* Data + descrição */}
       <div className="flex flex-col items-end gap-0.5 min-w-0">
-        <time dateTime={data.toISOString()} className="text-xs text-slate-500">
+        <time dateTime={data.toISOString()} className="text-xs text-muted">
           {formattedDate}
         </time>
         {descricao && (
-          <span className="text-xs text-slate-400 truncate max-w-[200px]" title={descricao}>
+          <span className="text-xs text-subtle truncate max-w-[200px]" title={descricao}>
             {descricao}
           </span>
         )}
         <a
           href={`/app/financeiro/extrato?transferencia=${transferencia.grupoId}`}
-          className="text-xs text-cyan-700 hover:text-cyan-800 underline"
+          className="text-xs text-accent hover:text-accent-strong underline"
         >
           Ver no extrato
         </a>

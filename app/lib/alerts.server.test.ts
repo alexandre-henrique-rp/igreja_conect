@@ -19,6 +19,8 @@ let listAlertas: typeof import("./alerts.server").listAlertas;
 let marcarLido: typeof import("./alerts.server").marcarLido;
 let marcarResolvido: typeof import("./alerts.server").marcarResolvido;
 let criarAlertaVisitante: typeof import("./alerts.server").criarAlertaVisitante;
+let criarAlertaNovaCobranca: typeof import("./alerts.server").criarAlertaNovaCobranca;
+let criarAlertaLancamentoPago: typeof import("./alerts.server").criarAlertaLancamentoPago;
 
 beforeAll(async () => {
   cleanup = await setupTestDb("alerts.server");
@@ -28,6 +30,8 @@ beforeAll(async () => {
   marcarLido = mod.marcarLido;
   marcarResolvido = mod.marcarResolvido;
   criarAlertaVisitante = mod.criarAlertaVisitante;
+  criarAlertaNovaCobranca = mod.criarAlertaNovaCobranca;
+  criarAlertaLancamentoPago = mod.criarAlertaLancamentoPago;
 });
 
 afterAll(async () => { await cleanup(); });
@@ -288,5 +292,113 @@ describe("alerts.server — criarAlertaVisitante", () => {
 
     expect(alerta.mensagem).not.toMatch(/@/); // sem email
     expect(alerta.mensagem).not.toMatch(/\b(rua|av\.|logradouro)\b/i); // sem endereço
+  });
+});
+
+
+// ----------------- criarAlertaNovaCobranca / criarAlertaLancamentoPago -----------------
+
+describe("alerts.server — alertas financeiros", () => {
+  async function makeCargo(nome: string, cargo: string) {
+    return makeMembro(nome, { cargo });
+  }
+
+  const baseLanc = {
+    id: "lanc-1",
+    tipo: "SAIDA",
+    categoria: "DESPESA_OPERACIONAL",
+    valorCentavos: 12345,
+    caixaNome: "Caixa Geral",
+  };
+
+  it("nova cobrança: PENDENTE cria alerta p/ ADMIN+PASTOR+FINANCEIRO (fan-out)", async () => {
+    await makeCargo("Admin", "ADMIN");
+    await makeCargo("Pastor", "PASTOR");
+    await makeCargo("Fin", "FINANCEIRO");
+    await makeCargo("Secretario", "SECRETARIO"); // NÃO deve receber
+
+    const alerta = await prismaTest.$transaction((tx) =>
+      criarAlertaNovaCobranca(tx, { ...baseLanc, status: "PENDENTE" }),
+    );
+    if (!alerta) throw new Error("alerta não criado");
+
+    expect(alerta.titulo).toBe("Nova cobrança registrada");
+    expect(alerta.mensagem).toContain("pendente");
+    const ads = await prismaTest.alertaDestinatario.findMany({ where: { alertaId: alerta.id } });
+    expect(ads).toHaveLength(3); // ADMIN+PASTOR+FINANCEIRO, sem SECRETARIO
+  });
+
+  it("nova cobrança: AGENDADO também gera alerta (texto 'agendada')", async () => {
+    await makeCargo("Admin", "ADMIN");
+    const alerta = await prismaTest.$transaction((tx) =>
+      criarAlertaNovaCobranca(tx, { ...baseLanc, status: "AGENDADO" }),
+    );
+    if (!alerta) throw new Error("alerta não criado");
+    expect(alerta.mensagem).toContain("agendada");
+  });
+
+  it("nova cobrança: PAGO NÃO gera alerta de cobrança (retorna null)", async () => {
+    await makeCargo("Admin", "ADMIN");
+    const alerta = await prismaTest.$transaction((tx) =>
+      criarAlertaNovaCobranca(tx, { ...baseLanc, status: "PAGO" }),
+    );
+    expect(alerta).toBeNull();
+  });
+
+  it("sem destinatários financeiros → retorna null (não cria alerta)", async () => {
+    await makeCargo("Secretario", "SECRETARIO");
+    const alerta = await prismaTest.$transaction((tx) =>
+      criarAlertaNovaCobranca(tx, { ...baseLanc, status: "PENDENTE" }),
+    );
+    expect(alerta).toBeNull();
+    const count = await prismaTest.alerta.count();
+    expect(count).toBe(0);
+  });
+
+  it("pago: SAIDA PAGO → 'Pagamento confirmado' p/ financeiros", async () => {
+    await makeCargo("Admin", "ADMIN");
+    await makeCargo("Fin", "FINANCEIRO");
+    const alerta = await prismaTest.$transaction((tx) =>
+      criarAlertaLancamentoPago(tx, { ...baseLanc, status: "PAGO" }),
+    );
+    if (!alerta) throw new Error("alerta não criado");
+    expect(alerta.titulo).toBe("Pagamento confirmado");
+    const ads = await prismaTest.alertaDestinatario.findMany({ where: { alertaId: alerta.id } });
+    expect(ads).toHaveLength(2);
+  });
+
+  it("pago: ENTRADA PAGO → 'Recebimento confirmado'", async () => {
+    await makeCargo("Admin", "ADMIN");
+    const alerta = await prismaTest.$transaction((tx) =>
+      criarAlertaLancamentoPago(tx, { ...baseLanc, tipo: "ENTRADA", categoria: "OFERTA", status: "PAGO" }),
+    );
+    if (!alerta) throw new Error("alerta não criado");
+    expect(alerta.titulo).toBe("Recebimento confirmado");
+  });
+
+  it("pago: status != PAGO → retorna null", async () => {
+    await makeCargo("Admin", "ADMIN");
+    const alerta = await prismaTest.$transaction((tx) =>
+      criarAlertaLancamentoPago(tx, { ...baseLanc, status: "PENDENTE" }),
+    );
+    expect(alerta).toBeNull();
+  });
+
+  it("LGPD: mensagem NÃO contém nome de membro nem descrição livre", async () => {
+    await makeCargo("Admin", "ADMIN");
+    const alerta = await prismaTest.$transaction((tx) =>
+      criarAlertaLancamentoPago(tx, {
+        ...baseLanc,
+        categoria: "DIZIMO",
+        status: "PAGO",
+        descricao: "Dízimo de Fulano de Tal",
+      }),
+    );
+    if (!alerta) throw new Error("alerta não criado");
+    expect(alerta.mensagem).not.toMatch(/Fulano/i);
+    expect(alerta.mensagem).not.toMatch(/@/);
+    // Contém valor formatado + categoria
+    expect(alerta.mensagem).toContain("DIZIMO");
+    expect(alerta.mensagem).toMatch(/R\$/);
   });
 });

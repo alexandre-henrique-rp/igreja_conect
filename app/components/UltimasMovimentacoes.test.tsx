@@ -43,17 +43,17 @@ describe("<UltimasMovimentacoes />", () => {
     expect(html).toContain("01/06");
   });
 
-  it("ENTRADA tem classe text-green-*", () => {
+  it("ENTRADA tem classe text-success*", () => {
     const html = renderList({ items: [itemBase], podeVerMembro: true });
-    expect(html).toContain("text-green-");
+    expect(html).toContain("text-success");
   });
 
-  it("SAIDA tem classe text-red-*", () => {
+  it("SAIDA tem classe text-danger*", () => {
     const html = renderList({
       items: [{ ...itemBase, tipo: "SAIDA" }],
       podeVerMembro: true,
     });
-    expect(html).toContain("text-red-");
+    expect(html).toContain("text-danger");
   });
 
   it("exibe nome do membro quando podeVerMembro e categoria DIZIMO", () => {

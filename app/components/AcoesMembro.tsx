@@ -23,7 +23,7 @@
  * @returns Elemento JSX com os botões de ação.
  */
 import { Form, Link } from "react-router";
-import { Button } from "~/components/Button";
+import { Button } from "~/components/ds";
 
 /**
  * Subset de Membro.

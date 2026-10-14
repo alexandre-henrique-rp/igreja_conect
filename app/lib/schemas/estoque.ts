@@ -11,6 +11,36 @@
  */
 import { z } from "zod";
 
+/** Texto opcional: trim e `""` → `undefined` (campos de formulário HTML). */
+const textoOpcional = (max: number) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? v.trim() || undefined : v),
+    z.string().max(max).optional(),
+  );
+
+/** Data opcional vinda de `<input type="date">`; vazio vira `undefined`. */
+const dataOpcional = z.preprocess(
+  (v) => (v === "" || v === null || v === undefined ? undefined : v),
+  z.coerce.date({ message: "Data inválida." }).optional(),
+);
+
+/** Inteiro opcional no intervalo; vazio vira `undefined`. */
+const inteiroOpcional = (min: number, max: number) =>
+  z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? undefined : v),
+    z.coerce.number({ message: "Informe um número." }).int("Use um número inteiro.").min(min).max(max).optional(),
+  );
+
+/** Campos próprios de bens patrimoniais (todos opcionais). */
+const camposPatrimonio = {
+  valorAquisicaoCentavos: inteiroOpcional(0, 2_000_000_000),
+  dataAquisicao: dataOpcional,
+  notaFiscal: textoOpcional(60),
+  fimGarantia: dataOpcional,
+  vidaUtilAnos: inteiroOpcional(1, 100),
+  responsavelPatrimonio: textoOpcional(120),
+};
+
 /**
  * Schema de criação de Item de Estoque/Patrimônio.
  *
@@ -32,6 +62,7 @@ export const ItemEstoqueCreateSchema = z.discriminatedUnion("tipo", [
       quantidadeMinima: z.coerce.number().int().min(0).default(5),
       descricao: z.string().max(500).optional(),
       localizacaoFisica: z.string().max(120).optional(),
+      categoria: textoOpcional(60),
     })
     .strict(),
   z
@@ -50,6 +81,8 @@ export const ItemEstoqueCreateSchema = z.discriminatedUnion("tipo", [
         .max(60),
       statusPatrimonio: z.literal("DISPONIVEL").default("DISPONIVEL"),
       localizacaoFisica: z.string().max(120).optional(),
+      categoria: textoOpcional(60),
+      ...camposPatrimonio,
     })
     .strict(),
 ]);
@@ -66,6 +99,8 @@ export const ItemEstoqueUpdateSchema = z
     descricao: z.string().max(500).optional(),
     quantidadeMinima: z.coerce.number().int().min(0).optional(),
     localizacaoFisica: z.string().max(120).optional(),
+    categoria: textoOpcional(60),
+    ...camposPatrimonio,
   })
   .strict();
 

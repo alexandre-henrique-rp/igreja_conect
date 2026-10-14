@@ -19,8 +19,8 @@
  * @returns Elemento JSX.
  */
 import { RelativeTime } from "./RelativeTime";
-import { EmptyState } from "./EmptyState";
 import { cn } from "~/lib/cn";
+import { EmptyState } from "~/components/ds";
 
 /**
  * Item da lista recente.
@@ -52,13 +52,13 @@ export type ListaRecenteProps = {
 
 /** Mapa de cores de badge por cargo. */
 const BADGE_CORES: Record<string, string> = {
-  Visitante: "bg-amber-100 text-amber-800",
-  Congregado: "bg-blue-100 text-blue-800",
-  Membros: "bg-green-100 text-green-800",
+  Visitante: "bg-warning-soft text-warning",
+  Congregado: "bg-accent-soft-2 text-accent-strong",
+  Membros: "bg-success-soft text-success",
 };
 
 function badgeClasse(cargo: string): string {
-  return BADGE_CORES[cargo] ?? "bg-slate-100 text-slate-700";
+  return BADGE_CORES[cargo] ?? "bg-surface-2 text-fg";
 }
 
 /**
@@ -79,16 +79,16 @@ export function ListaRecente({
   return (
     <div
       data-testid="lista-recente"
-      className={cn("border border-slate-200 rounded-lg bg-white", className)}
+      className={cn("border border-border rounded-lg bg-surface", className)}
     >
-      <ul className="divide-y divide-slate-100">
+      <ul className="divide-y divide-surface-2">
         {items.map((item) => (
           <li
             key={item.id}
             className="flex items-center justify-between gap-3 px-4 py-3"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm font-medium text-slate-900 truncate">
+              <span className="text-sm font-medium text-fg truncate">
                 {item.nome}
               </span>
               <span

@@ -1,23 +1,19 @@
 /**
- * Componente <ResumoFinanceiro /> — KPIs de dízimos do membro (S08-T03).
+ * Componente <ResumoFinanceiro /> — KPIs de fidelidade do membro (S08-T03).
  *
- * Exibe 3 cards: total contribuído (R$), meses com dízimo e quantidade
- * de dízimos. Estilo copiado de `<CardKpi>`.
+ * 3 `KpiCard` do Design System: total contribuído (R$), meses com dízimo
+ * e quantidade de dízimos.
  *
  * @example
- *   <ResumoFinanceiro
- *     totalCentavos={150000}
- *     mesesComDizimo={12}
- *     quantidadeDizimos={24}
- *   />
+ *   <ResumoFinanceiro totalCentavos={150000} mesesComDizimo={6} quantidadeDizimos={8} />
  *
  * @param props - Props do componente.
- * @param props.totalCentavos - Total em centavos.
- * @param props.mesesComDizimo - Quantidade de meses com ao menos 1 dízimo.
+ * @param props.totalCentavos - Total contribuído em centavos.
+ * @param props.mesesComDizimo - Meses com ao menos 1 dízimo.
  * @param props.quantidadeDizimos - Quantidade total de dízimos.
- * @returns Elemento JSX.
+ * @returns Elemento JSX com 3 cards.
  */
-import { CardKpi } from "~/components/CardKpi";
+import { KpiCard } from "~/components/ds";
 import { formatBRLFromCents } from "~/lib/money-format";
 
 /**
@@ -44,18 +40,12 @@ export function ResumoFinanceiro({
 }: ResumoFinanceiroProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <CardKpi
+      <KpiCard
         label="Total contribuído"
-        value={formatBRLFromCents(totalCentavos) as unknown as number}
+        value={formatBRLFromCents(totalCentavos)}
       />
-      <CardKpi
-        label="Meses com dízimo"
-        value={mesesComDizimo}
-      />
-      <CardKpi
-        label="Quantidade"
-        value={quantidadeDizimos}
-      />
+      <KpiCard label="Meses com dízimo" value={mesesComDizimo} />
+      <KpiCard label="Quantidade" value={quantidadeDizimos} />
     </div>
   );
 }

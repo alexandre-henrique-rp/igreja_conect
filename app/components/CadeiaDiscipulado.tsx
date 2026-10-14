@@ -53,12 +53,12 @@ export function CadeiaDiscipulado({ cadeia }: CadeiaDiscipuladoProps) {
         <li key={m.id} className="flex items-center gap-1">
           <Link
             to={`/app/membros/${m.id}`}
-            className="text-cyan-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded"
+            className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
           >
             {m.nome}
           </Link>
           {i < cadeia.length - 1 && (
-            <span className="text-slate-400" aria-hidden="true">
+            <span className="text-subtle" aria-hidden="true">
               →
             </span>
           )}

@@ -98,10 +98,10 @@ export type TabsMembroProps = {
 function tabClassName(active: boolean): string {
   return cn(
     "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
     active
-      ? "border-cyan-700 text-cyan-900"
-      : "border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300"
+      ? "border-accent text-accent-strong"
+      : "border-transparent text-muted hover:text-fg hover:border-border-strong"
   );
 }
 
@@ -133,7 +133,7 @@ export function TabsMembro({
       <div
         role="tablist"
         aria-label="Abas do membro"
-        className="border-b border-slate-200 flex gap-1 overflow-x-auto"
+        className="border-b border-border flex gap-1 overflow-x-auto"
       >
         <Link
           to="?tab=dados"

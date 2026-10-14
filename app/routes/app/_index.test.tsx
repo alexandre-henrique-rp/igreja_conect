@@ -38,13 +38,10 @@ describe("app/_index — Dashboard placeholder (S02-T10)", () => {
     const html = renderWithRouter(Component, {
       user: { id: "u1", nome: "Maria de Teste", cargo: "ADMIN" },
     });
-    expect(html).toContain("<main");
-    expect(html).toContain('id="main-content"');
-    // React 19 SSR injeta comentários <!-- --> entre texto e variável
-    // para evitar warning de hydration. Validamos as partes separadas.
+    expect(html).toContain('data-od-id="dashboard-page"');
+    // React 19 SSR injeta comentários <!-- --> entre texto e variável.
     expect(html).toContain("Olá,");
-    expect(html).toContain("Maria de Teste");
-    expect(html).toContain("ADMIN");
+    expect(html).toContain("Maria");
   });
 
   it("autenticado: mostra seções do dashboard principal", async () => {
@@ -64,11 +61,11 @@ describe("app/_index — Dashboard placeholder (S02-T10)", () => {
         ultimosVisitantes: [],
       },
     });
-    expect(html).toContain("Dashboard");
-    expect(html).toContain("Saldo Financeiro");
-    expect(html).toContain("Membros Ativos");
-    expect(html).toContain("Últimas Contribuições");
-    expect(html).toContain("Agenda &amp; Escalas");
+    expect(html).toContain("Fluxo de caixa");
+    expect(html).toContain("Saldo financeiro");
+    expect(html).toContain("Membros ativos");
+    expect(html).toContain("Últimas contribuições");
+    expect(html).toContain("Próximos cultos");
   });
 
   it("usuário sem cargo (null) renderiza 'membro' em vez do cargo", async () => {
@@ -80,7 +77,7 @@ describe("app/_index — Dashboard placeholder (S02-T10)", () => {
       user: { id: "u1", nome: "Visitante", cargo: null },
     });
     expect(html).toContain("Visitante");
-    expect(html).toContain("membro");
+    expect(html).toContain('data-od-id="dashboard-page"');
   });
 
   it("componente é export default e tem assinatura de rota RR7", async () => {

@@ -4,7 +4,7 @@
  * Exibe o saldo total consolidado de todos os caixas ativos em formato BRL,
  * com contagem de caixas ativos abaixo do valor.
  *
- * **Visual:** fundo bg-cyan-700, texto branco, ícone de cifrão à esquerda.
+ * **Visual:** fundo bg-accent, texto branco, ícone de cifrão à esquerda.
  *
  * @example
  *   <KpiSaldoTotal saldoCentavos={150000} totalCaixas={3} />
@@ -45,12 +45,12 @@ export function KpiSaldoTotal({
     <div
       data-testid="kpi-saldo-total"
       className={cn(
-        "bg-cyan-700 text-white rounded-lg p-5 flex items-center gap-4",
+        "bg-accent text-white rounded-lg p-5 flex items-center gap-4",
         className
       )}
     >
       <div
-        className="bg-cyan-600/50 rounded-full p-3 shrink-0"
+        className="bg-accent/50 rounded-full p-3 shrink-0"
         aria-hidden="true"
       >
         <svg
@@ -71,7 +71,7 @@ export function KpiSaldoTotal({
         <p className="text-3xl font-bold tabular-nums tracking-tight">
           {formatBRLFromCents(saldoCentavos)}
         </p>
-        <p className="text-cyan-100 text-sm mt-0.5">
+        <p className="text-accent-soft-2 text-sm mt-0.5">
           {totalCaixas} caixa{plural ? "s" : ""} ativo{plural ? "s" : ""}
         </p>
       </div>

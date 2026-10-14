@@ -56,12 +56,12 @@ export type InfoBoxProps = {
 const TONE_CLASSES: Record<InfoBoxTone, { container: string; icon: string }> =
   {
     info: {
-      container: "border-cyan-200 bg-cyan-50 text-cyan-900",
-      icon: "text-cyan-700",
+      container: "border-accent-soft bg-accent-soft-2 text-accent-strong",
+      icon: "text-accent",
     },
     warning: {
-      container: "border-amber-200 bg-amber-50 text-amber-900",
-      icon: "text-amber-700",
+      container: "border-warning-soft bg-warning-soft text-warning",
+      icon: "text-warning",
     },
   };
 

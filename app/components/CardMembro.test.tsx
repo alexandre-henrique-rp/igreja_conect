@@ -60,7 +60,7 @@ describe("<CardMembro />", () => {
 
   it("renderiza badge de tipo (VISITANTE → amber)", () => {
     const html = renderCards(baseItems, true);
-    expect(html).toContain("bg-amber-100");
+    expect(html).toContain("bg-warning-soft");
     expect(html).toContain("Visitante");
   });
 

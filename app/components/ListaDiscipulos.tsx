@@ -26,7 +26,7 @@
  * @returns Elemento JSX da lista.
  */
 import { Form, Link } from "react-router";
-import { Button } from "~/components/Button";
+import { Button } from "~/components/ds";
 
 /**
  * Props aceitas pelo `<ListaDiscipulos>`.
@@ -44,7 +44,7 @@ export type ListaDiscipulosProps = {
 export function ListaDiscipulos({ discipulos }: ListaDiscipulosProps) {
   if (discipulos.length === 0) {
     return (
-      <p className="text-sm text-slate-500" data-testid="lista-vazia">
+      <p className="text-sm text-muted" data-testid="lista-vazia">
         Nenhum discípulo vinculado.
       </p>
     );
@@ -52,7 +52,7 @@ export function ListaDiscipulos({ discipulos }: ListaDiscipulosProps) {
 
   return (
     <ul
-      className="divide-y divide-slate-200 border border-slate-200 rounded-lg bg-white"
+      className="divide-y divide-border border border-border rounded-lg bg-surface"
       data-testid="lista-discipulos"
     >
       {discipulos.map((d) => (
@@ -62,7 +62,7 @@ export function ListaDiscipulos({ discipulos }: ListaDiscipulosProps) {
         >
           <Link
             to={`/app/membros/${d.id}`}
-            className="text-cyan-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded"
+            className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
           >
             {d.nome}
           </Link>

@@ -1,32 +1,28 @@
 /**
- * Rota / (Landing pública) (S01-T08).
+ * Rota / (Landing pública) — Design System completo (S05-F5).
  *
- * Página inicial do Igreja Conect, acessível por qualquer visitante
- * anônimo. Dois objetivos:
- * 1. Identificar institucionalmente a igreja.
- * 2. Direcionar para `/login` (única ação real).
+ * **Padrão do Design System (landing.html):**
+ * - `.landing` wrapper.
+ * - `.public-nav` com `.brand` (church mark + "Igreja Conect") + `.nav-actions`.
+ * - `.hero` com `.hero-grid` (2 colunas): copy à esquerda, `.community-art` à direita.
+ * - `.community-art` — ilustração abstrata CSS-only: sun (::before) + skyline + church + 4 pessoas.
+ * - `.feature-section` com `.section-intro` + `.grid-3.feature-card` × 6.
+ * - `.trust` strip + `.public-footer` com links.
  *
- * **Server-side (`loader`):** se já há cookie válido, redireciona
- * direto para `/app` (UX: usuário logado não vê a landing).
- *
- * **UI:** tema dark/moderno com hero, feature cards glassmorphism e CTA.
- *
- * @see design/public-landing.DESIGN.md
+ * @see design/Igreja-Conect-Design-System/landing.html
  */
 import type { Route } from "./+types/index";
 import { Link, redirect } from "react-router";
-import { Button } from "~/components/Button";
-import { CardInfo } from "~/components/CardInfo";
-import { TopbarPublica } from "~/components/TopbarPublica";
+import { Icon, Button } from "~/components/ds";
 import { getUserFromRequest } from "~/lib/session.server";
 
 export function meta(_args: Route.MetaArgs) {
   return [
-    { title: "Igreja Conect" },
+    { title: "Igreja Conect — Gestão completa para sua comunidade de fé" },
     {
       name: "description",
       content:
-        "Sistema interno de gestão eclesiástica local — membros, discipulado, ministérios e alertas.",
+        "Organize pessoas, finanças, ministérios e encontros em um só lugar — com clareza para quem administra e mais tempo para quem cuida.",
     },
   ];
 }
@@ -39,134 +35,175 @@ export async function loader({ request }: Route.LoaderArgs) {
   return null;
 }
 
-const ITENS_DISPONIVEIS = [
-  "Cadastro e busca de membros",
-  "Vínculo de discipulado (limite de 12 discípulos por líder)",
-  "Vinculação de membros a ministérios",
-  "Acolhimento automático de visitantes com alerta",
-  "Central de alertas interna",
-];
-
-const ITENS_EM_DESENVOLVIMENTO = [
-  "Módulo Financeiro (caixas, dízimos, ofertas)",
-  "Módulo de Estoque (consumo e patrimônio)",
-  "Manutenção de ativos",
-];
-
 const FEATURES = [
-  {
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-    title: "Gestão de Membros",
-    description: "Cadastro completo com busca, filtros e histórico de discipulado.",
-  },
-  {
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
-    ),
-    title: "Sistema de Alertas",
-    description: "Alertas internos automáticos para visitantes e ocorrências.",
-  },
-  {
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      </svg>
-    ),
-    title: "Ministérios",
-    description: "Organize e vincule membros aos ministérios da igreja.",
-  },
+  { icon: "users", title: "Membros", desc: "Cadastro completo, busca avançada, filtros por tipo e status." },
+  { icon: "wallet", title: "Caixas & dízimos", desc: "Lançamentos, transferências entre caixas e relatórios." },
+  { icon: "package", title: "Estoque & patrimônio", desc: "Inventário, níveis mínimos e histórico de movimentações." },
+  { icon: "users", title: "Ministérios", desc: "Equipes, liderança, escalas e oportunidades de serviço." },
+  { icon: "heart", title: "Células", desc: "Pequenos grupos, líderes, participantes e encontros." },
+  { icon: "calendar", title: "Cultos & escalas", desc: "Programação, voluntários e sorteio automático." },
 ];
 
 export default function Landing() {
   return (
-    <>
-      <TopbarPublica entrarHref="/login" />
-      <main id="main-content" className="bg-[#070e1b] min-h-screen">
-        {/* Hero */}
-        <section className="relative overflow-hidden">
-          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-900/15 blur-[140px] pointer-events-none" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-900/10 blur-[120px] pointer-events-none" />
+    <main id="main-content" className="landing bg-surface min-h-screen" data-od-id="landing-page">
+      <nav className="public-nav" aria-label="Navegação principal" data-od-id="landing-nav">
+        <Link to="/" className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          <span className="brand-name">Igreja Conect</span>
+        </Link>
+        <div className="nav-actions flex items-center gap-3.5">
+          <Button
+            as={Link}
+            to="/login"
+            variant="primary"
+            size="sm"
+            className="btn btn-primary btn-sm"
+          >
+            Entrar
+          </Button>
+        </div>
+      </nav>
 
-          <div className="relative max-w-4xl mx-auto px-4 pt-20 pb-16 sm:pt-28 sm:pb-20 text-center z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              Sistema de gestão eclesiástica
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-              Conecte sua{" "}
-              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                igreja
-              </span>{" "}
-              com tecnologia
+      {/* Hero */}
+      <section className="hero" data-od-id="landing-hero">
+        <div className="container hero-grid">
+          <div className="hero-copy">
+            <span className="eyebrow">Gestão que serve a comunidade</span>
+            <h1 className="title-xl">
+              Gestão completa para sua comunidade de fé
             </h1>
-
-            <p className="mt-5 text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              Gerencie membros, discipulados, ministérios e alertas em um só
-              lugar. Feito para igrejas que valorizam organização e acolhimento.
+            <p>
+              Organize pessoas, finanças, ministérios e encontros em um só
+              lugar — com clareza para quem administra e mais tempo para quem
+              cuida.
             </p>
-
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button as={Link} to="/login" variant="blue" size="md">
-                Entrar no sistema
+            <div className="hero-actions">
+              <Button
+                as={Link}
+                to="/login"
+                variant="primary"
+                size="lg"
+                className="btn btn-primary btn-lg"
+              >
+                Entrar
               </Button>
-              <span className="text-sm text-slate-500">Acesso para membros autorizados</span>
+              <Button
+                as={Link}
+                to="#demo"
+                variant="secondary"
+                size="lg"
+                className="btn btn-secondary btn-lg js-demo"
+              >
+                Ver demonstração
+              </Button>
+            </div>
+            <div className="hero-note">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="m5 12 4 4L19 6" />
+              </svg>
+              <span>
+                Acesse sua conta com segurança · feito para igrejas brasileiras
+              </span>
             </div>
           </div>
-        </section>
 
-        {/* Features */}
-        <section className="max-w-4xl mx-auto px-4 pb-16 sm:pb-20">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div
+            className="community-art"
+            data-od-id="landing-hero-illustration"
+            role="img"
+            aria-label="Ilustração abstrata de uma igreja e pessoas reunidas"
+          >
+            <div className="art-skyline" />
+            <div className="church">
+              <span className="church-door" />
+              <span className="church-window left" />
+              <span className="church-window right" />
+            </div>
+            <div className="people">
+              <span className="person" />
+              <span className="person" />
+              <span className="person" />
+              <span className="person" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="feature-section" data-od-id="landing-features">
+        <div className="container">
+          <div className="section-intro">
+            <div>
+              <span className="eyebrow">O que está incluído</span>
+              <h2 className="title-md">Tudo que sua igreja precisa, em um só lugar.</h2>
+            </div>
+            <p>
+              Módulos prontos para usar desde o primeiro dia. Personalize o
+              que precisar.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="bg-[#121b2c]/60 backdrop-blur-sm border border-[#202f47] rounded-xl p-5 hover:border-blue-500/30 transition-colors"
+                className="feature-card card-hover rounded-lg border border-border bg-surface p-5 transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-[0_8px_20px_oklch(20.8%_0.035_260_/_0.08)]"
               >
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4">
-                  {f.icon}
+                <div className="icon-wrap h-10 w-10 rounded-lg bg-accent-soft text-accent-strong grid place-items-center mb-6">
+                  <Icon name={f.icon} size="lg" />
                 </div>
-                <h3 className="text-sm font-semibold text-white mb-1">{f.title}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">{f.description}</p>
+                <h3 className="text-base font-bold text-fg mb-2">{f.title}</h3>
+                <p className="text-sm text-muted leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Disponível agora + Em desenvolvimento */}
-        <section className="max-w-4xl mx-auto px-4 pb-16 sm:pb-20">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <CardInfo
-              title="Disponível agora"
-              description="Funcionalidades ativas neste MVP."
-              tone="available"
-              variant="dark"
-              items={ITENS_DISPONIVEIS}
-            />
-            <CardInfo
-              title="Em desenvolvimento"
-              description="Módulos previstos para sprints futuras."
-              tone="planned"
-              variant="dark"
-              items={ITENS_EM_DESENVOLVIMENTO}
-            />
-          </div>
-        </section>
-      </main>
+      {/* Trust */}
+      <div className="trust" id="demo">
+        <div className="container">
+          <p>
+            Construído para igrejas brasileiras — segurança, LGPD e suporte em
+            português.
+          </p>
+        </div>
+      </div>
 
-      <footer className="bg-[#070e1b] border-t border-[#202f47] py-6 text-center text-xs text-slate-500">
-        © 2026 Igreja Conect — Sistema de gestão eclesiástica
+      {/* Footer */}
+      <footer className="public-footer">
+        <span>© 2026 Igreja Conect · ambiente de demonstração</span>
+        <nav className="flex flex-wrap gap-4">
+          <Link to="/login" className="hover:text-fg">
+            Login
+          </Link>
+          <Link to="/login" className="hover:text-fg">
+            App
+          </Link>
+          <Link to="/login" className="hover:text-fg">
+            Membros
+          </Link>
+          <Link to="/login" className="hover:text-fg">
+            Financeiro
+          </Link>
+          <Link to="/login" className="hover:text-fg">
+            Estoque
+          </Link>
+          <Link to="/login" className="hover:text-fg">
+            Configurações
+          </Link>
+        </nav>
       </footer>
-    </>
+    </main>
   );
 }

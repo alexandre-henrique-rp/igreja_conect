@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "Conect",
+        "expandível",
         "faststart",
         "lancamento",
         "Lancamento",
@@ -8,6 +9,9 @@
         "libx",
         "movflags",
         "periodo",
-        "TOCTOU"
-    ]
+        "relatorios",
+        "TOCTOU",
+        "transferencias"
+    ],
+    "css.lint.unknownAtRules": "ignore"
 }

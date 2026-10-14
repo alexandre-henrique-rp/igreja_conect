@@ -29,9 +29,7 @@
 import { useId, useState } from "react";
 import { Form } from "react-router";
 import { Dialog } from "~/components/Dialog";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
-import { Select } from "~/components/Select";
+import { Button, Input, Select } from "~/components/ds";
 
 /**
  * Props aceitas pelo `<ModalVincularMembro>`.
@@ -100,7 +98,7 @@ export function ModalVincularMembro({
         {filtered.length === 0 ? (
           <p
             role="status"
-            className="text-sm text-slate-500 py-2"
+            className="text-sm text-muted py-2"
             data-testid="membros-vazio"
           >
             Nenhum membro disponível.

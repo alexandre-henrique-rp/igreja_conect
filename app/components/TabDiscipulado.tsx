@@ -63,21 +63,21 @@ export function TabDiscipulado({
   return (
     <div className="space-y-4" data-testid="tab-discipulado">
       {/* Card do discipulador */}
-      <div className="border border-slate-200 rounded-lg bg-white p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-slate-900">
+      <div className="border border-border rounded-lg bg-surface p-4 space-y-2">
+        <h3 className="text-sm font-semibold text-fg">
           Discipulador atual
         </h3>
         {discipulador ? (
-          <p className="text-base text-slate-900">{discipulador.nome}</p>
+          <p className="text-base text-fg">{discipulador.nome}</p>
         ) : (
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-fg">
             Este membro não possui discipulador vinculado.
           </p>
         )}
         {canEdit && (
           <Link
             to={`/app/membros/${membroId}/discipulado`}
-            className="inline-block text-sm text-cyan-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 rounded"
+            className="inline-block text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
           >
             Gerenciar discipulado →
           </Link>
@@ -86,8 +86,8 @@ export function TabDiscipulado({
 
       {/* Lista de discípulos (quando o foco é o discipulador) */}
       {discipulos.length > 0 && (
-        <div className="border border-slate-200 rounded-lg bg-white p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-slate-900">
+        <div className="border border-border rounded-lg bg-surface p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-fg">
             Discípulos ({discipulos.length})
           </h3>
           <ul className="space-y-1">
@@ -95,7 +95,7 @@ export function TabDiscipulado({
               <li key={d.id} className="text-sm">
                 <Link
                   to={`/app/membros/${d.id}`}
-                  className="text-cyan-700 hover:underline"
+                  className="text-accent hover:underline"
                 >
                   {d.nome}
                 </Link>

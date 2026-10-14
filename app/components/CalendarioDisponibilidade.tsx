@@ -31,15 +31,15 @@ const MESES = [
 ];
 
 const COR_TIPO: Record<string, string> = {
-  CULTO: "bg-blue-100 text-blue-700 border-blue-300",
-  ENSAIO: "bg-green-100 text-green-700 border-green-300",
-  ATIVIDADE_EXTRA: "bg-purple-100 text-purple-700 border-purple-300",
+  CULTO: "bg-accent-soft-2 text-accent-strong border-accent-soft",
+  ENSAIO: "bg-success-soft text-success border-success-soft",
+  ATIVIDADE_EXTRA: "bg-accent-soft text-accent-strong border-accent-soft",
 };
 
 const COR_TIPO_DOT: Record<string, string> = {
-  CULTO: "bg-blue-500",
-  ENSAIO: "bg-green-500",
-  ATIVIDADE_EXTRA: "bg-purple-500",
+  CULTO: "bg-accent",
+  ENSAIO: "bg-success",
+  ATIVIDADE_EXTRA: "bg-accent",
 };
 
 function parseDate(s: string): Date {
@@ -126,19 +126,19 @@ export function CalendarioDisponibilidade({
         <button
           type="button"
           onClick={mesAnterior}
-          className="p-1.5 rounded-md hover:bg-slate-100 text-slate-600"
+          className="p-1.5 rounded-md hover:bg-surface-2 text-muted"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <span className="text-sm font-bold text-slate-800">
+        <span className="text-sm font-bold text-fg">
           {MESES[mes]} {ano}
         </span>
         <button
           type="button"
           onClick={proximoMes}
-          className="p-1.5 rounded-md hover:bg-slate-100 text-slate-600"
+          className="p-1.5 rounded-md hover:bg-surface-2 text-muted"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -148,24 +148,24 @@ export function CalendarioDisponibilidade({
 
       {/* Legenda */}
       <div className="flex items-center gap-3 mb-3 flex-wrap">
-        <span className="flex items-center gap-1 text-xs text-slate-600">
-          <span className="w-3 h-3 rounded-full bg-blue-500" /> Culto
+        <span className="flex items-center gap-1 text-xs text-muted">
+          <span className="w-3 h-3 rounded-full bg-accent" /> Culto
         </span>
-        <span className="flex items-center gap-1 text-xs text-slate-600">
-          <span className="w-3 h-3 rounded-full bg-green-500" /> Ensaio
+        <span className="flex items-center gap-1 text-xs text-muted">
+          <span className="w-3 h-3 rounded-full bg-success" /> Ensaio
         </span>
-        <span className="flex items-center gap-1 text-xs text-slate-600">
-          <span className="w-3 h-3 rounded-full bg-purple-500" /> Atividade Extra
+        <span className="flex items-center gap-1 text-xs text-muted">
+          <span className="w-3 h-3 rounded-full bg-accent" /> Atividade Extra
         </span>
-        <span className="flex items-center gap-1 text-xs text-slate-600">
-          <span className="w-3 h-3 rounded-full bg-red-400" /> Indisponível
+        <span className="flex items-center gap-1 text-xs text-muted">
+          <span className="w-3 h-3 rounded-full bg-danger" /> Indisponível
         </span>
       </div>
 
       {/* Grid do calendário */}
       <div className="grid grid-cols-7 gap-1">
         {DIAS_HEADER.map((d) => (
-          <div key={d} className="text-center text-xs font-bold text-slate-400 py-1">
+          <div key={d} className="text-center text-xs font-bold text-subtle py-1">
             {d}
           </div>
         ))}
@@ -183,13 +183,13 @@ export function CalendarioDisponibilidade({
               className={`min-h-[72px] border rounded-md p-1 text-xs transition-colors ${
                 diaInfo.isCurrentMonth
                   ? temIndisponibilidade
-                    ? "bg-red-50 border-red-200"
-                    : "bg-white border-slate-200 hover:border-slate-300"
-                  : "bg-slate-50 border-slate-100 text-slate-300"
-              } ${isHoje ? "ring-2 ring-cyan-500" : ""}`}
+                    ? "bg-danger-soft border-danger-soft"
+                    : "bg-surface border-border hover:border-border-strong"
+                  : "bg-surface-2 border-surface-2 text-border-strong"
+              } ${isHoje ? "ring-2 ring-accent" : ""}`}
               onClick={() => diaInfo.isCurrentMonth && setDiaSelecionado(diaSelecionado === dataISO ? null : dataISO)}
             >
-              <div className="font-semibold text-slate-700 mb-0.5">{dia.getDate()}</div>
+              <div className="font-semibold text-fg mb-0.5">{dia.getDate()}</div>
               <div className="space-y-0.5">
                 {atividadesDia.map((a) => (
                   <div
@@ -207,7 +207,7 @@ export function CalendarioDisponibilidade({
                 ))}
                 {temIndisponibilidade && (
                   <div
-                    className="px-1 py-0.5 rounded text-[10px] bg-red-100 text-red-600 border border-red-200 cursor-pointer"
+                    className="px-1 py-0.5 rounded text-[10px] bg-danger-soft text-danger border border-danger-soft cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       onRemoveIndisponibilidade(indisponibilidadesDia[0].id);
@@ -225,15 +225,15 @@ export function CalendarioDisponibilidade({
 
       {/* Painel de ações do dia selecionado */}
       {diaSelecionado && (
-        <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <div className="mt-3 p-3 bg-surface-2 border border-border rounded-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-slate-700">
+            <span className="text-sm font-semibold text-fg">
               {new Date(diaSelecionado + "T00:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
             </span>
             <button
               type="button"
               onClick={() => setDiaSelecionado(null)}
-              className="text-slate-400 hover:text-slate-600"
+              className="text-subtle hover:text-muted"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -244,21 +244,21 @@ export function CalendarioDisponibilidade({
             <button
               type="button"
               onClick={() => onAddAtividade(diaSelecionado)}
-              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
+              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-success-soft text-success border border-success-soft hover:bg-success-soft"
             >
               + Ensaio
             </button>
             <button
               type="button"
               onClick={() => onAddAtividade(diaSelecionado)}
-              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-accent-soft text-accent-strong border border-accent-soft hover:bg-accent-soft"
             >
               + Atividade Extra
             </button>
             <button
               type="button"
               onClick={() => onAddIndisponibilidade(diaSelecionado)}
-              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
+              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-danger-soft text-danger border border-danger-soft hover:bg-danger-soft"
             >
               + Indisponibilidade
             </button>

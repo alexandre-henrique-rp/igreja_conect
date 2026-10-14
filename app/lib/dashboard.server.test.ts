@@ -136,6 +136,9 @@ describe("dashboard.server — getDashboardData", () => {
     expect(data.ultimasContribuicoes[0].valorCentavos).toBe(10000);
     expect(data.ultimasContribuicoes[0].contribuinte).toBe("Admin");
     expect(data.ultimasContribuicoes[0].tipo).toBe("DÍZIMO");
+    expect(data.fluxoCaixa).toHaveLength(6);
+    expect(data.fluxoCaixa.at(-1)?.entradasCentavos).toBe(10000);
+    expect(data.fluxoCaixa.at(-1)?.saidasCentavos).toBe(0);
   });
 
   it("DISCIPULADOR: filtra membros por discipuladorId", async () => {

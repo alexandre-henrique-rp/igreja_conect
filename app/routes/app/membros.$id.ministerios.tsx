@@ -135,17 +135,17 @@ export default function MembroMinisteriosPage({
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900 mb-4">
+      <h1 className="text-2xl font-bold text-fg mb-4">
         Ministérios — {membro?.nome ?? "Carregando..."}
       </h1>
 
       {/* Ministérios atuais */}
       <section className="mb-8">
-        <h2 className="text-lg font-semibold text-slate-800 mb-3">
+        <h2 className="text-lg font-semibold text-fg mb-3">
           Ministérios do membro
         </h2>
         {ministeriosDoMembro.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted">
             Este membro não está em nenhum ministério.
           </p>
         ) : (
@@ -153,16 +153,16 @@ export default function MembroMinisteriosPage({
             {ministeriosDoMembro.map((m) => (
               <li
                 key={m.id}
-                className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg"
+                className="flex items-center justify-between p-3 bg-surface border border-border rounded-lg"
               >
-                <span className="text-sm text-slate-800">{m.nome}</span>
+                <span className="text-sm text-fg">{m.nome}</span>
                 {canEdit && (
                   <form method="POST" className="inline">
                     <input type="hidden" name="intent" value="remove" />
                     <input type="hidden" name="ministerioId" value={m.id} />
                     <button
                       type="submit"
-                      className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
+                      className="text-xs px-2 py-1 rounded bg-danger-soft text-danger hover:bg-danger-soft"
                     >
                       Remover
                     </button>
@@ -177,22 +177,22 @@ export default function MembroMinisteriosPage({
       {/* Ministérios disponíveis */}
       {canEdit && ministeriosDisponiveis.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-slate-800 mb-3">
+          <h2 className="text-lg font-semibold text-fg mb-3">
             Adicionar a ministério
           </h2>
           <ul className="space-y-2">
             {ministeriosDisponiveis.map((m) => (
               <li
                 key={m.id}
-                className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg"
+                className="flex items-center justify-between p-3 bg-surface border border-border rounded-lg"
               >
-                <span className="text-sm text-slate-800">{m.nome}</span>
+                <span className="text-sm text-fg">{m.nome}</span>
                 <form method="POST" className="inline">
                   <input type="hidden" name="intent" value="add" />
                   <input type="hidden" name="ministerioId" value={m.id} />
                   <button
                     type="submit"
-                    className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    className="text-xs px-2 py-1 rounded bg-accent-soft-2 text-accent-strong hover:bg-accent-soft"
                   >
                     Adicionar
                   </button>

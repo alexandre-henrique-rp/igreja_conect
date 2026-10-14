@@ -38,16 +38,16 @@ describe("<Section />", () => {
     expect(html).toContain('type="email"');
   });
 
-  it("fieldset tem border + rounded-lg + bg-white (card visual)", () => {
+  it("fieldset tem border + rounded-lg + bg-surface (card visual)", () => {
     const html = renderSection("Eclesiástico", <p>x</p>);
     expect(html).toContain("border");
     expect(html).toContain("rounded-lg");
-    expect(html).toContain("bg-white");
+    expect(html).toContain("bg-surface");
   });
 
-  it("legend tem classes semânticas (font-semibold text-slate-900)", () => {
+  it("legend tem classes semânticas (font-semibold text-fg)", () => {
     const html = renderSection("Endereço", <p>x</p>);
     expect(html).toContain("font-semibold");
-    expect(html).toContain("text-slate-900");
+    expect(html).toContain("text-fg");
   });
 });

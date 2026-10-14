@@ -39,7 +39,7 @@
  */
 import { useState } from "react";
 import { Form, Link } from "react-router";
-import { Button } from "~/components/Button";
+import { Button } from "~/components/ds";
 import { ContadorDiscipulos } from "~/components/ContadorDiscipulos";
 import { CadeiaDiscipulado } from "~/components/CadeiaDiscipulado";
 import { ListaDiscipulos } from "~/components/ListaDiscipulos";
@@ -91,17 +91,17 @@ export function DiscipuladoPainel({
     <div className="space-y-4" data-testid="discipulado-painel">
       {/* Card principal: discipulador atual ou vazio */}
       <article
-        className="border border-slate-200 rounded-lg bg-white p-4 sm:p-6"
+        className="border border-border rounded-lg bg-surface p-4 sm:p-6"
         data-testid="card-discipulador"
       >
         {discipuladorAtual ? (
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">
+                <h2 className="text-sm font-semibold text-fg">
                   Discipulador atual
                 </h2>
-                <p className="text-base text-slate-900 mt-1">
+                <p className="text-base text-fg mt-1">
                   {discipuladorAtual.nome}
                 </p>
               </div>
@@ -109,7 +109,7 @@ export function DiscipuladoPainel({
             </div>
 
             {canEdit && (
-              <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-200">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border">
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -145,10 +145,10 @@ export function DiscipuladoPainel({
         ) : (
           <div className="space-y-3">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-sm font-semibold text-fg">
                 Situação atual
               </h2>
-              <p className="text-sm text-slate-700 mt-1">
+              <p className="text-sm text-fg mt-1">
                 {membro.nome} não possui discipulador vinculado.
               </p>
             </div>
@@ -170,20 +170,20 @@ export function DiscipuladoPainel({
 
       {/* Discípulos atuais (quando o foco é o discipulador) */}
       {discipuladorAtual && discipulosDoDiscipulador.length > 0 && (
-        <article className="border border-slate-200 rounded-lg bg-white p-4 sm:p-6 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-900">
+        <article className="border border-border rounded-lg bg-surface p-4 sm:p-6 space-y-3">
+          <h2 className="text-sm font-semibold text-fg">
             Discípulos de {discipuladorAtual.nome} (
             {discipulosDoDiscipulador.length})
           </h2>
           {canEdit ? (
             <ListaDiscipulos discipulos={discipulosDoDiscipulador} />
           ) : (
-            <ul className="divide-y divide-slate-200 border border-slate-200 rounded-lg bg-white">
+            <ul className="divide-y divide-border border border-border rounded-lg bg-surface">
               {discipulosDoDiscipulador.map((d) => (
                 <li key={d.id} className="px-4 py-2 text-sm">
                   <Link
                     to={`/app/membros/${d.id}`}
-                    className="text-cyan-700 hover:underline"
+                    className="text-accent hover:underline"
                   >
                     {d.nome}
                   </Link>
@@ -196,8 +196,8 @@ export function DiscipuladoPainel({
 
       {/* Cadeia (sempre que houver) */}
       {cadeia.length > 0 && (
-        <article className="border border-slate-200 rounded-lg bg-white p-4 sm:p-6 space-y-2">
-          <h2 className="text-sm font-semibold text-slate-900">
+        <article className="border border-border rounded-lg bg-surface p-4 sm:p-6 space-y-2">
+          <h2 className="text-sm font-semibold text-fg">
             Cadeia de discipulado
           </h2>
           <CadeiaDiscipulado cadeia={cadeia} />

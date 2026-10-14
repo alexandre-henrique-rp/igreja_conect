@@ -83,23 +83,23 @@ export function FormField({
     <div className="space-y-1">
       <label
         htmlFor={fieldId}
-        className="block text-sm font-medium text-slate-700"
+        className="block text-sm font-medium text-fg"
       >
         {label}
         {required && (
-          <span aria-hidden="true" className="text-red-700 ml-1">
+          <span aria-hidden="true" className="text-danger ml-1">
             *
           </span>
         )}
       </label>
       {children}
       {!hasError && hint && (
-        <p id={hintId} className="text-sm text-slate-500">
+        <p id={hintId} className="text-sm text-muted">
           {hint}
         </p>
       )}
       {hasError && (
-        <p id={errorId} role="alert" className="text-sm text-red-700">
+        <p id={errorId} role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

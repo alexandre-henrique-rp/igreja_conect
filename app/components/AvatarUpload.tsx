@@ -248,7 +248,7 @@ export function AvatarUpload({
       />
 
       {/* Preview / Placeholder */}
-      <div className="h-20 w-20 rounded-full overflow-hidden bg-slate-50 border border-slate-200 flex items-center justify-center relative">
+      <div className="h-20 w-20 rounded-full overflow-hidden bg-surface-2 border border-border flex items-center justify-center relative">
         {previewUrl ? (
           <img
             src={previewUrl}
@@ -257,7 +257,7 @@ export function AvatarUpload({
           />
         ) : (
           <svg
-            className="h-8 w-8 text-slate-400"
+            className="h-8 w-8 text-subtle"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -298,8 +298,8 @@ export function AvatarUpload({
 
       {/* Controls + Status */}
       <div className="flex-1">
-        <p className="text-sm font-bold text-slate-900">Foto de Perfil</p>
-        <p className="text-xs text-slate-500">
+        <p className="text-sm font-bold text-fg">Foto de Perfil</p>
+        <p className="text-xs text-muted">
           JPG, PNG, GIF ou WebP. Máximo 20MB.
         </p>
 
@@ -309,7 +309,7 @@ export function AvatarUpload({
             onClick={handlePickFile}
             disabled={isBusy}
             className={cn(
-              "px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200/50 rounded-lg text-xs font-bold transition-colors",
+              "px-3 py-1.5 bg-accent-soft-2 text-accent hover:bg-accent-soft-2 border border-accent-soft/50 rounded-lg text-xs font-bold transition-colors",
               isBusy && "opacity-50 cursor-not-allowed",
             )}
           >
@@ -322,7 +322,7 @@ export function AvatarUpload({
               onClick={handleRemove}
               disabled={isBusy}
               className={cn(
-                "px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/50 rounded-lg text-xs font-bold transition-colors",
+                "px-3 py-1.5 bg-danger-soft text-danger hover:bg-danger-soft border border-danger-soft/50 rounded-lg text-xs font-bold transition-colors",
                 isBusy && "opacity-50 cursor-not-allowed",
               )}
             >
@@ -332,13 +332,13 @@ export function AvatarUpload({
         </div>
 
         {/* Status text */}
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-muted">
           {status === "uploading" && "Enviando arquivo..."}
           {status === "processing" && "Processando (scan + validação)..."}
           {status === "ready" && previewUrl && "Foto atualizada"}
           {status === "idle" && !previewUrl && "Nenhuma foto definida"}
           {status === "error" && (
-            <span className="text-red-600">
+            <span className="text-danger">
               {error}{" "}
               <button
                 type="button"

@@ -19,7 +19,6 @@ import { ConfigAcolhimentoSchema } from "~/lib/schemas/config";
 import { assertIsAdmin } from "~/lib/rbac.server";
 import { ConfigAcolhimentoCard, type ConfigAcolhimento } from "~/components/ConfigAcolhimentoCard";
 import { FormConfigAcolhimento, type MembroCargo } from "~/components/FormConfigAcolhimento";
-import { InfoBox } from "~/components/InfoBox";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "Config. Acolhimento — Igreja Conect" }];
@@ -128,19 +127,19 @@ export default function ConfigAcolhimentoPage({
   const cardConfig = toCardConfig(config);
 
   return (
-    <main id="main-content" className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 bg-slate-50 min-h-screen">
+    <main id="main-content" className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 bg-surface-2 min-h-screen">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-2">
+          <nav className="flex items-center gap-2 text-xs font-semibold text-subtle mb-2">
             <span>Configurações</span>
-            <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+            <svg className="w-3 h-3 text-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            <span className="text-blue-600">Acolhimento</span>
+            <span className="text-accent">Acolhimento</span>
           </nav>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight font-headline">Configurações</h2>
-          <p className="text-slate-500 text-sm mt-1">Gerencie as regras de negócio e parâmetros globais do sistema.</p>
+          <h2 className="text-3xl font-extrabold text-fg tracking-tight font-headline">Configurações</h2>
+          <p className="text-muted text-sm mt-1">Gerencie as regras de negócio e parâmetros globais do sistema.</p>
         </div>
       </div>
 
@@ -149,9 +148,9 @@ export default function ConfigAcolhimentoPage({
         <aside className="lg:col-span-1 space-y-2">
           <button
             type="button"
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold bg-blue-50 text-blue-750 border border-blue-100 text-left transition-all cursor-pointer"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold bg-accent-soft-2 text-accent-strong border border-accent-soft-2 text-left transition-all cursor-pointer"
           >
-            <svg className="w-5 h-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <svg className="w-5 h-5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
             Acolhimento
@@ -160,7 +159,7 @@ export default function ConfigAcolhimentoPage({
           <button
             type="button"
             disabled
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 text-left opacity-60 cursor-not-allowed"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-subtle text-left opacity-60 cursor-not-allowed"
           >
             <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -171,7 +170,7 @@ export default function ConfigAcolhimentoPage({
           <button
             type="button"
             disabled
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 text-left opacity-60 cursor-not-allowed"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-subtle text-left opacity-60 cursor-not-allowed"
           >
             <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />

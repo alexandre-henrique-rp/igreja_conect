@@ -10,10 +10,7 @@ import { criarEscala, adicionarVoluntario } from "~/lib/escalas.server";
 import type { CriarEscalaInput } from "~/lib/escalas.server";
 import { prisma } from "~/db/prisma.server";
 import { z } from "zod";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
-import { Select } from "~/components/Select";
-import { Breadcrumb } from "~/components/Breadcrumb";
+import { Button, Input, Select, Breadcrumb, BreadcrumbItem, BreadcrumbSeparator } from "~/components/ds";
 
 /** Cargos autorizados a gerenciar escalas. */
 const CAN_MANAGE = ["ADMIN", "PASTOR", "SECRETARIO", "LIDER_MINISTERIO"] as const;
@@ -25,6 +22,17 @@ const escalaSchema = z.object({
   voluntarios: z.string().optional(),
   cultoId: z.string().optional(),
   eventoId: z.string().optional(),
+  local: z.string().trim().max(120, "Use no máximo 120 caracteres.").optional(),
+  horaInicio: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Informe o horário no formato HH:MM.")
+    .optional()
+    .or(z.literal("")),
+  horaFim: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Informe o horário no formato HH:MM.")
+    .optional()
+    .or(z.literal("")),
 });
 
 function formatIsoDate(dateVal: Date | string): string {
@@ -122,6 +130,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     data: parsed.data.data,
     cultoId: parsed.data.cultoId || undefined,
     eventoId: parsed.data.eventoId || undefined,
+    local: parsed.data.local || undefined,
+    horaInicio: parsed.data.horaInicio || undefined,
+    horaFim: parsed.data.horaFim || undefined,
   };
 
   const escala = await criarEscala(input, user);
@@ -321,12 +332,11 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: "Escalas", href: "/app/escalas" },
-          { label: "Nova Escala" },
-        ]}
-      />
+      <Breadcrumb>
+        <BreadcrumbItem href="/app/escalas">Escalas</BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem current>Nova Escala</BreadcrumbItem>
+      </Breadcrumb>
 
       <Form method="post" noValidate className="space-y-6">
         <input type="hidden" name="voluntarios" value={JSON.stringify(voluntarios)} />
@@ -336,10 +346,10 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
         {/* Page Header */}
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-3xl font-extrabold text-fg tracking-tight">
               Nova Escala
             </h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
+            <p className="text-sm font-medium text-muted mt-1">
               Configure os detalhes e monte a equipe para a nova escala de voluntários.
             </p>
           </div>
@@ -349,7 +359,7 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
             </Button>
             <Button
               type="submit"
-              variant="blue"
+              variant="primary"
               loading={isSubmitting}
               className="whitespace-nowrap shrink-0"
               disabled={!ministerioId || !tituloEscala || !dataEscala}
@@ -360,14 +370,14 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
         </div>
 
         {/* Card 1: Informações Gerais */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+        <div className="bg-surface border border-border rounded-2xl p-6 shadow-xs space-y-5">
+          <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+            <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-base font-extrabold text-slate-900">Informações Gerais</h2>
+            <h2 className="text-base font-extrabold text-fg">Informações Gerais</h2>
           </div>
 
           {/* Selecionar Ministério */}
@@ -385,7 +395,7 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
 
           {/* Seleção do Tipo de Vínculo */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700">Origem da Escala (Vincular a)</label>
+            <label className="block text-sm font-medium text-fg">Origem da Escala (Vincular a)</label>
             <div className="grid grid-cols-3 gap-3">
               <button
                 type="button"
@@ -396,8 +406,8 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                 }}
                 className={`py-2.5 px-4 rounded-xl border text-sm font-bold transition-all text-center ${
                   tipoVinculo === "livre"
-                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    ? "bg-accent text-white border-accent shadow-xs"
+                    : "bg-surface text-fg border-border hover:bg-surface-2"
                 }`}
               >
                 Avulsa / Livre
@@ -410,8 +420,8 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                 }}
                 className={`py-2.5 px-4 rounded-xl border text-sm font-bold transition-all text-center ${
                   tipoVinculo === "culto"
-                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    ? "bg-accent text-white border-accent shadow-xs"
+                    : "bg-surface text-fg border-border hover:bg-surface-2"
                 }`}
               >
                 Culto Cadastrado
@@ -424,8 +434,8 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                 }}
                 className={`py-2.5 px-4 rounded-xl border text-sm font-bold transition-all text-center ${
                   tipoVinculo === "evento"
-                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    ? "bg-accent text-white border-accent shadow-xs"
+                    : "bg-surface text-fg border-border hover:bg-surface-2"
                 }`}
               >
                 Evento Cadastrado
@@ -473,6 +483,16 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
               disabled={tipoVinculo !== "livre"}
             />
 
+            <Input
+              id="local"
+              name="local"
+              label="Local"
+              placeholder="Ex.: Salão principal"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input id="horaInicio" name="horaInicio" label="Início" type="time" />
+              <Input id="horaFim" name="horaFim" label="Término" type="time" />
+            </div>
             {/* Input Título / Nome da Escala */}
             <div className="md:col-span-2">
               <Input
@@ -490,20 +510,20 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
         </div>
 
         {/* Card 2: Voluntários */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="bg-surface border border-border rounded-2xl p-6 shadow-xs space-y-5">
+          <div className="flex items-center justify-between border-b border-surface-2 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900">Voluntários</h2>
+              <h2 className="text-base font-extrabold text-fg">Voluntários</h2>
             </div>
             <button
               type="button"
               onClick={handleFocusSearch}
-              className="text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
+              className="text-accent hover:text-accent-strong font-semibold text-sm transition-colors"
               disabled={!ministerioId}
             >
               + Adicionar Novo
@@ -511,7 +531,7 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
           </div>
 
           {!ministerioId ? (
-            <div className="text-center py-6 text-slate-500 text-sm bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <div className="text-center py-6 text-muted text-sm bg-surface-2 rounded-xl border border-dashed border-border">
               Por favor, selecione um Ministério para começar a adicionar voluntários.
             </div>
           ) : (
@@ -534,9 +554,9 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                           ? "Buscar em todos os membros cadastrados na igreja..."
                           : `Buscar voluntários vinculados ao Ministério de ${ministerioAtivo?.nome ?? ""}...`
                       }
-                      className="w-full h-11 pl-10 pr-4 rounded-md border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                      className="w-full h-11 pl-10 pr-4 rounded-md border border-border-strong bg-surface text-fg placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                     />
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle">
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
@@ -545,26 +565,26 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
 
                   {/* Dropdown de Resultados da busca */}
                   {showDropdown && searchTerm.trim() !== "" && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-surface border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {filteredMembers.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-slate-500">Nenhum membro disponível encontrado.</div>
+                        <div className="px-4 py-3 text-sm text-muted">Nenhum membro disponível encontrado.</div>
                       ) : (
                         filteredMembers.map((membro) => (
                           <button
                             key={membro.id}
                             type="button"
                             onClick={() => addVolunteer(membro)}
-                            className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-sm font-medium text-slate-800 flex items-center justify-between border-b border-slate-50 last:border-0"
+                            className="w-full text-left px-4 py-2.5 hover:bg-surface-2 text-sm font-medium text-fg flex items-center justify-between border-b border-surface-2 last:border-0"
                           >
                             <div className="flex flex-col">
                               <span>{membro.nome}</span>
                               {membro.funcaoPadrao && (
-                                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">
+                                <span className="text-[10px] text-subtle font-semibold uppercase tracking-wide">
                                   Função padrão: {membro.funcaoPadrao}
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs text-blue-600 font-semibold">Adicionar</span>
+                            <span className="text-xs text-accent font-semibold">Adicionar</span>
                           </button>
                         ))
                       )}
@@ -578,25 +598,25 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                     id="mostrarTodosMembros"
                     checked={mostrarTodosMembros}
                     onChange={(e) => setMostrarTodosMembros(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent cursor-pointer"
                   />
-                  <label htmlFor="mostrarTodosMembros" className="text-xs font-semibold text-slate-500 select-none cursor-pointer">
+                  <label htmlFor="mostrarTodosMembros" className="text-xs font-semibold text-muted select-none cursor-pointer">
                     Buscar voluntários de fora do Ministério (mostrar toda a lista da igreja)
                   </label>
                 </div>
               </div>
 
               {/* Tabela de Voluntários */}
-              <div className="overflow-x-auto border border-slate-100 rounded-xl">
+              <div className="overflow-x-auto border border-surface-2 rounded-xl">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100">
-                      <th className="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Membro</th>
-                      <th className="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Função</th>
-                      <th className="text-right px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ação</th>
+                    <tr className="bg-surface-2 border-b border-surface-2">
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-subtle uppercase tracking-wider">Membro</th>
+                      <th className="text-left px-5 py-3 text-[10px] font-bold text-subtle uppercase tracking-wider">Função</th>
+                      <th className="text-right px-5 py-3 text-[10px] font-bold text-subtle uppercase tracking-wider">Ação</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-surface-2">
                     {voluntarios.map((v) => {
                       const initials = v.nome
                         .split(" ")
@@ -605,14 +625,14 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                         .substring(0, 2)
                         .toUpperCase();
                       return (
-                        <tr key={v.id} className="hover:bg-slate-50/50 transition-colors">
+                        <tr key={v.id} className="hover:bg-surface-2/50 transition-colors">
                           {/* Avatar + Nome */}
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
+                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-accent to-accent text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
                                   {initials}
                               </div>
-                              <span className="font-semibold text-slate-900">{v.nome}</span>
+                              <span className="font-semibold text-fg">{v.nome}</span>
                             </div>
                           </td>
 
@@ -622,7 +642,7 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                               <select
                                 value={v.funcao}
                                 onChange={(e) => updateFunction(v.id, e.target.value)}
-                                className="w-full h-9 pl-3 pr-8 text-sm font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 cursor-pointer appearance-none"
+                                className="w-full h-9 pl-3 pr-8 text-sm font-semibold text-muted bg-surface-2 border border-border rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 cursor-pointer appearance-none"
                               >
                                 {funcoesDisponiveis.map((func) => (
                                   <option key={func} value={func}>{func}</option>
@@ -631,7 +651,7 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                                   <option value={v.funcao}>{v.funcao}</option>
                                 )}
                               </select>
-                              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-subtle">
                                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                                   <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                                 </svg>
@@ -644,7 +664,7 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                             <button
                               type="button"
                               onClick={() => removeVolunteer(v.id)}
-                              className="text-red-500 hover:text-red-700 font-semibold text-xs transition-colors"
+                              className="text-danger hover:text-danger font-semibold text-xs transition-colors"
                             >
                               Remover
                             </button>
@@ -654,7 +674,7 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
                     })}
                     {voluntarios.length === 0 && (
                       <tr>
-                        <td colSpan={3} className="px-5 py-8 text-center text-slate-400 text-sm">
+                        <td colSpan={3} className="px-5 py-8 text-center text-subtle text-sm">
                           Nenhum voluntário adicionado. Use o campo de busca acima para incluir membros deste ministério.
                         </td>
                       </tr>
@@ -667,20 +687,20 @@ export default function NovaEscala({ loaderData }: Route.ComponentProps) {
         </div>
 
         {/* Card 3: Observações */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+        <div className="bg-surface border border-border rounded-2xl p-6 shadow-xs space-y-5">
+          <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+            <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
               </svg>
             </div>
-            <h2 className="text-base font-extrabold text-slate-900">Observações</h2>
+            <h2 className="text-base font-extrabold text-fg">Observações</h2>
           </div>
 
           <textarea
             name="observacoes"
             rows={4}
-            className="w-full p-3 border border-slate-300 rounded-md bg-white text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 placeholder:text-slate-400 text-sm"
+            className="w-full p-3 border border-border-strong rounded-md bg-surface text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 placeholder:text-subtle text-sm"
             placeholder="Adicione notas, instruções especiais ou detalhes do repertório..."
           />
         </div>

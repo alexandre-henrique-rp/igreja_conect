@@ -11,7 +11,7 @@
  * `<fieldset>`.
  *
  * **Visual:** spacing confortável entre opções, focus visível com
- * ring-2 cyan-700 (alinhado ao design system).
+ * ring-2 accent (alinhado ao design system).
  *
  * @example
  *   <RadioGroup
@@ -75,7 +75,7 @@ export function RadioGroup({
 }: RadioGroupProps) {
   return (
     <fieldset className={className}>
-      <legend className="text-sm font-medium text-slate-700 mb-1">
+      <legend className="text-sm font-medium text-fg mb-1">
         {legend}
       </legend>
       <div className="space-y-1">
@@ -95,9 +95,9 @@ export function RadioGroup({
                 defaultChecked={value === undefined ? defaultValue === o.value : undefined}
                 checked={value !== undefined ? isChecked : undefined}
                 onChange={() => onChange?.(o.value)}
-                className="text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2"
+                className="text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               />
-              <span className="text-sm text-slate-700">{o.label}</span>
+              <span className="text-sm text-fg">{o.label}</span>
             </label>
           );
         })}

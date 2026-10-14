@@ -104,9 +104,14 @@ export type ListMembrosFilter = {
   isDiscipulador?: boolean;
 };
 
+export type MembroListado = MembroSafe & {
+  /** Até 3 vínculos de ministério (apenas nome) para os chips do card. */
+  ministerios: { ministerio: { nome: string } }[];
+};
+
 /** Resultado paginado. */
 export type ListMembrosResult = {
-  items: MembroSafe[];
+  items: MembroListado[];
   total: number;
   page: number;
   pageSize: number;
@@ -164,7 +169,14 @@ export async function listMembros(
   const [items, total] = await Promise.all([
     prisma.membro.findMany({
       where,
-      select: MEMBRO_SAFE_SELECT,
+      select: {
+        ...MEMBRO_SAFE_SELECT,
+        ministerios: {
+          select: { ministerio: { select: { nome: true } } },
+          orderBy: { ministerio: { nome: "asc" } },
+          take: 3,
+        },
+      },
       orderBy: { nome: "asc" },
       skip,
       take: pageSize,

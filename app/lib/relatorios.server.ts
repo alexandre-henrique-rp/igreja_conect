@@ -394,15 +394,15 @@ function formatCategoriaNome(categoria: string): string {
 
 function getCategoriaColor(categoria: string): string {
   const cores: Record<string, string> = {
-    DIZIMO: "bg-blue-500",
-    OFERTA: "bg-indigo-500",
-    CAMPANHA: "bg-emerald-500",
-    DESPESA_OPERACIONAL: "bg-red-400",
-    COMPRA_ESTOQUE: "bg-orange-400",
-    MANUTENCAO: "bg-amber-400",
-    TRANSFERENCIA: "bg-slate-300",
+    DIZIMO: "bg-accent",
+    OFERTA: "bg-accent",
+    CAMPANHA: "bg-success",
+    DESPESA_OPERACIONAL: "bg-danger",
+    COMPRA_ESTOQUE: "bg-info",
+    MANUTENCAO: "bg-warning",
+    TRANSFERENCIA: "bg-border-strong",
   };
-  return cores[categoria] || "bg-slate-400";
+  return cores[categoria] || "bg-subtle";
 }
 
 /**
@@ -542,8 +542,19 @@ export async function getContasAPagar(user: SessionUser): Promise<number> {
 export async function getProjecao3Meses(
   user: SessionUser,
   dataFim: Date,
-): Promise<Array<{ periodo: string; entradasCentavos: number; saidasCentavos: number; saldoCentavos: number }>> {
-  const tresMesesAtras = new Date(dataFim.getFullYear(), dataFim.getMonth() - 3, 1);
+): Promise<
+  Array<{
+    periodo: string;
+    entradasCentavos: number;
+    saidasCentavos: number;
+    saldoCentavos: number;
+  }>
+> {
+  const tresMesesAtras = new Date(
+    dataFim.getFullYear(),
+    dataFim.getMonth() - 3,
+    1,
+  );
   const where: Record<string, unknown> = {
     dataCompetencia: { gte: tresMesesAtras, lte: dataFim },
   };
@@ -555,17 +566,28 @@ export async function getProjecao3Meses(
     select: { tipo: true, valorCentavos: true, dataCompetencia: true },
   });
 
-  const entradas = lancamentos.filter((l) => l.tipo === "ENTRADA").reduce((s, l) => s + l.valorCentavos, 0);
-  const saidas = lancamentos.filter((l) => l.tipo === "SAIDA").reduce((s, l) => s + l.valorCentavos, 0);
+  const entradas = lancamentos
+    .filter((l) => l.tipo === "ENTRADA")
+    .reduce((s, l) => s + l.valorCentavos, 0);
+  const saidas = lancamentos
+    .filter((l) => l.tipo === "SAIDA")
+    .reduce((s, l) => s + l.valorCentavos, 0);
   const mediaEntradas = Math.round(entradas / 3);
   const mediaSaidas = Math.round(saidas / 3);
   const mediaSaldo = mediaEntradas - mediaSaidas;
 
-  const projecao: Array<{ periodo: string; entradasCentavos: number; saidasCentavos: number; saldoCentavos: number }> = [];
+  const projecao: Array<{
+    periodo: string;
+    entradasCentavos: number;
+    saidasCentavos: number;
+    saldoCentavos: number;
+  }> = [];
   for (let i = 1; i <= 3; i++) {
     const d = new Date(dataFim.getFullYear(), dataFim.getMonth() + i, 1);
     projecao.push({
-      periodo: d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", ""),
+      periodo: d
+        .toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+        .replace(".", ""),
       entradasCentavos: mediaEntradas,
       saidasCentavos: mediaSaidas,
       saldoCentavos: mediaSaldo,
@@ -581,7 +603,14 @@ export async function getFluxoMensal(
   user: SessionUser,
   dataInicio: Date,
   dataFim: Date,
-): Promise<Array<{ mes: string; entradasCentavos: number; saidasCentavos: number; saldoCentavos: number }>> {
+): Promise<
+  Array<{
+    mes: string;
+    entradasCentavos: number;
+    saidasCentavos: number;
+    saldoCentavos: number;
+  }>
+> {
   const where: Record<string, unknown> = {
     dataCompetencia: { gte: dataInicio, lte: dataFim },
   };
@@ -602,7 +631,12 @@ export async function getFluxoMensal(
     else mesesMap[key].saidas += l.valorCentavos;
   }
 
-  const resultado: Array<{ mes: string; entradasCentavos: number; saidasCentavos: number; saldoCentavos: number }> = [];
+  const resultado: Array<{
+    mes: string;
+    entradasCentavos: number;
+    saidasCentavos: number;
+    saldoCentavos: number;
+  }> = [];
   const meses = Object.keys(mesesMap).sort();
   let saldoAcumulado = 0;
   for (const key of meses) {
@@ -611,7 +645,10 @@ export async function getFluxoMensal(
     const saldo = mesesMap[key].entradas - mesesMap[key].saidas;
     saldoAcumulado += saldo;
     resultado.push({
-      mes: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toUpperCase(),
+      mes: d
+        .toLocaleDateString("pt-BR", { month: "short" })
+        .replace(".", "")
+        .toUpperCase(),
       entradasCentavos: mesesMap[key].entradas,
       saidasCentavos: mesesMap[key].saidas,
       saldoCentavos: saldoAcumulado,
@@ -636,20 +673,30 @@ export async function exportarDRECSV(
   lines.push(`Periodo,${dados.periodo.dataInicio} a ${dados.periodo.dataFim}`);
   lines.push("");
   lines.push("RESUMO");
-  lines.push(`Total de Entradas,${formatBRLFromCentsInline(dados.kpis.totalEntradasCentavos)}`);
-  lines.push(`Total de Saidas,${formatBRLFromCentsInline(dados.kpis.totalSaidasCentavos)}`);
-  lines.push(`Resultado Liquido,${formatBRLFromCentsInline(dados.kpis.resultadoCentavos)}`);
+  lines.push(
+    `Total de Entradas,${formatBRLFromCentsInline(dados.kpis.totalEntradasCentavos)}`,
+  );
+  lines.push(
+    `Total de Saidas,${formatBRLFromCentsInline(dados.kpis.totalSaidasCentavos)}`,
+  );
+  lines.push(
+    `Resultado Liquido,${formatBRLFromCentsInline(dados.kpis.resultadoCentavos)}`,
+  );
   lines.push("");
   lines.push("ENTRADAS POR TIPO");
   lines.push("Tipo,Valor,Percentual");
   for (const e of dados.entradasPorTipo) {
-    lines.push(`${csvEscape(e.tipo)},${formatBRLFromCentsInline(e.valorCentavos)},${e.percentual}%`);
+    lines.push(
+      `${csvEscape(e.tipo)},${formatBRLFromCentsInline(e.valorCentavos)},${e.percentual}%`,
+    );
   }
   lines.push("");
   lines.push("SAIDAS POR CATEGORIA");
   lines.push("Categoria,Transacoes,Valor,Percentual");
   for (const s of dados.saidasPorCategoria) {
-    lines.push(`${csvEscape(s.categoria)},${s.transacoes},${formatBRLFromCentsInline(s.valorCentavos)},${s.percentual}%`);
+    lines.push(
+      `${csvEscape(s.categoria)},${s.transacoes},${formatBRLFromCentsInline(s.valorCentavos)},${s.percentual}%`,
+    );
   }
 
   return BOM + lines.join("\r\n") + "\r\n";
@@ -671,10 +718,18 @@ export async function exportarBalanceteCSV(
   lines.push(`Periodo,${dados.periodo}`);
   lines.push("");
   lines.push("RESUMO");
-  lines.push(`Saldo Anterior,${formatBRLFromCentsInline(dados.kpis.saldoAnteriorCentavos)}`);
-  lines.push(`Entradas do Mes,${formatBRLFromCentsInline(dados.kpis.entradasCentavos)}`);
-  lines.push(`Saidas do Mes,${formatBRLFromCentsInline(dados.kpis.saidasCentavos)}`);
-  lines.push(`Saldo Atual,${formatBRLFromCentsInline(dados.kpis.saldoAtualCentavos)}`);
+  lines.push(
+    `Saldo Anterior,${formatBRLFromCentsInline(dados.kpis.saldoAnteriorCentavos)}`,
+  );
+  lines.push(
+    `Entradas do Mes,${formatBRLFromCentsInline(dados.kpis.entradasCentavos)}`,
+  );
+  lines.push(
+    `Saidas do Mes,${formatBRLFromCentsInline(dados.kpis.saidasCentavos)}`,
+  );
+  lines.push(
+    `Saldo Atual,${formatBRLFromCentsInline(dados.kpis.saldoAtualCentavos)}`,
+  );
   lines.push(`Variacao Entradas,${dados.kpis.variacaoEntradas}%`);
   lines.push(`Variacao Saidas,${dados.kpis.variacaoSaidas}%`);
   lines.push("");
@@ -682,11 +737,15 @@ export async function exportarBalanceteCSV(
   lines.push("Categoria,Entradas,Saidas,Saldo");
   for (const c of dados.categorias) {
     const saldo = c.entradasCentavos - c.saidasCentavos;
-    lines.push(`${csvEscape(c.nome)},${formatBRLFromCentsInline(c.entradasCentavos)},${formatBRLFromCentsInline(c.saidasCentavos)},${formatBRLFromCentsInline(saldo)}`);
+    lines.push(
+      `${csvEscape(c.nome)},${formatBRLFromCentsInline(c.entradasCentavos)},${formatBRLFromCentsInline(c.saidasCentavos)},${formatBRLFromCentsInline(saldo)}`,
+    );
   }
   lines.push("");
   lines.push("PROJECAO");
-  lines.push(`Saldo Estimado,${formatBRLFromCentsInline(dados.projecao.saldoEstimadoCentavos)}`);
+  lines.push(
+    `Saldo Estimado,${formatBRLFromCentsInline(dados.projecao.saldoEstimadoCentavos)}`,
+  );
   lines.push(`Tendencia,${dados.projecao.tendencia}`);
 
   return BOM + lines.join("\r\n") + "\r\n";
@@ -708,19 +767,27 @@ export async function exportarFluxoCaixaCSV(
   lines.push(`Periodo,${dados.periodo.dataInicio} a ${dados.periodo.dataFim}`);
   lines.push("");
   lines.push("RESUMO");
-  lines.push(`Saldo Inicial,${formatBRLFromCentsInline(dados.saldoInicialCentavos)}`);
-  lines.push(`Saldo Final,${formatBRLFromCentsInline(dados.saldoFinalCentavos)}`);
+  lines.push(
+    `Saldo Inicial,${formatBRLFromCentsInline(dados.saldoInicialCentavos)}`,
+  );
+  lines.push(
+    `Saldo Final,${formatBRLFromCentsInline(dados.saldoFinalCentavos)}`,
+  );
   lines.push("");
   lines.push("ENTRADAS");
   lines.push("Data,Descricao,Categoria,Valor");
   for (const e of dados.entradas) {
-    lines.push(`${e.data},${csvEscape(e.descricao)},${csvEscape(e.categoria)},${formatBRLFromCentsInline(e.valorCentavos)}`);
+    lines.push(
+      `${e.data},${csvEscape(e.descricao)},${csvEscape(e.categoria)},${formatBRLFromCentsInline(e.valorCentavos)}`,
+    );
   }
   lines.push("");
   lines.push("SAIDAS");
   lines.push("Data,Descricao,Categoria,Valor");
   for (const s of dados.saidas) {
-    lines.push(`${s.data},${csvEscape(s.descricao)},${csvEscape(s.categoria)},${formatBRLFromCentsInline(s.valorCentavos)}`);
+    lines.push(
+      `${s.data},${csvEscape(s.descricao)},${csvEscape(s.categoria)},${formatBRLFromCentsInline(s.valorCentavos)}`,
+    );
   }
 
   return BOM + lines.join("\r\n") + "\r\n";

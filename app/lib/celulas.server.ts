@@ -29,6 +29,9 @@ export type CelulaComLider = {
   endereco: string | null;
   diaSemana: string | null;
   horario: string | null;
+  regiao: string | null;
+  status: string;
+  capacidade: number | null;
   totalMembros: number;
 };
 
@@ -40,9 +43,13 @@ export type CriarCelulaInput = {
   endereco?: string;
   diaSemana?: string;
   horario?: string;
+  regiao?: string;
+  /** ATIVA | EM_FORMACAO | INATIVA (padrão: ATIVA). */
+  status?: string;
+  capacidade?: number;
 };
 
-/** Input para editar célula (parcial). */
+/** Input para editar célula (parcial). `""` limpa campos de texto; `0`/`null` limpa a capacidade. */
 export type EditarCelulaInput = Partial<CriarCelulaInput>;
 
 const CARGO_LEITURA = ["ADMIN", "PASTOR", "SECRETARIO", "FINANCEIRO", "LIDER_MINISTERIO"] as const;
@@ -74,6 +81,9 @@ const celulaComLiderSelect = {
   endereco: true,
   diaSemana: true,
   horario: true,
+  regiao: true,
+  status: true,
+  capacidade: true,
   lider: { select: { id: true, nome: true } },
   _count: { select: { membros: true } },
 } as const;
@@ -85,6 +95,9 @@ function formatCelula(raw: {
   endereco: string | null;
   diaSemana: string | null;
   horario: string | null;
+  regiao: string | null;
+  status: string;
+  capacidade: number | null;
   lider: { id: string; nome: string } | null;
   _count: { membros: number };
 }): CelulaComLider {
@@ -96,6 +109,9 @@ function formatCelula(raw: {
     endereco: raw.endereco,
     diaSemana: raw.diaSemana,
     horario: raw.horario,
+    regiao: raw.regiao,
+    status: raw.status,
+    capacidade: raw.capacidade,
     totalMembros: raw._count.membros,
   };
 }
@@ -184,6 +200,9 @@ export async function criarCelula(input: CriarCelulaInput, user: SessionUser): P
       endereco: input.endereco ?? null,
       diaSemana: input.diaSemana ?? null,
       horario: input.horario ?? null,
+      regiao: input.regiao ?? null,
+      status: input.status ?? "ATIVA",
+      capacidade: input.capacidade ?? null,
     },
     select: celulaComLiderSelect,
   });
@@ -227,11 +246,15 @@ export async function editarCelula(id: string, input: EditarCelulaInput, user: S
 
   const data: Record<string, unknown> = {};
   if (input.nome !== undefined) data.nome = input.nome;
-  if (input.descricao !== undefined) data.descricao = input.descricao;
-  if (input.liderId !== undefined) data.liderId = input.liderId;
-  if (input.endereco !== undefined) data.endereco = input.endereco;
-  if (input.diaSemana !== undefined) data.diaSemana = input.diaSemana;
-  if (input.horario !== undefined) data.horario = input.horario;
+  // "" limpa o campo (grava null); undefined mantém o valor atual.
+  if (input.descricao !== undefined) data.descricao = input.descricao || null;
+  if (input.liderId !== undefined) data.liderId = input.liderId || null;
+  if (input.endereco !== undefined) data.endereco = input.endereco || null;
+  if (input.diaSemana !== undefined) data.diaSemana = input.diaSemana || null;
+  if (input.horario !== undefined) data.horario = input.horario || null;
+  if (input.regiao !== undefined) data.regiao = input.regiao || null;
+  if (input.status !== undefined && input.status) data.status = input.status;
+  if (input.capacidade !== undefined) data.capacidade = input.capacidade || null;
 
   const raw = await prisma.celula.update({ where: { id }, data, select: celulaComLiderSelect });
   return formatCelula(raw);

@@ -21,3 +21,9 @@ coverage/
 .pnpm-store/
 .mimocode
 .harness
+
+# Artefatos de ferramentas/agentes (não versionar)
+.devin/
+.kiro/
+.playwright-mcp/
+test-results/

@@ -9,10 +9,7 @@ import { criarEvento } from "~/lib/eventos.server";
 import type { CriarEventoInput } from "~/lib/eventos.server";
 import { prisma } from "~/db/prisma.server";
 import { z } from "zod";
-import { Button } from "~/components/Button";
-import { Input } from "~/components/Input";
-import { Select } from "~/components/Select";
-import { Breadcrumb } from "~/components/Breadcrumb";
+import { Button, Input, Select, Breadcrumb, BreadcrumbItem, BreadcrumbSeparator } from "~/components/ds";
 
 const eventoSchema = z.object({
   titulo: z.string().min(1, "Título do evento é obrigatório"),
@@ -120,15 +117,14 @@ export default function NovoEvento({ loaderData, actionData }: Route.ComponentPr
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: "Eventos", href: "/app/eventos" },
-          { label: "Novo Evento" },
-        ]}
-      />
+      <Breadcrumb>
+        <BreadcrumbItem href="/app/eventos">Eventos</BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem current>Novo Evento</BreadcrumbItem>
+      </Breadcrumb>
 
       {errorMsg && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-semibold">
+        <div className="p-4 bg-danger-soft border border-danger-soft text-danger rounded-xl text-sm font-semibold">
           {errorMsg}
         </div>
       )}
@@ -138,14 +134,14 @@ export default function NovoEvento({ loaderData, actionData }: Route.ComponentPr
         <div className="lg:col-span-2 space-y-6">
           
           {/* Card 1: Informações Gerais */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="bg-surface border border-border rounded-2xl p-6 shadow-xs space-y-5">
+            <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+              <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                 </svg>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900">Informações Gerais</h2>
+              <h2 className="text-base font-extrabold text-fg">Informações Gerais</h2>
             </div>
 
             <div className="space-y-4">
@@ -160,7 +156,7 @@ export default function NovoEvento({ loaderData, actionData }: Route.ComponentPr
               />
 
               <div className="space-y-1">
-                <label htmlFor="descricao" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="descricao" className="block text-sm font-medium text-fg">
                   Descrição / Detalhes do Evento
                 </label>
                 <textarea
@@ -168,21 +164,21 @@ export default function NovoEvento({ loaderData, actionData }: Route.ComponentPr
                   name="descricao"
                   rows={4}
                   placeholder="Descreva as atividades do evento, cronograma de palestras ou informações para inscrição..."
-                  className="w-full p-3 rounded-md border border-slate-300 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700 focus-visible:ring-offset-2 text-sm text-slate-900"
+                  className="w-full p-3 rounded-md border border-border-strong placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 text-sm text-fg"
                 />
               </div>
             </div>
           </div>
 
           {/* Card 2: Local e Horário */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="bg-surface border border-border rounded-2xl p-6 shadow-xs space-y-5">
+            <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+              <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900">Programação e Local</h2>
+              <h2 className="text-base font-extrabold text-fg">Programação e Local</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -238,14 +234,14 @@ export default function NovoEvento({ loaderData, actionData }: Route.ComponentPr
         <div className="space-y-6">
           
           {/* Card 3: Classificação e Responsabilidade */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="p-2 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="bg-surface border border-border rounded-2xl p-6 shadow-xs space-y-5">
+            <div className="flex items-center gap-3 border-b border-surface-2 pb-4">
+              <div className="p-2 rounded-xl bg-accent-soft-2 text-accent flex items-center justify-center">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <h2 className="text-base font-extrabold text-slate-900">Classificação</h2>
+              <h2 className="text-base font-extrabold text-fg">Classificação</h2>
             </div>
 
             <div className="space-y-5">
@@ -275,7 +271,7 @@ export default function NovoEvento({ loaderData, actionData }: Route.ComponentPr
           <div className="flex items-center gap-3 pt-2">
             <Button
               type="submit"
-              variant="blue"
+              variant="primary"
               loading={isSubmitting}
               className="flex-1 h-11 text-sm font-semibold"
             >
