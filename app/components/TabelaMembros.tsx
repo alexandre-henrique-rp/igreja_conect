@@ -1,6 +1,5 @@
 import { Link } from "react-router";
-import { Avatar, Icon } from "~/components/ds";
-import { cn } from "~/lib/cn";
+import { Avatar, Badge, Chip, Icon } from "~/components/ds";
 
 /**
  * Item de membro para a listagem.
@@ -59,22 +58,15 @@ function MemberAvatar({ avatarUrl, nome }: { avatarUrl?: string | null; nome: st
   return <Avatar name={nome} src={avatarUrl ?? undefined} size={40} />;
 }
 
-/** Badge visual de Status. */
-function BadgeStatus({ status }: { status: "Ativo" | "Pendente" | "Inativo" }) {
-  const styles = {
-    Ativo: "bg-success-soft text-success border-success-soft",
-    Pendente: "bg-warning-soft text-warning border-warning-soft",
-    Inativo: "bg-danger-soft text-danger border-danger-soft",
-  }[status];
+const STATUS_TONE = {
+  Ativo: "success",
+  Pendente: "warning",
+  Inativo: "danger",
+} as const;
 
-  return (
-    <span className={cn(
-      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
-      styles
-    )}>
-      {status}
-    </span>
-  );
+/** Badge visual de Status (primitivo do DS; texto + cor). */
+function BadgeStatus({ status }: { status: "Ativo" | "Pendente" | "Inativo" }) {
+  return <Badge tone={STATUS_TONE[status]}>{status}</Badge>;
 }
 
 /** Renderiza a grade de membros no padrão `member-grid` do Design System. */
@@ -92,7 +84,7 @@ export function TabelaMembros({ items, canEdit, view = "grid" }: TabelaMembrosPr
                   <h3 className="member-name">
                     <Link
                       to={`/app/membros/${m.id}`}
-                      className="hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
+                      className="rounded transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {m.nome}
                     </Link>
@@ -104,9 +96,8 @@ export function TabelaMembros({ items, canEdit, view = "grid" }: TabelaMembrosPr
             </div>
 
             <div className="member-chips">
-              <span className="chip">{TIPO_LABELS[m.tipo]}</span>
               {m.ministerios?.slice(0, 2).map((ministerio) => (
-                <span key={ministerio.nome} className="chip">{ministerio.nome}</span>
+                <Chip key={ministerio.nome}>{ministerio.nome}</Chip>
               ))}
             </div>
 
@@ -117,14 +108,14 @@ export function TabelaMembros({ items, canEdit, view = "grid" }: TabelaMembrosPr
               {m.discipulador?.nome && <span><Icon name="users" size="sm" />Disc. {m.discipulador.nome}</span>}
             </div>
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="member-actions">
               <Link to={`/app/membros/${m.id}`} className="card-link">
                 Ver detalhes <Icon name="chevron-right" size="sm" />
               </Link>
               {canEdit && (
                 <Link
                   to={`/app/membros/${m.id}/editar`}
-                  className="text-xs font-bold text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
+                  className="member-edit"
                 >
                   Editar
                 </Link>

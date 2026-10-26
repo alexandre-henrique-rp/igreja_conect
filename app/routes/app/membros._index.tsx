@@ -187,13 +187,12 @@ export default function MembrosIndex({ loaderData }: Route.ComponentProps) {
     <div className="members-page space-y-6" data-od-id="members-list-page">
       <PageHeader
         className="page-header"
-        eyebrow="Pessoas"
         title="Membros"
         description="Gerencie todos os membros da congregação."
         actions={
           <>
             <Button type="button" variant="secondary" size="md" onClick={exportCsv}>
-              <Icon name="download" size="sm" />
+              <Icon name="download" size="sm" className="inline-block align-[-3px] mr-2" />
               Exportar CSV
             </Button>
             <Button as={Link} to="/app/membros/novo" variant="primary" size="md">
@@ -218,10 +217,11 @@ export default function MembrosIndex({ loaderData }: Route.ComponentProps) {
           role="search"
           aria-label="Pesquisar membros"
         >
-          <Icon name="search" size="sm" />
+          <Icon name="search" size="sm" className="icon" />
           <input
             className="input"
             type="search"
+            aria-label="Buscar membros"
             name="q"
             placeholder="Buscar por nome, email..."
             defaultValue={filterValues.q}
@@ -325,7 +325,7 @@ export default function MembrosIndex({ loaderData }: Route.ComponentProps) {
           </CardBody>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <TabelaMembros items={items} canEdit={true} view={view} />
           <Pagination
             current={page}

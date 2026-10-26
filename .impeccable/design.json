@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-14T00:00:00.000Z",
+  "title": "Design System: Igreja Conect",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Índigo de Ação", "canonical": "oklch(48.8% 0.246 275)" },
+      "accent-strong": { "role": "primary", "displayName": "Índigo Profundo", "canonical": "oklch(42.8% 0.235 275)" },
+      "accent-soft": { "role": "primary", "displayName": "Névoa Índigo", "canonical": "oklch(94.5% 0.055 275)" },
+      "success": { "role": "secondary", "displayName": "Verde Sucesso", "canonical": "oklch(52.5% 0.145 162)" },
+      "warning": { "role": "secondary", "displayName": "Âmbar Atenção", "canonical": "oklch(60% 0.14 72)" },
+      "danger": { "role": "secondary", "displayName": "Rosa Perigo", "canonical": "oklch(55% 0.19 28)" },
+      "info": { "role": "secondary", "displayName": "Azul Informação", "canonical": "oklch(53% 0.19 255)" },
+      "fg": { "role": "neutral", "displayName": "Tinta", "canonical": "oklch(20.8% 0.035 260)" },
+      "bg": { "role": "neutral", "displayName": "Papel", "canonical": "oklch(98.5% 0.006 250)" },
+      "surface": { "role": "neutral", "displayName": "Branco de Cartão", "canonical": "oklch(100% 0 0)" },
+      "border": { "role": "neutral", "displayName": "Linha Fina", "canonical": "oklch(90.8% 0.018 250)" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Landing e telas de entrada." },
+      "headline": { "displayName": "Headline", "purpose": "Título de página (PageHeader)." },
+      "body": { "displayName": "Body", "purpose": "Texto corrido e campos." },
+      "label": { "displayName": "Label", "purpose": "Eyebrows e cabeçalhos de tabela." }
+    },
+    "shadows": [
+      { "name": "rest", "value": "0 1px 2px oklch(20.8% 0.035 260 / 0.04)", "purpose": "Cards em repouso." },
+      { "name": "hover", "value": "0 8px 20px oklch(20.8% 0.035 260 / 0.08)", "purpose": "Card interativo ao passar o mouse." },
+      { "name": "modal", "value": "0 20px 50px oklch(20.8% 0.035 260 / 0.15)", "purpose": "Diálogos." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "180ms ease-out", "purpose": "Transição padrão de cor, fundo e sombra." }
+    ],
+    "breakpoints": [
+      { "name": "tablet", "value": "1050px" },
+      { "name": "mobile", "value": "780px" },
+      { "name": "sidebar-fixa", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal da área.",
+      "html": "<button class=\"ds-btn-primary\">Salvar</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 16px; font-weight: 500; color: #fff; background: var(--color-accent); border: 1px solid transparent; border-radius: 12px; box-shadow: 0 1px 2px oklch(20.8% 0.035 260 / 0.08); transition: background 180ms ease-out; } .ds-btn-primary:hover { background: var(--color-accent-strong); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Botão secundário",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação neutra ao lado da principal.",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 16px; font-weight: 500; color: var(--color-fg); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: 12px; transition: background 180ms ease-out; } .ds-btn-secondary:hover { background: var(--color-surface-2); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo com rótulo.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Nome</span><input class=\"ds-input\" placeholder=\"Maria Souza\" /></label>",
+      "css": ".ds-field { display: grid; gap: 6px; } .ds-field-label { font-size: 12px; font-weight: 700; color: var(--color-fg); } .ds-input { height: 44px; padding: 0 12px; font-size: 14px; color: var(--color-fg); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: 12px; } .ds-input::placeholder { color: var(--color-subtle); } .ds-input:hover { border-color: var(--color-muted); } .ds-input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px oklch(48.8% 0.246 275 / 0.3); }"
+    },
+    {
+      "name": "Badge de status",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Estado em pílula, fundo suave com texto forte.",
+      "html": "<span class=\"ds-badge\">Ativo</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; font-size: 11px; font-weight: 700; line-height: 1; color: var(--color-success); background: var(--color-success-soft); border-radius: 999px; white-space: nowrap; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Container padrão com borda fina; a variante interativa sobe ao passar o mouse.",
+      "html": "<div class=\"ds-card\"><strong>Membros ativos</strong><p>42 pessoas</p></div>",
+      "css": ".ds-card { padding: 20px; color: var(--color-fg); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; box-shadow: 0 1px 2px oklch(20.8% 0.035 260 / 0.04); transition: transform 200ms, border-color 200ms, box-shadow 200ms; } .ds-card:hover { transform: translateY(-2px); border-color: oklch(48.8% 0.246 275 / 0.6); box-shadow: 0 8px 20px oklch(20.8% 0.035 260 / 0.08); } .ds-card p { margin: 4px 0 0; color: var(--color-muted); }"
+    },
+    {
+      "name": "Item de navegação",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Link da sidebar; o ativo usa a Névoa Índigo.",
+      "html": "<a class=\"ds-nav-link\" aria-current=\"page\">Membros</a>",
+      "css": ".ds-nav-link { display: flex; align-items: center; min-height: 36px; padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--color-muted); border-radius: 8px; transition: color 180ms ease-out, background 180ms ease-out; } .ds-nav-link:hover { color: var(--color-fg); background: var(--color-surface-3); } .ds-nav-link[aria-current=\"page\"] { color: var(--color-accent-strong); background: var(--color-accent-soft); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Balcão de Acolhimento",
+    "overview": "O Igreja Conect é uma ferramenta de trabalho para quem cuida de uma igreja. O sistema recebe a pessoa como um balcão de acolhimento: tudo à mão, claro, sem exigir que ela seja técnica. O humor é simpático e objetivo, e a simpatia vem da linguagem, dos cantos arredondados e de respostas suaves ao toque.",
+    "keyCharacteristics": [
+      "Superfícies claras e planas, separadas por bordas finas.",
+      "Um acento único (índigo) e três cores de estado em pares forte/suave.",
+      "Cantos generosos (12 a 16px) e controles de 44px de altura.",
+      "Tema claro e escuro com a mesma estrutura.",
+      "Tipografia Inter, com títulos firmes."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "O índigo é a única cor de ação; use-o em uma ação principal por área.", "section": "colors" },
+      { "name": "The Paired State Rule", "body": "Toda cor de estado vem com seu fundo suave e, quando importante, também com texto ou ícone.", "section": "colors" },
+      { "name": "The Token Only Rule", "body": "Nenhuma cor literal do Tailwind fora dos primitivos; cor nova vira token em app/app.css.", "section": "colors" },
+      { "name": "The Tabular Numbers Rule", "body": "Valores monetários, contagens e KPIs usam números tabulares.", "section": "typography" },
+      { "name": "The Responds-To-Touch Rule", "body": "Sombra e movimento aparecem como resposta a hover, foco e pressão, não como decoração em repouso.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do usar os primitivos de app/components/ds/ e tokens semânticos; cor nova entra como token.",
+      "Do manter alvos de toque de pelo menos 44px nos controles principais.",
+      "Do deixar a linguagem da interface calorosa e direta, em português.",
+      "Do dar resposta suave a hover e foco, respeitando prefers-reduced-motion.",
+      "Do manter o tema escuro com a mesma estrutura, apenas trocando os valores dos tokens."
+    ],
+    "donts": [
+      "Don't usar cores literais do Tailwind fora dos primitivos.",
+      "Don't usar o índigo em mais de uma ação principal por área.",
+      "Don't depender só de cor para comunicar estado.",
+      "Don't criar novo botão, card ou badge fora do DS; use variantes.",
+      "Don't usar componentes de app/components/_old/ em código novo."
+    ]
+  }
+}

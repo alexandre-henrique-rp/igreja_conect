@@ -1887,7 +1887,7 @@ html[data-theme="dark"] {
   margin-bottom: 18px;
   background: color-mix(in oklch, var(--color-surface) 94%, transparent);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow-x: auto;
   scrollbar-width: none;
   backdrop-filter: blur(12px);
@@ -1914,25 +1914,122 @@ html[data-theme="dark"] {
 
 .filter-bar .search .icon {
   position: absolute;
-  top: 11px;
+  top: 14px;
   left: 12px;
   color: var(--color-subtle);
 }
 
 .filter-bar .search .input {
-  height: 36px;
-  min-height: 36px;
-  padding-left: 36px;
+  height: 44px;
+  min-height: 44px;
+  padding-left: 38px;
+  font-size: 14px;
 }
 
 .filter-bar .select {
-  min-width: 150px;
-  min-height: 36px;
-  flex: 0 0 150px;
+  min-width: 160px;
+  min-height: 44px;
+  flex: 0 0 160px;
+  padding-right: 8px;
+  font-size: 14px;
+  text-overflow: ellipsis;
+}
+
+.filter-clear {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  transition: background 180ms ease-out;
+}
+
+.filter-clear:hover {
+  background: var(--color-accent-soft);
+}
+
+.filter-clear:focus-visible,
+.filter-bar .view-toggle button:focus-visible,
+.member-edit:focus-visible,
+.member-grid .card-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .filter-bar .view-toggle {
+  display: inline-flex;
   flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.filter-bar .view-toggle button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 36px;
+  color: var(--color-muted);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 180ms ease-out, color 180ms ease-out;
+}
+
+.filter-bar .view-toggle button:hover {
+  color: var(--color-fg);
+  background: var(--color-surface-3);
+}
+
+.filter-bar .view-toggle button.active {
+  color: var(--color-accent-strong);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-rest);
+}
+
+.members-page .page-header,
+.members-page .filter-bar {
+  margin-bottom: 24px;
+}
+
+.member-chips:empty {
+  display: none;
+}
+
+.member-grid[data-view="list"] .member-chips:empty {
+  display: flex;
+}
+
+.member-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.member-actions .card-link,
+.member-edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.member-edit {
+  padding: 0 8px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  transition: color 180ms ease-out, background 180ms ease-out;
+}
+
+.member-edit:hover {
+  color: var(--color-accent-strong);
+  background: var(--color-accent-soft);
 }
 
 @media (max-width: 1100px) and (min-width: 781px) {
@@ -1975,7 +2072,14 @@ html[data-theme="dark"] {
 }
 
 .member-card {
+  display: flex;
+  flex-direction: column;
   padding: 18px;
+}
+
+.member-top + .member-contact,
+.member-chips:empty + .member-contact {
+  margin-top: 14px;
 }
 
 .member-top {
@@ -1994,7 +2098,7 @@ html[data-theme="dark"] {
 
 .member-name {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2002,16 +2106,16 @@ html[data-theme="dark"] {
 
 .member-role {
   margin-top: 2px;
-  color: var(--color-subtle);
-  font-size: 11px;
+  color: var(--color-muted);
+  font-size: 12px;
 }
 
 .member-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  min-height: 26px;
-  margin: 18px 0 14px;
+  gap: 6px;
+  min-height: 22px;
+  margin: 14px 0 14px;
 }
 
 .member-contact {
@@ -2027,7 +2131,7 @@ html[data-theme="dark"] {
   gap: 7px;
   overflow: hidden;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2043,6 +2147,25 @@ html[data-theme="dark"] {
 }
 
 @media (max-width: 780px) {
+  .members-page .page-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .filter-bar .search {
+    flex-basis: 100%;
+  }
+
+  .filter-bar .select {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .filter-bar .view-toggle {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
   .member-form-stepper {
     gap: 14px;
     overflow-x: auto;

@@ -1,0 +1,46 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": "CEL-DESIGN-001",
+      "severity": "MEDIUM",
+      "title": "A matriz de exclusão não está realmente centralizada",
+      "location": "celulas-design.md §4; app/lib/celulas.server.ts:279-286",
+      "problem": "O design declara CELULAS_DELETE_CARGOS como matriz canônica, mas só define assertCanSeeCelulas, assertCanManageCelulas e canManageCelulas. Não especifica um helper de exclusão nem a substituição do if inline ADMIN/PASTOR no service, deixando uma segunda fonte de verdade de autorização.",
+      "fix": "Definir CELULAS_DELETE_CARGOS junto com canDeleteCelulas/assertCanDeleteCelulas em rbac.server.ts e chamar o assert em excluirCelula; derivar qualquer CTA de exclusão do mesmo helper. Alternativamente, remover esse conjunto da alegada matriz centralizada e declarar exclusão explicitamente fora dela."
+    },
+    {
+      "id": "CEL-DESIGN-002",
+      "severity": "MEDIUM",
+      "title": "O contrato de liderId no service permanece ambíguo",
+      "location": "celulas-design.md §2; app/lib/celulas.server.ts:37-54",
+      "problem": "A obrigatoriedade é definida para o Zod, mas o design não fecha CriarCelulaInput/EditarCelulaInput. Hoje a criação aceita liderId opcional e a edição é Partial<CriarCelulaInput>; a política exige semânticas distintas para undefined, null, vazio e substituição do líder.",
+      "fix": "Definir as assinaturas e a guarda server-side. Por exemplo, CriarCelulaInput deve ter liderId: string; EditarCelulaInput deve declarar explicitamente undefined = manter, string = substituir e null/\"\"/whitespace = rejeitar, nunca limpar, com os erros/status correspondentes."
+    },
+    {
+      "id": "CEL-DESIGN-003",
+      "severity": "MEDIUM",
+      "title": "O fallback de foco pode ocorrer enquanto o main está inert",
+      "location": "celulas-design.md §5, Foco/Escape/resize; app/routes/app.tsx:49-60; app/components/MobileNavigation.tsx:17-44",
+      "problem": "#main-content fica dentro de backgroundRef, que recebe inert enquanto o drawer está aberto. O design manda focar esse fallback no cleanup do drawer, mas não define a ordem em relação ao efeito que remove inert; o navegador pode recusar o foco após 1023→1024px.",
+      "fix": "Especificar a ordem: restaurar overflow/listeners imediatamente e agendar o foco após inert=false, por requestAnimationFrame ou callback do AppShell, revalidando isConnected e visibilidade. O teste deve afirmar activeElement em #main-content e que ele não está inert após o resize."
+    },
+    {
+      "id": "CEL-DESIGN-004",
+      "severity": "MEDIUM",
+      "title": "take: 500 não garante que o líder atual apareça na edição",
+      "location": "celulas-design.md §3 e tabela de entradas; loaders celulas.novo.tsx/celulas.$id.editar.tsx",
+      "problem": "Mesmo com o where de edição incluindo o líder atual, orderBy nome + take 500 pode cortá-lo quando houver mais de 500 candidatos e ele estiver depois dos primeiros 500. Isso contradiz a garantia de que o líder atual elegível será incluído e deixa o defaultValue sem option correspondente.",
+      "fix": "Definir a política do limite: buscar o líder atual elegível em separado e mesclá-lo/deduplicá-lo na lista, ou remover o limite no fluxo de edição e adotar busca/paginação. Testar um líder atual ordenado após a posição 500."
+    },
+    {
+      "id": "CEL-DESIGN-005",
+      "severity": "MEDIUM",
+      "title": "O formato de meta.target do P2002 não foi verificado no adapter real",
+      "location": "celulas-design.md §2, Implementação do service e concorrência; §Testabilidade",
+      "problem": "O contrato de erro depende de distinguir liderId, nome e alvo desconhecido em error.meta.target, mas o código atual só verifica code === P2002 e não há evidência no workspace do formato produzido pelo Prisma 7 com @prisma/adapter-better-sqlite3. Mocks podem não revelar o comportamento de uma corrida real no SQLite.",
+      "fix": "Exigir teste de integração com o Prisma/adapter real, provocando duplicidade de nome e de liderId e registrando a forma de meta.target. Manter o type guard string/array e o relançamento de alvo desconhecido; se o adapter não fornecer o alvo de forma confiável, usar reconsulta determinística documentada em vez de depender só do metadata."
+    }
+  ],
+  "reviewDoc": "/home/kingdev/Documentos/igreja_conect/.agents/tasks/celulas-design-review.md"
+}

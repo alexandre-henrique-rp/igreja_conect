@@ -228,7 +228,7 @@ Toda decisão de acesso passa por 3 camadas obrigatórias:
 - **PII em log:** proibido. Use `safeLog({ userId, event, resourceId })`, nunca `safeLog({ email, telefone, cpf })`.
 - **Soft-delete LGPD:** `Upload.deletedAt` (art. 18, VI). Hard-delete via job agendado em `retentionUntil`.
 - **Dízimos** (RN-MEM-03): restritos a `ADMIN`, `PASTOR`, `FINANCEIRO`. UI esconde a aba + loader bloqueia + service revalida.
-- **Rate limit:** `app/lib/rate-limit.server.ts` no `/login` (5 tentativas / 15min / IP).
+- **Rate limit:** desativado no `/login` (ver RN-AUTH-03). Falhas de login ficam apenas na auditoria.
 - **AuditLog** é append-only. Não deletar registros.
 
 **Não coletamos (LGPD, minimização):** CPF, RG, dados fiscais, dados de saúde, opinião política/religiosa detalhada.

@@ -1,16 +1,24 @@
 {
     "cSpell.words": [
         "Conect",
+        "Conversao",
+        "descricao",
         "expandível",
         "faststart",
         "lancamento",
         "Lancamento",
         "lancamentos",
         "libx",
+        "LIDER",
+        "MINISTERIO",
+        "MINISTERIOS",
         "movflags",
+        "oklch",
         "periodo",
+        "profissao",
         "relatorios",
         "TOCTOU",
+        "topbar",
         "transferencias"
     ],
     "css.lint.unknownAtRules": "ignore"

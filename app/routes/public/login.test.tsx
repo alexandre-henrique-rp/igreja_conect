@@ -1,7 +1,7 @@
 /**
  * Teste de app/routes/public/login.tsx (S01-T03).
  *
- * Cobre o action de login integrado: rate limit, validação Zod, verifyCredentials,
+ * Cobre o action de login integrado: validação Zod, verifyCredentials,
  * createSession, set-cookie, redirect.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
@@ -165,8 +165,8 @@ describe("login — action", () => {
     expect(headers.get("Location")).toBe("/app");
   });
 
-  it("3 falhas do mesmo IP → 4ª chamada retorna 429", async () => {
-    for (let i = 0; i < 3; i++) {
+  it("várias falhas do mesmo IP NÃO bloqueiam: a senha correta ainda entra", async () => {
+    for (let i = 0; i < 6; i++) {
       const body = new URLSearchParams({ email: "x@x.com", senha: "errada-999" });
       const req = new Request("http://localhost/login", {
         method: "POST",
@@ -181,7 +181,7 @@ describe("login — action", () => {
       expect(status).toBe(401);
     }
     const body = new URLSearchParams({ email: "admin-test@igreja.local", senha: "senha-correta-123" });
-    const blockedReq = new Request("http://localhost/login", {
+    const okReq = new Request("http://localhost/login", {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
@@ -189,8 +189,8 @@ describe("login — action", () => {
       },
       body: body.toString(),
     });
-    const blocked = await action({ request: blockedReq } as Parameters<typeof action>[0]);
-    const { status } = unwrap(blocked);
-    expect(status).toBe(429);
+    const ok = await action({ request: okReq } as Parameters<typeof action>[0]);
+    const { status } = unwrap(ok);
+    expect(status).toBe(302);
   });
 });

@@ -295,7 +295,7 @@ export function FormLogin({
 
             <div className="flex items-center justify-between pt-1">
               <Checkbox
-                label="Lembrar de mim"
+                label="Lembrar de mim por 30 dias"
                 name="manterConectado"
                 value="true"
               />

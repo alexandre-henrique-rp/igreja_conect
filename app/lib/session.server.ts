@@ -16,6 +16,14 @@ export const SLIDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** TTL absoluto (teto): 30 dias. Após isso a sessão morre definitivamente. */
 export const ABSOLUTE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
+/**
+ * Sessão SEM "lembrar de mim": TTL deslizante de 12h e teto de 24h no
+ * servidor. O cookie correspondente é de sessão do navegador (sem
+ * `Max-Age`), ou seja, some quando o navegador é fechado.
+ */
+export const SHORT_SLIDING_TTL_MS = 12 * 60 * 60 * 1000;
+export const SHORT_ABSOLUTE_TTL_MS = 24 * 60 * 60 * 1000;
+
 /** Nome do cookie httpOnly que armazena o session id. */
 export const SESSION_COOKIE_NAME = "__session";
 
@@ -51,11 +59,13 @@ export type SessionUser = {
  *
  * Para testes, passe `prismaTest` como segundo argumento para usar o DB de teste.
  *
- * @description Persiste registro em `Session` com `expiresAt = now + 7d`
- *   e `absoluteExpiresAt = now + 30d`.
+ * @description Persiste registro em `Session`. Com `remember` (padrão):
+ *   `expiresAt = now + 7d` e `absoluteExpiresAt = now + 30d`. Sem `remember`
+ *   ("lembrar de mim" desmarcado): `now + 12h` e `now + 24h`.
  * @param {string} membroId - UUID do membro que está logando.
  * @param {typeof import("../../generated/prisma/client").PrismaClient} [prismaClient] -
  *   PrismaClient opcional para injeção de dependência (testes).
+ * @param {{ remember?: boolean }} [options] - `remember: false` cria sessão curta.
  * @returns {Promise<string>} `sid` (UUID) que vai no cookie.
  * @example
  *   const sid = await createSession(membro.id);
@@ -63,18 +73,41 @@ export type SessionUser = {
  */
 export async function createSession(
   membroId: string,
-  prismaClient?: PrismaClient
+  prismaClient?: PrismaClient,
+  options: { remember?: boolean } = {}
 ): Promise<string> {
   const p = prismaClient ?? prisma;
+  const remember = options.remember ?? true;
   const now = Date.now();
   const sess = await p.session.create({
     data: {
       membroId,
-      expiresAt: new Date(now + SLIDING_TTL_MS),
-      absoluteExpiresAt: new Date(now + ABSOLUTE_TTL_MS),
+      expiresAt: new Date(now + (remember ? SLIDING_TTL_MS : SHORT_SLIDING_TTL_MS)),
+      absoluteExpiresAt: new Date(now + (remember ? ABSOLUTE_TTL_MS : SHORT_ABSOLUTE_TTL_MS)),
     },
   });
   return sess.id;
+}
+
+/**
+ * Gera o header `Set-Cookie` da sessão conforme o "lembrar de mim".
+ *
+ * - `remember: true` → cookie persistente de 30 dias (igual ao teto absoluto).
+ * - `remember: false` → cookie de sessão do navegador (sem `Max-Age`/`Expires`).
+ *
+ * @param {string} sid - Id da sessão retornado por `createSession`.
+ * @param {boolean} remember - Se o usuário marcou "lembrar de mim".
+ * @returns {Promise<string>} Valor do header `Set-Cookie`.
+ * @example
+ *   headers: { "Set-Cookie": await serializeSessionCookie(sid, true) }
+ */
+export function serializeSessionCookie(sid: string, remember: boolean): Promise<string> {
+  return sessionCookie.serialize(
+    sid,
+    remember
+      ? { maxAge: ABSOLUTE_TTL_MS / 1000 }
+      : { maxAge: undefined, expires: undefined }
+  );
 }
 
 /**

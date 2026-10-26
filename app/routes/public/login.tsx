@@ -3,9 +3,12 @@
  *
  * Server-side:
  * - `loader` redireciona para `/app` se já autenticado.
- * - `action` valida (Zod) → rate limit (5/15min/IP) → verifyCredentials
- *   (bcrypt + mensagem unificada anti-enumeração) → createSession +
- *   set-cookie httpOnly + redirect (para `?next` ou `/app`).
+ * - `action` valida (Zod) → verifyCredentials (bcrypt + mensagem unificada
+ *   anti-enumeração) → createSession + set-cookie httpOnly + redirect
+ *   (para `?next` ou `/app`). Não há bloqueio por tentativas/IP: as falhas
+ *   apenas são registradas na auditoria.
+ * - "Lembrar de mim" (`manterConectado`): marcado = cookie persistente de
+ *   30 dias; desmarcado = cookie de sessão do navegador + sessão curta (24h).
  *
  * **LGPD:** loga apenas `userId`/`action`/`result` via `safeLog` —
  * email e senha nunca tocam o logger.
@@ -18,9 +21,8 @@ import type { Route } from "./+types/login";
 import { data, redirect } from "react-router";
 import { verifyCredentials } from "~/lib/auth.server";
 import { LoginSchema } from "~/lib/schemas/auth";
-import { checkRateLimit } from "~/lib/rate-limit.server";
 import { safeLog, logAction } from "~/lib/audit.server";
-import { createSession, getUserFromRequest, sessionCookie } from "~/lib/session.server";
+import { createSession, getUserFromRequest, serializeSessionCookie } from "~/lib/session.server";
 
 /**
  * Loader: redireciona para `/app` (ou `?next`) se o visitante já tem
@@ -40,19 +42,23 @@ export async function loader({ request }: Route.LoaderArgs) {
  * Action: processa POST do `<FormLogin>`.
  *
  * Fluxo (em ordem):
- * 1. Rate limit por IP (chave: "login"). Se bloqueado → 429.
- * 2. Zod `LoginSchema.safeParse(formData)`. Se falhar → 422 com
+ * 1. Zod `LoginSchema.safeParse(formData)`. Se falhar → 422 com
  *    `fieldErrors` (PT-BR) por campo.
- * 3. `verifyCredentials(email, senha)`. Se null → 401 com
+ * 2. `verifyCredentials(email, senha)`. Se null → 401 com
  *    `formError: "E-mail ou senha incorretos."` (unificado).
- * 4. Sucesso: `createSession(user.id)`, `Set-Cookie __session=...` com
- *    flags estritas (httpOnly, sameSite=lax, secure em prod, path=/,
- *    maxAge=7d), redirect para `?next` (validado) ou `/app`.
+ * 3. Sucesso: `createSession(user.id, { remember })` e `Set-Cookie __session`
+ *    com flags estritas (httpOnly, sameSite=lax, secure em prod, path=/):
+ *    "lembrar de mim" marcado → persistente por 30 dias; desmarcado →
+ *    cookie de sessão do navegador. Redireciona para `?next` (validado)
+ *    ou `/app`.
+ *
+ * Não há limite de tentativas nem bloqueio de IP. Toda falha continua sendo
+ * registrada na auditoria (`login.invalid_*`) com o IP em hash.
  */
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
 
-  // Identifica o IP para rate limit.
+  // IP apenas para auditoria (LGPD: `logAction` grava só o hash).
   // Prioridade: x-forwarded-for > x-real-ip > clientIP (enviado pelo frontend) > "unknown"
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -60,34 +66,13 @@ export async function action({ request }: Route.ActionArgs) {
     (formData.get("clientIP") as string) ??
     "unknown";
 
-  // 1. Rate limit
-  const rl = checkRateLimit(ip);
-  if (!rl.allowed) {
-    safeLog({
-      action: "login",
-      result: "rate_limited",
-      ip,
-      timestamp: Date.now(),
-    });
-    await logAction({
-      event: "login.rate_limited",
-      ip,
-      details: JSON.stringify({ reason: "rate_limit" }),
-    });
-    return data(
-      { formError: "Muitas tentativas. Tente novamente em 1 hora." },
-      { status: 429, headers: { "Retry-After": String(rl.retryAfter ?? 60) } }
-    );
-  }
-
-  // 2. Parse + Zod
+  // 1. Parse + Zod
   const parsed = LoginSchema.safeParse({
     email: formData.get("email"),
     senha: formData.get("senha"),
     manterConectado: formData.get("manterConectado") ?? undefined,
   });
   if (!parsed.success) {
-    checkRateLimit(ip, "fail");
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
       const key = String(issue.path[0] ?? "");
@@ -107,10 +92,9 @@ export async function action({ request }: Route.ActionArgs) {
     return data({ fieldErrors }, { status: 422 });
   }
 
-  // 3. verifyCredentials (mensagem unificada)
+  // 2. verifyCredentials (mensagem unificada)
   const user = await verifyCredentials(parsed.data.email, parsed.data.senha);
   if (!user) {
-    checkRateLimit(ip, "fail");
     safeLog({
       action: "login",
       result: "invalid_credentials",
@@ -127,9 +111,9 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
 
-  // 4. Sucesso: cria sessão, seta cookie, redireciona
-  const sid = await createSession(user.id);
-  checkRateLimit(ip, "success");
+  // 3. Sucesso: cria sessão, seta cookie, redireciona
+  const remember = parsed.data.manterConectado === true;
+  const sid = await createSession(user.id, undefined, { remember });
   safeLog({
     userId: user.id,
     action: "login",
@@ -143,16 +127,14 @@ export async function action({ request }: Route.ActionArgs) {
     actorId: user.id,
     actorRole: user.cargo,
     ip,
+    details: JSON.stringify({ remember }),
   });
 
-  // `manterConectado` por enquanto é apenas persistido (não muda TTL).
-  // O TTL sliding de 7 dias já cobre o caso comum; refresh tokens
-  // ficam para evolução futura (YAGNI).
   const next = new URL(request.url).searchParams.get("next");
   const target = safeNext(next);
 
   return redirect(target, {
-    headers: { "Set-Cookie": await sessionCookie.serialize(sid) },
+    headers: { "Set-Cookie": await serializeSessionCookie(sid, remember) },
   });
 }
 

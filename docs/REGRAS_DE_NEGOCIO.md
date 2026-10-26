@@ -309,11 +309,12 @@ Login via `email` + `senha`. Senha com **mínimo 8 caracteres** (recomendação;
 
 ### RN-AUTH-02 — Sessão
 
-Cookie `__session` httpOnly, sameSite=lax, secure em prod. **Sliding 7d / absoluto 30d**. Logout invalida server-side (`deleteSession(sid)`) e limpa cookie (`Max-Age=0`).
+Cookie `__session` httpOnly, sameSite=lax, secure em prod. Logout invalida server-side (`deleteSession(sid)`) e limpa cookie (`Max-Age=0`).
 
-### RN-AUTH-03 — Rate Limit
+**"Lembrar de mim"** (`manterConectado`): marcado → cookie persistente de **30 dias** e sessão **sliding 7d / absoluto 30d**; desmarcado → cookie de sessão do navegador (some ao fechar) e sessão **sliding 12h / absoluto 24h**.
 
-`/login` limitado a **5 tentativas / 15min / IP**. IPs bloqueados são registrados em `RateLimitBlockedIP` para auditoria.
+### RN-AUTH-03 — Rate Limit (desativado)
+O `/login` **não** limita tentativas nem bloqueia IP (decisão do produto em 2026-10-13). Tentativas inválidas continuam registradas na auditoria (`login.invalid_credentials`, `login.invalid_payload`) com o IP em hash. O módulo `rate-limit.server.ts` permanece no código, mas nenhuma rota o chama.
 
 ### RN-AUTH-04 — Convite vs Reset
 
