@@ -63,7 +63,7 @@ export function CaixaHeader({
       <div className="flex flex-wrap gap-6 text-sm">
         <div>
           <span className="text-muted">Saldo: </span>
-          <span className="font-semibold text-fg tabular-nums">
+          <span className={`font-semibold tabular-nums ${caixa.saldoCentavos < 0 ? "text-danger" : "text-fg"}`}>
             {formatBRLFromCents(caixa.saldoCentavos)}
           </span>
         </div>

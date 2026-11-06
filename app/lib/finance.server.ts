@@ -160,10 +160,12 @@ export async function getFidelidadeFinanceira(membroId: string, user: SessionUse
  * @param {string} caixaId - UUID do caixa.
  * @param {number} valorCentavos - Valor a debitar (sempre > 0).
  * @param {string} context - Descrição do contexto (ex: "Lançamento de saída").
+ * @param {Object} [options] - Opções adicionais de validação.
+ * @param {boolean} [options.permitirSaldoNegativo] - Se true, não bloqueia caso o saldo fique negativo.
  * @returns {Promise<void>}
  * @throws {Response} 400 se `valorCentavos` não é Int > 0.
  * @throws {Response} 404 se caixa não existe.
- * @throws {Response} 409 se caixa arquivado OU saldo < valor.
+ * @throws {Response} 409 se caixa arquivado OU (saldo < valor quando permitirSaldoNegativo não estiver ativo).
  * @example
  *   await assertSaldoSuficiente(caixaId, 100, "Pagamento de conta de luz");
  *   // 100 cents = R$ 1,00; se saldo < 100, throws 409
@@ -171,7 +173,8 @@ export async function getFidelidadeFinanceira(membroId: string, user: SessionUse
 export async function assertSaldoSuficiente(
   caixaId: string,
   valorCentavos: number,
-  context: string
+  context: string,
+  options?: { permitirSaldoNegativo?: boolean }
 ): Promise<void> {
   if (!Number.isInteger(valorCentavos) || valorCentavos <= 0) {
     throw new Response(
@@ -192,7 +195,7 @@ export async function assertSaldoSuficiente(
       { status: 409 }
     );
   }
-  if (caixa.saldoCentavos < valorCentavos) {
+  if (!options?.permitirSaldoNegativo && caixa.saldoCentavos < valorCentavos) {
     throw new Response(
       `Saldo insuficiente no caixa de origem. Disponível: R$ ${(caixa.saldoCentavos / 100).toFixed(2)}.`,
       { status: 409 }

@@ -83,7 +83,7 @@ export function TabelaCaixas({
                     {caixa.nome}
                   </Link>
                 </td>
-                <td className="py-3 pr-4 text-sm font-medium tabular-nums text-fg">
+                <td className={`py-3 pr-4 text-sm font-medium tabular-nums ${caixa.saldoCentavos < 0 ? "text-danger font-semibold" : "text-fg"}`}>
                   {formatBRLFromCents(caixa.saldoCentavos)}
                 </td>
                 <td className="py-3 pr-4 text-sm text-muted">

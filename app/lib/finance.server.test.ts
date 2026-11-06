@@ -179,6 +179,13 @@ describe("finance.server — assertSaldoSuficiente (RN-FIN-04, S06-T07)", () => 
       assertSaldoSuficiente(caixa.id, 1000, "Lançamento de saída")
     ).resolves.toBeUndefined();
   });
+
+  it("com permitirSaldoNegativo=true: saldo<valor resolve sem erro", async () => {
+    const caixa = await makeCaixa({ nome: "PermiteNegativo", saldoCentavos: 100 });
+    await expect(
+      assertSaldoSuficiente(caixa.id, 500, "Lançamento de saída", { permitirSaldoNegativo: true })
+    ).resolves.toBeUndefined();
+  });
 });
 
 // ----------------- T010 — getDashboardFinanceiro (S06-T10) -----------------

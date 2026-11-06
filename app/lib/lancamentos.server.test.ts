@@ -69,22 +69,20 @@ async function catchResponse(promise: Promise<unknown>): Promise<Response | null
 
 describe("lancamentos.server — criarLancamento (T07)", () => {
 
-  // ===== Teste #3 (BLOQUEADOR) =====
-  it("Teste #3: saldo=0 + SAIDA 1 centavo → 409, saldo permanece 0", async () => {
+  // ===== Teste #3 (saldo negativo permitido) =====
+  it("Teste #3: saldo=0 + SAIDA 1 centavo → OK, saldo torna-se -1 (permite saldo negativo)", async () => {
     const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 0 });
-    const res = await catchResponse(criarLancamento({
+    await criarLancamento({
       tipo: "SAIDA",
       categoria: "DESPESA_OPERACIONAL",
       status: "PAGO",
       valorCentavos: 1,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
-      descricao: "Tentativa falha",
-    }, userWith("ADMIN")));
-    expect(res).not.toBeNull();
-    expect(res!.status).toBe(409);
+      descricao: "Saída com saldo zero",
+    }, userWith("ADMIN"));
     const atual = await prismaTest.caixa.findUnique({ where: { id: caixa.id } });
-    expect(atual!.saldoCentavos).toBe(0);
+    expect(atual!.saldoCentavos).toBe(-1);
   });
 
   // ===== Teste #4 (ZodError — propagado) =====
@@ -243,17 +241,50 @@ describe("lancamentos.server — criarLancamento (T07)", () => {
     expect(res!.status).toBe(403);
   });
 
-  // ===== SAIDA com saldo insuficiente =====
-  it("SAIDA com saldo insuficiente → 409 (assertSaldoSuficiente)", async () => {
+  // ===== SAIDA permitindo saldo negativo =====
+  it("SAIDA com valor superior ao saldo → permite saldo negativo no caixa", async () => {
     const caixa = await makeCaixa({ nome: "Geral", saldoCentavos: 100 });
+    const lanc = await criarLancamento({
+      tipo: "SAIDA",
+      categoria: "DESPESA_OPERACIONAL",
+      status: "PAGO",
+      valorCentavos: 250,
+      caixaId: caixa.id,
+      dataCompetencia: new Date("2026-06-01"),
+      descricao: "Despesa que deixa caixa negativo",
+    }, userWith("ADMIN")) as { id: string };
+
+    expect(lanc).toBeDefined();
+    const caixaAtualizado = await prismaTest.caixa.findUnique({ where: { id: caixa.id } });
+    expect(caixaAtualizado?.saldoCentavos).toBe(-150); // 100 - 250 = -150
+  });
+
+  it("SAIDA adicional em caixa com saldo ja negativo → decrementa ainda mais", async () => {
+    const caixa = await makeCaixa({ nome: "Negativo", saldoCentavos: -150 });
+    await criarLancamento({
+      tipo: "SAIDA",
+      categoria: "DESPESA_OPERACIONAL",
+      status: "PAGO",
+      valorCentavos: 50,
+      caixaId: caixa.id,
+      dataCompetencia: new Date("2026-06-01"),
+      descricao: "Outra despesa",
+    }, userWith("ADMIN"));
+
+    const caixaAtualizado = await prismaTest.caixa.findUnique({ where: { id: caixa.id } });
+    expect(caixaAtualizado?.saldoCentavos).toBe(-200); // -150 - 50 = -200
+  });
+
+  it("SAIDA em caixa arquivado → 409", async () => {
+    const caixa = await makeCaixa({ nome: "Arquivado", saldoCentavos: 1000, ativo: false });
     const res = await catchResponse(criarLancamento({
       tipo: "SAIDA",
       categoria: "DESPESA_OPERACIONAL",
       status: "PAGO",
-      valorCentavos: 200,
+      valorCentavos: 100,
       caixaId: caixa.id,
       dataCompetencia: new Date("2026-06-01"),
-      descricao: "Sem saldo",
+      descricao: "Tentativa em arquivado",
     }, userWith("ADMIN")));
     expect(res).not.toBeNull();
     expect(res!.status).toBe(409);

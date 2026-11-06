@@ -248,11 +248,11 @@ export async function reabrirCaixa(id: string, user: SessionUser): Promise<unkno
  * @returns {Promise<Array<{id: string, nome: string}>>} Lista de caixas.
  * @throws {Response} 403 se perfil não autorizado.
  */
-export async function listarCaixasParaSelect(user: SessionUser): Promise<Array<{ id: string; nome: string }>> {
+export async function listarCaixasParaSelect(user: SessionUser): Promise<Array<{ id: string; nome: string; saldoCentavos: number }>> {
   assertCanSeeFinancialModule(user);
   return prisma.caixa.findMany({
     where: { ativo: true },
-    select: { id: true, nome: true },
+    select: { id: true, nome: true, saldoCentavos: true },
     orderBy: { nome: 'asc' },
     take: 50,
   });

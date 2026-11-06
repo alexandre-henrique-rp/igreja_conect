@@ -9,7 +9,7 @@
  *
  * **RBAC:** assertCanSeeFinancialModule aplicado no loader.
  */
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useState, useMemo } from "react";
 import type { Route } from "./+types/financeiro._index";
 import { userContext } from "~/lib/user-context";
@@ -114,6 +114,11 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
     loaderData;
 
   const fmt = formatBRLFromCents;
+  const [searchParams] = useSearchParams();
+  const [feedbackDismissed, setFeedbackDismissed] = useState(false);
+
+  const sucessoParam = searchParams.get("sucesso");
+  const transfParam = searchParams.get("transferencia");
 
   const totalCaixasCount = caixas.length;
 
@@ -122,7 +127,7 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
   );
 
   const recentLancamentos = useMemo(() => {
-    return todosLancamentos.slice(0, 6).map((l) => {
+    return todosLancamentos.slice(0, 8).map((l) => {
       const statusLabel =
         l.status === "PAGO" ? "APROVADO" : l.status === "PENDENTE" ? "PENDENTE" : "REJEITADO";
       return {
@@ -140,11 +145,22 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
 
   const filteredLancamentos = useMemo(() => {
     if (activeTab === "all") return recentLancamentos;
-    if (activeTab === "approved") return recentLancamentos;
-    return [];
+    if (activeTab === "pending") return recentLancamentos.filter((l) => l.status === "PENDENTE");
+    if (activeTab === "approved") return recentLancamentos.filter((l) => l.status === "APROVADO");
+    if (activeTab === "rejected") return recentLancamentos.filter((l) => l.status === "REJEITADO");
+    return recentLancamentos;
   }, [activeTab, recentLancamentos]);
 
-  // Donut chart — proporções fixas do design system
+  // Contagens para os badges das abas
+  const countPending = useMemo(() => recentLancamentos.filter((l) => l.status === "PENDENTE").length, [recentLancamentos]);
+  const countApproved = useMemo(() => recentLancamentos.filter((l) => l.status === "APROVADO").length, [recentLancamentos]);
+
+  // Mês atual formatado em pt-BR
+  const nomeMesAtual = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date());
+  const mesCapitalizado = nomeMesAtual.charAt(0).toUpperCase() + nomeMesAtual.slice(1);
+  const totalMovimentadoMes = totalEntradasMesCentavos + totalSaidasMesCentavos;
+
+  // Donut chart — proporções do design system
   const donutPercent = [
     { label: "Dízimos", pct: 38, color: "var(--color-accent)" },
     { label: "Ofertas", pct: 25, color: "var(--color-success)" },
@@ -158,6 +174,34 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
 
   return (
     <div>
+      {/* Banner de feedback de sucesso (se vindo de novo lançamento ou transferência) */}
+      {!feedbackDismissed && (sucessoParam === "lancamento_criado" || transfParam === "ok") && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mb-6 rounded-xl border border-success-soft bg-success-soft/20 p-4 text-success flex items-center justify-between gap-3 shadow-xs"
+        >
+          <div className="flex items-center gap-3">
+            <span className="p-1 rounded-full bg-success-soft text-success">
+              <Icon name="check" size="sm" />
+            </span>
+            <span className="text-sm font-semibold text-fg">
+              {sucessoParam === "lancamento_criado"
+                ? "Lançamento financeiro registrado com sucesso!"
+                : "Transferência entre caixas realizada com sucesso!"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedbackDismissed(true)}
+            className="text-muted hover:text-fg text-sm font-medium p-1 rounded-md"
+            aria-label="Fechar notificação"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* === Page header === */}
       <div className="page-header">
         <div>
@@ -281,7 +325,7 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
                     <Icon name="wallet" size="sm" />
                   </span>
                 </div>
-                <div className="cash-balance mono">{fmt(caixa.saldoCentavos)}</div>
+                <div className={`cash-balance mono ${caixa.saldoCentavos < 0 ? "!text-danger" : ""}`}>{fmt(caixa.saldoCentavos)}</div>
                 <div className="cash-meta">
                   <span>
                     <strong>{totalCaixasCount}</strong> caixas
@@ -298,7 +342,7 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
         <article className="card">
           <CardHeader
             title="Distribuição por categoria"
-            actions={<span className="badge badge-neutral">Setembro</span>}
+            actions={<span className="badge badge-neutral">{mesCapitalizado}</span>}
           />
           <div className="donut-wrap">
             <div
@@ -307,8 +351,8 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
               aria-label="Distribuição: dízimos 38%, ofertas 25%, despesas 18%, outros 19%"
             >
               <div className="donut-center">
-                <strong>R$ 27,6k</strong>
-                <span>movimentado</span>
+                <strong>{fmt(totalMovimentadoMes)}</strong>
+                <span>movimentado em {mesCapitalizado}</span>
               </div>
             </div>
             <div className="legend-list">
@@ -351,7 +395,7 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
               onClick={() => setActiveTab("all")}
               data-testid="finance-tab-all"
             >
-              Todos
+              Todos ({recentLancamentos.length})
             </button>
             <button
               type="button"
@@ -363,8 +407,8 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
               data-testid="finance-tab-pending"
             >
               Pendentes
-              {totalPendentes > 0 && (
-                <span className="badge badge-warning">{totalPendentes}</span>
+              {countPending > 0 && (
+                <span className="badge badge-warning">{countPending}</span>
               )}
             </button>
             <button
@@ -373,7 +417,7 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
               onClick={() => setActiveTab("approved")}
               data-testid="finance-tab-approved"
             >
-              Aprovados
+              Aprovados ({countApproved})
             </button>
             <button
               type="button"
@@ -405,7 +449,7 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
                     colSpan={7}
                     className="px-6 py-12 text-center text-subtle"
                   >
-                    Nenhum lançamento encontrado.
+                    Nenhum lançamento encontrado nesta categoria.
                   </td>
                 </tr>
               ) : (
@@ -413,7 +457,7 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
                   <tr key={l.id}>
                     <td className="mono">{l.dataStr}</td>
                     <td>
-                      <strong>{l.descricao}</strong>
+                      <strong>{l.descricao || l.categoria}</strong>
                     </td>
                     <td>
                       <Badge
@@ -467,13 +511,14 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
                       </Badge>
                     </td>
                     <td>
-                      <button
-                        type="button"
+                      <Link
+                        to={`/app/financeiro/lancamentos/${l.id}`}
                         className="btn btn-ghost btn-icon btn-sm"
-                        aria-label="Mais ações"
+                        title="Ver detalhes do lançamento"
+                        aria-label={`Ver detalhes do lançamento: ${l.descricao || l.categoria}`}
                       >
-                        <Icon name="more-vertical" size="sm" />
-                      </button>
+                        <Icon name="chevron-right" size="sm" />
+                      </Link>
                     </td>
                   </tr>
                 ))
@@ -481,45 +526,17 @@ export default function DashboardFinanceiro({ loaderData }: Route.ComponentProps
             </tbody>
           </table>
         </div>
-        <div className="table-footer">
-          <span>
-            Mostrando 1–{Math.min(6, filteredLancamentos.length)} de{" "}
-            {recentLancamentos.length} lançamentos
+        <div className="table-footer flex items-center justify-between flex-wrap gap-4 py-3 px-6">
+          <span className="text-sm text-muted">
+            Exibindo {filteredLancamentos.length} de {recentLancamentos.length} lançamentos recentes
           </span>
-          <div className="pagination">
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              disabled
-              aria-label="Página anterior"
-            >
-              <Icon
-                name="chevron-right"
-                size="sm"
-                className="rotate-180"
-              />
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              aria-current="page"
-            >
-              1
-            </button>
-            <button type="button" className="btn btn-secondary btn-sm">
-              2
-            </button>
-            <button type="button" className="btn btn-secondary btn-sm">
-              3
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              aria-label="Próxima página"
-            >
-              <Icon name="chevron-right" size="sm" />
-            </button>
-          </div>
+          <Link
+            to="/app/financeiro/lancamentos"
+            className="btn btn-secondary btn-sm inline-flex items-center gap-1.5"
+          >
+            Ver todos os lançamentos
+            <Icon name="chevron-right" size="sm" />
+          </Link>
         </div>
       </section>
     </div>

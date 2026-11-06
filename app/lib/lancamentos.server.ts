@@ -86,12 +86,13 @@ export async function criarLancamento(
   // 3) Validação Zod (propaga ZodError — action captura → 422)
   const parsed = LancamentoCreateSchema.parse(input);
 
-  // 4) Trava de saldo para SAÍDAS (ANTES da transação — validação rápida)
+  // 4) Validação do caixa para SAÍDAS (permite que o saldo fique negativo)
   if (parsed.tipo === "SAIDA") {
     await assertSaldoSuficiente(
       parsed.caixaId,
       parsed.valorCentavos,
       `Lançamento de saída (${parsed.categoria})`,
+      { permitirSaldoNegativo: true },
     );
   }
 
@@ -111,13 +112,7 @@ export async function criarLancamento(
       );
     }
 
-    // Re-checagem TOCTOU: saldo para SAÍDA
-    if (parsed.tipo === "SAIDA" && caixa.saldoCentavos < parsed.valorCentavos) {
-      throw new Response(
-        `Saldo insuficiente no caixa de origem. Disponível: R$ ${(caixa.saldoCentavos / 100).toFixed(2)}.`,
-        { status: 409 },
-      );
-    }
+    // Nota: O saldo do caixa pode ficar negativo para lançamentos de saída
 
     // Cria o lançamento
     const lancamento = await tx.lancamento.create({
